@@ -36,77 +36,64 @@ fn parse_jwt(token : String) -> Json raise Error {
   }
   let padded = add_base64_padding(parts[1].to_string())
   let payload = @base64.decode(padded, url_safe=true) catch {
-    err => {
-      println("ERROR in base64.decode: \{err}")
-      println("Input: \{padded}")
-      raise ParseError("Base64 decode failed: \{err}")
-    }
+    err => raise ParseError("Base64 decode failed: \{err}")
   }
   let payload_str = @encoding/utf8.decode(payload)
   @json.parse(payload_str) catch {
-    err => {
-      println("ERROR in @json.parse: \{err}")
-      println("Decoded payload: \{payload_str}")
-      raise ParseError("JSON parse failed: \{err}")
-    }
+    err => raise ParseError("JSON parse failed: \{err}")
   }
 }
 
 ///|
 pub fn extract_token_claims(token : String) -> IdTokenClaims raise Error {
-  let payload = if parse_jwt(token) is Object(obj) {
-    obj
-  } else {
-    abort("Invalid token")
+  let payload = match parse_jwt(token) {
+    Object(obj) => obj
+    _ => raise ParseError("Invalid token payload")
   }
-  let authClaims = if payload["https://api.openai.com/auth"] is Object(obj) {
-    obj
-  } else {
-    abort("Invalid auth claims")
+  let authClaims = match payload.get("https://api.openai.com/auth") {
+    Some(Object(obj)) => obj
+    _ => raise ParseError("Invalid auth claims")
   }
   {
     email: if payload.get("email") is Some(String(email)) {
       email
     } else {
-      abort("No email found in token claims")
+      raise ParseError("No email found in token claims")
     },
     chatgptAccountId: if authClaims.get("chatgpt_account_id")
       is Some(String(chatgptAccountId)) {
       chatgptAccountId
     } else {
-      abort("No chatgpt account id found in auth claims")
+      raise ParseError("No chatgpt account id found in auth claims")
     },
     chatgptPlanType: if authClaims.get("chatgpt_plan_type")
       is Some(String(chatgptPlanType)) {
       chatgptPlanType
     } else {
-      abort("No chatgpt plan type found in auth claims")
+      raise ParseError("No chatgpt plan type found in auth claims")
     },
   }
 }
 
 ///|
-fn get_home() -> String {
+fn get_home() -> String raise Error {
   @os.home() catch {
-    err => {
-      println("ERROR in @os.home(): \{err}")
-      abort("Failed to get home directory")
-    }
+    err => raise ParseError("Failed to get home directory: \{err}")
   }
 }
 
 ///|
-fn get_credentials_path() -> String {
+fn get_credentials_path() -> String raise Error {
   @pathx.join(get_home(), CREDENTIALS_FILE)
 }
 
 ///|
-fn get_codex_auth_path() -> String {
+fn get_codex_auth_path() -> String raise Error {
   @pathx.join(get_home(), CODEX_AUTH_FILE)
 }
 
 ///|
-pub async fn save_credentials(credentials : Credentials) -> Unit {
+pub async fn save_credentials(credentials : Credentials) -> Unit raise Error {
   let path = get_credentials_path()
   let dir = @pathx.dirname(path)
   @fsx.make_directory(dir, recursive=true, exists_ok=true)
@@ -115,11 +102,11 @@ pub async fn save_credentials(credentials : Credentials) -> Unit {
 
 ///|
 async fn try_load_from_codex() -> Credentials? {
-  let codex_path = get_codex_auth_path()
-  if not(@fsx.exists_as_file(codex_path)) {
-    return None
-  }
   try {
+    let codex_path = get_codex_auth_path()
+    if not(@fsx.exists_as_file(codex_path)) {
+      return None
+    }
     let content = @fsx.read_file(codex_path)
     let json = @json.parse(content)
     guard json is Object(root) else { return None }
@@ -171,19 +158,27 @@ pub async fn load_credentials() -> Credentials raise Error {
 ///|
 /// Returns true if credentials file exists (either our own or from codex CLI)
 pub async fn credentials_exist() -> Bool {
-  let path = get_credentials_path()
-  if @fsx.exists_as_file(path) {
-    return true
+  try {
+    let path = get_credentials_path()
+    if @fsx.exists_as_file(path) {
+      return true
+    }
+    let codex_path = get_codex_auth_path()
+    @fsx.exists_as_file(codex_path)
+  } catch {
+    _ => false
   }
-  let codex_path = get_codex_auth_path()
-  @fsx.exists_as_file(codex_path)
 }
 
 ///|
 /// Deletes the credentials file if it exists
 pub async fn delete_credentials() -> Unit {
-  let path = get_credentials_path()
-  if @fsx.exists_as_file(path) {
-    @fsx.remove(path)
+  try {
+    let path = get_credentials_path()
+    if @fsx.exists_as_file(path) {
+      @fsx.remove(path)
+    }
+  } catch {
+    _ => ()
   }
 }

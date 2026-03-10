@@ -32,10 +32,12 @@ pub(all) enum Type {
 } derive(Eq, Show)
 
 ///|
-pub fn open_router_model(api_key : String, name : CommonModels) -> Model {
+pub fn open_router_model(
+  api_key~ : String,
+  name? : CommonModels = CommonModels::Qwen3CoderPlus,
+) -> Model {
   let model_name = match name {
     Qwen3CoderPlus => "qwen/qwen3-coder-plus"
-    _ => "qwen/qwen3-coder-plus"
   }
   {
     name: name.to_string(),
@@ -55,6 +57,6 @@ pub fn open_router_model(api_key : String, name : CommonModels) -> Model {
 }
 
 ///|
-pub enum CommonModels {
+pub(all) enum CommonModels {
   Qwen3CoderPlus
 } derive(Show)

@@ -1,10 +1,10 @@
 import {
-  "moonbitlang/moonclaw/internal/rand",
-  "moonbitlang/moonclaw/internal/os",
-  "moonbitlang/moonclaw/internal/pathx",
-  "moonbitlang/moonclaw/internal/fsx",
-  "moonbitlang/moonclaw/internal/httpx",
-  "moonbitlang/moonclaw/internal/spawn",
+  "vectie/hij/internal/rand",
+  "vectie/hij/internal/os",
+  "vectie/hij/internal/pathx",
+  "vectie/hij/internal/fsx",
+  "vectie/hij/internal/httpx",
+  "vectie/hij/internal/spawn",
   "moonbitlang/x/crypto",
   "moonbitlang/x/codec/base64",
   "moonbitlang/async/http",
@@ -13,5 +13,5 @@ import {
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/json",
   "moonbitlang/core/random",
-  "moonbitlang/moonclaw/internal/pino",
+  "vectie/hij/internal/pino",
 }

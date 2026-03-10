@@ -1,0 +1,152 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/hij"
+
+import {
+  "moonbitlang/core/json",
+  "vectie/hij/internal/pino",
+  "vectie/hij/oauth/codex",
+}
+
+// Values
+pub fn build_anthropic_response(String, String, String, Array[ToolCallInfo], Int, Int) -> AnthropicResponse
+
+pub fn build_codex_request(CodexInput, String, Bool) -> Json
+
+pub fn convert_anthropic_to_codex(AnthropicRequest, String) -> CodexInput
+
+// Errors
+
+// Types and methods
+pub struct AnthropicBlock {
+  type_ : String
+  text : String?
+  tool_use_id : String?
+  content : String?
+}
+pub impl ToJson for AnthropicBlock
+pub impl @json.FromJson for AnthropicBlock
+
+pub enum AnthropicContent {
+  Text(String)
+  Blocks(Array[AnthropicBlock])
+}
+
+pub struct AnthropicDelta {
+  type_ : String?
+  text : String?
+  stop_reason : String?
+}
+pub impl Show for AnthropicDelta
+pub impl @json.FromJson for AnthropicDelta
+
+pub struct AnthropicMessage {
+  role : String
+  content : AnthropicContent
+}
+pub impl ToJson for AnthropicMessage
+pub impl @json.FromJson for AnthropicMessage
+
+pub struct AnthropicRequest {
+  model : String
+  max_tokens : Int
+  messages : Array[AnthropicMessage]
+  system : String?
+  tools : Array[AnthropicTool]?
+  stream : Bool?
+}
+pub impl ToJson for AnthropicRequest
+pub impl @json.FromJson for AnthropicRequest
+
+pub struct AnthropicResponse {
+  id : String
+  type_ : String
+  role : String
+  content : Array[AnthropicResponseBlock]
+  model : String
+  stop_reason : String?
+  stop_sequence : String?
+  usage : AnthropicUsage
+}
+pub impl Show for AnthropicResponse
+pub impl ToJson for AnthropicResponse
+pub impl @json.FromJson for AnthropicResponse
+
+pub struct AnthropicResponseBlock {
+  type_ : String
+  text : String?
+  name : String?
+  input : Json?
+  id : String?
+}
+pub impl Show for AnthropicResponseBlock
+pub impl ToJson for AnthropicResponseBlock
+pub impl @json.FromJson for AnthropicResponseBlock
+
+pub struct AnthropicStreamEvent {
+  type_ : String
+  index : Int?
+  delta : AnthropicDelta?
+  content_block : AnthropicResponseBlock?
+  message : AnthropicResponse?
+}
+pub impl Show for AnthropicStreamEvent
+pub impl @json.FromJson for AnthropicStreamEvent
+
+pub struct AnthropicTool {
+  name : String
+  description : String?
+  input_schema : Json
+}
+pub impl ToJson for AnthropicTool
+pub impl @json.FromJson for AnthropicTool
+
+pub struct AnthropicUsage {
+  input_tokens : Int
+  output_tokens : Int
+}
+pub impl Show for AnthropicUsage
+pub impl ToJson for AnthropicUsage
+pub impl @json.FromJson for AnthropicUsage
+
+pub struct CodexInput {
+  messages : Array[CodexMessage]
+  tools : Array[CodexTool]?
+}
+
+pub struct CodexMessage {
+  role : String
+  content : String
+  tool_call_id : String?
+  name : String?
+  arguments : String?
+}
+pub impl ToJson for CodexMessage
+
+pub struct CodexTool {
+  type_ : String
+  name : String
+  description : String?
+  parameters : Json
+}
+pub impl ToJson for CodexTool
+
+pub struct Gateway {
+  port : Int
+  model : String
+  mut credentials : @codex.Credentials?
+  logger : @pino.Logger
+}
+pub fn Gateway::new(port~ : Int, model? : String) -> Self
+pub fn Gateway::port(Self) -> Int
+pub async fn Gateway::start(Self) -> Unit
+
+pub struct ToolCallInfo {
+  id : String
+  name : String
+  arguments : String
+}
+
+// Type aliases
+
+// Traits
+

@@ -1,14 +1,15 @@
 ///|
 /// 自动 hosts 文件劫持模块
 /// 通过将 api.anthropic.com 重定向到本地网关实现透明劫持
-
 const ANTHROPIC_HOST = "api.anthropic.com"
+
+///|
 const HIJACK_COMMENT = "# hijack-auto-hijack"
 
 ///|
 /// 获取系统的 hosts 文件路径
 fn get_hosts_path() -> String {
-  "/etc/hosts"  // macOS/Linux，Windows 需要特殊处理
+  "/etc/hosts" // macOS/Linux，Windows 需要特殊处理
 }
 
 ///|
@@ -34,7 +35,7 @@ pub async fn check_permission() -> Bool {
 
 ///|
 /// 生成劫持条目
-fn generate_hijack_entry(port : Int) -> String {
+fn generate_hijack_entry(_port : Int) -> String {
   "127.0.0.1 \{ANTHROPIC_HOST} \{HIJACK_COMMENT}\n"
 }
 
@@ -54,17 +55,17 @@ pub async fn is_hijack_installed() -> Bool {
 /// 安装 hosts 劫持
 pub async fn install_hijack(port : Int) -> Result[Unit, String] {
   let hosts_path = get_hosts_path()
-  
+
   // 检查权限
   if not(check_permission()) {
     return Err("没有权限修改 hosts 文件，请使用 sudo 运行")
   }
-  
+
   // 检查是否已安装
   if is_hijack_installed() {
     return Err("hosts 劫持已经安装")
   }
-  
+
   try {
     let content = @fsx.read_file(hosts_path)
     let entry = generate_hijack_entry(port)
@@ -80,21 +81,22 @@ pub async fn install_hijack(port : Int) -> Result[Unit, String] {
 /// 卸载 hosts 劫持
 pub async fn uninstall_hijack() -> Result[Unit, String] {
   let hosts_path = get_hosts_path()
-  
+
   // 检查权限
   if not(check_permission()) {
     return Err("没有权限修改 hosts 文件，请使用 sudo 运行")
   }
-  
+
   // 检查是否已安装
   if not(is_hijack_installed()) {
     return Err("hosts 劫持未安装")
   }
-  
+
   try {
     let content = @fsx.read_file(hosts_path)
     let lines = content.split("\n").to_array()
-    let filtered_lines = lines.iter()
+    let filtered_lines = lines
+      .iter()
       .filter(fn(line) { not(line.contains(HIJACK_COMMENT)) })
       .collect()
     let new_content = filtered_lines.join("\n")

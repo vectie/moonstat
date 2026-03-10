@@ -36,7 +36,7 @@ impl @json.FromJson for TokenResponse with from_json(
 }
 
 ///|
-pub fn generate_state() -> String {
+pub fn generate_state() -> String raise Error {
   let bytes = generate_random_bytes(32)
   strip_padding(@base64.encode(bytes, url_safe=true))
 }
@@ -171,9 +171,21 @@ pub fn parse_query_string(query : StringView) -> Map[String, String] {
     return result
   }
   for pair in query.split("&") {
-    let parts = pair.split("=").to_array()
-    if parts.length() == 2 {
-      result[url_decode(parts[0])] = url_decode(parts[1])
+    let raw = pair.to_string()
+    let chars = raw.to_array()
+    let mut separator = -1
+    let mut i = 0
+    while i < chars.length() {
+      if chars[i] == '=' {
+        separator = i
+        break
+      }
+      i += 1
+    }
+    if separator >= 0 {
+      result[url_decode(raw[:separator])] = url_decode(raw[separator + 1:])
+    } else if !raw.is_empty() {
+      result[url_decode(raw[:])] = ""
     }
   }
   result

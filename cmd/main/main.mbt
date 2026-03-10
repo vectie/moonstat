@@ -60,7 +60,7 @@ async fn start_gateway(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn do_login(args : Array[String]) -> Unit {
+async fn do_login(_args : Array[String]) -> Unit {
   let logger = @pino.logger("hijack", @pino.Transport::console())
   logger.info("Starting OpenAI Codex OAuth login flow...")
   try {
@@ -78,21 +78,25 @@ async fn do_login(args : Array[String]) -> Unit {
 async fn check_health(args : Array[String]) -> Unit {
   let logger = @pino.logger("hijack", @pino.Transport::console())
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:80")
-  let client = @http.Client::new(url, headers={})
-  defer client.close()
-  let response = client.get("/health")
-  if response.code == 200 {
-    let body = client.read_all().text()
-    println("Gateway health: \{body}")
-  } else {
-    logger.error("Health check failed: \{response.code}")
+  try {
+    let client = @http.Client::new(url, headers={})
+    defer client.close()
+    let response = client.get("/health")
+    if response.code == 200 {
+      let body = client.read_all().text()
+      println("Gateway health: \{body}")
+    } else {
+      logger.error("Health check failed: \{response.code}")
+    }
+  } catch {
+    err => logger.error("Health check failed: \{err}")
   }
 }
 
 ///|
 async fn check_status() -> Unit {
   let logger = @pino.logger("hijack", @pino.Transport::console())
-  
+
   // 检查 hosts 劫持状态
   let hosts_installed = @hosts.is_hijack_installed()
   if hosts_installed {
@@ -100,18 +104,22 @@ async fn check_status() -> Unit {
   } else {
     logger.warn("Hosts hijack is NOT installed")
   }
-  
+
   // 检查网关是否在运行
-  let client = @http.Client::new("http://localhost:80", headers={})
-  defer client.close()
-  let response = client.get("/health")
-  if response.code == 200 {
-    let body = client.read_all().text()
-    logger.info("Gateway is running: \{body}")
-  } else {
-    logger.warn("Gateway is NOT running")
+  try {
+    let client = @http.Client::new("http://localhost:80", headers={})
+    defer client.close()
+    let response = client.get("/health")
+    if response.code == 200 {
+      let body = client.read_all().text()
+      logger.info("Gateway is running: \{body}")
+    } else {
+      logger.warn("Gateway is NOT running")
+    }
+  } catch {
+    _ => logger.warn("Gateway is NOT running")
   }
-  
+
   // 检查凭据
   let creds_result : Result[@codex.Credentials, Error] = try? @codex.load_credentials()
   match creds_result {
@@ -124,7 +132,7 @@ async fn check_status() -> Unit {
 async fn install_hijack(args : Array[String]) -> Unit {
   let logger = @pino.logger("hijack", @pino.Transport::console())
   let port = parse_int_arg(args, "--port", default=80)
-  
+
   logger.info("Installing hosts hijack for port \{port}...")
   let result = @hosts.install_and_flush(port)
   match result {
@@ -140,7 +148,7 @@ async fn install_hijack(args : Array[String]) -> Unit {
 ///|
 async fn uninstall_hijack() -> Unit {
   let logger = @pino.logger("hijack", @pino.Transport::console())
-  
+
   logger.info("Removing hosts hijack...")
   let result = @hosts.uninstall_and_flush()
   match result {

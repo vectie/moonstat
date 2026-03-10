@@ -1,9 +1,8 @@
 import {
   "moonbitlang/async/process",
   "moonbitlang/async/io",
+  "moonbitlang/async/stdio",
   "moonbitlang/async",
-  "moonbitlang/async/aqueue",
-  "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/json",
   "moonbitlang/core/test",
   "vectie/hij/internal/fsx",
@@ -11,7 +10,6 @@ import {
   "moonbitlang/async/fs",
   "moonbitlang/async/os_error",
   "vectie/hij/internal/os",
-  "moonbitlang/async/io",
   "moonbitlang/async/semaphore",
   "vectie/hij/internal/pino",
   "vectie/hij/clock",

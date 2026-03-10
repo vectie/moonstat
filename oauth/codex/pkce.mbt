@@ -19,9 +19,9 @@ fn gen_byte(randomer : @random.Rand) -> Byte {
 }
 
 ///|
-fn generate_random_bytes(length : Int) -> Bytes {
+fn generate_random_bytes(length : Int) -> Bytes raise Error {
   let randomer = @rand.chacha8() catch {
-    _ => abort("Failed to create random generator")
+    err => raise ParseError("Failed to create random generator: \{err}")
   }
   let bytes : FixedArray[Byte] = FixedArray::make(length, 0)
   for i in 0..<length {
@@ -42,7 +42,7 @@ fn strip_padding(s : String) -> String {
 }
 
 ///|
-pub fn generate_pkce() -> PkceCodes {
+pub fn generate_pkce() -> PkceCodes raise Error {
   let bytes = generate_random_bytes(64)
   let code_verifier = strip_padding(@base64.encode(bytes, url_safe=true))
   let code_challenge = strip_padding(

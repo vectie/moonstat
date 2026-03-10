@@ -313,7 +313,7 @@ pub fn Context::getenv(
 ///|
 pub fn Context::model(
   self : Context,
-  name? : @model.CommonModels = @model.Qwen3CoderPlus,
+  name? : @model.CommonModels = @model.CommonModels::Qwen3CoderPlus,
 ) -> @model.Model raise {
   @model.open_router_model(api_key=self.getenv("OPENROUTER_API_KEY"), name~)
 }

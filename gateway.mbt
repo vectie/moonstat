@@ -331,11 +331,11 @@ fn convert_codex_to_anthropic(
   }
   if obj.get("usage") is Some(Object(usage_obj)) {
     input_tokens = match usage_obj.get("input_tokens") {
-      Some(Number(n)) => n.trunc().to_int()
+      Some(Number(n, ..)) => n.trunc().to_int()
       _ => 0
     }
     output_tokens = match usage_obj.get("output_tokens") {
-      Some(Number(n)) => n.trunc().to_int()
+      Some(Number(n, ..)) => n.trunc().to_int()
       _ => 0
     }
   }
@@ -355,7 +355,7 @@ fn convert_codex_to_anthropic(
 
 ///|
 fn generate_message_id() -> String {
-  let gen = @uuid.generator(@random.new())
+  let gen = @uuid.generator(@random.Rand::new())
   let uuid = gen.v4()
   "msg_\{uuid}"
 }
@@ -382,36 +382,27 @@ fn CodexStreamReader::new(
 
 ///|
 async fn CodexStreamReader::read(self : CodexStreamReader) -> StreamEvent? {
-  let bytes = self.reader.read_until("\n")
-  if bytes is None {
-    return None
-  }
-  let line = @encoding/utf8.decode(bytes.unwrap().to_bytes()).to_string()
-  // Parse "data: {...}" format
-  let trimmed = line.trim()
-  if trimmed.length() > 6 {
-    let prefix = trimmed[0:5]
-    if prefix == "data:" {
-      let data = trimmed[6:].trim().to_string()
-      if data == "[DONE]" {
-        return None
-      }
-      let json_result : Result[Json, Error] = try? @json.parse(data)
-      guard json_result is Ok(Object(obj)) else { return None }
-      let json = json_result.unwrap()
-      guard json is Object(obj) else { return None }
-      let event_type = match obj.get("type") {
-        Some(String(t)) => t
-        _ => return None
-      }
-      let anthropic_event = convert_stream_event(event_type, obj, self.model)
-      match anthropic_event {
-        Some(event) => return Some(event)
-        None => return None
-      }
+  for ;; {
+    guard self.reader.read_until("\n") is Some(line) else { return None }
+    guard line is [.. "data: ", .. rest] else { continue }
+    let data = rest.trim().to_string()
+    if data == "[DONE]" {
+      return None
+    }
+    let json_result : Result[Json, Error] = try? @json.parse(data)
+    guard json_result is Ok(Object(_)) else { return None }
+    let json = json_result.unwrap()
+    guard json is Object(obj) else { return None }
+    let event_type = match obj.get("type") {
+      Some(String(t)) => t
+      _ => return None
+    }
+    let anthropic_event = convert_stream_event(event_type, obj, self.model)
+    match anthropic_event {
+      Some(event) => return Some(event)
+      None => return None
     }
   }
-  None
 }
 
 ///|

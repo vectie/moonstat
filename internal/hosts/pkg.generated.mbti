@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/hij/internal/hosts"
+
+// Values
+pub async fn check_permission() -> Bool
+
+pub async fn install_and_flush(Int) -> Result[Unit, String]
+
+pub async fn install_hijack(Int) -> Result[Unit, String]
+
+pub async fn is_hijack_installed() -> Bool
+
+pub async fn uninstall_and_flush() -> Result[Unit, String]
+
+pub async fn uninstall_hijack() -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+
