@@ -14,6 +14,9 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["codex", "status", ..] => status_codex()
     ["models", "fetch", ..] => fetch_provider_models(arr)
     ["models", "candidates", ..] => print_model_candidates(arr)
+    ["suite", "manifest", ..] => print_suite_manifest(arr)
+    ["suite", "status", ..] => print_suite_status(arr)
+    ["suite", "write-status", ..] => write_suite_status(arr)
     ["status", ..] => check_status(arr)
     ["health", ..] => check_health(arr)
     ["stats", ..] => check_stats(arr)
@@ -53,6 +56,9 @@ fn print_help() -> Unit {
     "  models fetch              Fetch provider models using ccs-compatible logic",
   )
   println("  models candidates         Print /v1/models candidate URLs")
+  println("  suite manifest            Print Moon suite service manifest")
+  println("  suite status              Print Moon suite status contract")
+  println("  suite write-status        Write ~/.moonstat/suite-status.json")
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")
   println("  login       Login to OpenAI Codex OAuth")
@@ -72,6 +78,9 @@ fn print_help() -> Unit {
   println("  --models-url <url>    Exact model-list endpoint override")
   println("  --user-agent <ua>     Custom User-Agent header")
   println("")
+  println("Suite options:")
+  println("  --path <path>     Status file path for suite write-status")
+  println("")
   println("Examples:")
   println("  sudo moonstat install          # Install hosts reroute")
   println("  moonstat start                 # Start gateway on 127.0.0.1:15721")
@@ -81,6 +90,7 @@ fn print_help() -> Unit {
   println(
     "  moonstat models fetch --base-url https://api.example.com --api-key sk-...",
   )
+  println("  moonstat suite write-status --port 15721")
   println("  claude                         # Use Claude CLI through moonstat")
   println("  moonstat stats                 # Show traffic counters")
   println("  moonstat uninstall             # Remove hosts reroute")
@@ -374,6 +384,48 @@ fn provider_model_fields_to_json(id : String, owned_by : String?) -> Json {
       None => Json::null()
     },
   })
+}
+
+///|
+fn print_suite_manifest(args : Array[String]) -> Unit {
+  let host = parse_string_arg(args, "--host").unwrap_or("127.0.0.1")
+  let port = parse_int_arg(args, "--port", default=15721)
+  let model = parse_string_arg(args, "--model").unwrap_or("gpt-5")
+  println(
+    @moonstat.moonstat_suite_manifest_json(host~, port~, model~).stringify(
+      indent=2,
+    ),
+  )
+}
+
+///|
+fn print_suite_status(args : Array[String]) -> Unit {
+  let host = parse_string_arg(args, "--host").unwrap_or("127.0.0.1")
+  let port = parse_int_arg(args, "--port", default=15721)
+  let model = parse_string_arg(args, "--model").unwrap_or("gpt-5")
+  println(
+    @moonstat.moonstat_suite_status_json(host~, port~, model~).stringify(
+      indent=2,
+    ),
+  )
+}
+
+///|
+async fn write_suite_status(args : Array[String]) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  let host = parse_string_arg(args, "--host").unwrap_or("127.0.0.1")
+  let port = parse_int_arg(args, "--port", default=15721)
+  let model = parse_string_arg(args, "--model").unwrap_or("gpt-5")
+  let path = parse_string_arg(args, "--path").unwrap_or(
+    @moonstat.default_moonstat_suite_status_path(),
+  )
+  let written = @moonstat.write_moonstat_suite_status(
+    path~,
+    host~,
+    port~,
+    model~,
+  )
+  logger.info("Moon suite status written: \{written}")
 }
 
 ///|

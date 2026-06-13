@@ -9,6 +9,7 @@ import {
   "vectie/moonstat/internal/httpx",
   "vectie/moonstat/internal/httpx/status",
   "vectie/moonstat/internal/os",
+  "vectie/moonstat/internal/pathx",
   "vectie/moonstat/internal/pino",
   "vectie/moonstat/internal/uuid",
   "vectie/moonstat/oauth/codex",

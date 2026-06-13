@@ -45,6 +45,18 @@ moon run cmd/main -- models fetch --base-url https://api.example.com --api-key s
 moon run cmd/main -- models candidates --base-url https://api.deepseek.com/anthropic
 ```
 
+Moon suite discovery:
+
+```sh
+moon run cmd/main -- suite manifest
+moon run cmd/main -- suite status
+moon run cmd/main -- suite write-status
+```
+
+`suite manifest` and `suite status` print JSON contracts for MoonClaw,
+MoonBook, Moontown, Moondesk, or any other local probe. `suite write-status`
+writes the same status contract to `~/.moonstat/suite-status.json` by default.
+
 ## Proxy Surface
 
 Moonstat currently exposes the ccs-compatible local routes below:
