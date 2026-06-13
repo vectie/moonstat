@@ -65,6 +65,7 @@ pub fn moonstat_suite_manifest_json(
     "usage_session_sync_file": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
     ),
+    "usage_opencode_export_file": Json::string(default_opencode_export_path()),
     "models_url": Json::string("\{moonstat_openai_base_url(host, port)}/models"),
     "routes": Json::array(
       moonstat_suite_routes().map(fn(route) { Json::string(route) }),
@@ -169,6 +170,7 @@ pub fn moonstat_suite_status_json(
     "usage_session_sync_file": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
     ),
+    "usage_opencode_export_file": Json::string(default_opencode_export_path()),
     "openai_base_url": Json::string(moonstat_openai_base_url(host, port)),
     "anthropic_base_url": Json::string(moonstat_base_url(host, port)),
     "claude_desktop_base_url": Json::string(

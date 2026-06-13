@@ -59,6 +59,18 @@ priv struct GeminiSessionTokens {
 }
 
 ///|
+priv struct OpenCodeMessageData {
+  input_tokens : Int
+  output_tokens : Int
+  reasoning_tokens : Int
+  cache_read_tokens : Int
+  cache_write_tokens : Int
+  cost_usd : String
+  model_id : String
+  timestamp_ms : Int64
+}
+
+///|
 pub fn SessionSyncResult::new() -> SessionSyncResult {
   { imported: 0, skipped: 0, files_scanned: 0, errors: [] }
 }
@@ -112,11 +124,27 @@ pub fn default_gemini_dir() -> String {
 }
 
 ///|
+pub fn default_opencode_dir() -> String {
+  let home = @os.home() catch { _ => "" }
+  if home.is_empty() {
+    ".local/share/opencode"
+  } else {
+    @pathx.join(home, ".local/share/opencode")
+  }
+}
+
+///|
+pub fn default_opencode_export_path() -> String {
+  @pathx.join(default_opencode_dir(), "opencode.messages.jsonl")
+}
+
+///|
 pub async fn TrafficStats::sync_session_logs(
   self : TrafficStats,
   claude_projects_dir? : String = default_claude_projects_dir(),
   codex_dir? : String = default_codex_config_dir(),
   gemini_dir? : String = default_gemini_dir(),
+  opencode_export_path? : String = default_opencode_export_path(),
 ) -> SessionSyncResult {
   let result = self.sync_claude_session_logs(projects_dir=claude_projects_dir)
   let codex_result = self.sync_codex_session_logs(codex_dir~)
@@ -129,6 +157,161 @@ pub async fn TrafficStats::sync_session_logs(
   result.skipped += gemini_result.skipped
   result.files_scanned += gemini_result.files_scanned
   result.errors.append(gemini_result.errors)
+  let opencode_result = self.sync_opencode_session_export(
+    export_path=opencode_export_path,
+  )
+  result.imported += opencode_result.imported
+  result.skipped += opencode_result.skipped
+  result.files_scanned += opencode_result.files_scanned
+  result.errors.append(opencode_result.errors)
+  result
+}
+
+///|
+pub fn TrafficStats::ingest_opencode_message_json(
+  self : TrafficStats,
+  session_id~ : String,
+  message_id~ : String,
+  data~ : String,
+) -> SessionSyncResult {
+  let result = SessionSyncResult::new()
+  result.files_scanned = 1
+  let parsed = @json.parse(data) catch {
+    error => {
+      result.errors.push("OpenCode message JSON parse failed: \{error}")
+      return result
+    }
+  }
+  guard parsed is Object(root) else {
+    result.skipped += 1
+    return result
+  }
+  self.ingest_opencode_message_object(session_id~, message_id~, root, result)
+  result
+}
+
+///|
+pub async fn TrafficStats::sync_opencode_session_export(
+  self : TrafficStats,
+  export_path? : String = default_opencode_export_path(),
+) -> SessionSyncResult {
+  let result = SessionSyncResult::new()
+  if !@fsx.exists_as_file(export_path) {
+    return result
+  }
+  try {
+    let stat = @fsx.stat(export_path)
+    let content = @fsx.read_file(export_path)
+    self.ingest_opencode_session_export_jsonl(
+      file_path=export_path,
+      content~,
+      last_modified=stat.mtime(),
+    )
+  } catch {
+    error => {
+      result.files_scanned = 1
+      result.errors.push(
+        "OpenCode session export failed \{export_path}: \{error}",
+      )
+      result
+    }
+  }
+}
+
+///|
+pub fn TrafficStats::ingest_opencode_session_export_jsonl(
+  self : TrafficStats,
+  file_path~ : String,
+  content~ : String,
+  last_modified~ : Int64,
+) -> SessionSyncResult {
+  let result = SessionSyncResult::new()
+  result.files_scanned = 1
+  let existing_state = self.session_sync_state.get(file_path)
+  if existing_state is Some(state) && last_modified <= state.last_modified {
+    return result
+  }
+  let last_offset = match existing_state {
+    Some(state) => state.last_line_offset
+    None => 0
+  }
+  let mut line_offset = 0
+  for line_view in content.split("\n") {
+    line_offset += 1
+    if line_offset <= last_offset {
+      continue
+    }
+    let line = line_view.to_owned().trim()
+    if line.is_empty() {
+      continue
+    }
+    let parsed = @json.parse(line) catch {
+      error => {
+        result.errors.push("OpenCode export line \{line_offset}: \{error}")
+        result.skipped += 1
+        continue
+      }
+    }
+    guard parsed is Object(row) else {
+      result.skipped += 1
+      continue
+    }
+    let session_id = match session_payload_id(row) {
+      Some(id) => id
+      None => {
+        result.skipped += 1
+        continue
+      }
+    }
+    let message_id = match opencode_row_message_id(row) {
+      Some(id) => id
+      None => {
+        result.skipped += 1
+        continue
+      }
+    }
+    match row.get("data") {
+      Some(Object(data_obj)) =>
+        self.ingest_opencode_message_object(
+          session_id~,
+          message_id~,
+          data_obj,
+          result,
+        )
+      Some(String(data_text)) => {
+        let data_json = @json.parse(data_text) catch {
+          error => {
+            result.errors.push(
+              "OpenCode export data line \{line_offset}: \{error}",
+            )
+            result.skipped += 1
+            continue
+          }
+        }
+        match data_json {
+          Object(data_obj) =>
+            self.ingest_opencode_message_object(
+              session_id~,
+              message_id~,
+              data_obj,
+              result,
+            )
+          _ => result.skipped += 1
+        }
+      }
+      _ =>
+        self.ingest_opencode_message_object(
+          session_id~,
+          message_id~,
+          row,
+          result,
+        )
+    }
+  }
+  self.session_sync_state.set(
+    file_path,
+    SessionFileSyncState::new(last_modified~, last_line_offset=line_offset),
+  )
   result
 }
 
@@ -770,6 +953,106 @@ fn GeminiSessionTokens::is_zero(self : GeminiSessionTokens) -> Bool {
 }
 
 ///|
+fn parse_opencode_message_data(
+  root : Map[String, Json],
+  require_completed? : Bool = false,
+) -> OpenCodeMessageData? {
+  if session_map_string(root, "role") != Some("assistant") {
+    return None
+  }
+  guard root.get("tokens") is Some(Object(tokens)) else { return None }
+  if require_completed &&
+    !(root.get("time") is Some(Object(time)) && time.get("completed") is Some(_)) {
+    return None
+  }
+  let input_tokens = json_int_or_zero(tokens, "input")
+  let output_tokens = json_int_or_zero(tokens, "output")
+  let reasoning_tokens = json_int_or_zero(tokens, "reasoning")
+  let (cache_read_tokens, cache_write_tokens) = match tokens.get("cache") {
+    Some(Object(cache)) =>
+      (json_int_or_zero(cache, "read"), json_int_or_zero(cache, "write"))
+    _ => (0, 0)
+  }
+  if input_tokens == 0 &&
+    output_tokens == 0 &&
+    reasoning_tokens == 0 &&
+    cache_read_tokens == 0 &&
+    cache_write_tokens == 0 {
+    return None
+  }
+  let cost_usd = match root.get("cost") {
+    Some(Number(cost, ..)) if cost > 0.0 => cost.to_string()
+    _ => "0"
+  }
+  let timestamp_ms = match root.get("time") {
+    Some(Object(time)) =>
+      match time.get("created") {
+        Some(Number(created, ..)) => created.trunc().to_int64()
+        _ => 0L
+      }
+    _ => 0L
+  }
+  Some(OpenCodeMessageData::{
+    input_tokens,
+    output_tokens,
+    reasoning_tokens,
+    cache_read_tokens,
+    cache_write_tokens,
+    cost_usd,
+    model_id: session_map_string(root, "modelID").unwrap_or("unknown"),
+    timestamp_ms,
+  })
+}
+
+///|
+fn TrafficStats::ingest_opencode_message_object(
+  self : TrafficStats,
+  session_id~ : String,
+  message_id~ : String,
+  root : Map[String, Json],
+  result : SessionSyncResult,
+) -> Unit {
+  match parse_opencode_message_data(root, require_completed=true) {
+    Some(message) => {
+      let request_id = "opencode_session:\{session_id}:\{message_id}"
+      let output_tokens = message.output_tokens + message.reasoning_tokens
+      let usage = TokenUsage::new(
+        input_tokens=message.input_tokens,
+        output_tokens~,
+        cache_read_tokens=message.cache_read_tokens,
+        cache_creation_tokens=message.cache_write_tokens,
+        model=Some(message.model_id),
+      )
+      if self.should_skip_session_insert(
+          request_id,
+          app_type="opencode",
+          model=message.model_id,
+          usage~,
+          created_at=opencode_timestamp_seconds(message.timestamp_ms),
+        ) {
+        result.skipped += 1
+      } else {
+        self.record_opencode_session_usage(request_id, message, session_id)
+        result.imported += 1
+      }
+    }
+    None => result.skipped += 1
+  }
+}
+
+///|
+fn opencode_row_message_id(row : Map[String, Json]) -> String? {
+  match session_map_string(row, "message_id") {
+    Some(id) => Some(id)
+    None =>
+      match session_map_string(row, "messageId") {
+        Some(id) => Some(id)
+        None => session_map_string(row, "id")
+      }
+  }
+}
+
+///|
 fn should_replace_claude_session_usage(
   existing : ParsedClaudeSessionUsage?,
   candidate : ParsedClaudeSessionUsage,
@@ -943,6 +1226,69 @@ fn TrafficStats::record_gemini_session_usage(
 }
 
 ///|
+fn TrafficStats::record_opencode_session_usage(
+  self : TrafficStats,
+  request_id : String,
+  message : OpenCodeMessageData,
+  session_id : String,
+) -> Unit {
+  let output_tokens = message.output_tokens + message.reasoning_tokens
+  let usage = TokenUsage::new(
+    input_tokens=message.input_tokens,
+    output_tokens~,
+    cache_read_tokens=message.cache_read_tokens,
+    cache_creation_tokens=message.cache_write_tokens,
+    model=Some(message.model_id),
+  )
+  let cost = if message.cost_usd != "0" {
+    {
+      input_cost_usd: "0",
+      output_cost_usd: "0",
+      cache_read_cost_usd: "0",
+      cache_creation_cost_usd: "0",
+      total_cost_usd: message.cost_usd,
+    }
+  } else {
+    match find_static_model_pricing(message.model_id) {
+      Some(model_pricing) =>
+        calculate_cost_for_app("opencode", usage, model_pricing)
+      None =>
+        {
+          input_cost_usd: "0",
+          output_cost_usd: "0",
+          cache_read_cost_usd: "0",
+          cache_creation_cost_usd: "0",
+          total_cost_usd: "0",
+        }
+    }
+  }
+  self.record_request_log(
+    RequestLog::new(
+      request_id~,
+      provider_id="_opencode_session",
+      app_type="opencode",
+      model=message.model_id,
+      request_model=Some(message.model_id),
+      pricing_model=Some(message.model_id),
+      usage~,
+      input_cost_usd=cost.input_cost_usd,
+      output_cost_usd=cost.output_cost_usd,
+      cache_read_cost_usd=cost.cache_read_cost_usd,
+      cache_creation_cost_usd=cost.cache_creation_cost_usd,
+      total_cost_usd=cost.total_cost_usd,
+      latency_ms=0,
+      status_code=200,
+      session_id=Some(session_id),
+      provider_type=Some("opencode_session"),
+      is_streaming=true,
+      cost_multiplier="1.0",
+      created_at=opencode_timestamp_seconds(message.timestamp_ms),
+      data_source="opencode_session",
+    ),
+  )
+}
+
+///|
 fn TrafficStats::should_skip_session_insert(
   self : TrafficStats,
   request_id : String,
@@ -974,6 +1320,15 @@ fn TrafficStats::should_skip_session_insert(
     }
   }
   false
+}
+
+///|
+fn opencode_timestamp_seconds(timestamp_ms : Int64) -> Int {
+  if timestamp_ms > 0L {
+    (timestamp_ms / 1000L).to_int()
+  } else {
+    @async.now().to_int() / 1000
+  }
 }
 
 ///|

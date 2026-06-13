@@ -1157,10 +1157,16 @@ async fn Gateway::handle_usage_sync_session(
   let gemini_dir = usage_query_value_any(r.path, "gemini_dir", "geminiDir").unwrap_or(
     default_gemini_dir(),
   )
+  let opencode_export_path = usage_query_value_any(
+    r.path,
+    "opencode_export_path",
+    "opencodeExportPath",
+  ).unwrap_or(default_opencode_export_path())
   let result = self.stats.sync_session_logs(
     claude_projects_dir~,
     codex_dir~,
     gemini_dir~,
+    opencode_export_path~,
   )
   self.stats.save_persistent_store()
   write_usage_json(w, result.to_json())

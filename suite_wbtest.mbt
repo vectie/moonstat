@@ -45,6 +45,10 @@ test "suite manifest publishes moonstat service contract" {
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
     ),
   )
+  assert_eq(
+    obj["usage_opencode_export_file"],
+    Json::string(default_opencode_export_path()),
+  )
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
   assert_true(routes.contains(Json::string("GET /stats")))
   assert_true(routes.contains(Json::string("GET /usage/logs")))
@@ -108,6 +112,10 @@ async test "suite status writes discovery file" {
       Json::string(
         @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
       ),
+    )
+    assert_eq(
+      obj["usage_opencode_export_file"],
+      Json::string(default_opencode_export_path()),
     )
     guard obj["manifest"] is Object(manifest) else {
       fail("expected manifest object")

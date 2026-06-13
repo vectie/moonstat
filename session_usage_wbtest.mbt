@@ -194,6 +194,167 @@ test "gemini session import merges thoughts into output like ccs" {
 }
 
 ///|
+test "opencode message import mirrors ccs request log shape" {
+  let stats = TrafficStats::new()
+  let data =
+    #|{
+    #|  "role": "assistant",
+    #|  "cost": 0.0023113,
+    #|  "tokens": {
+    #|    "total": 56554,
+    #|    "input": 3272,
+    #|    "output": 383,
+    #|    "reasoning": 419,
+    #|    "cache": { "write": 7, "read": 52480 }
+    #|  },
+    #|  "modelID": "deepseek-v4-pro",
+    #|  "providerID": "deepseek",
+    #|  "time": { "created": 1779755333700, "completed": 1779755350639 }
+    #|}
+  let result = stats.ingest_opencode_message_json(
+    session_id="opencode-s1",
+    message_id="msg-open-1",
+    data~,
+  )
+  assert_eq(result.imported, 1)
+  assert_eq(result.skipped, 0)
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.request_id, "opencode_session:opencode-s1:msg-open-1")
+  assert_eq(log.provider_id, "_opencode_session")
+  assert_eq(log.app_type, "opencode")
+  assert_eq(log.model, "deepseek-v4-pro")
+  assert_eq(log.request_model, Some("deepseek-v4-pro"))
+  assert_eq(log.input_tokens, 3272)
+  assert_eq(log.output_tokens, 802)
+  assert_eq(log.cache_read_tokens, 52480)
+  assert_eq(log.cache_creation_tokens, 7)
+  assert_eq(log.input_cost_usd, "0")
+  assert_eq(log.output_cost_usd, "0")
+  assert_eq(log.total_cost_usd, "0.0023113")
+  assert_eq(log.session_id, Some("opencode-s1"))
+  assert_eq(log.provider_type, Some("opencode_session"))
+  assert_true(log.is_streaming)
+  assert_eq(log.status_code, 200)
+  assert_eq(log.created_at, 1779755333)
+  assert_eq(log.data_source, "opencode_session")
+}
+
+///|
+test "opencode message import defaults missing cache and skips incomplete rows" {
+  let stats = TrafficStats::new()
+  let complete =
+    #|{
+    #|  "role": "assistant",
+    #|  "cost": 0,
+    #|  "tokens": { "input": 1000, "output": 200 },
+    #|  "modelID": "mimo-v2.5-pro",
+    #|  "time": { "created": 1779755333700, "completed": 1779755334700 }
+    #|}
+  let complete_result = stats.ingest_opencode_message_json(
+    session_id="opencode-s2",
+    message_id="done",
+    data=complete,
+  )
+  assert_eq(complete_result.imported, 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.input_tokens, 1000)
+  assert_eq(log.output_tokens, 200)
+  assert_eq(log.cache_read_tokens, 0)
+  assert_eq(log.cache_creation_tokens, 0)
+
+  let incomplete =
+    #|{
+    #|  "role": "assistant",
+    #|  "tokens": { "input": 500, "output": 1 },
+    #|  "modelID": "mimo-v2.5-pro",
+    #|  "time": { "created": 1779755333700 }
+    #|}
+  let incomplete_result = stats.ingest_opencode_message_json(
+    session_id="opencode-s2",
+    message_id="wip",
+    data=incomplete,
+  )
+  assert_eq(incomplete_result.imported, 0)
+  assert_eq(incomplete_result.skipped, 1)
+  assert_eq(stats.request_logs.length(), 1)
+
+  let zero =
+    #|{
+    #|  "role": "assistant",
+    #|  "tokens": {
+    #|    "input": 0,
+    #|    "output": 0,
+    #|    "reasoning": 0,
+    #|    "cache": { "read": 0, "write": 0 }
+    #|  },
+    #|  "modelID": "mimo-v2.5-pro",
+    #|  "time": { "created": 1779755333700, "completed": 1779755334700 }
+    #|}
+  let zero_result = stats.ingest_opencode_message_json(
+    session_id="opencode-s2",
+    message_id="zero",
+    data=zero,
+  )
+  assert_eq(zero_result.imported, 0)
+  assert_eq(zero_result.skipped, 1)
+  assert_eq(stats.request_logs.length(), 1)
+}
+
+///|
+test "opencode export jsonl import stores offsets and supports string data" {
+  let stats = TrafficStats::new()
+  let file_path = "/tmp/opencode/messages.jsonl"
+  let content =
+    #|{"session_id":"opencode-export","message_id":"m1","data":{"role":"assistant","tokens":{"input":10,"output":2},"modelID":"open-model","time":{"created":1779755333700,"completed":1779755334700}}}
+    #|{"session_id":"opencode-export","message_id":"m2","data":"{\"role\":\"assistant\",\"tokens\":{\"input\":1,\"output\":1,\"reasoning\":3,\"cache\":{\"read\":5,\"write\":7}},\"modelID\":\"open-model\",\"time\":{\"created\":1779755335700,\"completed\":1779755336700}}"}
+  let first_result = stats.ingest_opencode_session_export_jsonl(
+    file_path~,
+    content~,
+    last_modified=1L,
+  )
+  assert_eq(first_result.imported, 2)
+  assert_eq(first_result.skipped, 0)
+  assert_eq(stats.request_logs.length(), 2)
+  assert_eq(
+    stats.request_logs[0].request_id,
+    "opencode_session:opencode-export:m1",
+  )
+  assert_eq(stats.request_logs[0].output_tokens, 2)
+  assert_eq(
+    stats.request_logs[1].request_id,
+    "opencode_session:opencode-export:m2",
+  )
+  assert_eq(stats.request_logs[1].output_tokens, 4)
+  assert_eq(stats.request_logs[1].cache_read_tokens, 5)
+  assert_eq(stats.request_logs[1].cache_creation_tokens, 7)
+
+  let unchanged_result = stats.ingest_opencode_session_export_jsonl(
+    file_path~,
+    content~,
+    last_modified=1L,
+  )
+  assert_eq(unchanged_result.imported, 0)
+  assert_eq(unchanged_result.skipped, 0)
+
+  let appended =
+    #|{"session_id":"opencode-export","message_id":"m1","data":{"role":"assistant","tokens":{"input":10,"output":2},"modelID":"open-model","time":{"created":1779755333700,"completed":1779755334700}}}
+    #|{"session_id":"opencode-export","message_id":"m2","data":"{\"role\":\"assistant\",\"tokens\":{\"input\":1,\"output\":1,\"reasoning\":3,\"cache\":{\"read\":5,\"write\":7}},\"modelID\":\"open-model\",\"time\":{\"created\":1779755335700,\"completed\":1779755336700}}"}
+    #|{"session_id":"opencode-export","message_id":"m3","data":{"role":"assistant","tokens":{"input":3,"output":4},"modelID":"open-model","time":{"created":1779755337700,"completed":1779755338700}}}
+  let appended_result = stats.ingest_opencode_session_export_jsonl(
+    file_path~,
+    content=appended,
+    last_modified=2L,
+  )
+  assert_eq(appended_result.imported, 1)
+  assert_eq(stats.request_logs.length(), 3)
+  assert_eq(
+    stats.request_logs[2].request_id,
+    "opencode_session:opencode-export:m3",
+  )
+}
+
+///|
 test "session imports skip matching proxy log fingerprints" {
   let stats = TrafficStats::new()
   stats.record_request_log(
@@ -220,6 +381,50 @@ test "session imports skip matching proxy log fingerprints" {
     file_path="/tmp/codex/dedup.jsonl",
     content~,
     last_modified=1L,
+  )
+  assert_eq(result.imported, 0)
+  assert_eq(result.skipped, 1)
+  assert_eq(stats.request_logs.length(), 1)
+}
+
+///|
+test "opencode session import skips matching proxy log fingerprints" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="proxy-open-1",
+      provider_id="opencode-provider",
+      app_type="opencode",
+      model="deepseek-v4-pro",
+      usage=TokenUsage::new(
+        input_tokens=3272,
+        output_tokens=802,
+        cache_read_tokens=52480,
+        cache_creation_tokens=7,
+        model=Some("deepseek-v4-pro"),
+      ),
+      status_code=200,
+      created_at=1779755333,
+      data_source="proxy",
+    ),
+  )
+  let data =
+    #|{
+    #|  "role": "assistant",
+    #|  "cost": 0.0023113,
+    #|  "tokens": {
+    #|    "input": 3272,
+    #|    "output": 383,
+    #|    "reasoning": 419,
+    #|    "cache": { "write": 7, "read": 52480 }
+    #|  },
+    #|  "modelID": "deepseek-v4-pro",
+    #|  "time": { "created": 1779755333700, "completed": 1779755350639 }
+    #|}
+  let result = stats.ingest_opencode_message_json(
+    session_id="opencode-s1",
+    message_id="msg-open-1",
+    data~,
   )
   assert_eq(result.imported, 0)
   assert_eq(result.skipped, 1)

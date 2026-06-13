@@ -20,8 +20,8 @@ test "usage sync path accepts standalone projects dir override" {
   assert_eq(
     usage_sync_path([
       "moonstat", "usage", "sync", "--projects-dir", "/tmp/claude/projects", "--codex-dir",
-      "/tmp/codex", "--gemini-dir", "/tmp/gemini",
+      "/tmp/codex", "--gemini-dir", "/tmp/gemini", "--opencode-export-path", "/tmp/opencode/messages.jsonl",
     ]),
-    "/usage/sync-session?projects_dir=/tmp/claude/projects&codex_dir=/tmp/codex&gemini_dir=/tmp/gemini",
+    "/usage/sync-session?projects_dir=/tmp/claude/projects&codex_dir=/tmp/codex&gemini_dir=/tmp/gemini&opencode_export_path=/tmp/opencode/messages.jsonl",
   )
 }

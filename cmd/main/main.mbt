@@ -79,7 +79,9 @@ fn print_help() -> Unit {
   println("  usage apps       Show ccs-style usage summary by app")
   println("  usage trends     Show ccs-style hourly/daily usage trends")
   println("  usage limits     Show ccs-style provider limit status")
-  println("  usage sync       Sync ccs-style Claude/Codex/Gemini session logs")
+  println(
+    "  usage sync       Sync ccs-style Claude/Codex/Gemini/OpenCode session logs",
+  )
   println("  usage providers  Show ccs-style provider statistics")
   println("  usage models     Show ccs-style model statistics")
   println("  usage sources    Show ccs-style data source breakdown")
@@ -122,7 +124,7 @@ fn print_help() -> Unit {
   println("  moonstat usage trends --start-date 0 --end-date 86400")
   println("  moonstat usage limits --provider-id codex-oauth --app-type codex")
   println(
-    "  moonstat usage sync --projects-dir ~/.claude/projects --codex-dir ~/.codex --gemini-dir ~/.gemini",
+    "  moonstat usage sync --projects-dir ~/.claude/projects --codex-dir ~/.codex --gemini-dir ~/.gemini --opencode-export-path ~/.local/share/opencode/opencode.messages.jsonl",
   )
   println("  moonstat usage detail --request-id req_x")
   println("  moonstat uninstall             # Remove hosts reroute")
@@ -290,6 +292,10 @@ fn usage_sync_path(args : Array[String]) -> String {
   }
   match parse_string_arg(args, "--gemini-dir") {
     Some(value) => query.push("gemini_dir=\{value}")
+    None => ()
+  }
+  match parse_string_arg(args, "--opencode-export-path") {
+    Some(value) => query.push("opencode_export_path=\{value}")
     None => ()
   }
   if query.is_empty() {
