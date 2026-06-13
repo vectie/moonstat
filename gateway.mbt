@@ -4776,13 +4776,21 @@ fn replace_images_for_text_only_model(
     Some(false) => return replace_image_blocks_with_marker(Json::object(obj))
     None => ()
   }
-  if !provider_media_heuristic_enabled(provider) {
+  if !rectifier_media_heuristic_enabled(provider) {
     return { body: Json::object(obj), count: 0 }
   }
   if !known_text_only_model(model) {
     return { body: Json::object(obj), count: 0 }
   }
   replace_image_blocks_with_marker(Json::object(obj))
+}
+
+///|
+fn rectifier_media_heuristic_enabled(provider : ProviderRouteTarget?) -> Bool {
+  let config = moonstat_rectifier_config_from_env()
+  config.enabled &&
+  config.request_media_heuristic &&
+  provider_media_heuristic_enabled(provider)
 }
 
 ///|

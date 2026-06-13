@@ -2906,6 +2906,53 @@ test "ccs media sanitizer can disable curated text-only heuristic" {
 }
 
 ///|
+test "ccs media sanitizer honors global heuristic toggle" {
+  let keys = [
+    "MOONSTAT_RECTIFIER_ENABLED", "MOONSTAT_RECTIFIER_MEDIA_HEURISTIC", "MOONSTAT_CCS_RECTIFIER_MEDIA_HEURISTIC",
+    "CCS_RECTIFIER_MEDIA_HEURISTIC",
+  ]
+  for key in keys {
+    @os.unsetenv(key) catch {
+      _ => ()
+    }
+  }
+  @os.setenv("MOONSTAT_RECTIFIER_MEDIA_HEURISTIC", "false", overwrite=true)
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "deepseek/deepseek-v4-pro",
+      #|  "messages": [
+      #|    {
+      #|      "role": "user",
+      #|      "content": [
+      #|        {
+      #|          "type": "image",
+      #|          "source": {
+      #|            "type": "base64",
+      #|            "media_type": "image/png",
+      #|            "data": "AAAA"
+      #|          }
+      #|        }
+      #|      ]
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let prepared = prepare_upstream_request_body(body)
+  @os.unsetenv("MOONSTAT_RECTIFIER_MEDIA_HEURISTIC") catch {
+    _ => ()
+  }
+  guard prepared is Object(obj) else { fail("expected object") }
+  guard obj["messages"] is Array(messages) else { fail("expected messages") }
+  guard messages[0] is Object(message) else { fail("expected message") }
+  guard message["content"] is Array(content) else { fail("expected content") }
+  guard content[0] is Object(image) else { fail("expected image") }
+  assert_eq(image["type"], Json::string("image"))
+  assert_true(image.get("source") is Some(_))
+}
+
+///|
 test "ccs media sanitizer honors explicit provider text-only capability" {
   let settings = @json.parse(
     (
