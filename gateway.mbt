@@ -2092,12 +2092,21 @@ fn gemini_model_from_endpoint(endpoint : String) -> String {
   match endpoint.find("/models/") {
     Some(index) => {
       let rest = endpoint[index + "/models/".length():]
-      match rest.find(":") {
-        Some(end) => normalize_gemini_model_id(rest[:end].to_owned())
-        None => normalize_gemini_model_id(rest.to_owned())
+      let without_query = match rest.find("?") {
+        Some(end) => rest[:end]
+        None => rest
+      }
+      let model = match without_query.find(":") {
+        Some(end) => without_query[:end].to_owned()
+        None => without_query.to_owned()
+      }
+      if model.is_empty() {
+        "unknown"
+      } else {
+        normalize_gemini_model_id(model)
       }
     }
-    None => "gemini"
+    None => "unknown"
   }
 }
 

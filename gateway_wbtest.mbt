@@ -40,6 +40,28 @@ test "codex compact responses keep compact backend endpoint" {
 }
 
 ///|
+test "gemini model extraction trims ccs query and action suffixes" {
+  assert_eq(
+    gemini_model_from_endpoint(
+      "/v1beta/models/gemini-pro:generateContent?key=abc",
+    ),
+    "gemini-pro",
+  )
+  assert_eq(
+    gemini_model_from_endpoint("/gemini/v1beta/models/gemini-2.0-flash?key=abc"),
+    "gemini-2.0-flash",
+  )
+  assert_eq(
+    gemini_model_from_endpoint(
+      "/gemini/v1beta/models/gemini-2.0-flash:countTokens",
+    ),
+    "gemini-2.0-flash",
+  )
+  assert_eq(gemini_model_from_endpoint("/v1beta/models"), "unknown")
+  assert_eq(gemini_model_from_endpoint("/v1beta/operations"), "unknown")
+}
+
+///|
 test "usage request detail route extracts ccs request id" {
   assert_eq(usage_request_detail_id("/usage/request-detail/req_123"), "req_123")
   assert_eq(usage_request_detail_id("req_123"), "req_123")
