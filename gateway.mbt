@@ -578,6 +578,15 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/proxy/status", (_, w) => {
     self.handle_proxy_status(w)
   })
+  router.add_handler(@httpx.Method::Post, "/start_proxy_server", (_, w) => {
+    self.handle_proxy_start_server(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/stop_proxy_server", (_, w) => {
+    self.handle_proxy_stop_server(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/stop_proxy_with_restore", (_, w) => {
+    self.handle_proxy_stop_with_restore(w)
+  })
   router.add_handler(@httpx.Method::Get, "/proxy/config", (_, w) => {
     self.handle_proxy_config(w)
   })
@@ -642,10 +651,19 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/proxy/takeover-status", (_, w) => {
     self.handle_proxy_takeover_status(w)
   })
+  router.add_handler(@httpx.Method::Get, "/is_live_takeover_active", (_, w) => {
+    self.handle_proxy_live_takeover_active(w)
+  })
   router.add_handler(@httpx.Method::Post, "/proxy/takeover-status", (r, w) => {
     self.handle_proxy_set_takeover_for_app(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/switch_proxy_provider", (r, w) => {
+    self.handle_proxy_switch_provider(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/proxy/running", (_, w) => {
+    self.handle_proxy_running(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/is_proxy_running", (_, w) => {
     self.handle_proxy_running(w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/logs", (r, w) => {
@@ -2755,6 +2773,47 @@ fn Gateway::proxy_status_json(self : Gateway) -> Json {
 }
 
 ///|
+async fn Gateway::handle_proxy_start_server(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.proxy_enabled = true
+  write_usage_json(w, self.proxy_server_info_json())
+}
+
+///|
+fn Gateway::proxy_server_info_json(self : Gateway) -> Json {
+  {
+    "address": Json::string(self.proxy_listen_address),
+    "port": Json::number(self.proxy_listen_port.to_double()),
+    "started_at": Json::string(self.started_at_ms.to_string()),
+  }.to_json()
+}
+
+///|
+async fn Gateway::handle_proxy_stop_server(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  if self.proxy_takeover_active() {
+    write_usage_bad_request(w, "live_takeover_active")
+    return
+  }
+  self.proxy_enabled = false
+  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+}
+
+///|
+async fn Gateway::handle_proxy_stop_with_restore(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.proxy_enabled = false
+  self.proxy_clear_takeover()
+  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+}
+
+///|
 async fn Gateway::handle_proxy_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
@@ -3274,6 +3333,50 @@ async fn Gateway::handle_proxy_set_takeover_for_app(
 }
 
 ///|
+async fn Gateway::handle_proxy_live_takeover_active(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, Json::boolean(self.proxy_takeover_active()))
+}
+
+///|
+async fn Gateway::handle_proxy_switch_provider(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let config = proxy_embedded_config(body)
+  guard proxy_string_request(r.path, config, ["app_type", "appType"])
+    is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app_type")
+    return
+  }
+  guard proxy_string_request(r.path, config, ["provider_id", "providerId"])
+    is Some(provider_id) else {
+    write_usage_bad_request(w, "missing_provider_id")
+    return
+  }
+  guard self.provider_router.provider_by_id(app_type, provider_id)
+    is Some(provider) else {
+    write_usage_bad_request(w, "provider_not_found")
+    return
+  }
+  if provider.provider_type == Some("official") {
+    write_usage_bad_request(w, "official_provider_blocked_during_takeover")
+    return
+  }
+  self.provider_router.set_current_provider(app_type, provider_id)
+  self.stats.set_active_target(
+    app_type,
+    provider.provider_id,
+    provider.provider_name,
+  )
+  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+}
+
+///|
 fn Gateway::proxy_takeover_status_json(self : Gateway) -> Json {
   {
     "claude": Json::boolean(self.proxy_takeover_for_app("claude")),
@@ -3307,13 +3410,23 @@ fn Gateway::proxy_takeover_active(self : Gateway) -> Bool {
 }
 
 ///|
+fn Gateway::proxy_clear_takeover(self : Gateway) -> Unit {
+  for
+    app_type in [
+      "claude", "claude-desktop", "codex", "gemini", "opencode", "openclaw", "hermes",
+    ] {
+    self.proxy_takeover_enabled.set(app_type, false)
+  }
+}
+
+///|
 async fn Gateway::handle_proxy_running(
-  _self : Gateway,
+  self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
-  w.write(Json::boolean(true).stringify())
+  w.write(Json::boolean(self.proxy_enabled).stringify())
   w.flush()
 }
 

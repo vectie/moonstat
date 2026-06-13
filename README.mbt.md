@@ -77,6 +77,9 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /status`
 - `GET /stats`
 - `GET /proxy/status`
+- `POST /start_proxy_server`
+- `POST /stop_proxy_server`
+- `POST /stop_proxy_with_restore`
 - `GET /proxy/config`
 - `POST /proxy/config`
 - `GET /proxy/global-config`
@@ -98,7 +101,10 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /proxy/auto-failover-enabled?app_type=claude&enabled=true`
 - `GET /proxy/takeover-status`
 - `POST /proxy/takeover-status?app_type=claude&enabled=true`
+- `GET /is_live_takeover_active`
+- `POST /switch_proxy_provider?app_type=claude&provider_id=codex-oauth`
 - `GET /proxy/running`
+- `GET /is_proxy_running`
 - `GET /usage/logs`
 - `GET /usage/summary`
 - `GET /usage/summary/by-app`

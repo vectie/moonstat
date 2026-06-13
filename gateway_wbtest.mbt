@@ -258,6 +258,21 @@ test "proxy global config state updates ccs config shapes" {
 }
 
 ///|
+test "proxy lifecycle state matches ccs command aliases" {
+  let gateway = Gateway::new(port=17016, host="127.0.0.16", model="gpt-5")
+  gateway.proxy_enabled = false
+  guard gateway.proxy_server_info_json() is Object(server_info) else {
+    fail("expected server info")
+  }
+  assert_eq(server_info["address"], Json::string("127.0.0.16"))
+  assert_eq(server_info["port"], Json::number(17016.0))
+  gateway.proxy_takeover_enabled.set("codex", true)
+  assert_true(gateway.proxy_takeover_active())
+  gateway.proxy_clear_takeover()
+  assert_false(gateway.proxy_takeover_active())
+}
+
+///|
 test "proxy app config state updates ccs app fields" {
   let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
   gateway.proxy_app_enabled.set("codex", false)

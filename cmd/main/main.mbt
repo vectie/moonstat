@@ -21,6 +21,9 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["health", ..] => check_health(arr)
     ["stats", ..] => check_stats(arr)
     ["proxy", "status", ..] => check_proxy_status(arr)
+    ["proxy", "start-proxy-server", ..] => start_proxy_server(arr)
+    ["proxy", "stop-proxy-server", ..] => stop_proxy_server(arr)
+    ["proxy", "stop-proxy-with-restore", ..] => stop_proxy_with_restore(arr)
     ["proxy", "config", "set", ..] => update_proxy_config(arr)
     ["proxy", "update-config", ..] => update_proxy_config(arr)
     ["proxy", "config", ..] => check_proxy_config(arr)
@@ -68,7 +71,11 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["proxy", "set-proxy-takeover-for-app", ..] =>
       set_proxy_takeover_status(arr)
     ["proxy", "takeover-status", ..] => check_proxy_takeover_status(arr)
+    ["proxy", "is-live-takeover-active", ..] =>
+      check_proxy_endpoint(arr, "/is_live_takeover_active")
+    ["proxy", "switch-proxy-provider", ..] => switch_proxy_provider(arr)
     ["proxy", "running", ..] => check_proxy_running(arr)
+    ["proxy", "is-proxy-running", ..] => check_proxy_running(arr)
     ["usage", "logs", ..] => check_usage_logs(arr)
     ["usage", "get-request-logs", ..] => check_usage_logs(arr)
     ["usage", "summary", ..] => check_usage_summary(arr)
@@ -140,6 +147,15 @@ fn print_help() -> Unit {
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")
   println("  proxy status           Show ccs-style proxy server status")
+  println(
+    "  proxy start-proxy-server  Enable proxy routing and print server info",
+  )
+  println(
+    "  proxy stop-proxy-server   Disable proxy routing when no takeover is active",
+  )
+  println(
+    "  proxy stop-proxy-with-restore  Disable proxy routing and clear takeover state",
+  )
   println("  proxy config           Show ccs-style proxy server config")
   println("  proxy config set       Update ccs-style legacy proxy config")
   println("  proxy global-config    Show ccs-style global proxy config")
@@ -163,7 +179,10 @@ fn print_help() -> Unit {
   println("  proxy auto-failover-enabled set  Set app auto-failover boolean")
   println("  proxy takeover-status  Show ccs-style app takeover status")
   println("  proxy takeover-status set  Set ccs-style app takeover state")
+  println("  proxy is-live-takeover-active  Show ccs takeover active boolean")
+  println("  proxy switch-proxy-provider  Hot-switch current app provider")
   println("  proxy running          Show ccs-style proxy running boolean")
+  println("  proxy is-proxy-running  Alias for ccs is_proxy_running")
   println("  usage logs  Show ccs-style recent proxy_request_logs")
   println("  usage get-request-logs  Alias for ccs get_request_logs")
   println("  usage summary    Show ccs-style usage summary")
@@ -248,6 +267,10 @@ fn print_help() -> Unit {
   println("  moonstat suite write-status --port 15721")
   println("  claude                         # Use Claude CLI through moonstat")
   println("  moonstat proxy status          # Show ccs-style proxy status")
+  println("  moonstat proxy start-proxy-server")
+  println(
+    "  moonstat proxy switch-proxy-provider --app-type codex --provider-id codex-oauth",
+  )
   println("  moonstat proxy app-config --app-type codex")
   println(
     "  moonstat proxy global-config set --proxy-enabled true --listen-address 127.0.0.1 --listen-port 15721",
@@ -356,6 +379,21 @@ async fn check_stats(args : Array[String]) -> Unit {
 ///|
 async fn check_proxy_status(args : Array[String]) -> Unit {
   check_proxy_endpoint(args, "/proxy/status")
+}
+
+///|
+async fn start_proxy_server(args : Array[String]) -> Unit {
+  check_json_post_endpoint(args, "/start_proxy_server", "Proxy")
+}
+
+///|
+async fn stop_proxy_server(args : Array[String]) -> Unit {
+  check_json_post_endpoint(args, "/stop_proxy_server", "Proxy")
+}
+
+///|
+async fn stop_proxy_with_restore(args : Array[String]) -> Unit {
+  check_json_post_endpoint(args, "/stop_proxy_with_restore", "Proxy")
 }
 
 ///|
@@ -501,6 +539,17 @@ async fn set_proxy_takeover_status(args : Array[String]) -> Unit {
   guard proxy_takeover_update_path(args) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --enabled")
+    return
+  }
+  check_json_post_endpoint(args, path, "Proxy")
+}
+
+///|
+async fn switch_proxy_provider(args : Array[String]) -> Unit {
+  guard proxy_provider_endpoint_path(args, "/switch_proxy_provider")
+    is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_post_endpoint(args, path, "Proxy")
