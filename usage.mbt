@@ -323,7 +323,7 @@ pub fn token_usage_from_gemini_stream_chunks(
     cache_read_tokens~,
     model~,
   )
-  if usage.has_billable_tokens() {
+  if input_tokens > 0 || output_tokens > 0 {
     Some(usage)
   } else {
     None

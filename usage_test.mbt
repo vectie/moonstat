@@ -275,3 +275,22 @@ test "gemini stream usage derives output from latest usage chunk" {
   assert_eq(usage.cache_read_tokens, 7)
   assert_eq(usage.model, Some("gemini-3-pro"))
 }
+
+///|
+test "gemini stream usage skips cache-only chunks like ccs" {
+  let chunks = [
+    parse_json_for_test(
+      (
+        #|{
+        #|  "modelVersion": "gemini-3-pro",
+        #|  "usageMetadata": {
+        #|    "promptTokenCount": 0,
+        #|    "totalTokenCount": 0,
+        #|    "cachedContentTokenCount": 99
+        #|  }
+        #|}
+      ),
+    ),
+  ]
+  assert_true(token_usage_from_gemini_stream_chunks(chunks) is None)
+}
