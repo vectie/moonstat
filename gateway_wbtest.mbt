@@ -3723,6 +3723,110 @@ test "openai chat stream finalizes usage after done" {
 }
 
 ///|
+test "openai chat stream subtracts cache creation from prompt usage like ccs" {
+  let state = OpenAIChatAnthropicStreamState::new()
+  let chunk = @json.parse(
+    (
+      #|{
+      #|  "id": "chatcmpl_cache_create",
+      #|  "model": "glm-5.1",
+      #|  "choices": [
+      #|    {
+      #|      "index": 0,
+      #|      "delta": {
+      #|        "tool_calls": [
+      #|          {
+      #|            "index": 0,
+      #|            "id": "tool-1",
+      #|            "function": { "name": "Bash", "arguments": "{\"command\":\"pwd\"}" }
+      #|          }
+      #|        ]
+      #|      }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(chunk)
+  let done = @json.parse(
+    (
+      #|{
+      #|  "choices": [
+      #|    {
+      #|      "index": 0,
+      #|      "delta": {},
+      #|      "finish_reason": "tool_calls"
+      #|    }
+      #|  ],
+      #|  "usage": {
+      #|    "prompt_tokens": 1000,
+      #|    "completion_tokens": 50,
+      #|    "prompt_tokens_details": { "cached_tokens": 600 },
+      #|    "cache_creation_input_tokens": 300
+      #|  }
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(done)
+  let done_events = state.finish()
+  let done_data = @json.parse(done_events[0].data)
+  guard done_data is Object(done_obj) else { fail("expected message delta") }
+  guard done_obj["usage"] is Object(usage) else { fail("expected usage") }
+  assert_eq(usage["input_tokens"], Json::number(100.0))
+  assert_eq(usage["output_tokens"], Json::number(50.0))
+  assert_eq(usage["cache_read_input_tokens"], Json::number(600.0))
+  assert_eq(usage["cache_creation_input_tokens"], Json::number(300.0))
+}
+
+///|
+test "openai chat stream clamps fresh input when cache exceeds prompt" {
+  let state = OpenAIChatAnthropicStreamState::new()
+  let chunk = @json.parse(
+    (
+      #|{
+      #|  "id": "chatcmpl_cache_clamp",
+      #|  "model": "glm-5.1",
+      #|  "choices": [
+      #|    {
+      #|      "index": 0,
+      #|      "delta": { "content": "hi" }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(chunk)
+  let done = @json.parse(
+    (
+      #|{
+      #|  "choices": [
+      #|    {
+      #|      "index": 0,
+      #|      "delta": {},
+      #|      "finish_reason": "stop"
+      #|    }
+      #|  ],
+      #|  "usage": {
+      #|    "prompt_tokens": 100,
+      #|    "completion_tokens": 50,
+      #|    "prompt_tokens_details": { "cached_tokens": 80 },
+      #|    "cache_creation_input_tokens": 50
+      #|  }
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(done)
+  let done_events = state.finish()
+  let done_data = @json.parse(done_events[0].data)
+  guard done_data is Object(done_obj) else { fail("expected message delta") }
+  guard done_obj["usage"] is Object(usage) else { fail("expected usage") }
+  assert_eq(usage["input_tokens"], Json::number(0.0))
+  assert_eq(usage["output_tokens"], Json::number(50.0))
+  assert_eq(usage["cache_read_input_tokens"], Json::number(80.0))
+  assert_eq(usage["cache_creation_input_tokens"], Json::number(50.0))
+}
+
+///|
 test "openai chat stream tool calls keep distinct indexes" {
   let state = OpenAIChatAnthropicStreamState::new()
   let first = @json.parse(
