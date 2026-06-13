@@ -19,6 +19,8 @@ pub struct Gateway {
   proxy_streaming_first_byte_timeout : Map[String, Int]
   proxy_streaming_idle_timeout : Map[String, Int]
   proxy_non_streaming_timeout : Map[String, Int]
+  proxy_default_cost_multipliers : Map[String, String]
+  proxy_pricing_model_sources : Map[String, String]
   logger : @pino.Logger
   started_at_ms : Int
 }
@@ -50,6 +52,8 @@ pub fn Gateway::new(
     proxy_streaming_first_byte_timeout: Map([], capacity=0),
     proxy_streaming_idle_timeout: Map([], capacity=0),
     proxy_non_streaming_timeout: Map([], capacity=0),
+    proxy_default_cost_multipliers: Map([], capacity=0),
+    proxy_pricing_model_sources: Map([], capacity=0),
     logger,
     started_at_ms: @async.now().to_int(),
   }
@@ -199,8 +203,8 @@ fn Gateway::activate_provider_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
-    cost_multiplier=provider_cost_multiplier(provider),
-    pricing_model_source=provider_pricing_model_source(provider),
+    cost_multiplier=self.provider_cost_multiplier(provider),
+    pricing_model_source=self.provider_pricing_model_source(provider),
   )
   true
 }
@@ -609,8 +613,21 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     r,
     w,
   ) => self.handle_proxy_default_cost_multiplier(r, w))
+  router.add_handler(@httpx.Method::Post, "/proxy/default-cost-multiplier", (
+    r,
+    w,
+  ) => self.handle_proxy_set_default_cost_multiplier(r, w))
+  router.add_handler(@httpx.Method::Post, "/set_default_cost_multiplier", (r, w) => {
+    self.handle_proxy_set_default_cost_multiplier(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/proxy/pricing-model-source", (r, w) => {
     self.handle_proxy_pricing_model_source(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/proxy/pricing-model-source", (r, w) => {
+    self.handle_proxy_set_pricing_model_source(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_pricing_model_source", (r, w) => {
+    self.handle_proxy_set_pricing_model_source(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/provider-health", (r, w) => {
     self.handle_proxy_provider_health(r, w)
@@ -2461,8 +2478,21 @@ fn claude_provider_from_env(app_type : String) -> ProviderRouteTarget? {
 }
 
 ///|
-fn provider_cost_multiplier(provider : ProviderRouteTarget) -> String {
-  let default_multiplier = default_cost_multiplier_for_app(provider.app_type)
+fn Gateway::provider_cost_multiplier(
+  self : Gateway,
+  provider : ProviderRouteTarget,
+) -> String {
+  provider_cost_multiplier_from_default(
+    provider,
+    self.proxy_default_cost_multiplier_for_app(provider.app_type),
+  )
+}
+
+///|
+fn provider_cost_multiplier_from_default(
+  provider : ProviderRouteTarget,
+  default_multiplier : String,
+) -> String {
   guard provider.settings_config is Some(settings) else {
     return default_multiplier
   }
@@ -2528,8 +2558,21 @@ fn default_cost_multiplier_for_app(app_type : String) -> String {
 }
 
 ///|
-fn provider_pricing_model_source(provider : ProviderRouteTarget) -> String {
-  let default_source = default_pricing_model_source_for_app(provider.app_type)
+fn Gateway::provider_pricing_model_source(
+  self : Gateway,
+  provider : ProviderRouteTarget,
+) -> String {
+  provider_pricing_model_source_from_default(
+    provider,
+    self.proxy_pricing_model_source_for_app(provider.app_type),
+  )
+}
+
+///|
+fn provider_pricing_model_source_from_default(
+  provider : ProviderRouteTarget,
+  default_source : String,
+) -> String {
   guard provider.settings_config is Some(settings) else {
     return default_source
   }
@@ -2944,20 +2987,7 @@ async fn Gateway::handle_proxy_update_app_config(
 
 ///|
 async fn Gateway::handle_proxy_default_cost_multiplier(
-  _self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  guard usage_query_value_any(r.path, "app_type", "appType") is Some(app_type) else {
-    write_usage_bad_request(w, "missing_app_type")
-    return
-  }
-  write_usage_json(w, Json::string(default_cost_multiplier_for_app(app_type)))
-}
-
-///|
-async fn Gateway::handle_proxy_pricing_model_source(
-  _self : Gateway,
+  self : Gateway,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -2967,8 +2997,96 @@ async fn Gateway::handle_proxy_pricing_model_source(
   }
   write_usage_json(
     w,
-    Json::string(default_pricing_model_source_for_app(app_type)),
+    Json::string(self.proxy_default_cost_multiplier_for_app(app_type)),
   )
+}
+
+///|
+async fn Gateway::handle_proxy_set_default_cost_multiplier(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let config = proxy_embedded_config(body)
+  guard proxy_string_request(r.path, config, ["app_type", "appType"])
+    is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app_type")
+    return
+  }
+  guard proxy_string_request(r.path, config, ["value"]) is Some(value) else {
+    write_usage_bad_request(w, "missing_value")
+    return
+  }
+  if !usage_non_negative_decimal(value) {
+    write_usage_bad_request(w, "invalid_default_cost_multiplier")
+    return
+  }
+  let trimmed = value.trim().to_owned()
+  self.proxy_default_cost_multipliers.set(app_type, trimmed)
+  write_usage_json(w, Json::string(trimmed))
+}
+
+///|
+async fn Gateway::handle_proxy_pricing_model_source(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard usage_query_value_any(r.path, "app_type", "appType") is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app_type")
+    return
+  }
+  write_usage_json(
+    w,
+    Json::string(self.proxy_pricing_model_source_for_app(app_type)),
+  )
+}
+
+///|
+async fn Gateway::handle_proxy_set_pricing_model_source(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let config = proxy_embedded_config(body)
+  guard proxy_string_request(r.path, config, ["app_type", "appType"])
+    is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app_type")
+    return
+  }
+  guard proxy_string_request(r.path, config, ["value"]) is Some(value) else {
+    write_usage_bad_request(w, "missing_value")
+    return
+  }
+  if !pricing_model_source_is_valid(value) {
+    write_usage_bad_request(w, "invalid_pricing_model_source")
+    return
+  }
+  let trimmed = value.trim().to_owned()
+  self.proxy_pricing_model_sources.set(app_type, trimmed)
+  write_usage_json(w, Json::string(trimmed))
+}
+
+///|
+fn Gateway::proxy_default_cost_multiplier_for_app(
+  self : Gateway,
+  app_type : String,
+) -> String {
+  self.proxy_default_cost_multipliers
+  .get(app_type)
+  .unwrap_or(default_cost_multiplier_for_app(app_type))
+}
+
+///|
+fn Gateway::proxy_pricing_model_source_for_app(
+  self : Gateway,
+  app_type : String,
+) -> String {
+  self.proxy_pricing_model_sources
+  .get(app_type)
+  .unwrap_or(default_pricing_model_source_for_app(app_type))
 }
 
 ///|

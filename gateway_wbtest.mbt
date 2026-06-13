@@ -380,6 +380,22 @@ test "proxy pricing config aliases use ccs env-backed defaults" {
 }
 
 ///|
+test "proxy pricing config runtime overrides feed provider activation defaults" {
+  let gateway = Gateway::new(port=17017, host="127.0.0.17", model="gpt-5")
+  gateway.proxy_default_cost_multipliers.set("codex", "1.75")
+  gateway.proxy_pricing_model_sources.set("codex", "request")
+  let provider = ProviderRouteTarget::new(
+    app_type="codex",
+    provider_id="codex-oauth",
+    provider_name="Codex OAuth",
+  )
+  assert_eq(gateway.proxy_default_cost_multiplier_for_app("codex"), "1.75")
+  assert_eq(gateway.proxy_pricing_model_source_for_app("codex"), "request")
+  assert_eq(gateway.provider_cost_multiplier(provider), "1.75")
+  assert_eq(gateway.provider_pricing_model_source(provider), "request")
+}
+
+///|
 test "proxy circuit breaker config alias matches ccs shape" {
   let gateway = Gateway::new(port=17006, host="127.0.0.7", model="gpt-5")
   guard gateway.provider_router.circuit_config.to_json() is Object(config) else {
@@ -921,7 +937,13 @@ test "ccs default cost multiplier env falls back per app" {
     provider_id="default-cost",
     provider_name="Default Cost",
   )
-  assert_eq(provider_cost_multiplier(provider), "1.75")
+  assert_eq(
+    provider_cost_multiplier_from_default(
+      provider,
+      default_cost_multiplier_for_app(provider.app_type),
+    ),
+    "1.75",
+  )
   for key in keys {
     @os.unsetenv(key) catch {
       _ => ()
@@ -950,7 +972,13 @@ test "ccs provider cost multiplier overrides default env" {
       ),
     ),
   )
-  assert_eq(provider_cost_multiplier(provider), "2.5")
+  assert_eq(
+    provider_cost_multiplier_from_default(
+      provider,
+      default_cost_multiplier_for_app(provider.app_type),
+    ),
+    "2.5",
+  )
   @os.unsetenv(key) catch {
     _ => ()
   }
@@ -977,7 +1005,13 @@ test "invalid ccs provider cost multiplier falls back to default env" {
       ),
     ),
   )
-  assert_eq(provider_cost_multiplier(provider), "1.75")
+  assert_eq(
+    provider_cost_multiplier_from_default(
+      provider,
+      default_cost_multiplier_for_app(provider.app_type),
+    ),
+    "1.75",
+  )
   @os.unsetenv(key) catch {
     _ => ()
   }
@@ -1000,7 +1034,13 @@ test "ccs default pricing model source env falls back per app" {
     provider_id="default-pricing-source",
     provider_name="Default Pricing Source",
   )
-  assert_eq(provider_pricing_model_source(provider), "request")
+  assert_eq(
+    provider_pricing_model_source_from_default(
+      provider,
+      default_pricing_model_source_for_app(provider.app_type),
+    ),
+    "request",
+  )
   for key in keys {
     @os.unsetenv(key) catch {
       _ => ()
@@ -1029,7 +1069,13 @@ test "ccs provider pricing model source overrides default env" {
       ),
     ),
   )
-  assert_eq(provider_pricing_model_source(provider), "request")
+  assert_eq(
+    provider_pricing_model_source_from_default(
+      provider,
+      default_pricing_model_source_for_app(provider.app_type),
+    ),
+    "request",
+  )
   @os.unsetenv(key) catch {
     _ => ()
   }
@@ -1056,7 +1102,13 @@ test "invalid ccs provider pricing model source falls back to default env" {
       ),
     ),
   )
-  assert_eq(provider_pricing_model_source(provider), "request")
+  assert_eq(
+    provider_pricing_model_source_from_default(
+      provider,
+      default_pricing_model_source_for_app(provider.app_type),
+    ),
+    "request",
+  )
   @os.unsetenv(key) catch {
     _ => ()
   }

@@ -172,6 +172,16 @@ test "proxy config setter paths encode ccs command arguments" {
     Some("/proxy/takeover-status?app_type=codex&enabled=true"),
   )
   assert_eq(
+    proxy_app_value_update_path(
+      [
+        "moonstat", "proxy", "default-cost-multiplier", "set", "--app-type", "codex",
+        "--value", "1.25",
+      ],
+      "/proxy/default-cost-multiplier",
+    ),
+    Some("/proxy/default-cost-multiplier?app_type=codex&value=1.25"),
+  )
+  assert_eq(
     proxy_provider_endpoint_path(
       [
         "moonstat", "proxy", "switch-proxy-provider", "--app-type", "codex", "--provider-id",

@@ -87,7 +87,11 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /proxy/app-config?app_type=claude`
 - `POST /proxy/app-config?app_type=claude&enabled=true`
 - `GET /proxy/default-cost-multiplier?app_type=claude`
+- `POST /proxy/default-cost-multiplier?app_type=claude&value=1.25`
+- `POST /set_default_cost_multiplier?app_type=claude&value=1.25`
 - `GET /proxy/pricing-model-source?app_type=claude`
+- `POST /proxy/pricing-model-source?app_type=claude&value=request`
+- `POST /set_pricing_model_source?app_type=claude&value=request`
 - `GET /proxy/provider-health?app_type=claude&provider_id=codex-oauth`
 - `GET /proxy/circuit-breaker-config`
 - `POST /proxy/circuit-breaker-config`

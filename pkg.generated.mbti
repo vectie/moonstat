@@ -316,6 +316,8 @@ pub struct Gateway {
   proxy_streaming_first_byte_timeout : Map[String, Int]
   proxy_streaming_idle_timeout : Map[String, Int]
   proxy_non_streaming_timeout : Map[String, Int]
+  proxy_default_cost_multipliers : Map[String, String]
+  proxy_pricing_model_sources : Map[String, String]
   logger : @pino.Logger
   started_at_ms : Int
 }

@@ -33,8 +33,16 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["proxy", "app-config", "set", ..] => update_proxy_app_config(arr)
     ["proxy", "update-app-config", ..] => update_proxy_app_config(arr)
     ["proxy", "app-config", ..] => check_proxy_app_config(arr)
+    ["proxy", "default-cost-multiplier", "set", ..] =>
+      set_proxy_default_cost_multiplier(arr)
+    ["proxy", "set-default-cost-multiplier", ..] =>
+      set_proxy_default_cost_multiplier(arr)
     ["proxy", "default-cost-multiplier", ..] =>
       check_proxy_default_cost_multiplier(arr)
+    ["proxy", "pricing-model-source", "set", ..] =>
+      set_proxy_pricing_model_source(arr)
+    ["proxy", "set-pricing-model-source", ..] =>
+      set_proxy_pricing_model_source(arr)
     ["proxy", "pricing-model-source", ..] =>
       check_proxy_pricing_model_source(arr)
     ["proxy", "provider-health", ..] => check_proxy_provider_health(arr)
@@ -163,7 +171,11 @@ fn print_help() -> Unit {
   println("  proxy app-config       Show ccs-style app proxy config")
   println("  proxy app-config set   Update ccs-style app proxy config")
   println("  proxy default-cost-multiplier  Show ccs-style app cost multiplier")
+  println(
+    "  proxy default-cost-multiplier set  Set ccs-style app cost multiplier",
+  )
   println("  proxy pricing-model-source     Show ccs-style app pricing mode")
+  println("  proxy pricing-model-source set     Set ccs-style app pricing mode")
   println("  proxy provider-health          Show ccs-style provider health")
   println("  proxy circuit-breaker-config   Show ccs-style circuit config")
   println("  proxy circuit-breaker-config set  Update ccs-style circuit config")
@@ -238,6 +250,7 @@ fn print_help() -> Unit {
   println("Proxy config options:")
   println("  --app-type <app>  App type for app-level proxy config")
   println("  --provider-id <id> Provider id for provider-level proxy commands")
+  println("  --value <value>    Value for ccs proxy scalar setter commands")
   println(
     "  --enabled <bool>   Boolean for proxy app/takeover/failover commands",
   )
@@ -277,6 +290,12 @@ fn print_help() -> Unit {
   )
   println(
     "  moonstat proxy app-config set --app-type codex --enabled true --max-retries 3",
+  )
+  println(
+    "  moonstat proxy default-cost-multiplier set --app-type codex --value 1.25",
+  )
+  println(
+    "  moonstat proxy pricing-model-source set --app-type codex --value request",
   )
   println(
     "  moonstat proxy takeover-status set --app-type codex --enabled true",
@@ -440,8 +459,30 @@ async fn check_proxy_default_cost_multiplier(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn set_proxy_default_cost_multiplier(args : Array[String]) -> Unit {
+  guard proxy_app_value_update_path(args, "/proxy/default-cost-multiplier")
+    is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --value")
+    return
+  }
+  check_json_post_endpoint(args, path, "Proxy")
+}
+
+///|
 async fn check_proxy_pricing_model_source(args : Array[String]) -> Unit {
   check_proxy_app_endpoint(args, "/proxy/pricing-model-source")
+}
+
+///|
+async fn set_proxy_pricing_model_source(args : Array[String]) -> Unit {
+  guard proxy_app_value_update_path(args, "/proxy/pricing-model-source")
+    is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --value")
+    return
+  }
+  check_json_post_endpoint(args, path, "Proxy")
 }
 
 ///|
@@ -592,6 +633,15 @@ fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? 
   let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
   Some(
     "\{path}?provider_id=\{cli_url_encode(provider_id)}&app_type=\{cli_url_encode(app_type)}",
+  )
+}
+
+///|
+fn proxy_app_value_update_path(args : Array[String], path : String) -> String? {
+  guard parse_string_arg(args, "--value") is Some(value) else { return None }
+  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  Some(
+    "\{path}?app_type=\{cli_url_encode(app_type)}&value=\{cli_url_encode(value)}",
   )
 }
 
