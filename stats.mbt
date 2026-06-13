@@ -524,7 +524,12 @@ fn TrafficStats::backfill_missing_usage_costs_for_model(
       model=Some(log.model),
     )
     guard usage.has_billable_tokens() else { continue }
-    guard find_model_pricing(log.model, pricing_overrides, deleted_model_ids)
+    guard request_log_backfill_pricing_model(log) is Some(pricing_model) else {
+      continue
+    }
+    guard find_model_pricing(
+        pricing_model, pricing_overrides, deleted_model_ids,
+      )
       is Some(pricing) else {
       continue
     }
@@ -573,6 +578,31 @@ fn request_log_needs_cost_backfill(log : RequestLog, model_id : String) -> Bool 
   log.model == model_id ||
   log.request_model == Some(model_id) ||
   log.pricing_model == Some(model_id)
+}
+
+///|
+fn request_log_backfill_pricing_model(log : RequestLog) -> String? {
+  match log.pricing_model {
+    Some(pricing_model) if !is_placeholder_pricing_model(pricing_model) =>
+      return Some(pricing_model)
+    _ => ()
+  }
+  if !is_placeholder_pricing_model(log.model) {
+    return Some(log.model)
+  }
+  match log.request_model {
+    Some(request_model) if request_model != log.model => Some(request_model)
+    _ => None
+  }
+}
+
+///|
+fn is_placeholder_pricing_model(model_id : String) -> Bool {
+  let normalized = model_id.trim().to_lower()
+  normalized.is_empty() ||
+  normalized == "unknown" ||
+  normalized == "null" ||
+  normalized == "none"
 }
 
 ///|

@@ -1385,3 +1385,56 @@ test "traffic stats backfills missing costs after ccs pricing update" {
   assert_eq(stats.request_logs[0].total_cost_usd, "0.00004")
   assert_eq(stats.request_logs[1].total_cost_usd, "9.000000")
 }
+
+///|
+test "traffic stats backfill uses persisted ccs pricing model" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-pricing-model",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="upstream-unpriced",
+      request_model=Some("client-alias"),
+      pricing_model=Some("custom-backfill"),
+      usage=TokenUsage::new(input_tokens=10, output_tokens=5),
+      total_cost_usd="0",
+      status_code=200,
+      created_at=1,
+    ),
+  )
+  let updated = stats.backfill_missing_usage_costs_for_model(
+    "custom-backfill",
+    [mp("custom-backfill", "Custom Backfill", "2", "4", "0", "0")],
+    Map([], capacity=0),
+  )
+  assert_eq(updated, 1)
+  assert_eq(stats.request_logs[0].input_cost_usd, "0.00002")
+  assert_eq(stats.request_logs[0].output_cost_usd, "0.00002")
+  assert_eq(stats.request_logs[0].total_cost_usd, "0.00004")
+}
+
+///|
+test "traffic stats backfill does not use request model for real unpriced model" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-real-unpriced",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="real-upstream-unpriced",
+      request_model=Some("custom-backfill"),
+      usage=TokenUsage::new(input_tokens=10, output_tokens=5),
+      total_cost_usd="0",
+      status_code=200,
+      created_at=1,
+    ),
+  )
+  let updated = stats.backfill_missing_usage_costs_for_model(
+    "custom-backfill",
+    [mp("custom-backfill", "Custom Backfill", "2", "4", "0", "0")],
+    Map([], capacity=0),
+  )
+  assert_eq(updated, 0)
+  assert_eq(stats.request_logs[0].total_cost_usd, "0")
+}
