@@ -410,6 +410,69 @@ test "usage logs paginated json matches ccs filters and ordering" {
 }
 
 ///|
+test "usage logs provider name filter matches ccs joined provider name semantics" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-proxy",
+      provider_id="codex-oauth",
+      provider_name=Some("Codex OAuth"),
+      app_type="codex",
+      model="gpt-5",
+      usage=TokenUsage::new(input_tokens=10, output_tokens=2),
+      total_cost_usd="0.000010",
+      status_code=200,
+      created_at=100,
+      data_source="proxy",
+    ),
+  )
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-session",
+      provider_id="_codex_session",
+      app_type="codex",
+      model="gpt-5",
+      usage=TokenUsage::new(input_tokens=30, output_tokens=7),
+      total_cost_usd="0.000010",
+      status_code=200,
+      created_at=10_000,
+      data_source="codex_session",
+    ),
+  )
+  guard stats.usage_logs_paginated_json(
+      RequestLogFilters::new(),
+      page=0,
+      page_size=10,
+    )
+    is Object(all_logs) else {
+    fail("expected all logs page")
+  }
+  guard all_logs["data"] is Array(all_rows) else {
+    fail("expected all logs rows")
+  }
+  guard all_rows[0] is Object(session_row) else { fail("expected session row") }
+  assert_eq(session_row["providerName"], Json::string("Codex (Session)"))
+  guard stats.usage_logs_paginated_json(
+      RequestLogFilters::new(provider_name=Some("Session")),
+      page=0,
+      page_size=10,
+    )
+    is Object(session_filtered) else {
+    fail("expected filtered session page")
+  }
+  assert_eq(session_filtered["total"], Json::number(0.0))
+  guard stats.usage_logs_paginated_json(
+      RequestLogFilters::new(provider_name=Some("OAuth")),
+      page=0,
+      page_size=10,
+    )
+    is Object(provider_filtered) else {
+    fail("expected filtered provider page")
+  }
+  assert_eq(provider_filtered["total"], Json::number(1.0))
+}
+
+///|
 test "request detail lookup returns retained proxy request log" {
   let stats = TrafficStats::new()
   stats.record_request_log(

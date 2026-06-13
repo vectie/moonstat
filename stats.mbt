@@ -1177,7 +1177,7 @@ fn request_log_matches_filters(
   }
   match filters.provider_name {
     Some(filter) =>
-      if !request_log_text_contains(request_log_provider_name(log), filter) {
+      if !request_log_provider_name_matches_ccs_filter(log, filter) {
         return false
       }
     _ => ()
@@ -1205,6 +1205,17 @@ fn request_log_matches_filters(
 ///|
 fn request_log_text_contains(value : String, needle : String) -> Bool {
   needle.is_empty() || value.to_lower().contains(needle.to_lower())
+}
+
+///|
+fn request_log_provider_name_matches_ccs_filter(
+  log : RequestLog,
+  needle : String,
+) -> Bool {
+  match log.provider_name {
+    Some(provider_name) => request_log_text_contains(provider_name, needle)
+    None => false
+  }
 }
 
 ///|
