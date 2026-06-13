@@ -16,6 +16,16 @@ pub fn build_models_url_candidates(String, Bool, String?) -> Result[Array[String
 
 pub fn calculate_cost_for_app(String, TokenUsage, ModelPricing, cost_multiplier? : String) -> CostBreakdown
 
+pub let ccs_fwd_all_providers_failed : String
+
+pub let ccs_fwd_provider_failed_retry : String
+
+pub let ccs_fwd_single_provider_failed : String
+
+pub fn ccs_map_proxy_error_to_status(CcsProxyError) -> Int
+
+pub fn ccs_proxy_error_message(CcsProxyError) -> String
+
 pub fn convert_anthropic_to_codex(AnthropicRequest, String) -> CodexInput
 
 pub let credential_statuses : Array[CredentialStatus]
@@ -168,6 +178,27 @@ pub struct AnthropicUsage {
   cache_creation_input_tokens : Int?
 } derive(Show, @json.FromJson)
 pub impl ToJson for AnthropicUsage
+
+pub enum CcsProxyError {
+  AlreadyRunning
+  NotRunning
+  UpstreamError(status~ : Int, body~ : String?)
+  Timeout(String)
+  StreamIdleTimeout(Int)
+  ForwardFailed(String)
+  NoAvailableProvider
+  AllProvidersCircuitOpenError
+  NoProvidersConfiguredError
+  MaxRetriesExceeded
+  ProviderUnhealthy(String)
+  ConfigError(String)
+  InvalidRequest(String)
+  AuthError(String)
+  DatabaseError(String)
+  TransformError(String)
+  Unknown(String)
+}
+pub fn CcsProxyError::to_string(Self) -> String
 
 pub struct CircuitBreaker {
   mut state : CircuitState

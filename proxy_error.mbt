@@ -1,0 +1,242 @@
+///|
+pub let ccs_fwd_provider_failed_retry : String = "FWD-001"
+
+///|
+pub let ccs_fwd_all_providers_failed : String = "FWD-002"
+
+///|
+pub let ccs_fwd_single_provider_failed : String = "FWD-003"
+
+///|
+pub enum CcsProxyError {
+  AlreadyRunning
+  NotRunning
+  UpstreamError(status~ : Int, body~ : String?)
+  Timeout(String)
+  StreamIdleTimeout(Int)
+  ForwardFailed(String)
+  NoAvailableProvider
+  AllProvidersCircuitOpenError
+  NoProvidersConfiguredError
+  MaxRetriesExceeded
+  ProviderUnhealthy(String)
+  ConfigError(String)
+  InvalidRequest(String)
+  AuthError(String)
+  DatabaseError(String)
+  TransformError(String)
+  Unknown(String)
+}
+
+///|
+pub fn CcsProxyError::to_string(self : CcsProxyError) -> String {
+  match self {
+    AlreadyRunning => "proxy already running"
+    NotRunning => "proxy not running"
+    UpstreamError(status~, body~) =>
+      match body {
+        Some(body) => "upstream error \{status}: \{body}"
+        None => "upstream error \{status}"
+      }
+    Timeout(message) => "timeout: \{message}"
+    StreamIdleTimeout(seconds) => "stream idle timeout after \{seconds}s"
+    ForwardFailed(message) => "forward failed: \{message}"
+    NoAvailableProvider => "no available provider"
+    AllProvidersCircuitOpenError => "all providers circuit open"
+    NoProvidersConfiguredError => "no providers configured"
+    MaxRetriesExceeded => "max retries exceeded"
+    ProviderUnhealthy(message) => "provider unhealthy: \{message}"
+    ConfigError(message) => "config error: \{message}"
+    InvalidRequest(message) => "invalid request: \{message}"
+    AuthError(message) => "auth error: \{message}"
+    DatabaseError(message) => "database error: \{message}"
+    TransformError(message) => "transform error: \{message}"
+    Unknown(message) => message
+  }
+}
+
+///|
+pub fn ccs_map_proxy_error_to_status(error : CcsProxyError) -> Int {
+  match error {
+    AlreadyRunning => @status.Conflict
+    NotRunning => @status.ServiceUnavailable
+    UpstreamError(status~, ..) => status
+    Timeout(_) | StreamIdleTimeout(_) => @status.GatewayTimeout
+    ForwardFailed(_) => @status.BadGateway
+    NoAvailableProvider
+    | AllProvidersCircuitOpenError
+    | NoProvidersConfiguredError
+    | MaxRetriesExceeded
+    | ProviderUnhealthy(_) => @status.ServiceUnavailable
+    ConfigError(_) | InvalidRequest(_) => @status.BadRequest
+    AuthError(_) => @status.Unauthorized
+    DatabaseError(_) => @status.InternalServerError
+    TransformError(_) => @status.UnprocessableEntity
+    Unknown(_) => @status.InternalServerError
+  }
+}
+
+///|
+pub fn ccs_proxy_error_message(error : CcsProxyError) -> String {
+  match error {
+    UpstreamError(status~, body~) =>
+      match body {
+        Some(body) => "上游错误 (\{status}): \{body}"
+        None => "上游错误 (\{status})"
+      }
+    Timeout(message) => "请求超时: \{message}"
+    ForwardFailed(message) => "转发失败: \{message}"
+    NoAvailableProvider => "无可用 Provider"
+    AllProvidersCircuitOpenError => "所有供应商已熔断，无可用渠道"
+    NoProvidersConfiguredError => "未配置供应商"
+    MaxRetriesExceeded => "所有 Provider 都失败，重试耗尽"
+    ProviderUnhealthy(message) => "Provider 不健康: \{message}"
+    DatabaseError(message) => "数据库错误: \{message}"
+    TransformError(message) => "请求/响应转换错误: \{message}"
+    _ => error.to_string()
+  }
+}
+
+///|
+fn ccs_build_retryable_failure_log(
+  provider_name : String,
+  attempted_providers : Int,
+  total_providers : Int,
+  error : CcsProxyError,
+) -> (String, String) {
+  let error_summary = ccs_summarize_proxy_error(error)
+  if total_providers <= 1 {
+    (
+      ccs_fwd_single_provider_failed,
+      "Provider \{provider_name} 请求失败: \{error_summary}",
+    )
+  } else {
+    (
+      ccs_fwd_provider_failed_retry,
+      "Provider \{provider_name} 失败，继续尝试下一个 (\{attempted_providers}/\{total_providers}): \{error_summary}",
+    )
+  }
+}
+
+///|
+fn ccs_build_terminal_failure_log(
+  attempted_providers : Int,
+  total_providers : Int,
+  last_error : CcsProxyError?,
+) -> (String, String)? {
+  if total_providers <= 1 {
+    return None
+  }
+  let error_summary = match last_error {
+    Some(error) => ccs_summarize_proxy_error(error)
+    None => "未知错误"
+  }
+  Some(
+    (
+      ccs_fwd_all_providers_failed,
+      "已尝试 \{attempted_providers}/\{total_providers} 个 Provider，均失败。最后错误: \{error_summary}",
+    ),
+  )
+}
+
+///|
+fn ccs_summarize_proxy_error(error : CcsProxyError) -> String {
+  match error {
+    UpstreamError(status~, body~) =>
+      match body {
+        Some(body) => {
+          let summary = ccs_summarize_upstream_body(body)
+          if summary.is_empty() {
+            "上游 HTTP \{status}"
+          } else {
+            "上游 HTTP \{status}: \{summary}"
+          }
+        }
+        None => "上游 HTTP \{status}"
+      }
+    Timeout(message) =>
+      "请求超时: \{ccs_summarize_text_for_log(message, 180)}"
+    ForwardFailed(message) =>
+      "请求转发失败: \{ccs_summarize_text_for_log(message, 180)}"
+    TransformError(message) =>
+      "响应转换失败: \{ccs_summarize_text_for_log(message, 180)}"
+    ConfigError(message) =>
+      "配置错误: \{ccs_summarize_text_for_log(message, 180)}"
+    AuthError(message) =>
+      "认证失败: \{ccs_summarize_text_for_log(message, 180)}"
+    _ => ccs_summarize_text_for_log(error.to_string(), 180)
+  }
+}
+
+///|
+fn ccs_summarize_upstream_body(body : String) -> String {
+  let json_body = @json.parse(body) catch {
+    _ => return ccs_summarize_text_for_log(body, 180)
+  }
+  match ccs_json_error_message(json_body) {
+    Some(message) => ccs_summarize_text_for_log(message, 180)
+    None => ccs_summarize_text_for_log(json_body.stringify(), 180)
+  }
+}
+
+///|
+fn ccs_json_error_message(body : Json) -> String? {
+  match body {
+    Object(obj) => {
+      match obj.get("error") {
+        Some(Object(error_obj)) =>
+          match json_string_from_map(error_obj, "message") {
+            Some(message) => return Some(message)
+            None => ()
+          }
+        Some(String(message)) => return Some(message)
+        _ => ()
+      }
+      match json_string_from_map(obj, "message") {
+        Some(message) => return Some(message)
+        None => ()
+      }
+      match json_string_from_map(obj, "detail") {
+        Some(message) => return Some(message)
+        None => ()
+      }
+      None
+    }
+    _ => None
+  }
+}
+
+///|
+fn ccs_summarize_text_for_log(text : String, max_chars : Int) -> String {
+  let normalized = ccs_collapse_ascii_whitespace(text).trim()
+  if normalized.length() <= max_chars {
+    normalized.to_owned()
+  } else {
+    normalized[:max_chars].trim().to_owned() + "..."
+  }
+}
+
+///|
+fn ccs_collapse_ascii_whitespace(text : String) -> String {
+  let buffer = StringBuilder::new()
+  let mut in_whitespace = false
+  let mut has_output = false
+  for ch in text {
+    if ccs_is_ascii_whitespace(ch) {
+      in_whitespace = true
+    } else {
+      if in_whitespace && has_output {
+        buffer.write_char(' ')
+      }
+      buffer.write_char(ch)
+      has_output = true
+      in_whitespace = false
+    }
+  }
+  buffer.to_string()
+}
+
+///|
+fn ccs_is_ascii_whitespace(ch : Char) -> Bool {
+  ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t'
+}
