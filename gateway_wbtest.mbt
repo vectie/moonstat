@@ -2475,6 +2475,52 @@ test "ccs upstream body preparation canonicalizes object order" {
 }
 
 ///|
+test "ccs upstream body filter preserves all schema name maps" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "_top": "drop",
+      #|  "schema": {
+      #|    "patternProperties": {
+      #|      "^_x": { "_private_note": "drop", "type": "string" }
+      #|    },
+      #|    "definitions": {
+      #|      "_legacy": { "_private_note": "drop", "type": "number" }
+      #|    },
+      #|    "$defs": {
+      #|      "_modern": { "_private_note": "drop", "type": "boolean" }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+  let prepared = prepare_upstream_request_body(body)
+  guard prepared is Object(obj) else { fail("expected object") }
+  assert_true(obj.get("_top") is None)
+  guard obj["schema"] is Object(schema) else { fail("expected schema") }
+  guard schema["patternProperties"] is Object(pattern_properties) else {
+    fail("expected patternProperties")
+  }
+  guard pattern_properties["^_x"] is Object(pattern) else {
+    fail("expected pattern property")
+  }
+  assert_true(pattern.get("_private_note") is None)
+  assert_eq(pattern["type"], Json::string("string"))
+  guard schema["definitions"] is Object(definitions) else {
+    fail("expected definitions")
+  }
+  guard definitions["_legacy"] is Object(legacy) else {
+    fail("expected definition")
+  }
+  assert_true(legacy.get("_private_note") is None)
+  assert_eq(legacy["type"], Json::string("number"))
+  guard schema["$defs"] is Object(defs) else { fail("expected $defs") }
+  guard defs["_modern"] is Object(modern) else { fail("expected $defs entry") }
+  assert_true(modern.get("_private_note") is None)
+  assert_eq(modern["type"], Json::string("boolean"))
+}
+
+///|
 test "ccs thinking signature rectifier detects ccs error phrases" {
   let config = default_rectifier_config()
   assert_true(config.request_media_fallback)
