@@ -170,6 +170,26 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /check_env_conflicts?app=claude`
 - `POST /delete_env_vars`
 - `POST /restore_env_backup?backupPath=...`
+- `GET /get_claude_mcp_status`
+- `GET /read_claude_mcp_config`
+- `POST /upsert_claude_mcp_server?server={"id":"filesystem"}`
+- `DELETE|POST /delete_claude_mcp_server?id=filesystem`
+- `GET /validate_mcp_command?command=npx`
+- `GET /get_mcp_config?app=codex`
+- `POST /upsert_mcp_server_in_config?app=codex&server={"id":"filesystem"}`
+- `DELETE|POST /delete_mcp_server_in_config?id=filesystem`
+- `POST /set_mcp_enabled?app=codex&id=filesystem&enabled=true`
+- `GET /get_mcp_servers`
+- `POST /upsert_mcp_server?server={"id":"filesystem"}`
+- `DELETE|POST /delete_mcp_server?id=filesystem`
+- `POST /toggle_mcp_app?app=codex&id=filesystem&enabled=true`
+- `POST /import_mcp_from_apps`
+- `GET /get_prompts?app=codex`
+- `POST /upsert_prompt?app=codex&id=review&content=Check`
+- `DELETE|POST /delete_prompt?app=codex&id=review`
+- `POST /enable_prompt?app=codex&id=review`
+- `POST /import_prompt_from_file?app=codex&path=/tmp/prompts.md`
+- `GET /get_current_prompt_file_content?app=codex&path=/tmp/prompts.md`
 - `POST /import_opencode_providers_from_live`
 - `POST /import_openclaw_providers_from_live`
 - `POST /import_hermes_providers_from_live`
@@ -291,6 +311,12 @@ conflict commands are mirrored by `/get_config_status`, `/get_config_dir`,
 `/extract_common_config_snippet`, `/check_env_conflicts`, `/delete_env_vars`,
 and `/restore_env_backup`; standalone folder open/pick and env delete/restore
 routes are intentionally non-destructive and snippets are kept in gateway memory.
+CCS MCP and prompt commands are mirrored by `/get_mcp_config`,
+`/upsert_mcp_server_in_config`, `/set_mcp_enabled`, `/get_mcp_servers`,
+`/toggle_mcp_app`, `/get_prompts`, `/upsert_prompt`, and related Claude-specific
+aliases. Standalone mode stores MCP servers and prompts in gateway memory,
+exports the Claude `mcpServers` JSON text shape, validates command names, and
+keeps import/current-file operations non-destructive.
 `/get_universal_providers`,
 `/get_universal_provider`, `/upsert_universal_provider`,
 `/delete_universal_provider`, and `/sync_universal_provider` preserve the ccs

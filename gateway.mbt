@@ -32,6 +32,8 @@ pub struct Gateway {
   hermes_memory : Map[String, String]
   hermes_memory_enabled : Map[String, Bool]
   config_snippets : Map[String, String]
+  mcp_servers : Map[String, Json]
+  prompts : Map[String, Json]
   mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int
@@ -77,6 +79,8 @@ pub fn Gateway::new(
     hermes_memory: Map([], capacity=2),
     hermes_memory_enabled: Map([("memory", true), ("user", true)], capacity=2),
     config_snippets: Map([], capacity=8),
+    mcp_servers: Map([], capacity=16),
+    prompts: Map([], capacity=16),
     stream_check_config: StreamCheckConfig::default(),
     logger,
     started_at_ms: @async.now().to_int(),
@@ -658,6 +662,80 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/restore_env_backup", (r, w) => {
     self.handle_restore_env_backup(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_claude_mcp_status", (_, w) => {
+    self.handle_get_claude_mcp_status(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/read_claude_mcp_config", (_, w) => {
+    self.handle_read_claude_mcp_config(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/upsert_claude_mcp_server", (r, w) => {
+    self.handle_upsert_claude_mcp_server(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_claude_mcp_server", (r, w) => {
+    self.handle_delete_mcp_server(r, w)
+  })
+  router.add_handler(@httpx.Method::Delete, "/delete_claude_mcp_server", (r, w) => {
+    self.handle_delete_mcp_server(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/validate_mcp_command", (r, w) => {
+    self.handle_validate_mcp_command(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_mcp_config", (r, w) => {
+    self.handle_get_mcp_config(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/upsert_mcp_server_in_config", (r, w) => {
+    self.handle_upsert_mcp_server_in_config(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_mcp_server_in_config", (r, w) => {
+    self.handle_delete_mcp_server(r, w)
+  })
+  router.add_handler(@httpx.Method::Delete, "/delete_mcp_server_in_config", (
+    r,
+    w,
+  ) => self.handle_delete_mcp_server(r, w))
+  router.add_handler(@httpx.Method::Post, "/set_mcp_enabled", (r, w) => {
+    self.handle_set_mcp_enabled(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_mcp_servers", (_, w) => {
+    self.handle_get_mcp_servers(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/upsert_mcp_server", (r, w) => {
+    self.handle_upsert_mcp_server(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_mcp_server", (r, w) => {
+    self.handle_delete_mcp_server(r, w)
+  })
+  router.add_handler(@httpx.Method::Delete, "/delete_mcp_server", (r, w) => {
+    self.handle_delete_mcp_server(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/toggle_mcp_app", (r, w) => {
+    self.handle_toggle_mcp_app(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/import_mcp_from_apps", (_, w) => {
+    self.handle_import_mcp_from_apps(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_prompts", (r, w) => {
+    self.handle_get_prompts(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/upsert_prompt", (r, w) => {
+    self.handle_upsert_prompt(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_prompt", (r, w) => {
+    self.handle_delete_prompt(r, w)
+  })
+  router.add_handler(@httpx.Method::Delete, "/delete_prompt", (r, w) => {
+    self.handle_delete_prompt(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/enable_prompt", (r, w) => {
+    self.handle_enable_prompt(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/import_prompt_from_file", (r, w) => {
+    self.handle_import_prompt_from_file(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_current_prompt_file_content", (
+    r,
+    w,
+  ) => self.handle_get_current_prompt_file_content(r, w))
   router.add_handler(@httpx.Method::Get, "/proxy/status", (_, w) => {
     self.handle_proxy_status(w)
   })
@@ -3257,6 +3335,306 @@ fn ccs_env_conflicts_from_body(body : Json?) -> Array[Json] {
 }
 
 ///|
+fn ccs_json_request(
+  path : StringView,
+  body : Json?,
+  keys : Array[String],
+) -> Json? {
+  for key in keys {
+    match usage_query_value(path, key) {
+      Some(value) => return Some(ccs_json_value_from_string(value))
+      None => ()
+    }
+  }
+  match body {
+    Some(Object(obj)) =>
+      for key in keys {
+        match obj.get(key) {
+          Some(value) => return Some(value)
+          None => ()
+        }
+      }
+    _ => ()
+  }
+  None
+}
+
+///|
+fn ccs_json_value_from_string(value : String) -> Json {
+  try @json.parse(value) catch {
+    _ => Json::string(value)
+  } noraise {
+    parsed => parsed
+  }
+}
+
+///|
+fn ccs_mcp_apps_json(app : String, enabled? : Bool = true) -> Json {
+  let apps = {
+    "claude": Json::boolean(false),
+    "claude-desktop": Json::boolean(false),
+    "codex": Json::boolean(false),
+    "gemini": Json::boolean(false),
+    "opencode": Json::boolean(false),
+    "openclaw": Json::boolean(false),
+    "hermes": Json::boolean(false),
+  }
+  apps[ccs_normalize_app_type(app)] = Json::boolean(enabled)
+  Json::object(apps)
+}
+
+///|
+fn ccs_mcp_app_enabled(server : Json, app : String) -> Bool {
+  guard server is Object(obj) else { return false }
+  guard obj.get("apps") is Some(Object(apps)) else { return false }
+  match apps.get(ccs_normalize_app_type(app)) {
+    Some(true) => true
+    Some(false) => false
+    _ => false
+  }
+}
+
+///|
+fn ccs_mcp_server_with_app(server : Json, app : String, enabled : Bool) -> Json {
+  let normalized = ccs_normalize_app_type(app)
+  match server {
+    Object(obj) => {
+      let next = obj
+      let apps = match obj.get("apps") {
+        Some(Object(existing)) => existing
+        _ =>
+          match ccs_mcp_apps_json("claude", enabled=false) {
+            Object(empty) => empty
+            _ => {}
+          }
+      }
+      apps[normalized] = Json::boolean(enabled)
+      next["apps"] = Json::object(apps)
+      Json::object(next)
+    }
+    _ => server
+  }
+}
+
+///|
+fn ccs_mcp_server_from_request(
+  path : StringView,
+  body : Json?,
+  default_app : String,
+) -> (String, Json)? {
+  match ccs_json_request(path, body, ["server"]) {
+    Some(Object(server)) =>
+      match json_string_from_map_any(server, ["id", "serverId", "server_id"]) {
+        Some(id) =>
+          return Some(
+            (
+              id,
+              ccs_mcp_normalize_server(id, Json::object(server), default_app),
+            ),
+          )
+        None => ()
+      }
+    _ => ()
+  }
+  guard proxy_string_request(path, body, ["id", "serverId", "server_id"])
+    is Some(id) else {
+    return None
+  }
+  let spec = ccs_json_request(path, body, ["spec", "server"]).unwrap_or(
+    Json::object({}),
+  )
+  Some((id, ccs_mcp_server_from_spec(id, spec, default_app)))
+}
+
+///|
+fn ccs_mcp_server_from_spec(id : String, spec : Json, app : String) -> Json {
+  let name = match spec {
+    Object(obj) => json_string_from_map_any(obj, ["name"]).unwrap_or(id)
+    _ => id
+  }
+  Json::object({
+    "id": Json::string(id),
+    "name": Json::string(name),
+    "server": spec,
+    "apps": ccs_mcp_apps_json(app),
+    "description": Json::null(),
+    "homepage": Json::null(),
+    "docs": Json::null(),
+    "tags": Json::array([]),
+  })
+}
+
+///|
+fn ccs_mcp_normalize_server(
+  id : String,
+  server : Json,
+  default_app : String,
+) -> Json {
+  match server {
+    Object(obj) => {
+      let next = obj
+      if next.get("id") is None {
+        next["id"] = Json::string(id)
+      }
+      if next.get("name") is None {
+        next["name"] = Json::string(id)
+      }
+      if next.get("server") is None {
+        next["server"] = Json::object({})
+      }
+      if next.get("apps") is None {
+        next["apps"] = ccs_mcp_apps_json(default_app)
+      }
+      if next.get("tags") is None {
+        next["tags"] = Json::array([])
+      }
+      Json::object(next)
+    }
+    _ => ccs_mcp_server_from_spec(id, Json::object({}), default_app)
+  }
+}
+
+///|
+fn ccs_mcp_servers_object_for_app(
+  servers : Map[String, Json],
+  app : String?,
+) -> Json {
+  let result : Map[String, Json] = {}
+  for id in servers.keys() {
+    guard servers.get(id) is Some(server) else { continue }
+    match app {
+      Some(app_type) =>
+        if ccs_mcp_app_enabled(server, app_type) {
+          result[id] = server
+        }
+      None => result[id] = server
+    }
+  }
+  Json::object(result)
+}
+
+///|
+fn ccs_mcp_config_text(servers : Map[String, Json]) -> String? {
+  if servers.is_empty() {
+    return None
+  }
+  let mcp_servers : Map[String, Json] = {}
+  for id in servers.keys() {
+    guard servers.get(id) is Some(Object(server)) else { continue }
+    match server.get("server") {
+      Some(spec) => mcp_servers[id] = spec
+      None => ()
+    }
+  }
+  Some(
+    Json::object({ "mcpServers": Json::object(mcp_servers) }).stringify(
+      indent=2,
+    ),
+  )
+}
+
+///|
+fn ccs_validate_mcp_command_name(command : String) -> Bool {
+  let trimmed = command.trim()
+  !trimmed.is_empty() &&
+  !trimmed.contains("/") &&
+  !trimmed.contains("\\") &&
+  !trimmed.contains("\u{0000}")
+}
+
+///|
+fn ccs_prompt_store_key(app : String, id : String) -> String {
+  "\{ccs_normalize_app_type(app)}:\{id}"
+}
+
+///|
+fn ccs_prompt_from_request(
+  path : StringView,
+  body : Json?,
+) -> (String, String, Json)? {
+  let app = ccs_config_app_from_request(path, body).unwrap_or("claude")
+  match ccs_json_request(path, body, ["prompt"]) {
+    Some(Object(prompt)) =>
+      match json_string_from_map_any(prompt, ["id"]) {
+        Some(id) =>
+          return Some((app, id, ccs_normalize_prompt(id, Json::object(prompt))))
+        None => ()
+      }
+    _ => ()
+  }
+  guard proxy_string_request(path, body, ["id", "promptId", "prompt_id"])
+    is Some(id) else {
+    return None
+  }
+  let name = proxy_string_request(path, body, ["name"]).unwrap_or(id)
+  let content = proxy_string_request(path, body, ["content"]).unwrap_or("")
+  let description = proxy_string_request(path, body, ["description"])
+  let enabled = proxy_bool_request(path, body, ["enabled"]).unwrap_or(true)
+  let now = Json::string(@async.now().to_string())
+  let prompt : Map[String, Json] = {
+    "id": Json::string(id),
+    "name": Json::string(name),
+    "content": Json::string(content),
+    "enabled": Json::boolean(enabled),
+    "createdAt": now,
+    "updatedAt": now,
+  }
+  match description {
+    Some(value) => prompt["description"] = Json::string(value)
+    None => ()
+  }
+  Some((app, id, Json::object(prompt)))
+}
+
+///|
+fn ccs_normalize_prompt(id : String, prompt : Json) -> Json {
+  match prompt {
+    Object(obj) => {
+      let next = obj
+      if next.get("id") is None {
+        next["id"] = Json::string(id)
+      }
+      if next.get("name") is None {
+        next["name"] = Json::string(id)
+      }
+      if next.get("content") is None {
+        next["content"] = Json::string("")
+      }
+      if next.get("enabled") is None {
+        next["enabled"] = Json::boolean(true)
+      }
+      let now = Json::string(@async.now().to_string())
+      if next.get("createdAt") is None {
+        next["createdAt"] = now
+      }
+      next["updatedAt"] = now
+      Json::object(next)
+    }
+    _ => Json::object({})
+  }
+}
+
+///|
+fn ccs_prompts_object_for_app(
+  prompts : Map[String, Json],
+  app : String,
+) -> Json {
+  let normalized = ccs_normalize_app_type(app)
+  let prefix = "\{normalized}:"
+  let result : Map[String, Json] = {}
+  for key in prompts.keys() {
+    if key.has_prefix(prefix) {
+      guard prompts.get(key) is Some(Object(prompt)) else { continue }
+      match json_string_from_map_any(prompt, ["id"]) {
+        Some(id) => result[id] = Json::object(prompt)
+        None => ()
+      }
+    }
+  }
+  Json::object(result)
+}
+
+///|
 fn gemini_request_is_stream(endpoint : String, body : Json) -> Bool {
   endpoint.contains("streamGenerateContent") ||
   json_bool_field(body, "stream").unwrap_or(false)
@@ -3501,6 +3879,292 @@ async fn Gateway::handle_restore_env_backup(
   ignore(self)
   let body = proxy_json_body(r)
   ignore(proxy_string_request(r.path, body, ["backupPath", "backup_path"]))
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_get_claude_mcp_status(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(
+    w,
+    {
+      "userConfigPath": Json::string(
+        @pathx.join(ccs_home_dir(), ".claude.json"),
+      ),
+      "userConfigExists": Json::boolean(
+        @fsx.exists_as_file(@pathx.join(ccs_home_dir(), ".claude.json")),
+      ),
+      "serverCount": Json::number(self.mcp_servers.length().to_double()),
+    }.to_json(),
+  )
+}
+
+///|
+async fn Gateway::handle_read_claude_mcp_config(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  match ccs_mcp_config_text(self.mcp_servers) {
+    Some(content) => write_usage_json(w, Json::string(content))
+    None => write_usage_json(w, Json::null())
+  }
+}
+
+///|
+async fn Gateway::handle_upsert_claude_mcp_server(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  match ccs_mcp_server_from_request(r.path, body, "claude") {
+    Some((id, server)) => {
+      self.mcp_servers[id] = ccs_mcp_server_with_app(server, "claude", true)
+      write_usage_json(w, Json::boolean(true))
+    }
+    None => write_usage_json(w, Json::boolean(false))
+  }
+}
+
+///|
+async fn Gateway::handle_delete_mcp_server(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  match proxy_string_request(r.path, body, ["id", "serverId", "server_id"]) {
+    Some(id) => {
+      let existed = self.mcp_servers.get(id) is Some(_)
+      self.mcp_servers.remove(id)
+      write_usage_json(w, Json::boolean(existed))
+    }
+    None => write_usage_json(w, Json::boolean(false))
+  }
+}
+
+///|
+async fn Gateway::handle_validate_mcp_command(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let command = proxy_string_request(r.path, None, ["cmd", "command"]).unwrap_or(
+    "",
+  )
+  write_usage_json(w, Json::boolean(ccs_validate_mcp_command_name(command)))
+}
+
+///|
+async fn Gateway::handle_get_mcp_config(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let app = ccs_config_app_from_request(r.path, None).unwrap_or("claude")
+  write_usage_json(
+    w,
+    {
+      "configPath": Json::string(ccs_app_config_path()),
+      "servers": ccs_mcp_servers_object_for_app(self.mcp_servers, Some(app)),
+    }.to_json(),
+  )
+}
+
+///|
+async fn Gateway::handle_upsert_mcp_server_in_config(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  match ccs_mcp_server_from_request(r.path, body, app) {
+    Some((id, server)) => {
+      let sync_other = proxy_bool_request(r.path, body, [
+        "syncOtherSide", "sync_other_side",
+      ]).unwrap_or(false)
+      let next = if sync_other {
+        let synced = ccs_mcp_server_with_app(server, "claude", true)
+        let synced = ccs_mcp_server_with_app(synced, "codex", true)
+        let synced = ccs_mcp_server_with_app(synced, "gemini", true)
+        let synced = ccs_mcp_server_with_app(synced, "opencode", true)
+        ccs_mcp_server_with_app(synced, "hermes", true)
+      } else {
+        ccs_mcp_server_with_app(server, app, true)
+      }
+      self.mcp_servers[id] = next
+      write_usage_json(w, Json::boolean(true))
+    }
+    None => write_usage_json(w, Json::boolean(false))
+  }
+}
+
+///|
+async fn Gateway::handle_set_mcp_enabled(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let enabled = proxy_bool_request(r.path, body, ["enabled"]).unwrap_or(true)
+  match proxy_string_request(r.path, body, ["id", "serverId", "server_id"]) {
+    Some(id) =>
+      match self.mcp_servers.get(id) {
+        Some(server) => {
+          self.mcp_servers[id] = ccs_mcp_server_with_app(server, app, enabled)
+          write_usage_json(w, Json::boolean(true))
+        }
+        None => write_usage_json(w, Json::boolean(false))
+      }
+    None => write_usage_json(w, Json::boolean(false))
+  }
+}
+
+///|
+async fn Gateway::handle_get_mcp_servers(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, ccs_mcp_servers_object_for_app(self.mcp_servers, None))
+}
+
+///|
+async fn Gateway::handle_upsert_mcp_server(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  match ccs_mcp_server_from_request(r.path, body, "claude") {
+    Some((id, server)) => {
+      self.mcp_servers[id] = server
+      write_usage_json(w, Json::null())
+    }
+    None => write_usage_json(w, Json::null())
+  }
+}
+
+///|
+async fn Gateway::handle_toggle_mcp_app(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let enabled = proxy_bool_request(r.path, body, ["enabled"]).unwrap_or(true)
+  match proxy_string_request(r.path, body, ["serverId", "server_id", "id"]) {
+    Some(id) =>
+      match self.mcp_servers.get(id) {
+        Some(server) => {
+          self.mcp_servers[id] = ccs_mcp_server_with_app(server, app, enabled)
+          write_usage_json(w, Json::null())
+        }
+        None => write_usage_json(w, Json::null())
+      }
+    None => write_usage_json(w, Json::null())
+  }
+}
+
+///|
+async fn Gateway::handle_import_mcp_from_apps(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::number(0.0))
+}
+
+///|
+async fn Gateway::handle_get_prompts(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let app = ccs_config_app_from_request(r.path, None).unwrap_or("claude")
+  write_usage_json(w, ccs_prompts_object_for_app(self.prompts, app))
+}
+
+///|
+async fn Gateway::handle_upsert_prompt(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  match ccs_prompt_from_request(r.path, body) {
+    Some((app, id, prompt)) =>
+      self.prompts[ccs_prompt_store_key(app, id)] = prompt
+    None => ()
+  }
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_delete_prompt(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  match proxy_string_request(r.path, body, ["id", "promptId", "prompt_id"]) {
+    Some(id) => self.prompts.remove(ccs_prompt_store_key(app, id))
+    None => ()
+  }
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_enable_prompt(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  match proxy_string_request(r.path, body, ["id", "promptId", "prompt_id"]) {
+    Some(id) => {
+      let key = ccs_prompt_store_key(app, id)
+      match self.prompts.get(key) {
+        Some(Object(prompt)) => {
+          let next = prompt
+          next["enabled"] = Json::boolean(true)
+          next["updatedAt"] = Json::string(@async.now().to_string())
+          self.prompts[key] = Json::object(next)
+        }
+        _ => ()
+      }
+    }
+    None => ()
+  }
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_import_prompt_from_file(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  ignore(r)
+  write_usage_json(w, Json::string(""))
+}
+
+///|
+async fn Gateway::handle_get_current_prompt_file_content(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  ignore(r)
   write_usage_json(w, Json::null())
 }
 

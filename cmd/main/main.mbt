@@ -207,6 +207,45 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_json_post_endpoint(arr, "/delete_env_vars", "Env")
     ["restore_env_backup", ..] | ["restore-env-backup", ..] =>
       restore_env_backup(arr)
+    ["get_claude_mcp_status", ..] | ["get-claude-mcp-status", ..] =>
+      check_usage_endpoint(arr, "/get_claude_mcp_status")
+    ["read_claude_mcp_config", ..] | ["read-claude-mcp-config", ..] =>
+      check_usage_endpoint(arr, "/read_claude_mcp_config")
+    ["upsert_claude_mcp_server", ..] | ["upsert-claude-mcp-server", ..] =>
+      upsert_mcp_server(arr, "/upsert_claude_mcp_server")
+    ["delete_claude_mcp_server", ..] | ["delete-claude-mcp-server", ..] =>
+      delete_mcp_server(arr, "/delete_claude_mcp_server")
+    ["validate_mcp_command", ..] | ["validate-mcp-command", ..] =>
+      check_usage_endpoint(arr, mcp_validate_command_path(arr))
+    ["get_mcp_config", ..] | ["get-mcp-config", ..] =>
+      check_usage_endpoint(arr, mcp_app_path(arr, "/get_mcp_config"))
+    ["upsert_mcp_server_in_config", ..] | ["upsert-mcp-server-in-config", ..] =>
+      upsert_mcp_server(arr, "/upsert_mcp_server_in_config")
+    ["delete_mcp_server_in_config", ..] | ["delete-mcp-server-in-config", ..] =>
+      delete_mcp_server(arr, "/delete_mcp_server_in_config")
+    ["set_mcp_enabled", ..] | ["set-mcp-enabled", ..] => set_mcp_enabled(arr)
+    ["get_mcp_servers", ..] | ["get-mcp-servers", ..] =>
+      check_usage_endpoint(arr, "/get_mcp_servers")
+    ["upsert_mcp_server", ..] | ["upsert-mcp-server", ..] =>
+      upsert_mcp_server(arr, "/upsert_mcp_server")
+    ["delete_mcp_server", ..] | ["delete-mcp-server", ..] =>
+      delete_mcp_server(arr, "/delete_mcp_server")
+    ["toggle_mcp_app", ..] | ["toggle-mcp-app", ..] => toggle_mcp_app(arr)
+    ["import_mcp_from_apps", ..] | ["import-mcp-from-apps", ..] =>
+      check_json_post_endpoint(arr, "/import_mcp_from_apps", "MCP")
+    ["get_prompts", ..] | ["get-prompts", ..] =>
+      check_usage_endpoint(arr, prompt_app_path(arr, "/get_prompts"))
+    ["upsert_prompt", ..] | ["upsert-prompt", ..] => upsert_prompt(arr)
+    ["delete_prompt", ..] | ["delete-prompt", ..] => delete_prompt(arr)
+    ["enable_prompt", ..] | ["enable-prompt", ..] => enable_prompt(arr)
+    ["import_prompt_from_file", ..] | ["import-prompt-from-file", ..] =>
+      import_prompt_from_file(arr)
+    ["get_current_prompt_file_content", ..]
+    | ["get-current-prompt-file-content", ..] =>
+      check_usage_endpoint(
+        arr,
+        prompt_file_path(arr, "/get_current_prompt_file_content"),
+      )
     ["import_opencode_providers_from_live", ..]
     | ["import-opencode-providers-from-live", ..] =>
       import_named_live_providers(arr, "opencode")
@@ -276,6 +315,36 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, "/get_stream_check_config")
     ["save_stream_check_config", ..] | ["save-stream-check-config", ..] =>
       save_stream_check_config(arr)
+    ["mcp", "status", ..] => check_usage_endpoint(arr, "/get_claude_mcp_status")
+    ["mcp", "read-config", ..] =>
+      check_usage_endpoint(arr, "/read_claude_mcp_config")
+    ["mcp", "validate", ..] =>
+      check_usage_endpoint(arr, mcp_validate_command_path(arr))
+    ["mcp", "config", ..] =>
+      check_usage_endpoint(arr, mcp_app_path(arr, "/get_mcp_config"))
+    ["mcp", "upsert-config", ..] =>
+      upsert_mcp_server(arr, "/upsert_mcp_server_in_config")
+    ["mcp", "delete-config", ..] =>
+      delete_mcp_server(arr, "/delete_mcp_server_in_config")
+    ["mcp", "set-enabled", ..] => set_mcp_enabled(arr)
+    ["mcp", "list", ..] => check_usage_endpoint(arr, "/get_mcp_servers")
+    ["mcp", "upsert", ..] => upsert_mcp_server(arr, "/upsert_mcp_server")
+    ["mcp", "delete", ..] => delete_mcp_server(arr, "/delete_mcp_server")
+    ["mcp", "toggle", ..] => toggle_mcp_app(arr)
+    ["mcp", "import", ..] =>
+      check_json_post_endpoint(arr, "/import_mcp_from_apps", "MCP")
+    ["prompt", "list", ..] | ["prompts", "list", ..] =>
+      check_usage_endpoint(arr, prompt_app_path(arr, "/get_prompts"))
+    ["prompt", "upsert", ..] | ["prompts", "upsert", ..] => upsert_prompt(arr)
+    ["prompt", "delete", ..] | ["prompts", "delete", ..] => delete_prompt(arr)
+    ["prompt", "enable", ..] | ["prompts", "enable", ..] => enable_prompt(arr)
+    ["prompt", "import", ..] | ["prompts", "import", ..] =>
+      import_prompt_from_file(arr)
+    ["prompt", "current", ..] | ["prompts", "current", ..] =>
+      check_usage_endpoint(
+        arr,
+        prompt_file_path(arr, "/get_current_prompt_file_content"),
+      )
     ["proxy", "status", ..] => check_proxy_status(arr)
     ["proxy", "start-proxy-server", ..] => start_proxy_server(arr)
     ["proxy", "stop-proxy-server", ..] => stop_proxy_server(arr)
@@ -483,6 +552,9 @@ fn print_help() -> Unit {
   println(
     "  <ccs_stream_command>   Direct alias for CCS stream check command names",
   )
+  println("  mcp list/upsert/delete/toggle  Manage ccs-style MCP servers")
+  println("  mcp config/upsert-config       Manage app MCP config view")
+  println("  prompt list/upsert/delete      Manage ccs-style prompt records")
   println(
     "  proxy start-proxy-server  Enable proxy routing and print server info",
   )
@@ -605,6 +677,9 @@ fn print_help() -> Unit {
   println("  --category <kind>  Provider category for provider add/update")
   println("  --endpoint-url <url> Provider custom endpoint URL")
   println("  --app <app>         App id for ccs usage script commands")
+  println("  --server <json>     MCP server JSON for ccs MCP upsert commands")
+  println("  --command <cmd>     MCP command name for validation/upsert")
+  println("  --content <text>    Prompt content for ccs prompt upsert commands")
   println("  --script-code <json> JSON UsageResult for ccs testUsageScript")
   println("  --value <value>    Value for ccs proxy scalar setter commands")
   println(
@@ -656,6 +731,13 @@ fn print_help() -> Unit {
   )
   println(
     "  moonstat stream-check config set --codex-model gpt-5.5@low --timeout-secs 45",
+  )
+  println(
+    "  moonstat mcp upsert --id filesystem --command npx --name Filesystem",
+  )
+  println("  moonstat mcp toggle --id filesystem --app codex --enabled true")
+  println(
+    "  moonstat prompt upsert --app codex --id review --name Review --content 'Review this change'",
   )
   println("  moonstat proxy app-config --app-type codex")
   println(
@@ -1226,6 +1308,85 @@ async fn restore_env_backup(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn upsert_mcp_server(args : Array[String], base_path : String) -> Unit {
+  guard mcp_upsert_path(args, base_path) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required MCP server args: --id or --server")
+    return
+  }
+  check_json_post_endpoint(args, path, "MCP")
+}
+
+///|
+async fn delete_mcp_server(args : Array[String], base_path : String) -> Unit {
+  guard mcp_id_path(args, base_path) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --id")
+    return
+  }
+  check_json_delete_endpoint(args, path, "MCP")
+}
+
+///|
+async fn set_mcp_enabled(args : Array[String]) -> Unit {
+  guard mcp_enabled_path(args, "/set_mcp_enabled") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required MCP args: --id --enabled")
+    return
+  }
+  check_json_post_endpoint(args, path, "MCP")
+}
+
+///|
+async fn toggle_mcp_app(args : Array[String]) -> Unit {
+  guard mcp_enabled_path(args, "/toggle_mcp_app") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required MCP args: --id --enabled")
+    return
+  }
+  check_json_post_endpoint(args, path, "MCP")
+}
+
+///|
+async fn upsert_prompt(args : Array[String]) -> Unit {
+  guard prompt_upsert_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required prompt args: --id")
+    return
+  }
+  check_json_post_endpoint(args, path, "Prompt")
+}
+
+///|
+async fn delete_prompt(args : Array[String]) -> Unit {
+  guard prompt_id_path(args, "/delete_prompt") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --id")
+    return
+  }
+  check_json_delete_endpoint(args, path, "Prompt")
+}
+
+///|
+async fn enable_prompt(args : Array[String]) -> Unit {
+  guard prompt_id_path(args, "/enable_prompt") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --id")
+    return
+  }
+  check_json_post_endpoint(args, path, "Prompt")
+}
+
+///|
+async fn import_prompt_from_file(args : Array[String]) -> Unit {
+  check_json_post_endpoint(
+    args,
+    prompt_file_path(args, "/import_prompt_from_file"),
+    "Prompt",
+  )
+}
+
+///|
 async fn check_provider_live_ids(args : Array[String]) -> Unit {
   check_json_endpoint(
     args,
@@ -1627,6 +1788,149 @@ fn restore_env_backup_path(args : Array[String]) -> String? {
     return None
   }
   Some("/restore_env_backup?\{cli_query_pair("backupPath", path)}")
+}
+
+///|
+fn mcp_app_path(args : Array[String], base_path : String) -> String {
+  "\{base_path}?\{cli_query_pair("app", config_app_arg(args))}"
+}
+
+///|
+fn mcp_server_id_arg(args : Array[String]) -> String? {
+  match parse_string_arg(args, "--id") {
+    Some(id) => Some(id)
+    None => parse_string_arg_any(args, "--server-id", "--serverId")
+  }
+}
+
+///|
+fn mcp_id_path(args : Array[String], base_path : String) -> String? {
+  guard mcp_server_id_arg(args) is Some(id) else { return None }
+  Some("\{base_path}?\{cli_query_pair("id", id)}")
+}
+
+///|
+fn mcp_validate_command_path(args : Array[String]) -> String {
+  match parse_string_arg_any(args, "--command", "--cmd") {
+    Some(command) =>
+      "/validate_mcp_command?\{cli_query_pair("command", command)}"
+    None => "/validate_mcp_command"
+  }
+}
+
+///|
+fn mcp_server_json_from_args(args : Array[String], id : String) -> String {
+  let name = parse_string_arg(args, "--name").unwrap_or(id)
+  let spec : Map[String, Json] = {}
+  match parse_string_arg_any(args, "--command", "--cmd") {
+    Some(command) => spec["command"] = Json::string(command)
+    None => ()
+  }
+  match parse_string_arg(args, "--args") {
+    Some(value) => spec["args"] = Json::string(value)
+    None => ()
+  }
+  match parse_string_arg(args, "--env") {
+    Some(value) => spec["env"] = Json::string(value)
+    None => ()
+  }
+  {
+    "id": Json::string(id),
+    "name": Json::string(name),
+    "server": Json::object(spec),
+  }
+  .to_json()
+  .stringify()
+}
+
+///|
+fn mcp_upsert_path(args : Array[String], base_path : String) -> String? {
+  let query : Array[String] = []
+  match parse_string_arg(args, "--server") {
+    Some(server) => query.push(cli_query_pair("server", server))
+    None =>
+      match mcp_server_id_arg(args) {
+        Some(id) =>
+          query.push(
+            cli_query_pair("server", mcp_server_json_from_args(args, id)),
+          )
+        None => return None
+      }
+  }
+  query.push(cli_query_pair("app", config_app_arg(args)))
+  match parse_string_arg_any(args, "--sync-other-side", "--syncOtherSide") {
+    Some(value) => query.push(cli_query_pair("syncOtherSide", value))
+    None => ()
+  }
+  Some("\{base_path}?\{query.join("&")}")
+}
+
+///|
+fn mcp_enabled_path(args : Array[String], base_path : String) -> String? {
+  guard mcp_server_id_arg(args) is Some(id) else { return None }
+  guard parse_string_arg(args, "--enabled") is Some(enabled) else {
+    return None
+  }
+  Some(
+    "\{base_path}?\{cli_query_pair("id", id)}&\{cli_query_pair("app", config_app_arg(args))}&\{cli_query_pair("enabled", enabled)}",
+  )
+}
+
+///|
+fn prompt_app_path(args : Array[String], base_path : String) -> String {
+  "\{base_path}?\{cli_query_pair("app", config_app_arg(args))}"
+}
+
+///|
+fn prompt_id_path(args : Array[String], base_path : String) -> String? {
+  guard parse_string_arg_any(args, "--id", "--promptId") is Some(id) else {
+    return None
+  }
+  Some(
+    "\{base_path}?\{cli_query_pair("app", config_app_arg(args))}&\{cli_query_pair("id", id)}",
+  )
+}
+
+///|
+fn prompt_upsert_path(args : Array[String]) -> String? {
+  let query : Array[String] = [cli_query_pair("app", config_app_arg(args))]
+  match parse_string_arg(args, "--prompt") {
+    Some(prompt) => query.push(cli_query_pair("prompt", prompt))
+    None => {
+      guard parse_string_arg_any(args, "--id", "--promptId") is Some(id) else {
+        return None
+      }
+      query.push(cli_query_pair("id", id))
+      match parse_string_arg(args, "--name") {
+        Some(name) => query.push(cli_query_pair("name", name))
+        None => ()
+      }
+      match parse_string_arg(args, "--content") {
+        Some(content) => query.push(cli_query_pair("content", content))
+        None => ()
+      }
+      match parse_string_arg(args, "--description") {
+        Some(description) =>
+          query.push(cli_query_pair("description", description))
+        None => ()
+      }
+      match parse_string_arg(args, "--enabled") {
+        Some(enabled) => query.push(cli_query_pair("enabled", enabled))
+        None => ()
+      }
+    }
+  }
+  Some("/upsert_prompt?\{query.join("&")}")
+}
+
+///|
+fn prompt_file_path(args : Array[String], base_path : String) -> String {
+  let query : Array[String] = [cli_query_pair("app", config_app_arg(args))]
+  match parse_string_arg(args, "--path") {
+    Some(path) => query.push(cli_query_pair("path", path))
+    None => ()
+  }
+  cli_path_with_query(base_path, query)
 }
 
 ///|

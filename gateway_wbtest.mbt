@@ -5079,6 +5079,86 @@ test "ccs env helpers preserve conflicts and known keys" {
 }
 
 ///|
+test "ccs mcp helpers preserve server apps and config shape" {
+  let spec = {
+    "name": Json::string("Filesystem"),
+    "command": Json::string("npx"),
+  }.to_json()
+  let server = ccs_mcp_server_from_spec("filesystem", spec, "codex")
+  guard server is Object(obj) else { fail("expected server object") }
+  assert_eq(obj["id"], Json::string("filesystem"))
+  assert_eq(obj["name"], Json::string("Filesystem"))
+  assert_true(ccs_mcp_app_enabled(server, "codex"))
+  assert_false(ccs_mcp_app_enabled(server, "claude"))
+  let enabled = ccs_mcp_server_with_app(server, "claude", true)
+  assert_true(ccs_mcp_app_enabled(enabled, "claude"))
+  let servers : Map[String, Json] = { "filesystem": enabled }
+  guard ccs_mcp_servers_object_for_app(servers, Some("codex")) is Object(codex) else {
+    fail("expected codex mcp servers")
+  }
+  assert_true(codex.get("filesystem") is Some(_))
+  guard ccs_mcp_config_text(servers) is Some(config_text) else {
+    fail("expected mcp config")
+  }
+  assert_true(config_text.contains("\"mcpServers\""))
+  assert_true(config_text.contains("\"filesystem\""))
+}
+
+///|
+test "ccs mcp request parser accepts encoded server JSON" {
+  let body = {
+    "server": {
+      "id": Json::string("shell"),
+      "name": Json::string("Shell"),
+      "server": { "command": Json::string("sh") }.to_json(),
+    }.to_json(),
+  }.to_json()
+  guard ccs_mcp_server_from_request(
+      "/upsert_mcp_server?app=codex",
+      Some(body),
+      "codex",
+    )
+    is Some((id, server)) else {
+    fail("expected parsed server")
+  }
+  assert_eq(id, "shell")
+  guard server is Object(obj) else { fail("expected normalized server") }
+  assert_eq(obj["name"], Json::string("Shell"))
+  assert_true(ccs_mcp_app_enabled(server, "codex"))
+}
+
+///|
+test "ccs prompt helpers keep app-scoped prompt records" {
+  guard ccs_prompt_from_request(
+      "/upsert_prompt?app=codex&id=review&name=Review&content=Check%20this&description=Code%20review",
+      None,
+    )
+    is Some((app, id, prompt)) else {
+    fail("expected prompt")
+  }
+  assert_eq(app, "codex")
+  assert_eq(id, "review")
+  guard prompt is Object(obj) else { fail("expected prompt object") }
+  assert_eq(obj["name"], Json::string("Review"))
+  assert_eq(obj["content"], Json::string("Check this"))
+  assert_eq(obj["enabled"], Json::boolean(true))
+  let prompts : Map[String, Json] = {}
+  prompts[ccs_prompt_store_key(app, id)] = prompt
+  prompts[ccs_prompt_store_key("claude", "review")] = ccs_normalize_prompt(
+    "review",
+    { "content": Json::string("Claude") }.to_json(),
+  )
+  guard ccs_prompts_object_for_app(prompts, "codex") is Object(codex) else {
+    fail("expected codex prompts")
+  }
+  assert_true(codex.get("review") is Some(_))
+  guard ccs_prompts_object_for_app(prompts, "claude") is Object(claude) else {
+    fail("expected claude prompts")
+  }
+  assert_true(claude.get("review") is Some(_))
+}
+
+///|
 test "gemini native response synthesizes ccs marked missing tool id" {
   let body = @json.parse(
     (

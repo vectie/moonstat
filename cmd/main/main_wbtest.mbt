@@ -613,3 +613,89 @@ test "top level ccs config command names build config paths" {
     Some("/restore_env_backup?backupPath=%2Ftmp%2Fenv%20backup.json"),
   )
 }
+
+///|
+test "top level ccs mcp command names build mcp paths" {
+  assert_eq(
+    mcp_app_path(
+      ["moonstat", "get_mcp_config", "--appType", "codex"],
+      "/get_mcp_config",
+    ),
+    "/get_mcp_config?app=codex",
+  )
+  assert_eq(
+    mcp_validate_command_path([
+      "moonstat", "validate_mcp_command", "--command", "npx",
+    ]),
+    "/validate_mcp_command?command=npx",
+  )
+  assert_eq(
+    mcp_id_path(
+      ["moonstat", "delete_mcp_server", "--serverId", "filesystem server"],
+      "/delete_mcp_server",
+    ),
+    Some("/delete_mcp_server?id=filesystem%20server"),
+  )
+  guard mcp_upsert_path(
+      [
+        "moonstat", "upsert_mcp_server_in_config", "--app", "codex", "--id", "filesystem",
+        "--name", "Filesystem", "--command", "npx", "--syncOtherSide", "true",
+      ],
+      "/upsert_mcp_server_in_config",
+    )
+    is Some(upsert_path) else {
+    fail("expected upsert path")
+  }
+  assert_true(upsert_path.has_prefix("/upsert_mcp_server_in_config?server="))
+  assert_true(upsert_path.contains("&app=codex"))
+  assert_true(upsert_path.contains("&syncOtherSide=true"))
+  assert_true(upsert_path.contains("Filesystem"))
+  assert_true(upsert_path.contains("npx"))
+  assert_eq(
+    mcp_enabled_path(
+      [
+        "moonstat", "toggle_mcp_app", "--id", "filesystem", "--app", "codex", "--enabled",
+        "false",
+      ],
+      "/toggle_mcp_app",
+    ),
+    Some("/toggle_mcp_app?id=filesystem&app=codex&enabled=false"),
+  )
+}
+
+///|
+test "top level ccs prompt command names build prompt paths" {
+  assert_eq(
+    prompt_app_path(
+      ["moonstat", "get_prompts", "--appType", "codex"],
+      "/get_prompts",
+    ),
+    "/get_prompts?app=codex",
+  )
+  assert_eq(
+    prompt_upsert_path([
+      "moonstat", "upsert_prompt", "--app", "codex", "--id", "review", "--name",
+      "Review", "--content", "Check this", "--description", "Code review", "--enabled",
+      "true",
+    ]),
+    Some(
+      "/upsert_prompt?app=codex&id=review&name=Review&content=Check%20this&description=Code%20review&enabled=true",
+    ),
+  )
+  assert_eq(
+    prompt_id_path(
+      ["moonstat", "delete_prompt", "--app", "codex", "--promptId", "review"],
+      "/delete_prompt",
+    ),
+    Some("/delete_prompt?app=codex&id=review"),
+  )
+  assert_eq(
+    prompt_file_path(
+      [
+        "moonstat", "import_prompt_from_file", "--app", "codex", "--path", "/tmp/prompts.md",
+      ],
+      "/import_prompt_from_file",
+    ),
+    "/import_prompt_from_file?app=codex&path=%2Ftmp%2Fprompts.md",
+  )
+}
