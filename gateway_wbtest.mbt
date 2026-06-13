@@ -1392,6 +1392,215 @@ test "ccs upstream body filter removes private fields" {
 }
 
 ///|
+test "ccs thinking signature rectifier detects ccs error phrases" {
+  let config = default_rectifier_config()
+  assert_true(config.request_media_fallback)
+  assert_true(config.request_media_heuristic)
+  assert_true(
+    should_rectify_thinking_signature(
+      Some("messages.1.content.0: Invalid `signature` in `thinking` block"),
+      config,
+    ),
+  )
+  assert_true(
+    should_rectify_thinking_signature(
+      Some("Unable to submit request because Thought signature is not valid"),
+      config,
+    ),
+  )
+  assert_true(
+    should_rectify_thinking_signature(
+      Some(
+        "messages.69.content.0.type: Expected `thinking` or `redacted_thinking`, but found `tool_use`.",
+      ),
+      config,
+    ),
+  )
+  assert_true(
+    should_rectify_thinking_signature(
+      Some("xxx.signature: Extra inputs are not permitted"),
+      config,
+    ),
+  )
+  assert_false(
+    should_rectify_thinking_signature(
+      Some(
+        "Input tag 'adaptive' found using 'type' does not match expected tags",
+      ),
+      config,
+    ),
+  )
+  assert_false(
+    should_rectify_thinking_signature(
+      Some("Invalid `signature` in `thinking` block"),
+      {
+        enabled: false,
+        request_thinking_signature: true,
+        request_thinking_budget: true,
+        request_media_fallback: true,
+        request_media_heuristic: true,
+      },
+    ),
+  )
+}
+
+///|
+test "ccs thinking signature rectifier removes legacy blocks and signatures" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-test",
+      #|  "messages": [{
+      #|    "role": "assistant",
+      #|    "content": [
+      #|      { "type": "thinking", "thinking": "t", "signature": "sig" },
+      #|      { "type": "text", "text": "hello", "signature": "sig_text" },
+      #|      { "type": "tool_use", "id": "toolu_1", "name": "WebSearch", "input": {}, "signature": "sig_tool" },
+      #|      { "type": "redacted_thinking", "data": "r", "signature": "sig_redacted" }
+      #|    ]
+      #|  }]
+      #|}
+    ),
+  )
+  let rectified = rectify_anthropic_request(body)
+  assert_true(rectified.applied)
+  assert_eq(rectified.removed_thinking_blocks, 1)
+  assert_eq(rectified.removed_redacted_thinking_blocks, 1)
+  assert_eq(rectified.removed_signature_fields, 2)
+  guard rectified.body is Object(obj) else { fail("expected object") }
+  guard obj["messages"] is Array(messages) else { fail("expected messages") }
+  guard messages[0] is Object(message) else { fail("expected message") }
+  guard message["content"] is Array(content) else { fail("expected content") }
+  assert_eq(content.length(), 2)
+  guard content[0] is Object(text) else { fail("expected text") }
+  guard content[1] is Object(tool) else { fail("expected tool") }
+  assert_eq(text["type"], Json::string("text"))
+  assert_true(text.get("signature") is None)
+  assert_eq(tool["type"], Json::string("tool_use"))
+  assert_true(tool.get("signature") is None)
+}
+
+///|
+test "ccs thinking signature rectifier removes top level thinking for tool chain" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-test",
+      #|  "thinking": { "type": "enabled", "budget_tokens": 1024 },
+      #|  "messages": [{
+      #|    "role": "assistant",
+      #|    "content": [
+      #|      { "type": "tool_use", "id": "toolu_1", "name": "WebSearch", "input": {} }
+      #|    ]
+      #|  }, {
+      #|    "role": "user",
+      #|    "content": [{ "type": "tool_result", "tool_use_id": "toolu_1", "content": "ok" }]
+      #|  }]
+      #|}
+    ),
+  )
+  let rectified = rectify_anthropic_request(body)
+  assert_true(rectified.applied)
+  guard rectified.body is Object(obj) else { fail("expected object") }
+  assert_true(obj.get("thinking") is None)
+}
+
+///|
+test "ccs thinking budget rectifier detects and normalizes budget errors" {
+  let config = default_rectifier_config()
+  assert_true(
+    should_rectify_thinking_budget(
+      Some(
+        "thinking.budget_tokens: Input should be greater than or equal to 1024",
+      ),
+      config,
+    ),
+  )
+  assert_true(
+    should_rectify_thinking_budget(
+      Some("thinking budget_tokens must be >= 1024"),
+      config,
+    ),
+  )
+  assert_false(
+    should_rectify_thinking_budget(
+      Some("budget_tokens must be less than max_tokens"),
+      config,
+    ),
+  )
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-test",
+      #|  "thinking": { "type": "enabled", "budget_tokens": 512 },
+      #|  "max_tokens": 1024
+      #|}
+    ),
+  )
+  let rectified = rectify_thinking_budget(body)
+  assert_true(rectified.applied)
+  assert_eq(rectified.before.thinking_budget_tokens, Some(512))
+  assert_eq(rectified.after.thinking_budget_tokens, Some(32000))
+  assert_eq(rectified.before.max_tokens, Some(1024))
+  assert_eq(rectified.after.max_tokens, Some(64000))
+  guard rectified.body is Object(obj) else { fail("expected object") }
+  guard obj["thinking"] is Object(thinking) else { fail("expected thinking") }
+  assert_eq(thinking["type"], Json::string("enabled"))
+  assert_eq(thinking["budget_tokens"], Json::number(32000.0))
+  assert_eq(obj["max_tokens"], Json::number(64000.0))
+}
+
+///|
+test "ccs thinking budget rectifier skips adaptive requests" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-test",
+      #|  "thinking": { "type": "adaptive", "budget_tokens": 512 },
+      #|  "max_tokens": 1024
+      #|}
+    ),
+  )
+  let rectified = rectify_thinking_budget(body)
+  assert_false(rectified.applied)
+  assert_eq(rectified.before.thinking_type, Some("adaptive"))
+  assert_eq(rectified.after.thinking_type, Some("adaptive"))
+  guard rectified.body is Object(obj) else { fail("expected object") }
+  guard obj["thinking"] is Object(thinking) else { fail("expected thinking") }
+  assert_eq(thinking["type"], Json::string("adaptive"))
+  assert_eq(thinking["budget_tokens"], Json::number(512.0))
+  assert_eq(obj["max_tokens"], Json::number(1024.0))
+}
+
+///|
+test "ccs rectifier retry body selects signature before budget" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-test",
+      #|  "thinking": { "type": "enabled", "budget_tokens": 512 },
+      #|  "max_tokens": 1024,
+      #|  "messages": [{
+      #|    "role": "assistant",
+      #|    "content": [
+      #|      { "type": "thinking", "thinking": "t", "signature": "sig" },
+      #|      { "type": "tool_use", "id": "toolu_1", "name": "WebSearch", "input": {} }
+      #|    ]
+      #|  }]
+      #|}
+    ),
+  )
+  let retry = ccs_rectifier_retry_body(
+    "Invalid `signature` in `thinking` block and thinking.budget_tokens: Input should be greater than or equal to 1024",
+    body,
+  )
+  guard retry is Some(retry) else { fail("expected retry") }
+  assert_eq(retry.kind, "thinking_signature")
+  guard retry.body is Object(obj) else { fail("expected object") }
+  assert_true(obj.get("thinking") is None)
+}
+
+///|
 test "ccs thinking optimizer uses adaptive mode for newer opus and sonnet" {
   let body = @json.parse(
     (

@@ -3173,6 +3173,32 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
           }
         }
       }
+      if !(response_code is (200..=299)) {
+        match ccs_rectifier_retry_body(final_response_body, upstream_body) {
+          Some(rectifier_retry) => {
+            self.logger.info(
+              "CCS rectifier retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
+            )
+            let retry_outbound = self.claude_provider_outbound_body(
+              provider,
+              rectifier_retry.body,
+              api_format,
+              session_id,
+            )
+            match
+              self.post_claude_compatible_provider_json(
+                provider, endpoint, retry_outbound, api_format,
+              ) {
+              Ok((retry_response, retry_response_body)) => {
+                response_code = retry_response.code
+                final_response_body = retry_response_body
+              }
+              Err(_) => ()
+            }
+          }
+          None => ()
+        }
+      }
       if response_code is (200..=299) {
         let parsed = @json.parse(final_response_body) catch {
           _ => {
@@ -3727,6 +3753,73 @@ async fn Gateway::forward_streaming_claude_compatible_request(
         w.flush()
         return
       }
+    }
+    match ccs_rectifier_retry_body(error_body, upstream_body) {
+      Some(rectifier_retry) => {
+        self.logger.info(
+          "CCS rectifier stream retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
+        )
+        let retry_outbound = self.claude_provider_outbound_body(
+          provider,
+          rectifier_retry.body,
+          api_format,
+          session_id,
+        )
+        let retry_client = @http.Client::new(
+          origin,
+          headers=claude_compatible_provider_headers(
+            api_key,
+            api_format,
+            accept="text/event-stream",
+          ),
+        )
+        defer retry_client.close()
+        let retry_response = retry_client.post(path, retry_outbound)
+        if retry_response.code == 200 {
+          self.forward_successful_claude_compatible_stream(
+            retry_client,
+            request.model,
+            api_format,
+            provider.provider_id,
+            session_id,
+            w,
+          )
+          return
+        }
+        let retry_error_body = retry_client.read_all().text()
+        if !providers.is_empty() {
+          let next = self.activate_next_provider_after_upstream_status(
+            app_type,
+            providers,
+            attempted_provider_ids,
+            retry_response.code,
+          )
+          if next is Some(provider) {
+            self.handle_streaming_request(
+              request,
+              request_json,
+              self.upstream_claude_model(request.model, Some(provider)),
+              Some(provider),
+              app_type,
+              providers,
+              attempted_provider_ids,
+              session_id,
+              w,
+            )
+            return
+          }
+        }
+        self.record_upstream_error_status(
+          retry_error_body.length(),
+          retry_response.code,
+        )
+        w.header().set("Content-Type", "application/json")
+        w.write_header(retry_response.code)
+        w.write(retry_error_body)
+        w.flush()
+        return
+      }
+      None => ()
     }
     if !providers.is_empty() {
       let next = self.activate_next_provider_after_upstream_status(
