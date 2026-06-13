@@ -135,8 +135,25 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /get_openclaw_live_provider_ids`
 - `GET /get_openclaw_live_provider?providerId=custom`
 - `GET /scan_openclaw_config_health`
+- `GET /get_openclaw_default_model`
+- `POST /set_openclaw_default_model?primary=gpt-5&fallbacks=sonnet,opus`
+- `GET /get_openclaw_model_catalog`
+- `POST /set_openclaw_model_catalog?catalog={"fast":{"alias":"f"}}`
+- `GET /get_openclaw_agents_defaults`
+- `POST /set_openclaw_agents_defaults?defaults={"model":{"primary":"gpt-5"}}`
+- `GET /get_openclaw_env`
+- `POST /set_openclaw_env?key=OPENAI_API_KEY&value=...`
+- `GET /get_openclaw_tools`
+- `POST /set_openclaw_tools?allow=bash,read&deny=write`
 - `GET /get_hermes_live_provider_ids`
 - `GET /get_hermes_live_provider?providerId=custom`
+- `GET /get_hermes_model_config`
+- `GET /get_hermes_memory?kind=memory`
+- `POST /set_hermes_memory?kind=memory&content=...`
+- `GET /get_hermes_memory_limits`
+- `POST /set_hermes_memory_enabled?kind=user&enabled=false`
+- `GET /open_hermes_web_ui?path=/`
+- `POST /launch_hermes_dashboard`
 - `POST /import_opencode_providers_from_live`
 - `POST /import_openclaw_providers_from_live`
 - `POST /import_hermes_providers_from_live`
@@ -249,7 +266,10 @@ settings, endpoint latency result, and `sortIndex` command shapes.
 `import_*_from_live` commands expose the same suite-facing provider command
 surface against Moonstat's standalone provider router state. The standalone
 OpenClaw health scan returns an empty warning list because Moonstat does not own
-OpenClaw's live config file. `/get_universal_providers`,
+OpenClaw's live config file. The OpenClaw default-model/catalog/agents/env/tools
+commands and Hermes model/memory/dashboard commands keep CCS-compatible JSON
+shapes in Moonstat gateway state, returning `null` or CCS defaults before a
+standalone caller sets them. `/get_universal_providers`,
 `/get_universal_provider`, `/upsert_universal_provider`,
 `/delete_universal_provider`, and `/sync_universal_provider` preserve the ccs
 universal-provider JSON shape and can sync enabled Claude/Codex/Gemini apps into

@@ -370,6 +370,37 @@ test "top level ccs proxy command names build command alias paths" {
     ),
     Some("/test_proxy_url?url=socks5%3A%2F%2F127.0.0.1%3A1080"),
   )
+  assert_eq(
+    openclaw_default_model_path([
+      "moonstat", "set_openclaw_default_model", "--primary", "gpt-5", "--fallbacks",
+      "sonnet,opus",
+    ]),
+    Some("/set_openclaw_default_model?primary=gpt-5&fallbacks=sonnet%2Copus"),
+  )
+  assert_eq(
+    suite_json_config_path(
+      [
+        "moonstat", "set_openclaw_model_catalog", "--catalog", "{\"fast\":{\"alias\":\"f\"}}",
+      ],
+      "/set_openclaw_model_catalog",
+      "--catalog",
+    ),
+    Some(
+      "/set_openclaw_model_catalog?catalog=%7B%22fast%22%3A%7B%22alias%22%3A%22f%22%7D%7D",
+    ),
+  )
+  assert_eq(
+    hermes_memory_path([
+      "moonstat", "set_hermes_memory", "--kind", "memory", "--content", "hello world",
+    ]),
+    Some("/set_hermes_memory?kind=memory&content=hello%20world"),
+  )
+  assert_eq(
+    hermes_memory_enabled_path([
+      "moonstat", "set_hermes_memory_enabled", "--kind", "user", "--enabled", "false",
+    ]),
+    Some("/set_hermes_memory_enabled?kind=user&enabled=false"),
+  )
 }
 
 ///|

@@ -23,6 +23,14 @@ pub struct Gateway {
   proxy_default_cost_multipliers : Map[String, String]
   proxy_pricing_model_sources : Map[String, String]
   mut upstream_proxy_url : String?
+  mut openclaw_default_model : Json?
+  mut openclaw_model_catalog : Json?
+  mut openclaw_agents_defaults : Json?
+  mut openclaw_env : Json
+  mut openclaw_tools : Json
+  hermes_model_config : Json?
+  hermes_memory : Map[String, String]
+  hermes_memory_enabled : Map[String, Bool]
   mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int
@@ -59,6 +67,14 @@ pub fn Gateway::new(
     proxy_default_cost_multipliers: Map([], capacity=0),
     proxy_pricing_model_sources: Map([], capacity=0),
     upstream_proxy_url: None,
+    openclaw_default_model: None,
+    openclaw_model_catalog: None,
+    openclaw_agents_defaults: None,
+    openclaw_env: Json::object({}),
+    openclaw_tools: openclaw_default_tools_json(),
+    hermes_model_config: None,
+    hermes_memory: Map([], capacity=2),
+    hermes_memory_enabled: Map([("memory", true), ("user", true)], capacity=2),
     stream_check_config: StreamCheckConfig::default(),
     logger,
     started_at_ms: @async.now().to_int(),
@@ -781,11 +797,63 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/scan_openclaw_config_health", (_, w) => {
     self.handle_scan_openclaw_config_health(w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_openclaw_default_model", (_, w) => {
+    self.handle_get_openclaw_default_model(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_openclaw_default_model", (r, w) => {
+    self.handle_set_openclaw_default_model(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_openclaw_model_catalog", (_, w) => {
+    self.handle_get_openclaw_model_catalog(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_openclaw_model_catalog", (r, w) => {
+    self.handle_set_openclaw_model_catalog(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_openclaw_agents_defaults", (_, w) => {
+    self.handle_get_openclaw_agents_defaults(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_openclaw_agents_defaults", (
+    r,
+    w,
+  ) => self.handle_set_openclaw_agents_defaults(r, w))
+  router.add_handler(@httpx.Method::Get, "/get_openclaw_env", (_, w) => {
+    self.handle_get_openclaw_env(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_openclaw_env", (r, w) => {
+    self.handle_set_openclaw_env(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_openclaw_tools", (_, w) => {
+    self.handle_get_openclaw_tools(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_openclaw_tools", (r, w) => {
+    self.handle_set_openclaw_tools(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_hermes_live_provider_ids", (_, w) => {
     self.handle_get_live_provider_ids(w, "hermes")
   })
   router.add_handler(@httpx.Method::Get, "/get_hermes_live_provider", (r, w) => {
     self.handle_get_live_provider(r, w, "hermes")
+  })
+  router.add_handler(@httpx.Method::Get, "/get_hermes_model_config", (_, w) => {
+    self.handle_get_hermes_model_config(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_hermes_memory", (r, w) => {
+    self.handle_get_hermes_memory(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_hermes_memory", (r, w) => {
+    self.handle_set_hermes_memory(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_hermes_memory_limits", (_, w) => {
+    self.handle_get_hermes_memory_limits(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_hermes_memory_enabled", (r, w) => {
+    self.handle_set_hermes_memory_enabled(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/open_hermes_web_ui", (r, w) => {
+    self.handle_open_hermes_web_ui(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/launch_hermes_dashboard", (_, w) => {
+    self.handle_launch_hermes_dashboard(w)
   })
   router.add_handler(
     @httpx.Method::Post,
@@ -4007,6 +4075,224 @@ async fn Gateway::handle_scan_openclaw_config_health(
 }
 
 ///|
+async fn Gateway::handle_get_openclaw_default_model(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.openclaw_default_model.unwrap_or(Json::null()))
+}
+
+///|
+async fn Gateway::handle_set_openclaw_default_model(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard openclaw_default_model_from_request(r.path, body) is Some(model) else {
+    write_usage_bad_request(w, "invalid_openclaw_default_model")
+    return
+  }
+  self.openclaw_default_model = Some(model)
+  write_usage_json(w, suite_write_outcome_json())
+}
+
+///|
+async fn Gateway::handle_get_openclaw_model_catalog(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.openclaw_model_catalog.unwrap_or(Json::null()))
+}
+
+///|
+async fn Gateway::handle_set_openclaw_model_catalog(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard suite_object_request(r.path, body, "catalog") is Some(catalog) else {
+    write_usage_bad_request(w, "invalid_openclaw_model_catalog")
+    return
+  }
+  self.openclaw_model_catalog = Some(catalog)
+  write_usage_json(w, suite_write_outcome_json())
+}
+
+///|
+async fn Gateway::handle_get_openclaw_agents_defaults(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.openclaw_agents_defaults.unwrap_or(Json::null()))
+}
+
+///|
+async fn Gateway::handle_set_openclaw_agents_defaults(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let defaults = match suite_object_request(r.path, body, "defaults") {
+    Some(defaults) => Some(defaults)
+    None =>
+      match openclaw_default_model_from_request(r.path, body) {
+        Some(model) => Some({ "model": model }.to_json())
+        None => None
+      }
+  }
+  guard defaults is Some(defaults_json) else {
+    write_usage_bad_request(w, "invalid_openclaw_agents_defaults")
+    return
+  }
+  self.openclaw_agents_defaults = Some(defaults_json)
+  write_usage_json(w, suite_write_outcome_json())
+}
+
+///|
+async fn Gateway::handle_get_openclaw_env(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.openclaw_env)
+}
+
+///|
+async fn Gateway::handle_set_openclaw_env(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard openclaw_env_from_request(r.path, body) is Some(env) else {
+    write_usage_bad_request(w, "invalid_openclaw_env")
+    return
+  }
+  self.openclaw_env = env
+  write_usage_json(w, suite_write_outcome_json())
+}
+
+///|
+async fn Gateway::handle_get_openclaw_tools(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.openclaw_tools)
+}
+
+///|
+async fn Gateway::handle_set_openclaw_tools(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard openclaw_tools_from_request(r.path, body) is Some(tools) else {
+    write_usage_bad_request(w, "invalid_openclaw_tools")
+    return
+  }
+  self.openclaw_tools = tools
+  write_usage_json(w, suite_write_outcome_json())
+}
+
+///|
+async fn Gateway::handle_get_hermes_model_config(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.hermes_model_config.unwrap_or(Json::null()))
+}
+
+///|
+async fn Gateway::handle_get_hermes_memory(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard hermes_memory_kind_from_request(r.path, None) is Some(kind) else {
+    write_usage_bad_request(w, "invalid_hermes_memory_kind")
+    return
+  }
+  write_usage_json(w, Json::string(self.hermes_memory.get(kind).unwrap_or("")))
+}
+
+///|
+async fn Gateway::handle_set_hermes_memory(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard hermes_memory_kind_from_request(r.path, body) is Some(kind) else {
+    write_usage_bad_request(w, "invalid_hermes_memory_kind")
+    return
+  }
+  let content = proxy_string_request(r.path, body, ["content", "value", "text"]).unwrap_or(
+    "",
+  )
+  self.hermes_memory[kind] = content
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_get_hermes_memory_limits(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, hermes_memory_limits_json(self.hermes_memory_enabled))
+}
+
+///|
+async fn Gateway::handle_set_hermes_memory_enabled(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard hermes_memory_kind_from_request(r.path, body) is Some(kind) else {
+    write_usage_bad_request(w, "invalid_hermes_memory_kind")
+    return
+  }
+  guard proxy_bool_request(r.path, body, ["enabled"]) is Some(enabled) else {
+    write_usage_bad_request(w, "missing_enabled")
+    return
+  }
+  self.hermes_memory_enabled[kind] = enabled
+  write_usage_json(w, suite_write_outcome_json())
+}
+
+///|
+async fn Gateway::handle_open_hermes_web_ui(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let port = usage_query_int(r.path, "port").unwrap_or(9119)
+  let path = usage_query_value(r.path, "path").unwrap_or("/")
+  let normalized_path = if path.has_prefix("/") { path } else { "/\{path}" }
+  write_usage_json(
+    w,
+    {
+      "url": Json::string("http://127.0.0.1:\{port}\{normalized_path}"),
+      "opened": Json::boolean(false),
+      "error": Json::null(),
+    }.to_json(),
+  )
+}
+
+///|
+async fn Gateway::handle_launch_hermes_dashboard(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::null())
+}
+
+///|
 async fn Gateway::handle_import_live_providers(
   self : Gateway,
   w : @httpx.ResponseWriter,
@@ -5111,6 +5397,145 @@ fn provider_settings_config_from_body(body : Json?) -> Json? {
         None => None
       }
   }
+}
+
+///|
+fn suite_write_outcome_json() -> Json {
+  let empty : Map[String, Json] = {}
+  Json::object(empty)
+}
+
+///|
+fn openclaw_default_tools_json() -> Json {
+  { "allow": Json::array([]), "deny": Json::array([]) }.to_json()
+}
+
+///|
+fn suite_object_payload(body : Json?, key : String) -> Json? {
+  match body {
+    Some(Object(obj)) =>
+      match obj.get(key) {
+        Some(Object(nested)) => Some(Json::object(nested))
+        Some(_) => None
+        None => Some(Json::object(obj))
+      }
+    _ => None
+  }
+}
+
+///|
+fn suite_object_request(path : StringView, body : Json?, key : String) -> Json? {
+  match suite_object_payload(body, key) {
+    Some(payload) => return Some(payload)
+    None => ()
+  }
+  match usage_query_value(path, key) {
+    Some(raw) => {
+      let parsed = @json.parse(raw) catch { _ => return None }
+      match parsed {
+        Object(obj) => Some(Json::object(obj))
+        _ => None
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn openclaw_default_model_from_request(
+  path : StringView,
+  body : Json?,
+) -> Json? {
+  match suite_object_payload(body, "model") {
+    Some(model) => return Some(model)
+    None => ()
+  }
+  guard proxy_string_request(path, body, ["primary"]) is Some(primary) &&
+    !primary.trim().is_empty() else {
+    return None
+  }
+  Some(
+    {
+      "primary": Json::string(primary.trim().to_owned()),
+      "fallbacks": split_csv_json(
+        proxy_string_request(path, body, ["fallbacks"]).unwrap_or(""),
+      ),
+    }.to_json(),
+  )
+}
+
+///|
+fn openclaw_env_from_request(path : StringView, body : Json?) -> Json? {
+  match suite_object_request(path, body, "env") {
+    Some(env) => return Some(env)
+    None => ()
+  }
+  guard proxy_string_request(path, body, ["key", "name"]) is Some(key) &&
+    !key.trim().is_empty() else {
+    return None
+  }
+  let value = proxy_string_request(path, body, ["value"]).unwrap_or("")
+  let env : Map[String, Json] = {}
+  env[key.trim().to_owned()] = Json::string(value)
+  Some(Json::object(env))
+}
+
+///|
+fn openclaw_tools_from_request(path : StringView, body : Json?) -> Json? {
+  match suite_object_request(path, body, "tools") {
+    Some(tools) => return Some(tools)
+    None => ()
+  }
+  let tools : Map[String, Json] = {
+    "allow": split_csv_json(
+      proxy_string_request(path, body, ["allow"]).unwrap_or(""),
+    ),
+    "deny": split_csv_json(
+      proxy_string_request(path, body, ["deny"]).unwrap_or(""),
+    ),
+  }
+  match proxy_string_request(path, body, ["profile"]) {
+    Some(profile) if !profile.trim().is_empty() =>
+      tools["profile"] = Json::string(profile.trim().to_owned())
+    _ => ()
+  }
+  Some(Json::object(tools))
+}
+
+///|
+fn split_csv_json(value : String) -> Json {
+  let items : Array[Json] = []
+  for raw in value.split(",") {
+    let trimmed = raw.trim().to_owned()
+    if !trimmed.is_empty() {
+      items.push(Json::string(trimmed))
+    }
+  }
+  Json::array(items)
+}
+
+///|
+fn hermes_memory_kind_from_request(path : StringView, body : Json?) -> String? {
+  match
+    proxy_string_request(path, body, ["kind", "memoryKind", "memory_kind"]) {
+    Some(raw) =>
+      match raw.trim().to_lower() {
+        "memory" => Some("memory")
+        "user" => Some("user")
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
+fn hermes_memory_limits_json(enabled : Map[String, Bool]) -> Json {
+  {
+    "memory": Json::number(2200.0),
+    "user": Json::number(1375.0),
+    "memoryEnabled": Json::boolean(enabled.get("memory").unwrap_or(true)),
+    "userEnabled": Json::boolean(enabled.get("user").unwrap_or(true)),
+  }.to_json()
 }
 
 ///|

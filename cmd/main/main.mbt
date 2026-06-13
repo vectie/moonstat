@@ -126,11 +126,45 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_named_live_provider(arr, "openclaw")
     ["scan_openclaw_config_health", ..] | ["scan-openclaw-config-health", ..] =>
       check_usage_endpoint(arr, "/scan_openclaw_config_health")
+    ["get_openclaw_default_model", ..] | ["get-openclaw-default-model", ..] =>
+      check_usage_endpoint(arr, "/get_openclaw_default_model")
+    ["set_openclaw_default_model", ..] | ["set-openclaw-default-model", ..] =>
+      set_openclaw_default_model(arr)
+    ["get_openclaw_model_catalog", ..] | ["get-openclaw-model-catalog", ..] =>
+      check_usage_endpoint(arr, "/get_openclaw_model_catalog")
+    ["set_openclaw_model_catalog", ..] | ["set-openclaw-model-catalog", ..] =>
+      set_suite_json_config(arr, "/set_openclaw_model_catalog", "--catalog")
+    ["get_openclaw_agents_defaults", ..]
+    | ["get-openclaw-agents-defaults", ..] =>
+      check_usage_endpoint(arr, "/get_openclaw_agents_defaults")
+    ["set_openclaw_agents_defaults", ..]
+    | ["set-openclaw-agents-defaults", ..] => set_openclaw_agents_defaults(arr)
+    ["get_openclaw_env", ..] | ["get-openclaw-env", ..] =>
+      check_usage_endpoint(arr, "/get_openclaw_env")
+    ["set_openclaw_env", ..] | ["set-openclaw-env", ..] => set_openclaw_env(arr)
+    ["get_openclaw_tools", ..] | ["get-openclaw-tools", ..] =>
+      check_usage_endpoint(arr, "/get_openclaw_tools")
+    ["set_openclaw_tools", ..] | ["set-openclaw-tools", ..] =>
+      set_openclaw_tools(arr)
     ["get_hermes_live_provider_ids", ..]
     | ["get-hermes-live-provider-ids", ..] =>
       check_named_live_provider_ids(arr, "hermes")
     ["get_hermes_live_provider", ..] | ["get-hermes-live-provider", ..] =>
       check_named_live_provider(arr, "hermes")
+    ["get_hermes_model_config", ..] | ["get-hermes-model-config", ..] =>
+      check_usage_endpoint(arr, "/get_hermes_model_config")
+    ["get_hermes_memory", ..] | ["get-hermes-memory", ..] =>
+      check_hermes_memory(arr)
+    ["set_hermes_memory", ..] | ["set-hermes-memory", ..] =>
+      set_hermes_memory(arr)
+    ["get_hermes_memory_limits", ..] | ["get-hermes-memory-limits", ..] =>
+      check_usage_endpoint(arr, "/get_hermes_memory_limits")
+    ["set_hermes_memory_enabled", ..] | ["set-hermes-memory-enabled", ..] =>
+      set_hermes_memory_enabled(arr)
+    ["open_hermes_web_ui", ..] | ["open-hermes-web-ui", ..] =>
+      check_usage_endpoint(arr, hermes_web_ui_path(arr))
+    ["launch_hermes_dashboard", ..] | ["launch-hermes-dashboard", ..] =>
+      check_json_post_endpoint(arr, "/launch_hermes_dashboard", "Hermes")
     ["import_opencode_providers_from_live", ..]
     | ["import-opencode-providers-from-live", ..] =>
       import_named_live_providers(arr, "opencode")
@@ -1032,6 +1066,100 @@ async fn import_named_live_providers(
 }
 
 ///|
+async fn set_openclaw_default_model(args : Array[String]) -> Unit {
+  guard openclaw_default_model_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --primary")
+    return
+  }
+  check_json_post_endpoint(args, path, "OpenClaw")
+}
+
+///|
+async fn set_openclaw_agents_defaults(args : Array[String]) -> Unit {
+  let path = match
+    suite_json_config_path(args, "/set_openclaw_agents_defaults", "--defaults") {
+    Some(path) => Some(path)
+    None =>
+      openclaw_default_model_path_with_base(
+        args, "/set_openclaw_agents_defaults",
+      )
+  }
+  guard path is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --defaults or --primary")
+    return
+  }
+  check_json_post_endpoint(args, path, "OpenClaw")
+}
+
+///|
+async fn set_openclaw_env(args : Array[String]) -> Unit {
+  let path = match suite_json_config_path(args, "/set_openclaw_env", "--env") {
+    Some(path) => Some(path)
+    None => openclaw_key_value_path(args, "/set_openclaw_env")
+  }
+  guard path is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --env or --key")
+    return
+  }
+  check_json_post_endpoint(args, path, "OpenClaw")
+}
+
+///|
+async fn set_openclaw_tools(args : Array[String]) -> Unit {
+  let path = suite_json_config_path(args, "/set_openclaw_tools", "--tools").unwrap_or(
+    openclaw_tools_path(args),
+  )
+  check_json_post_endpoint(args, path, "OpenClaw")
+}
+
+///|
+async fn set_suite_json_config(
+  args : Array[String],
+  base_path : String,
+  flag : String,
+) -> Unit {
+  guard suite_json_config_path(args, base_path, flag) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required \{flag}")
+    return
+  }
+  check_json_post_endpoint(args, path, "Suite")
+}
+
+///|
+async fn check_hermes_memory(args : Array[String]) -> Unit {
+  guard hermes_kind_path(args, "/get_hermes_memory") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --kind memory|user")
+    return
+  }
+  check_json_endpoint(args, path, "Hermes")
+}
+
+///|
+async fn set_hermes_memory(args : Array[String]) -> Unit {
+  guard hermes_memory_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --kind and --content")
+    return
+  }
+  check_json_post_endpoint(args, path, "Hermes")
+}
+
+///|
+async fn set_hermes_memory_enabled(args : Array[String]) -> Unit {
+  guard hermes_memory_enabled_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --kind and --enabled")
+    return
+  }
+  check_json_post_endpoint(args, path, "Hermes")
+}
+
+///|
 async fn check_provider_live_ids(args : Array[String]) -> Unit {
   check_json_endpoint(
     args,
@@ -1270,6 +1398,112 @@ fn provider_import_live_path(app_type : String) -> String {
     "hermes" => "/import_hermes_providers_from_live"
     _ => "/get_providers?app=\{cli_url_encode(app_type)}"
   }
+}
+
+///|
+fn openclaw_default_model_path(args : Array[String]) -> String? {
+  openclaw_default_model_path_with_base(args, "/set_openclaw_default_model")
+}
+
+///|
+fn openclaw_default_model_path_with_base(
+  args : Array[String],
+  base_path : String,
+) -> String? {
+  guard parse_string_arg(args, "--primary") is Some(primary) else {
+    return None
+  }
+  let query : Array[String] = [cli_query_pair("primary", primary)]
+  match parse_string_arg(args, "--fallbacks") {
+    Some(fallbacks) => query.push(cli_query_pair("fallbacks", fallbacks))
+    None => ()
+  }
+  Some("\{base_path}?\{query.join("&")}")
+}
+
+///|
+fn suite_json_config_path(
+  args : Array[String],
+  base_path : String,
+  flag : String,
+) -> String? {
+  guard parse_string_arg(args, flag) is Some(raw) else { return None }
+  let key = if flag.has_prefix("--") { flag[2:].to_owned() } else { flag }
+  Some("\{base_path}?\{cli_query_pair(key, raw)}")
+}
+
+///|
+fn openclaw_key_value_path(args : Array[String], base_path : String) -> String? {
+  guard parse_string_arg(args, "--key") is Some(key) else { return None }
+  let value = parse_string_arg(args, "--value").unwrap_or("")
+  Some(
+    "\{base_path}?\{cli_query_pair("key", key)}&\{cli_query_pair("value", value)}",
+  )
+}
+
+///|
+fn openclaw_tools_path(args : Array[String]) -> String {
+  let query : Array[String] = []
+  match parse_string_arg(args, "--profile") {
+    Some(profile) => query.push(cli_query_pair("profile", profile))
+    None => ()
+  }
+  match parse_string_arg(args, "--allow") {
+    Some(allow) => query.push(cli_query_pair("allow", allow))
+    None => ()
+  }
+  match parse_string_arg(args, "--deny") {
+    Some(deny) => query.push(cli_query_pair("deny", deny))
+    None => ()
+  }
+  cli_path_with_query("/set_openclaw_tools", query)
+}
+
+///|
+fn hermes_kind_path(args : Array[String], base_path : String) -> String? {
+  guard parse_string_arg(args, "--kind") is Some(kind) else { return None }
+  Some("\{base_path}?\{cli_query_pair("kind", kind)}")
+}
+
+///|
+fn hermes_memory_path(args : Array[String]) -> String? {
+  guard parse_string_arg(args, "--kind") is Some(kind) else { return None }
+  let content = match parse_string_arg(args, "--content") {
+    Some(value) => value
+    None =>
+      match parse_string_arg(args, "--value") {
+        Some(value) => value
+        None => parse_string_arg(args, "--text").unwrap_or("")
+      }
+  }
+  Some(
+    "/set_hermes_memory?\{cli_query_pair("kind", kind)}&\{cli_query_pair("content", content)}",
+  )
+}
+
+///|
+fn hermes_memory_enabled_path(args : Array[String]) -> String? {
+  guard parse_string_arg(args, "--kind") is Some(kind) else { return None }
+  guard parse_string_arg(args, "--enabled") is Some(enabled) else {
+    return None
+  }
+  Some(
+    "/set_hermes_memory_enabled?\{cli_query_pair("kind", kind)}&\{cli_query_pair("enabled", enabled)}",
+  )
+}
+
+///|
+fn hermes_web_ui_path(args : Array[String]) -> String {
+  let query : Array[String] = []
+  match parse_string_arg(args, "--path") {
+    Some(path) => query.push(cli_query_pair("path", path))
+    None => ()
+  }
+  match parse_string_arg(args, "--port") {
+    Some(port) => query.push(cli_query_pair("port", port))
+    None => ()
+  }
+  cli_path_with_query("/open_hermes_web_ui", query)
 }
 
 ///|

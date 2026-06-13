@@ -312,6 +312,46 @@ test "global proxy url helpers use ccs response shapes" {
 }
 
 ///|
+test "suite config helpers mirror ccs openclaw hermes shapes" {
+  json_inspect(openclaw_default_tools_json(), content={
+    "allow": [],
+    "deny": [],
+  })
+  json_inspect(
+    openclaw_default_model_from_request(
+      "/set_openclaw_default_model?primary=gpt-5&fallbacks=sonnet%2Copus",
+      None,
+    ).unwrap(),
+    content={ "primary": "gpt-5", "fallbacks": ["sonnet", "opus"] },
+  )
+  json_inspect(
+    suite_object_request(
+      "/set_openclaw_model_catalog?catalog=%7B%22fast%22%3A%7B%22alias%22%3A%22f%22%7D%7D",
+      None,
+      "catalog",
+    ).unwrap(),
+    content={ "fast": { "alias": "f" } },
+  )
+  json_inspect(
+    hermes_memory_limits_json(Map([("memory", false), ("user", true)])),
+    content={
+      "memory": 2200,
+      "user": 1375,
+      "memoryEnabled": false,
+      "userEnabled": true,
+    },
+  )
+  assert_eq(
+    hermes_memory_kind_from_request("/get_hermes_memory?kind=user", None),
+    Some("user"),
+  )
+  assert_eq(
+    hermes_memory_kind_from_request("/get_hermes_memory?kind=bad", None),
+    None,
+  )
+}
+
+///|
 test "proxy app config alias matches ccs app config shape" {
   let gateway = Gateway::new(port=17005, host="127.0.0.6", model="gpt-5")
   guard gateway.proxy_app_config_json("claude") is Object(config) else {

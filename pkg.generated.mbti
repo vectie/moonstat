@@ -322,6 +322,14 @@ pub struct Gateway {
   proxy_default_cost_multipliers : Map[String, String]
   proxy_pricing_model_sources : Map[String, String]
   mut upstream_proxy_url : String?
+  mut openclaw_default_model : Json?
+  mut openclaw_model_catalog : Json?
+  mut openclaw_agents_defaults : Json?
+  mut openclaw_env : Json
+  mut openclaw_tools : Json
+  hermes_model_config : Json?
+  hermes_memory : Map[String, String]
+  hermes_memory_enabled : Map[String, Bool]
   mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int
