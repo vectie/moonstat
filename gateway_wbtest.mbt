@@ -1236,6 +1236,168 @@ test "gateway detects active direct codex compatible provider" {
 }
 
 ///|
+test "gemini native stream emits cumulative text deltas" {
+  let state = GeminiNativeAnthropicStreamState::new()
+  let first = @json.parse(
+    (
+      #|{
+      #|  "responseId": "resp_gem_1",
+      #|  "modelVersion": "gemini-2.5-pro",
+      #|  "candidates": [
+      #|    { "content": { "parts": [ { "text": "Hel" } ] } }
+      #|  ],
+      #|  "usageMetadata": { "promptTokenCount": 10, "totalTokenCount": 13 }
+      #|}
+    ),
+  )
+  let second = @json.parse(
+    (
+      #|{
+      #|  "responseId": "resp_gem_1",
+      #|  "modelVersion": "gemini-2.5-pro",
+      #|  "candidates": [
+      #|    {
+      #|      "finishReason": "STOP",
+      #|      "content": { "parts": [ { "text": "Hello" } ] }
+      #|    }
+      #|  ],
+      #|  "usageMetadata": { "promptTokenCount": 10, "totalTokenCount": 15 }
+      #|}
+    ),
+  )
+  let first_events = state.push_chunk(first)
+  let second_events = state.push_chunk(second)
+  let finish_events = state.finish()
+  assert_eq(first_events[0].event_type, "message_start")
+  assert_eq(first_events[1].event_type, "content_block_start")
+  let first_delta = @json.parse(first_events[2].data)
+  let second_delta = @json.parse(second_events[0].data)
+  guard first_delta is Object(first_obj) else { fail("expected first delta") }
+  guard second_delta is Object(second_obj) else {
+    fail("expected second delta")
+  }
+  guard first_obj["delta"] is Object(first_payload) else {
+    fail("expected first payload")
+  }
+  guard second_obj["delta"] is Object(second_payload) else {
+    fail("expected second payload")
+  }
+  assert_eq(first_payload["text"], Json::string("Hel"))
+  assert_eq(second_payload["text"], Json::string("lo"))
+  let message_delta = @json.parse(finish_events[1].data)
+  guard message_delta is Object(done_obj) else { fail("expected done") }
+  guard done_obj["delta"] is Object(done_delta) else {
+    fail("expected done delta")
+  }
+  assert_eq(done_delta["stop_reason"], Json::string("end_turn"))
+  guard done_obj["usage"] is Object(usage) else { fail("expected usage") }
+  assert_eq(usage["input_tokens"], Json::number(10.0))
+  assert_eq(usage["output_tokens"], Json::number(5.0))
+}
+
+///|
+test "gemini native stream keeps parallel no id tool calls distinct" {
+  let state = GeminiNativeAnthropicStreamState::new()
+  let chunk = @json.parse(
+    (
+      #|{
+      #|  "responseId": "resp_gem_tools",
+      #|  "modelVersion": "gemini-2.5-pro",
+      #|  "candidates": [
+      #|    {
+      #|      "finishReason": "STOP",
+      #|      "content": {
+      #|        "parts": [
+      #|          { "functionCall": { "name": "lookup", "args": { "city": "Tokyo" } } },
+      #|          { "functionCall": { "name": "lookup", "args": { "city": "Osaka" } } }
+      #|        ]
+      #|      }
+      #|    }
+      #|  ],
+      #|  "usageMetadata": { "promptTokenCount": 5, "totalTokenCount": 8 }
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(chunk)
+  let events = state.finish()
+  let starts = events.filter(event => event.event_type == "content_block_start")
+  assert_eq(starts.length(), 2)
+  let first = @json.parse(starts[0].data)
+  let second = @json.parse(starts[1].data)
+  guard first is Object(first_obj) else { fail("expected first") }
+  guard second is Object(second_obj) else { fail("expected second") }
+  guard first_obj["content_block"] is Object(first_block) else {
+    fail("expected first block")
+  }
+  guard second_obj["content_block"] is Object(second_block) else {
+    fail("expected second block")
+  }
+  assert_eq(first_block["type"], Json::string("tool_use"))
+  assert_eq(second_block["type"], Json::string("tool_use"))
+  assert_true(first_block["id"] != second_block["id"])
+  assert_eq(first_block["name"], Json::string("lookup"))
+  assert_eq(second_block["name"], Json::string("lookup"))
+  let deltas = events.filter(event => event.event_type == "content_block_delta")
+  assert_eq(deltas.length(), 2)
+  let delta_a = @json.parse(deltas[0].data)
+  let delta_b = @json.parse(deltas[1].data)
+  guard delta_a is Object(delta_a_obj) else { fail("expected delta") }
+  guard delta_b is Object(delta_b_obj) else { fail("expected delta") }
+  guard delta_a_obj["delta"] is Object(delta_a_payload) else {
+    fail("expected payload")
+  }
+  guard delta_b_obj["delta"] is Object(delta_b_payload) else {
+    fail("expected payload")
+  }
+  assert_eq(
+    delta_a_payload["partial_json"],
+    Json::string("{\"city\":\"Tokyo\"}"),
+  )
+  assert_eq(
+    delta_b_payload["partial_json"],
+    Json::string("{\"city\":\"Osaka\"}"),
+  )
+  let message_delta = @json.parse(events[6].data)
+  guard message_delta is Object(done_obj) else { fail("expected done") }
+  guard done_obj["delta"] is Object(done_delta) else {
+    fail("expected done delta")
+  }
+  assert_eq(done_delta["stop_reason"], Json::string("tool_use"))
+}
+
+///|
+test "gemini native stream prompt feedback becomes refusal" {
+  let state = GeminiNativeAnthropicStreamState::new()
+  let events = state.push_chunk(
+    @json.parse(
+      (
+        #|{
+        #|  "responseId": "resp_block",
+        #|  "modelVersion": "gemini-2.5-pro",
+        #|  "promptFeedback": { "blockReason": "SAFETY" },
+        #|  "usageMetadata": { "promptTokenCount": 5, "totalTokenCount": 5 }
+        #|}
+      ),
+    ),
+  )
+  assert_eq(events[0].event_type, "message_start")
+  let finish_events = state.finish()
+  let text_delta = @json.parse(finish_events[1].data)
+  guard text_delta is Object(text_obj) else { fail("expected text delta") }
+  guard text_obj["delta"] is Object(text_payload) else {
+    fail("expected text payload")
+  }
+  guard text_payload["text"] is String(text) else { fail("expected text") }
+  assert_true(text.contains("SAFETY"))
+  let message_delta = @json.parse(finish_events[3].data)
+  guard message_delta is Object(done_obj) else { fail("expected done") }
+  guard done_obj["delta"] is Object(done_delta) else {
+    fail("expected done delta")
+  }
+  assert_eq(done_delta["stop_reason"], Json::string("refusal"))
+}
+
+///|
 test "gemini native claude compatible provider uses gemini url and headers" {
   assert_eq(
     claude_compatible_provider_url(

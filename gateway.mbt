@@ -3394,20 +3394,13 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let api_format = provider.claude_api_format()
-  if api_format == "gemini_native" {
-    self.record_upstream_error_status(0, @status.BadGateway)
-    w.header().set("Content-Type", "application/json")
-    w.write_header(@status.BadGateway)
-    w.write(
-      "{\"error\":{\"message\":\"Gemini-native Claude streaming is not implemented yet\",\"type\":\"upstream_error\"}}",
-    )
-    w.flush()
-    return
-  }
   let upstream_body = claude_stream_request_json_for_upstream(
     request_json, upstream_model,
   )
-  let endpoint = claude_transform_endpoint(api_format, true)
+  let endpoint = claude_transform_endpoint(api_format, true).replace_all(
+    old="__MODEL__",
+    new=normalize_gemini_model_id(upstream_model),
+  )
   let outbound = if claude_api_format_needs_transform(api_format) {
     transform_claude_request_for_api_format(
       upstream_body,
@@ -3422,7 +3415,12 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   }
   let base_url = provider.base_url.unwrap()
   let api_key = provider.api_key.unwrap()
-  let url = codex_compatible_provider_url(base_url, endpoint)
+  let url = claude_compatible_provider_url(
+    base_url,
+    endpoint,
+    api_format,
+    provider.is_full_url,
+  )
   let (origin, path) = split_origin_and_path(url)
   let client = @http.Client::new(
     origin,
@@ -3475,6 +3473,13 @@ async fn Gateway::forward_streaming_claude_compatible_request(
     self.forward_openai_chat_sse_as_anthropic(client, stream_events, w)
     self.record_success_stream_usage(
       token_usage_from_openai_stream_events(stream_events),
+      0,
+      record_provider=false,
+    )
+  } else if api_format == "gemini_native" {
+    self.forward_gemini_native_sse_as_anthropic(client, stream_events, w)
+    self.record_success_stream_usage(
+      token_usage_from_gemini_stream_chunks(stream_events),
       0,
       record_provider=false,
     )
@@ -3577,11 +3582,390 @@ async fn Gateway::forward_anthropic_sse_passthrough(
 }
 
 ///|
+async fn Gateway::forward_gemini_native_sse_as_anthropic(
+  self : Gateway,
+  reader : &@io.Reader,
+  events : Array[Json],
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let _ = self
+  let state = GeminiNativeAnthropicStreamState::new()
+  let mut finished = false
+  while reader.read_until("\n") is Some(line) {
+    guard line is [.. "data: ", .. rest] else { continue }
+    let data = rest.trim().to_owned()
+    if data == "[DONE]" {
+      finished = true
+      for event in state.finish() {
+        w.write("event: \{event.event_type}\n")
+        w.write("data: \{event.data}\n\n")
+        w.flush()
+      }
+      break
+    }
+    let parsed = @json.parse(data) catch { _ => continue }
+    events.push(parsed)
+    for event in state.push_chunk(parsed) {
+      w.write("event: \{event.event_type}\n")
+      w.write("data: \{event.data}\n\n")
+      w.flush()
+    }
+  }
+  if !finished {
+    for event in state.finish() {
+      w.write("event: \{event.event_type}\n")
+      w.write("data: \{event.data}\n\n")
+      w.flush()
+    }
+  }
+}
+
+///|
+fn gemini_native_stream_chunk_to_anthropic_events(
+  chunk : Json,
+) -> Array[StreamEvent] {
+  let state = GeminiNativeAnthropicStreamState::new()
+  state.push_chunk(chunk)
+}
+
+///|
 fn openai_chat_stream_chunk_to_anthropic_events(
   chunk : Json,
 ) -> Array[StreamEvent] {
   let state = OpenAIChatAnthropicStreamState::new()
   state.push_chunk(chunk)
+}
+
+///|
+priv struct GeminiNativeAnthropicToolSnapshot {
+  mut id : String?
+  mut name : String
+  mut args : Json
+}
+
+///|
+priv struct GeminiNativeAnthropicStreamState {
+  mut message_id : String?
+  mut model : String?
+  mut next_content_index : Int
+  mut has_sent_message_start : Bool
+  mut text_block_index : Int?
+  mut text_block_open : Bool
+  mut accumulated_text : String
+  tool_snapshots : Array[GeminiNativeAnthropicToolSnapshot]
+  mut latest_usage : Json?
+  mut latest_finish_reason : String?
+  mut blocked_text : String?
+  mut finished : Bool
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::new() -> GeminiNativeAnthropicStreamState {
+  {
+    message_id: None,
+    model: None,
+    next_content_index: 0,
+    has_sent_message_start: false,
+    text_block_index: None,
+    text_block_open: false,
+    accumulated_text: "",
+    tool_snapshots: [],
+    latest_usage: None,
+    latest_finish_reason: None,
+    blocked_text: None,
+    finished: false,
+  }
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::push_chunk(
+  self : GeminiNativeAnthropicStreamState,
+  chunk : Json,
+) -> Array[StreamEvent] {
+  let events : Array[StreamEvent] = []
+  guard chunk is Object(obj) else { return events }
+  if self.message_id is None {
+    self.message_id = json_string_from_map(obj, "responseId")
+  }
+  if self.model is None {
+    self.model = json_string_from_map(obj, "modelVersion")
+  }
+  if obj.get("usageMetadata") is Some(usage) {
+    self.latest_usage = Some(usage)
+  }
+  if !self.has_sent_message_start {
+    events.push(self.message_start_event())
+    self.has_sent_message_start = true
+  }
+  if gemini_prompt_block_reason(obj) is Some(reason) {
+    self.blocked_text = Some(
+      "Request blocked by Gemini safety filters: \{reason}",
+    )
+    self.latest_finish_reason = Some("SAFETY")
+  }
+  guard obj.get("candidates") is Some(Array(candidates)) else { return events }
+  guard candidates.get(0) is Some(Object(candidate)) else { return events }
+  if json_string_from_map(candidate, "finishReason") is Some(reason) {
+    self.latest_finish_reason = Some(reason)
+  }
+  guard candidate.get("content") is Some(Object(content)) else { return events }
+  guard content.get("parts") is Some(Array(parts)) else { return events }
+  self.merge_tool_snapshots_from_parts(parts)
+  let visible_text = gemini_visible_text_from_parts(parts)
+  if !visible_text.is_empty() {
+    let is_cumulative = visible_text.has_prefix(self.accumulated_text)
+    let delta = if is_cumulative {
+      visible_text[self.accumulated_text.length():].to_owned()
+    } else {
+      visible_text
+    }
+    if !delta.is_empty() {
+      let index = self.ensure_text_block(events)
+      events.push(
+        anthropic_content_block_delta_event(index, "text_delta", "text", delta),
+      )
+      if is_cumulative {
+        self.accumulated_text = visible_text
+      } else {
+        self.accumulated_text = self.accumulated_text + delta
+      }
+    }
+  }
+  events
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::finish(
+  self : GeminiNativeAnthropicStreamState,
+) -> Array[StreamEvent] {
+  let events : Array[StreamEvent] = []
+  if self.finished {
+    return events
+  }
+  self.finished = true
+  if !self.has_sent_message_start {
+    events.push(self.message_start_event())
+    self.has_sent_message_start = true
+  }
+  if self.accumulated_text.is_empty() && self.blocked_text is Some(text) {
+    let index = self.ensure_text_block(events)
+    events.push(
+      anthropic_content_block_delta_event(index, "text_delta", "text", text),
+    )
+    self.accumulated_text = text
+  }
+  if self.text_block_open && self.text_block_index is Some(index) {
+    events.push(anthropic_content_block_stop_event(index))
+    self.text_block_open = false
+  }
+  self.emit_tool_snapshots(events)
+  let has_tools = !self.tool_snapshots.is_empty()
+  events.push(
+    self.message_delta_event(
+      gemini_finish_reason_to_anthropic(
+        self.latest_finish_reason.unwrap_or("STOP"),
+        has_tools,
+      ),
+    ),
+  )
+  events.push(anthropic_message_stop_stream_event())
+  events
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::message_start_event(
+  self : GeminiNativeAnthropicStreamState,
+) -> StreamEvent {
+  {
+    event_type: "message_start",
+    data: Json::object({
+      "type": Json::string("message_start"),
+      "message": Json::object({
+        "id": Json::string(self.message_id.unwrap_or("")),
+        "type": Json::string("message"),
+        "role": Json::string("assistant"),
+        "model": Json::string(self.model.unwrap_or("")),
+        "usage": gemini_native_stream_anthropic_usage_json(self.latest_usage),
+      }),
+    }).stringify(),
+  }
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::ensure_text_block(
+  self : GeminiNativeAnthropicStreamState,
+  events : Array[StreamEvent],
+) -> Int {
+  let index = match self.text_block_index {
+    Some(index) => index
+    None => {
+      let index = self.next_content_index
+      self.next_content_index += 1
+      self.text_block_index = Some(index)
+      index
+    }
+  }
+  if !self.text_block_open {
+    events.push(anthropic_content_block_start_event(index, "text"))
+    self.text_block_open = true
+  }
+  index
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::merge_tool_snapshots_from_parts(
+  self : GeminiNativeAnthropicStreamState,
+  parts : Array[Json],
+) -> Unit {
+  let mut position = 0
+  for part in parts {
+    guard part is Object(part_obj) else { continue }
+    guard part_obj.get("functionCall") is Some(Object(function_call)) else {
+      continue
+    }
+    let incoming_id = match json_string_from_map(function_call, "id") {
+      Some(id) if !id.is_empty() => Some(id)
+      _ => None
+    }
+    let snapshot = self.tool_snapshot_for_position(position, incoming_id)
+    snapshot.id = match incoming_id {
+      Some(id) => Some(id)
+      None =>
+        match snapshot.id {
+          Some(existing) => Some(existing)
+          None => Some("gemini_synth_\{position}")
+        }
+    }
+    snapshot.name = json_string_from_map(function_call, "name").unwrap_or(
+      snapshot.name,
+    )
+    snapshot.args = function_call.get("args").unwrap_or(Json::object({}))
+    position += 1
+  }
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::tool_snapshot_for_position(
+  self : GeminiNativeAnthropicStreamState,
+  position : Int,
+  incoming_id : String?,
+) -> GeminiNativeAnthropicToolSnapshot {
+  if incoming_id is Some(id) {
+    let mut index = 0
+    for snapshot in self.tool_snapshots {
+      if snapshot.id == Some(id) {
+        return snapshot
+      }
+      if index == position &&
+        snapshot.id is Some(existing) &&
+        existing.has_prefix("gemini_synth_") {
+        return snapshot
+      }
+      index += 1
+    }
+  }
+  if self.tool_snapshots.get(position) is Some(snapshot) {
+    return snapshot
+  }
+  while self.tool_snapshots.length() <= position {
+    self.tool_snapshots.push({ id: None, name: "", args: Json::object({}) })
+  }
+  self.tool_snapshots[position]
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::emit_tool_snapshots(
+  self : GeminiNativeAnthropicStreamState,
+  events : Array[StreamEvent],
+) -> Unit {
+  for snapshot in self.tool_snapshots {
+    if snapshot.name.is_empty() && snapshot.args == Json::object({}) {
+      continue
+    }
+    let index = self.next_content_index
+    self.next_content_index += 1
+    events.push(
+      anthropic_tool_block_start_event(
+        index,
+        snapshot.id.unwrap_or(""),
+        if snapshot.name.is_empty() {
+          "unknown"
+        } else {
+          snapshot.name
+        },
+      ),
+    )
+    events.push(
+      anthropic_tool_input_delta_event(index, snapshot.args.stringify()),
+    )
+    events.push(anthropic_content_block_stop_event(index))
+  }
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::message_delta_event(
+  self : GeminiNativeAnthropicStreamState,
+  stop_reason : String,
+) -> StreamEvent {
+  {
+    event_type: "message_delta",
+    data: Json::object({
+      "type": Json::string("message_delta"),
+      "delta": Json::object({
+        "stop_reason": Json::string(stop_reason),
+        "stop_sequence": Json::null(),
+      }),
+      "usage": gemini_native_stream_anthropic_usage_json(self.latest_usage),
+    }).stringify(),
+  }
+}
+
+///|
+fn gemini_visible_text_from_parts(parts : Array[Json]) -> String {
+  let texts : Array[String] = []
+  for part in parts {
+    guard part is Object(part_obj) else { continue }
+    if part_obj.get("thought") == Some(Json::boolean(true)) {
+      continue
+    }
+    if part_obj.get("functionCall") is Some(_) {
+      continue
+    }
+    if part_obj.get("text") is Some(String(text)) {
+      texts.push(text)
+    }
+  }
+  texts.join("")
+}
+
+///|
+fn gemini_native_stream_anthropic_usage_json(usage : Json?) -> Json {
+  let body = match usage {
+    Some(usage) => Json::object({ "usageMetadata": usage })
+    None => Json::object({})
+  }
+  token_usage_from_gemini_response(body)
+  .unwrap_or(TokenUsage::empty())
+  .as_anthropic_usage_json()
+}
+
+///|
+fn TokenUsage::as_anthropic_usage_json(self : TokenUsage) -> Json {
+  let result : Map[String, Json] = {
+    "input_tokens": Json::number(self.anthropic_input_tokens().to_double()),
+    "output_tokens": Json::number(self.output_tokens.to_double()),
+  }
+  if self.cache_read_tokens > 0 {
+    result["cache_read_input_tokens"] = Json::number(
+      self.cache_read_tokens.to_double(),
+    )
+  }
+  if self.cache_creation_tokens > 0 {
+    result["cache_creation_input_tokens"] = Json::number(
+      self.cache_creation_tokens.to_double(),
+    )
+  }
+  Json::object(result)
 }
 
 ///|
