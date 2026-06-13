@@ -3934,15 +3934,18 @@ fn prepare_upstream_request_body(
   body : Json,
   provider? : ProviderRouteTarget? = None,
 ) -> Json {
-  let filtered = filter_private_params_for_upstream(body, None)
+  let filtered = filter_private_params_for_upstream(body, None, [])
   let optimized = apply_ccs_optimizer_for_provider(filtered, provider)
-  replace_images_for_text_only_model(optimized, provider~).body
+  canonicalize_json_value(
+    replace_images_for_text_only_model(optimized, provider~).body,
+  )
 }
 
 ///|
 fn filter_private_params_for_upstream(
   body : Json,
   parent_key : String?,
+  whitelist : Array[String],
 ) -> Json {
   match body {
     Object(obj) => {
@@ -3950,17 +3953,23 @@ fn filter_private_params_for_upstream(
         matches_schema_name_map(key)
       let result : Map[String, Json] = {}
       for key, value in obj {
-        if key.has_prefix("_") && !schema_name_map {
+        if key.has_prefix("_") && !schema_name_map && !whitelist.contains(key) {
           continue
         }
-        result[key] = filter_private_params_for_upstream(value, Some(key))
+        result[key] = filter_private_params_for_upstream(
+          value,
+          Some(key),
+          whitelist,
+        )
       }
       Json::object(result)
     }
     Array(items) => {
       let result : Array[Json] = []
       for item in items {
-        result.push(filter_private_params_for_upstream(item, parent_key))
+        result.push(
+          filter_private_params_for_upstream(item, parent_key, whitelist),
+        )
       }
       Json::array(result)
     }

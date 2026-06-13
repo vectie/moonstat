@@ -1077,7 +1077,6 @@ fn append_openai_chat_blocks(
 
 ///|
 fn openai_chat_tool_call(block_obj : Map[String, Json]) -> Json {
-  let input = block_obj.get("input").unwrap_or(Json::object({}))
   Json::object({
     "id": Json::string(json_string_from_map(block_obj, "id").unwrap_or("")),
     "type": Json::string("function"),
@@ -1085,7 +1084,9 @@ fn openai_chat_tool_call(block_obj : Map[String, Json]) -> Json {
       "name": Json::string(
         json_string_from_map(block_obj, "name").unwrap_or(""),
       ),
-      "arguments": Json::string(input.stringify()),
+      "arguments": Json::string(
+        canonicalize_tool_arguments(block_obj.get("input")),
+      ),
     }),
   })
 }
@@ -1245,7 +1246,7 @@ fn append_response_input_blocks(
               json_string_from_map(block_obj, "name").unwrap_or(""),
             ),
             "arguments": Json::string(
-              block_obj.get("input").unwrap_or(Json::object({})).stringify(),
+              canonicalize_tool_arguments(block_obj.get("input")),
             ),
           }),
         )

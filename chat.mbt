@@ -202,7 +202,7 @@ fn openai_tool_call_to_response_item(tool_call : Json) -> Json? {
       "call_id": Json::string(call_id),
       "name": Json::string(name),
       "arguments": Json::string(
-        json_string_from_map(function, "arguments").unwrap_or("{}"),
+        canonicalize_tool_arguments(function.get("arguments")),
       ),
     }),
   )
@@ -391,7 +391,7 @@ fn openai_tool_call_from_response_item(item : Map[String, Json]) -> Json {
         json_string_from_map(item, "name").unwrap_or("unknown"),
       ),
       "arguments": Json::string(
-        json_string_from_map(item, "arguments").unwrap_or("{}"),
+        canonicalize_tool_arguments(item.get("arguments")),
       ),
     }),
   })
@@ -412,7 +412,7 @@ fn openai_tool_call_delta_from_response_item(item : Map[String, Json]) -> Json {
         json_string_from_map(item, "name").unwrap_or("unknown"),
       ),
       "arguments": Json::string(
-        json_string_from_map(item, "arguments").unwrap_or("{}"),
+        canonicalize_tool_arguments(item.get("arguments")),
       ),
     }),
   })

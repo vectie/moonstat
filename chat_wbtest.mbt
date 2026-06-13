@@ -46,6 +46,45 @@ test "chat completions request converts to codex responses request" {
 }
 
 ///|
+test "chat completions request canonicalizes function arguments" {
+  let body = chat_parse_json_for_test(
+    (
+      #|{
+      #|  "model": "client-model",
+      #|  "messages": [{
+      #|    "role": "assistant",
+      #|    "tool_calls": [{
+      #|      "id": "call_1",
+      #|      "type": "function",
+      #|      "function": {
+      #|        "name": "lookup",
+      #|        "arguments": "{ \"z\": 1, \"a\": 2 }"
+      #|      }
+      #|    }]
+      #|  }, {
+      #|    "role": "assistant",
+      #|    "tool_calls": [{
+      #|      "id": "call_2",
+      #|      "type": "function",
+      #|      "function": {
+      #|        "name": "empty",
+      #|        "arguments": "  "
+      #|      }
+      #|    }]
+      #|  }]
+      #|}
+    ),
+  )
+  let request = openai_chat_to_codex_response_request(body, "gpt-5").unwrap()
+  guard request is Object(obj) else { fail("expected object") }
+  guard obj["input"] is Array(input) else { fail("expected input") }
+  guard input[0] is Object(first) else { fail("expected first") }
+  guard input[1] is Object(second) else { fail("expected second") }
+  assert_eq(first["arguments"], Json::string("{\"a\":2,\"z\":1}"))
+  assert_eq(second["arguments"], Json::string("{}"))
+}
+
+///|
 test "codex response converts to chat completion response" {
   let body = chat_parse_json_for_test(
     (

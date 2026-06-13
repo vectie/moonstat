@@ -1392,6 +1392,89 @@ test "ccs upstream body filter removes private fields" {
 }
 
 ///|
+test "ccs json canonical string sorts nested object keys" {
+  let left = @json.parse(
+    (
+      #|{
+      #|  "b": 2,
+      #|  "a": {
+      #|    "d": true,
+      #|    "c": [3, { "z": 1, "y": 2 }]
+      #|  }
+      #|}
+    ),
+  )
+  let right = @json.parse(
+    (
+      #|{
+      #|  "a": {
+      #|    "c": [3, { "y": 2, "z": 1 }],
+      #|    "d": true
+      #|  },
+      #|  "b": 2
+      #|}
+    ),
+  )
+  assert_eq(canonical_json_string(left), canonical_json_string(right))
+  assert_eq(
+    canonical_json_string(right),
+    "{\"a\":{\"c\":[3,{\"y\":2,\"z\":1}],\"d\":true},\"b\":2}",
+  )
+}
+
+///|
+test "ccs upstream body filter supports private whitelist" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-3",
+      #|  "_metadata": { "key": "value" },
+      #|  "_internal_id": "drop",
+      #|  "data": {
+      #|    "_metadata": { "nested": true },
+      #|    "_internal": "drop"
+      #|  }
+      #|}
+    ),
+  )
+  let filtered = filter_private_params_for_upstream(body, None, ["_metadata"])
+  guard filtered is Object(obj) else { fail("expected object") }
+  assert_true(obj.get("_metadata") is Some(_))
+  assert_true(obj.get("_internal_id") is None)
+  guard obj["data"] is Object(data) else { fail("expected data") }
+  assert_true(data.get("_metadata") is Some(_))
+  assert_true(data.get("_internal") is None)
+}
+
+///|
+test "ccs upstream body preparation canonicalizes object order" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "z": 1,
+      #|  "_internal": "drop",
+      #|  "tools": [{
+      #|    "name": "lookup",
+      #|    "parameters": {
+      #|      "type": "object",
+      #|      "properties": {
+      #|        "_id": { "_private_note": "drop", "type": "string" },
+      #|        "b": { "type": "number" },
+      #|        "a": { "type": "string" }
+      #|      }
+      #|    }
+      #|  }],
+      #|  "a": 2
+      #|}
+    ),
+  )
+  assert_eq(
+    prepare_upstream_request_body(body).stringify(),
+    "{\"a\":2,\"tools\":[{\"name\":\"lookup\",\"parameters\":{\"properties\":{\"_id\":{\"type\":\"string\"},\"a\":{\"type\":\"string\"},\"b\":{\"type\":\"number\"}},\"type\":\"object\"}}],\"z\":1}",
+  )
+}
+
+///|
 test "ccs thinking signature rectifier detects ccs error phrases" {
   let config = default_rectifier_config()
   assert_true(config.request_media_fallback)

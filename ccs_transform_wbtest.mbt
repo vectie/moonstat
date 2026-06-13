@@ -119,6 +119,69 @@ test "ccs transform maps anthropic tool choice" {
 }
 
 ///|
+test "ccs openai chat transform canonicalizes tool arguments" {
+  let body = Json::object({
+    "model": Json::string("gpt-5.4"),
+    "messages": Json::array([
+      Json::object({
+        "role": Json::string("assistant"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_use"),
+            "id": Json::string("toolu_1"),
+            "name": Json::string("lookup"),
+            "input": Json::object({
+              "z": Json::number(1.0),
+              "a": Json::number(2.0),
+            }),
+          }),
+        ]),
+      }),
+    ]),
+  })
+  let transformed = transform_claude_request_for_api_format(body, "openai_chat")
+  guard transformed is Object(obj) else { fail("expected object") }
+  guard obj["messages"] is Array(messages) else { fail("expected messages") }
+  guard messages[0] is Object(message) else { fail("expected message") }
+  guard message["tool_calls"] is Array(tool_calls) else {
+    fail("expected tool calls")
+  }
+  guard tool_calls[0] is Object(call) else { fail("expected call") }
+  guard call["function"] is Object(function) else { fail("expected function") }
+  assert_eq(function["arguments"], Json::string("{\"a\":2,\"z\":1}"))
+}
+
+///|
+test "ccs responses transform canonicalizes tool arguments" {
+  let body = Json::object({
+    "model": Json::string("gpt-5.4"),
+    "messages": Json::array([
+      Json::object({
+        "role": Json::string("assistant"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_use"),
+            "id": Json::string("toolu_1"),
+            "name": Json::string("lookup"),
+            "input": Json::object({
+              "z": Json::number(1.0),
+              "a": Json::number(2.0),
+            }),
+          }),
+        ]),
+      }),
+    ]),
+  })
+  let transformed = transform_claude_request_for_api_format(
+    body, "openai_responses",
+  )
+  guard transformed is Object(obj) else { fail("expected object") }
+  guard obj["input"] is Array(input) else { fail("expected input") }
+  guard input[0] is Object(call) else { fail("expected call") }
+  assert_eq(call["arguments"], Json::string("{\"a\":2,\"z\":1}"))
+}
+
+///|
 test "ccs gemini native transform maps anthropic request" {
   let body = Json::object({
     "model": Json::string("claude-sonnet-4-6"),
