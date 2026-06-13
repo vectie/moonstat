@@ -1232,6 +1232,12 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/queryProviderUsage", (r, w) => {
     self.handle_query_provider_usage(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_balance", (r, w) => {
+    self.handle_get_balance(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_balance", (r, w) => {
+    self.handle_get_balance(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/testUsageScript", (r, w) => {
     self.handle_test_usage_script(r, w)
   })
@@ -7005,6 +7011,27 @@ async fn Gateway::handle_query_provider_usage(
         UsageResult::new(false, error=Some("Usage query is disabled")).to_json(),
       )
   }
+}
+
+///|
+async fn Gateway::handle_get_balance(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["baseUrl", "base_url"])
+    is Some(base_url) else {
+    write_usage_bad_request(w, "missing_base_url")
+    return
+  }
+  guard proxy_string_request(r.path, body, ["apiKey", "api_key"])
+    is Some(api_key) else {
+    write_usage_bad_request(w, "missing_api_key")
+    return
+  }
+  write_usage_json(w, ccs_get_balance(base_url, api_key).to_json())
 }
 
 ///|

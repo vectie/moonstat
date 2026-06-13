@@ -381,6 +381,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["queryProviderUsage", ..]
     | ["query_provider_usage", ..]
     | ["query-provider-usage", ..] => check_usage_provider_script(arr)
+    ["get_balance", ..] | ["get-balance", ..] => check_balance(arr)
     ["testUsageScript", ..]
     | ["test_usage_script", ..]
     | ["test-usage-script", ..] => test_usage_script(arr)
@@ -626,6 +627,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["usage", "get-usage-data-sources", ..] =>
       check_usage_endpoint(arr, "/usage/data-sources")
     ["usage", "query-provider-usage", ..] => check_usage_provider_script(arr)
+    ["usage", "balance", ..] => check_balance(arr)
     ["usage", "test-usage-script", ..] => test_usage_script(arr)
     ["usage", "pricing", "set", ..] => update_usage_pricing(arr)
     ["usage", "update-model-pricing", ..] => update_usage_pricing(arr)
@@ -804,6 +806,7 @@ fn print_help() -> Unit {
     "  usage get-usage-data-sources  Alias for ccs get_usage_data_sources",
   )
   println("  usage query-provider-usage  Alias for ccs queryProviderUsage")
+  println("  usage balance    Alias for ccs get_balance")
   println("  usage test-usage-script     Alias for ccs testUsageScript")
   println("  usage pricing    Show ccs-style editable model pricing")
   println("  usage get-model-pricing  Alias for ccs get_model_pricing")
@@ -2785,6 +2788,16 @@ async fn check_usage_provider_script(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn check_balance(args : Array[String]) -> Unit {
+  guard balance_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required balance args: --base-url --api-key")
+    return
+  }
+  check_usage_endpoint(args, path)
+}
+
+///|
 async fn test_usage_script(args : Array[String]) -> Unit {
   guard usage_provider_script_path(args, "/testUsageScript", true) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
@@ -2952,6 +2965,19 @@ fn usage_provider_script_path(
     }
   }
   Some("\{path}?\{query.join("&")}")
+}
+
+///|
+fn balance_path(args : Array[String]) -> String? {
+  guard parse_string_arg_any(args, "--base-url", "--baseUrl") is Some(base_url) else {
+    return None
+  }
+  guard parse_string_arg_any(args, "--api-key", "--apiKey") is Some(api_key) else {
+    return None
+  }
+  Some(
+    "/get_balance?\{cli_query_pair("baseUrl", base_url)}&\{cli_query_pair("apiKey", api_key)}",
+  )
 }
 
 ///|

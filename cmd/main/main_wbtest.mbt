@@ -799,3 +799,20 @@ test "top level ccs prompt command names build prompt paths" {
     "/import_prompt_from_file?app=codex&path=%2Ftmp%2Fprompts.md",
   )
 }
+
+///|
+test "top level ccs balance command builds balance path" {
+  assert_eq(
+    balance_path([
+      "moonstat", "get_balance", "--baseUrl", "https://api.deepseek.com", "--apiKey",
+      "sk test",
+    ]),
+    Some("/get_balance?baseUrl=https%3A%2F%2Fapi.deepseek.com&apiKey=sk%20test"),
+  )
+  assert_true(
+    balance_path([
+      "moonstat", "get_balance", "--base-url", "https://api.deepseek.com",
+    ])
+    is None,
+  )
+}

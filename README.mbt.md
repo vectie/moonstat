@@ -250,6 +250,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `DELETE /usage/model-pricing`
 - `GET /usage/request-detail/{request_id}`
 - `GET /queryProviderUsage?providerId=codex-oauth&app=codex`
+- `GET|POST /get_balance?baseUrl=https://api.deepseek.com&apiKey=...`
 - `POST /testUsageScript?providerId=codex-oauth&app=codex`
 - `POST /stream_check_provider?appType=codex&providerId=codex-oauth`
 - `POST /stream_check_all_providers?appType=codex&proxyTargetsOnly=true`
@@ -261,7 +262,8 @@ Moonstat currently exposes the ccs-compatible local routes below:
   `GET /get_request_detail?requestId=...`, `GET /get_model_pricing`,
   `POST /update_model_pricing`, `DELETE /delete_model_pricing`,
   `GET /check_provider_limits`, `POST /sync_session_usage`,
-  `GET /get_usage_data_sources`, `GET /queryProviderUsage`, and
+  `GET /get_usage_data_sources`, `GET /queryProviderUsage`, `GET /get_balance`,
+  and
   `POST /testUsageScript`.
   Stream check command aliases `stream_check_provider`,
   `stream_check_all_providers`, `get_stream_check_config`, and
@@ -386,6 +388,10 @@ OpenCode sync reads `opencode.db` directly when `sqlite3` is available, honoring
 `OPENCODE_DB` and `XDG_DATA_HOME` like ccs. It also accepts JSONL rows exported
 from `opencode.db` with `session_id`, `message_id`, and `data` fields as a
 fallback, defaulting to `~/.local/share/opencode/opencode.messages.jsonl`.
+`/get_balance` mirrors the CCS native balance command for DeepSeek, StepFun,
+SiliconFlow CN/EN, OpenRouter, and Novita AI by detecting provider from
+`baseUrl`, querying the vendor balance endpoint with `apiKey`, and returning the
+same `UsageResult` shape used by `queryProviderUsage`.
 
 Claude Desktop gateway routes are open by default for standalone local use. Set
 `MOONSTAT_CLAUDE_DESKTOP_TOKEN` or `CLAUDE_DESKTOP_GATEWAY_TOKEN` to require
