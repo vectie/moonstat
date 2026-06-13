@@ -292,6 +292,56 @@ fn provider_selection_error_json(
 }
 
 ///|
+fn codex_forward_failed_error_message(
+  provider_name : String,
+  request_model : String,
+  endpoint : String,
+  cause : String,
+) -> String {
+  body_snippet(
+    "Moonstat local proxy failed while handling Codex endpoint \{endpoint}. Provider: \{provider_name}; model: \{request_model}; cause: Codex upstream request failed: \{cause}",
+    1800,
+  )
+}
+
+///|
+fn codex_forward_failed_error_json(
+  provider : ProviderRouteTarget,
+  request_model : String,
+  endpoint : String,
+  cause : String,
+) -> Json {
+  {
+    "error": {
+      "message": Json::string(
+        codex_forward_failed_error_message(
+          provider.provider_name,
+          request_model,
+          endpoint,
+          cause,
+        ),
+      ),
+      "type": Json::string("proxy_error"),
+      "code": Json::string("cc_switch_forward_failed"),
+      "param": Json::null(),
+      "provider": Json::string(provider.provider_name),
+      "model": Json::string(request_model),
+      "endpoint": Json::string(endpoint),
+    }.to_json(),
+  }.to_json()
+}
+
+///|
+fn codex_forward_failed_error_body(
+  provider : ProviderRouteTarget,
+  request_model : String,
+  endpoint : String,
+  cause : String,
+) -> String {
+  codex_forward_failed_error_json(provider, request_model, endpoint, cause).stringify()
+}
+
+///|
 async fn Gateway::write_provider_selection_error(
   self : Gateway,
   app_type : String,
@@ -867,7 +917,12 @@ async fn Gateway::forward_non_streaming_chat_completion(
           ) {
           Ok(result) => result
           Err(error) => {
-            let error_body = "{\"error\":{\"message\":\"Codex upstream request failed: \{error}\",\"type\":\"upstream_error\"}}"
+            let error_body = codex_forward_failed_error_body(
+              provider,
+              response_model,
+              "/chat/completions",
+              "\{error}",
+            )
             if !providers.is_empty() {
               let next = self.activate_next_provider_after_upstream_status(
                 "codex",
@@ -1181,7 +1236,13 @@ async fn Gateway::forward_non_streaming_codex_response(
               (response, body)
             }
           Err(error) => {
-            let error_body = "{\"error\":{\"message\":\"Codex upstream request failed: \{error}\",\"type\":\"upstream_error\"}}"
+            let request_model = codex_request_model(request, self.model)
+            let error_body = codex_forward_failed_error_body(
+              provider,
+              request_model,
+              endpoint,
+              "\{error}",
+            )
             if !providers.is_empty() {
               let next = self.activate_next_provider_after_upstream_status(
                 "codex",
@@ -1338,7 +1399,13 @@ async fn Gateway::forward_streaming_codex_response(
           ) {
           Ok((client, response)) => (client, response, use_chat_bridge)
           Err(error) => {
-            let error_body = "{\"error\":{\"message\":\"Codex upstream request failed: \{error}\",\"type\":\"upstream_error\"}}"
+            let request_model = codex_request_model(request, self.model)
+            let error_body = codex_forward_failed_error_body(
+              provider,
+              request_model,
+              endpoint,
+              "\{error}",
+            )
             if !providers.is_empty() {
               let next = self.activate_next_provider_after_upstream_status(
                 "codex",

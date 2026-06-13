@@ -132,6 +132,34 @@ test "provider selection errors use ccs proxy error codes" {
 }
 
 ///|
+test "codex provider forward failures use ccs proxy error shape" {
+  let provider = ProviderRouteTarget::new(
+    app_type="codex",
+    provider_id="deepseek",
+    provider_name="DeepSeek",
+    provider_type=Some("codex"),
+  )
+  guard codex_forward_failed_error_json(
+      provider, "deepseek-chat", "/responses?beta=true", "connection refused",
+    )
+    is Object(body) else {
+    fail("expected error body")
+  }
+  guard body["error"] is Object(error) else { fail("expected error object") }
+  assert_eq(error["type"], Json::string("proxy_error"))
+  assert_eq(error["code"], Json::string("cc_switch_forward_failed"))
+  assert_eq(error["param"], Json::null())
+  assert_eq(error["provider"], Json::string("DeepSeek"))
+  assert_eq(error["model"], Json::string("deepseek-chat"))
+  assert_eq(error["endpoint"], Json::string("/responses?beta=true"))
+  guard error["message"] is String(message) else { fail("expected message") }
+  assert_true(message.contains("Moonstat local proxy failed"))
+  assert_true(message.contains("Provider: DeepSeek"))
+  assert_true(message.contains("model: deepseek-chat"))
+  assert_true(message.contains("cause: Codex upstream request failed"))
+}
+
+///|
 test "usage pricing query helpers parse and validate ccs pricing update" {
   let path = "/usage/model-pricing?modelId=test-model&displayName=Test%20Model&inputCost=1.25&outputCost=2&cacheReadCost=0.10&cacheCreationCost=0"
   guard usage_pricing_from_query(path) is Some(pricing) else {
