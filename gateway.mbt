@@ -62,6 +62,18 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/claude-desktop/v1/messages", (r, w) => {
     self.handle_messages(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/chat/completions", (r, w) => {
+    self.handle_chat_completions(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/v1/chat/completions", (r, w) => {
+    self.handle_chat_completions(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/v1/v1/chat/completions", (r, w) => {
+    self.handle_chat_completions(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/codex/v1/chat/completions", (r, w) => {
+    self.handle_chat_completions(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/responses", (r, w) => {
     self.handle_codex_responses(r, w)
   })
@@ -177,6 +189,169 @@ async fn Gateway::handle_codex_responses(
       }
     }
   }
+}
+
+///|
+async fn Gateway::handle_chat_completions(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = r.body.read_all()
+  let body_str = body.text()
+  self.stats.record_inbound(body_str.length())
+  let json_result : Result[Json, Error] = try? @json.parse(body_str)
+  match json_result {
+    Err(_) => {
+      self.stats.record_bad_request()
+      w.header().set("Content-Type", "application/json")
+      w.write_header(@status.BadRequest)
+      w.write(
+        "{\"error\":{\"message\":\"Invalid JSON\",\"type\":\"invalid_request_error\"}}",
+      )
+      w.flush()
+      return
+    }
+    Ok(json) => {
+      let response_model = openai_chat_model(json).unwrap_or(self.model)
+      let stream = json_bool_field(json, "stream").unwrap_or(false)
+      self.stats.record_stream_mode(stream)
+      let request = openai_chat_to_codex_response_request(json, self.model)
+      guard request is Some(codex_request) else {
+        self.stats.record_bad_request()
+        w.header().set("Content-Type", "application/json")
+        w.write_header(@status.BadRequest)
+        w.write(
+          "{\"error\":{\"message\":\"Invalid Chat Completions request\",\"type\":\"invalid_request_error\"}}",
+        )
+        w.flush()
+        return
+      }
+      if stream {
+        self.forward_streaming_chat_completion(codex_request, response_model, w)
+      } else {
+        self.forward_non_streaming_chat_completion(
+          codex_request, response_model, w,
+        )
+      }
+    }
+  }
+}
+
+///|
+async fn Gateway::forward_non_streaming_chat_completion(
+  self : Gateway,
+  request : Json,
+  response_model : String,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard self.credentials is Some(creds) else {
+    self.stats.record_unauthorized()
+    w.header().set("Content-Type", "application/json")
+    w.write_header(@status.Unauthorized)
+    w.write(
+      "{\"error\":{\"message\":\"Not authenticated. Please login first.\",\"type\":\"authentication_error\"}}",
+    )
+    w.flush()
+    return
+  }
+  let client = self.codex_client(creds, accept="application/json")
+  defer client.close()
+  let response = client.post("/backend-api/codex/responses", request)
+  let response_body = client.read_all().text()
+  if response.code != 200 {
+    self.stats.record_upstream_error(response_body.length())
+    w.header().set("Content-Type", "application/json")
+    w.write_header(response.code)
+    w.write(response_body)
+    w.flush()
+    return
+  }
+  let parsed : Result[Json, Error] = try? @json.parse(response_body)
+  match parsed {
+    Ok(json) => {
+      let usage = token_usage_from_codex_response_auto(json).unwrap_or(
+        TokenUsage::empty(),
+      )
+      let chat_response = codex_response_to_openai_chat_completion(
+        json, response_model,
+      )
+      self.stats.record_success_usage(usage, chat_response.stringify().length())
+      w.header().set("Content-Type", "application/json")
+      w.write_header(@status.Ok)
+      w.write(chat_response.stringify())
+    }
+    Err(_) => {
+      self.stats.record_internal_error()
+      w.header().set("Content-Type", "application/json")
+      w.write_header(@status.InternalServerError)
+      w.write(
+        "{\"error\":{\"message\":\"Failed to parse Codex response\",\"type\":\"server_error\"}}",
+      )
+    }
+  }
+  w.flush()
+}
+
+///|
+async fn Gateway::forward_streaming_chat_completion(
+  self : Gateway,
+  request : Json,
+  response_model : String,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard self.credentials is Some(creds) else {
+    self.stats.record_unauthorized()
+    w.header().set("Content-Type", "application/json")
+    w.write_header(@status.Unauthorized)
+    w.write(
+      "{\"error\":{\"message\":\"Not authenticated. Please login first.\",\"type\":\"authentication_error\"}}",
+    )
+    w.flush()
+    return
+  }
+  let client = self.codex_client(creds, accept="text/event-stream")
+  defer client.close()
+  let response = client.post("/backend-api/codex/responses", request)
+  if response.code != 200 {
+    let error_body = client.read_all().text()
+    self.stats.record_upstream_error(error_body.length())
+    w.header().set("Content-Type", "application/json")
+    w.write_header(response.code)
+    w.write(error_body)
+    w.flush()
+    return
+  }
+  w.header().set("Content-Type", "text/event-stream")
+  w.header().set("Cache-Control", "no-cache")
+  w.header().set("Connection", "keep-alive")
+  w.write_header(@status.Ok)
+  let id = generate_chat_completion_id()
+  let created = @async.now().to_int() / 1000
+  w.write(
+    "data: \{openai_chat_role_chunk(id, response_model, created).stringify()}\n\n",
+  )
+  w.flush()
+  let mut response_bytes = 0
+  while client.read_until("\n") is Some(line) {
+    guard line is [.. "data: ", .. rest] else { continue }
+    let data = rest.trim().to_owned()
+    if data == "[DONE]" {
+      break
+    }
+    if codex_stream_event_to_openai_chat_chunk(
+        data, id, response_model, created,
+      )
+      is Some(chunk) {
+      let payload = chunk.stringify()
+      response_bytes += payload.length()
+      w.write("data: \{payload}\n\n")
+      w.flush()
+    }
+  }
+  self.stats.record_success(0, 0, response_bytes)
+  w.write("data: [DONE]\n\n")
+  w.flush()
 }
 
 ///|
