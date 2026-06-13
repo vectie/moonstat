@@ -160,6 +160,7 @@ pub struct TrafficStats {
   mut current_request_session_id : String?
   mut current_request_provider_type : String?
   mut current_request_is_streaming : Bool
+  mut current_request_used_half_open_permit : Bool
 }
 
 ///|
@@ -205,6 +206,7 @@ pub fn TrafficStats::new() -> TrafficStats {
     current_request_session_id: None,
     current_request_provider_type: None,
     current_request_is_streaming: false,
+    current_request_used_half_open_permit: false,
   }
 }
 
@@ -248,6 +250,7 @@ pub fn TrafficStats::record_inbound(
   self.current_request_session_id = None
   self.current_request_provider_type = None
   self.current_request_is_streaming = false
+  self.current_request_used_half_open_permit = false
 }
 
 ///|
@@ -943,6 +946,7 @@ fn TrafficStats::finish_request(self : TrafficStats) -> Unit {
   self.current_request_session_id = None
   self.current_request_provider_type = None
   self.current_request_is_streaming = false
+  self.current_request_used_half_open_permit = false
 }
 
 ///|

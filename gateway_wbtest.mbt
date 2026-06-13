@@ -286,3 +286,34 @@ test "moonstat default provider router selects suite app targets" {
   assert_eq(claude.providers.length(), 1)
   assert_eq(claude.providers[0].provider_name, "Codex OAuth")
 }
+
+///|
+test "gateway records upstream failures into provider router before finish" {
+  let gateway = Gateway::new(port=0)
+  gateway.provider_router.update_all_configs({
+    failure_threshold: 1,
+    success_threshold: 2,
+    timeout_seconds: 60,
+    error_rate_threshold: 0.6,
+    min_requests: 10,
+  })
+  gateway.stats.record_inbound(10)
+  let _ = gateway.activate_provider("codex")
+  gateway.stats.record_request_context(
+    "codex",
+    "gpt-5",
+    provider_type=Some("codex"),
+  )
+  gateway.record_provider_result(false)
+  gateway.stats.record_upstream_error_status(0, 502)
+  assert_eq(gateway.stats.current_request_app_type, None)
+  guard gateway.provider_router.get_circuit_breaker_stats(
+      "codex-oauth", "codex",
+    )
+    is Some(stats) else {
+    fail("expected circuit stats")
+  }
+  assert_true(stats.state == Open)
+  assert_eq(stats.total_requests, 1)
+  assert_eq(stats.failed_requests, 1)
+}

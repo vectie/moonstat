@@ -76,12 +76,30 @@ fn Gateway::activate_provider(
   guard selected.error is None else { return None }
   guard selected.providers.length() > 0 else { return None }
   let provider = selected.providers[0]
+  let allow = self.provider_router.allow_provider_request(
+    provider.provider_id,
+    app_type,
+  )
+  guard allow.allowed else { return None }
+  self.stats.current_request_used_half_open_permit = allow.used_half_open_permit
   self.stats.set_active_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
   )
   Some(provider)
+}
+
+///|
+fn Gateway::record_provider_result(self : Gateway, success : Bool) -> Unit {
+  guard self.stats.current_request_app_type is Some(app_type) else { return }
+  guard self.stats.current_provider_id is Some(provider_id) else { return }
+  self.provider_router.record_result(
+    provider_id,
+    app_type,
+    self.stats.current_request_used_half_open_permit,
+    success,
+  )
 }
 
 ///|
@@ -112,6 +130,7 @@ async fn Gateway::record_upstream_error_status(
   response_bytes : Int,
   status_code : Int,
 ) -> Unit {
+  self.record_provider_result(false)
   self.stats.record_upstream_error_status(response_bytes, status_code)
   self.stats.save_persistent_store()
 }
@@ -129,6 +148,7 @@ async fn Gateway::record_success(
   output_tokens : Int,
   response_bytes : Int,
 ) -> Unit {
+  self.record_provider_result(true)
   self.stats.record_success(input_tokens, output_tokens, response_bytes)
   self.stats.save_persistent_store()
 }
@@ -139,6 +159,7 @@ async fn Gateway::record_success_usage(
   usage : TokenUsage,
   response_bytes : Int,
 ) -> Unit {
+  self.record_provider_result(true)
   self.stats.record_success_usage(usage, response_bytes)
   self.stats.save_persistent_store()
 }

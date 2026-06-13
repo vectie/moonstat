@@ -410,6 +410,7 @@ pub struct TrafficStats {
   mut current_request_session_id : String?
   mut current_request_provider_type : String?
   mut current_request_is_streaming : Bool
+  mut current_request_used_half_open_permit : Bool
 }
 pub async fn TrafficStats::enable_persistent_store(Self, storage_dir? : String) -> Unit
 pub fn TrafficStats::ingest_claude_session_jsonl(Self, file_path~ : String, content~ : String, last_modified~ : Int64) -> SessionSyncResult
