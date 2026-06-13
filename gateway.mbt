@@ -74,20 +74,41 @@ fn Gateway::activate_provider(
 ) -> ProviderRouteTarget? {
   let selected = self.provider_router.select_providers(app_type)
   guard selected.error is None else { return None }
-  guard selected.providers.length() > 0 else { return None }
-  let provider = selected.providers[0]
+  self.activate_first_available_provider(app_type, selected.providers)
+}
+
+///|
+fn Gateway::activate_first_available_provider(
+  self : Gateway,
+  app_type : String,
+  providers : Array[ProviderRouteTarget],
+) -> ProviderRouteTarget? {
+  for provider in providers {
+    if self.activate_provider_target(app_type, provider) {
+      return Some(provider)
+    }
+  }
+  None
+}
+
+///|
+fn Gateway::activate_provider_target(
+  self : Gateway,
+  app_type : String,
+  provider : ProviderRouteTarget,
+) -> Bool {
   let allow = self.provider_router.allow_provider_request(
     provider.provider_id,
     app_type,
   )
-  guard allow.allowed else { return None }
+  guard allow.allowed else { return false }
   self.stats.current_request_used_half_open_permit = allow.used_half_open_permit
   self.stats.set_active_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
   )
-  Some(provider)
+  true
 }
 
 ///|

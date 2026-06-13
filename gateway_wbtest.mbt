@@ -374,3 +374,46 @@ async test "gateway nonretryable upstream errors release half open permit" {
   assert_true(third is Some(_))
   assert_true(gateway.stats.current_request_used_half_open_permit)
 }
+
+///|
+test "gateway activation skips occupied half open provider in failover chain" {
+  let gateway = Gateway::new(port=0)
+  gateway.provider_router.update_all_configs({
+    failure_threshold: 1,
+    success_threshold: 2,
+    timeout_seconds: 0,
+    error_rate_threshold: 0.6,
+    min_requests: 10,
+  })
+  gateway.provider_router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="codex-alt",
+      provider_name="Codex Alt",
+    ),
+  )
+  gateway.provider_router.set_failover_queue("codex", [
+    "codex-oauth", "codex-alt",
+  ])
+  gateway.provider_router.set_auto_failover("codex", true)
+  gateway.provider_router.record_result(
+    "codex-oauth",
+    "codex",
+    false,
+    false,
+    now_ms=1000,
+  )
+  let occupied = gateway.provider_router.allow_provider_request(
+    "codex-oauth",
+    "codex",
+    now_ms=1000,
+  )
+  assert_true(occupied.allowed)
+  assert_true(occupied.used_half_open_permit)
+
+  let selected = gateway.activate_provider("codex")
+  guard selected is Some(provider) else { fail("expected fallback provider") }
+  assert_eq(provider.provider_id, "codex-alt")
+  assert_eq(gateway.stats.current_provider_id, Some("codex-alt"))
+  assert_false(gateway.stats.current_request_used_half_open_permit)
+}
