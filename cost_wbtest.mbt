@@ -138,6 +138,10 @@ test "model pricing lookup mirrors ccs normalization cases" {
     "claude-opus-4-8",
   )
   assert_eq(
+    find_static_model_pricing("global.anthropic.claude-gpt-5.5-v1:0").unwrap().model_id,
+    "gpt-5.5",
+  )
+  assert_eq(
     find_static_model_pricing("claude-opus-4-8@20260527").unwrap().model_id,
     "claude-opus-4-8",
   )

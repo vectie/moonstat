@@ -426,30 +426,31 @@ fn mp(
 fn model_pricing_candidates(model_id : String) -> Array[String] {
   let candidates : Array[String] = []
   let base = clean_model_id_for_pricing(model_id)
-  ignore(push_unique_candidate(candidates, base))
-  if strip_known_model_namespace(base) is Some(candidate) {
-    ignore(push_unique_candidate(candidates, candidate))
-  }
-  if strip_claude_desktop_non_anthropic_prefix(base) is Some(candidate) {
-    ignore(push_unique_candidate(candidates, candidate))
-  }
-  for candidate in candidates.copy() {
+  let queue : Array[String] = [base]
+  let mut index = 0
+  while index < queue.length() {
+    let candidate = queue[index]
+    index += 1
+    if !push_unique_candidate(candidates, candidate) {
+      continue
+    }
+    if strip_known_model_namespace(candidate) is Some(stripped) {
+      queue.push(stripped)
+    }
+    if strip_claude_desktop_non_anthropic_prefix(candidate) is Some(stripped) {
+      queue.push(stripped)
+    }
     if strip_bedrock_model_version_suffix(candidate) is Some(stripped) {
-      ignore(push_unique_candidate(candidates, stripped))
+      queue.push(stripped)
     }
     if strip_model_date_suffix(candidate) is Some(stripped) {
-      ignore(push_unique_candidate(candidates, stripped))
+      queue.push(stripped)
     }
     if strip_reasoning_effort_suffix(candidate) is Some(stripped) {
-      ignore(push_unique_candidate(candidates, stripped))
+      queue.push(stripped)
     }
     if candidate.has_prefix("claude-") && candidate.contains(".") {
-      ignore(
-        push_unique_candidate(
-          candidates,
-          candidate.replace(old=".", new="-").to_string(),
-        ),
-      )
+      queue.push(candidate.replace(old=".", new="-").to_string())
     }
   }
   candidates
