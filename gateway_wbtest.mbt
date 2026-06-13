@@ -478,6 +478,85 @@ test "invalid ccs provider cost multiplier falls back to default env" {
 }
 
 ///|
+test "ccs default pricing model source env falls back per app" {
+  let keys = [
+    "MOONSTAT_CLAUDE_PRICING_MODEL_SOURCE", "MOONSTAT_PRICING_MODEL_SOURCE",
+  ]
+  for key in keys {
+    @os.unsetenv(key) catch {
+      _ => ()
+    }
+  }
+  @os.setenv("MOONSTAT_CLAUDE_PRICING_MODEL_SOURCE", "request", overwrite=true)
+  @os.setenv("MOONSTAT_PRICING_MODEL_SOURCE", "response", overwrite=true)
+  let provider = ProviderRouteTarget::new(
+    app_type="claude-desktop",
+    provider_id="default-pricing-source",
+    provider_name="Default Pricing Source",
+  )
+  assert_eq(provider_pricing_model_source(provider), "request")
+  for key in keys {
+    @os.unsetenv(key) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+test "ccs provider pricing model source overrides default env" {
+  let key = "MOONSTAT_CLAUDE_PRICING_MODEL_SOURCE"
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+  @os.setenv(key, "response", overwrite=true)
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="provider-pricing-source",
+    provider_name="Provider Pricing Source",
+    settings_config=Some(
+      @json.parse(
+        (
+          #|{
+          #|  "meta": { "pricingModelSource": "request" }
+          #|}
+        ),
+      ),
+    ),
+  )
+  assert_eq(provider_pricing_model_source(provider), "request")
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+}
+
+///|
+test "invalid ccs provider pricing model source falls back to default env" {
+  let key = "MOONSTAT_CLAUDE_PRICING_MODEL_SOURCE"
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+  @os.setenv(key, "request", overwrite=true)
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="invalid-provider-pricing-source",
+    provider_name="Invalid Provider Pricing Source",
+    settings_config=Some(
+      @json.parse(
+        (
+          #|{
+          #|  "meta": { "pricingModelSource": "bad" }
+          #|}
+        ),
+      ),
+    ),
+  )
+  assert_eq(provider_pricing_model_source(provider), "request")
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+}
+
+///|
 test "gateway records upstream failures into provider router before finish" {
   let gateway = Gateway::new(port=0)
   gateway.provider_router.update_all_configs({
@@ -641,6 +720,64 @@ async test "gateway ignores invalid ccs provider cost multiplier" {
   assert_eq(gateway.stats.request_logs.length(), 1)
   let log = gateway.stats.request_logs[0]
   assert_eq(log.cost_multiplier, "1.0")
+  assert_eq(log.total_cost_usd, "0.001")
+}
+
+///|
+async test "gateway applies ccs request pricing model source" {
+  let gateway = Gateway::new(port=0)
+  gateway.pricing_overrides.set("request-model", ModelPricing::{
+    model_id: "request-model",
+    display_name: "Request Model",
+    input_cost_per_million: "1.0",
+    output_cost_per_million: "0",
+    cache_read_cost_per_million: "0",
+    cache_creation_cost_per_million: "0",
+  })
+  gateway.pricing_overrides.set("response-model", ModelPricing::{
+    model_id: "response-model",
+    display_name: "Response Model",
+    input_cost_per_million: "9.0",
+    output_cost_per_million: "0",
+    cache_read_cost_per_million: "0",
+    cache_creation_cost_per_million: "0",
+  })
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="request-priced",
+    provider_name="Request Priced Provider",
+    settings_config=Some(
+      @json.parse(
+        (
+          #|{
+          #|  "meta": { "pricingModelSource": "request" }
+          #|}
+        ),
+      ),
+    ),
+  )
+  gateway.stats.record_inbound(10)
+  assert_true(
+    gateway.activate_provider_target(
+      "claude",
+      provider,
+      bypass_circuit_breaker=true,
+    ),
+  )
+  gateway.stats.record_request_context("claude", "request-model")
+  gateway.record_success_usage(
+    TokenUsage::new(
+      input_tokens=1000,
+      output_tokens=0,
+      model=Some("response-model"),
+    ),
+    64,
+  )
+  assert_eq(gateway.stats.request_logs.length(), 1)
+  let log = gateway.stats.request_logs[0]
+  assert_eq(log.model, "response-model")
+  assert_eq(log.request_model, Some("request-model"))
+  assert_eq(log.pricing_model, Some("request-model"))
   assert_eq(log.total_cost_usd, "0.001")
 }
 

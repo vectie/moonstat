@@ -160,6 +160,7 @@ pub struct TrafficStats {
   mut current_request_session_id : String?
   mut current_request_provider_type : String?
   mut current_request_cost_multiplier : String
+  mut current_request_pricing_model_source : String
   mut current_request_is_streaming : Bool
   mut current_request_used_half_open_permit : Bool
 }
@@ -207,6 +208,7 @@ pub fn TrafficStats::new() -> TrafficStats {
     current_request_session_id: None,
     current_request_provider_type: None,
     current_request_cost_multiplier: "1.0",
+    current_request_pricing_model_source: "response",
     current_request_is_streaming: false,
     current_request_used_half_open_permit: false,
   }
@@ -219,6 +221,7 @@ pub fn TrafficStats::set_active_target(
   provider_id : String,
   provider_name : String,
   cost_multiplier? : String = "1.0",
+  pricing_model_source? : String = "response",
 ) -> Unit {
   match self.active_targets.get(app_type) {
     Some(target) if target.provider_id != provider_id =>
@@ -228,6 +231,7 @@ pub fn TrafficStats::set_active_target(
   self.current_provider = Some(provider_name)
   self.current_provider_id = Some(provider_id)
   self.current_request_cost_multiplier = cost_multiplier
+  self.current_request_pricing_model_source = pricing_model_source
   self.active_targets.set(app_type, ActiveTarget::{
     app_type,
     provider_id,
@@ -254,6 +258,7 @@ pub fn TrafficStats::record_inbound(
   self.current_request_session_id = None
   self.current_request_provider_type = None
   self.current_request_cost_multiplier = "1.0"
+  self.current_request_pricing_model_source = "response"
   self.current_request_is_streaming = false
   self.current_request_used_half_open_permit = false
 }
@@ -435,7 +440,13 @@ fn TrafficStats::record_completed_request(
     None => Some(model)
   }
   let app_type = self.current_request_app_type.unwrap_or("unknown")
-  let pricing = find_model_pricing(model, pricing_overrides, deleted_model_ids)
+  let pricing_model = match self.current_request_pricing_model_source {
+    "request" => request_model.unwrap_or(model)
+    _ => model
+  }
+  let pricing = find_model_pricing(
+    pricing_model, pricing_overrides, deleted_model_ids,
+  )
   let cost_multiplier = self.current_request_cost_multiplier
   let cost = match pricing {
     Some(model_pricing) if usage.has_billable_tokens() =>
@@ -457,7 +468,7 @@ fn TrafficStats::record_completed_request(
       app_type~,
       model~,
       request_model~,
-      pricing_model=Some(model),
+      pricing_model=Some(pricing_model),
       usage~,
       input_cost_usd=cost.input_cost_usd,
       output_cost_usd=cost.output_cost_usd,

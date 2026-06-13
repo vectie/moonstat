@@ -173,6 +173,7 @@ fn Gateway::activate_provider_target(
     provider.provider_id,
     provider.provider_name,
     cost_multiplier=provider_cost_multiplier(provider),
+    pricing_model_source=provider_pricing_model_source(provider),
   )
   true
 }
@@ -1905,6 +1906,77 @@ fn default_cost_multiplier_for_app(app_type : String) -> String {
 }
 
 ///|
+fn provider_pricing_model_source(provider : ProviderRouteTarget) -> String {
+  let default_source = default_pricing_model_source_for_app(provider.app_type)
+  guard provider.settings_config is Some(settings) else {
+    return default_source
+  }
+  match settings {
+    Object(obj) => {
+      match
+        json_string_from_map_any(obj, [
+          "pricingModelSource", "pricing_model_source",
+        ]) {
+        Some(value) if pricing_model_source_is_valid(value) =>
+          return value.trim().to_owned()
+        _ => ()
+      }
+      match obj.get("meta") {
+        Some(Object(meta)) =>
+          match
+            json_string_from_map_any(meta, [
+              "pricingModelSource", "pricing_model_source",
+            ]) {
+            Some(value) if pricing_model_source_is_valid(value) =>
+              value.trim().to_owned()
+            _ => default_source
+          }
+        _ => default_source
+      }
+    }
+    _ => default_source
+  }
+}
+
+///|
+fn default_pricing_model_source_for_app(app_type : String) -> String {
+  let global_keys = [
+    "MOONSTAT_PRICING_MODEL_SOURCE", "MOONSTAT_DEFAULT_PRICING_MODEL_SOURCE",
+  ]
+  let app_keys = match app_type {
+    "claude" | "claude-desktop" =>
+      [
+        "MOONSTAT_CLAUDE_PRICING_MODEL_SOURCE", "MOONSTAT_CLAUDE_DEFAULT_PRICING_MODEL_SOURCE",
+        "ANTHROPIC_PRICING_MODEL_SOURCE", "ANTHROPIC_DEFAULT_PRICING_MODEL_SOURCE",
+      ]
+    "codex" =>
+      [
+        "MOONSTAT_CODEX_PRICING_MODEL_SOURCE", "MOONSTAT_CODEX_DEFAULT_PRICING_MODEL_SOURCE",
+        "CODEX_PRICING_MODEL_SOURCE", "CODEX_DEFAULT_PRICING_MODEL_SOURCE",
+      ]
+    "gemini" =>
+      [
+        "MOONSTAT_GEMINI_PRICING_MODEL_SOURCE", "MOONSTAT_GEMINI_DEFAULT_PRICING_MODEL_SOURCE",
+        "GEMINI_PRICING_MODEL_SOURCE", "GEMINI_DEFAULT_PRICING_MODEL_SOURCE",
+      ]
+    "opencode" =>
+      [
+        "MOONSTAT_OPENCODE_PRICING_MODEL_SOURCE", "MOONSTAT_OPENCODE_DEFAULT_PRICING_MODEL_SOURCE",
+        "OPENCODE_PRICING_MODEL_SOURCE", "OPENCODE_DEFAULT_PRICING_MODEL_SOURCE",
+      ]
+    _ => []
+  }
+  match env_first_pricing_model_source(app_keys) {
+    Some(value) => value
+    None =>
+      match env_first_pricing_model_source(global_keys) {
+        Some(value) => value
+        None => "response"
+      }
+  }
+}
+
+///|
 fn codex_base_is_full_url() -> Bool {
   env_bool("MOONSTAT_CODEX_FULL_URL") || env_bool("CODEX_FULL_URL")
 }
@@ -1959,6 +2031,24 @@ fn env_first_non_negative_decimal(keys : Array[String]) -> String? {
     }
   }
   None
+}
+
+///|
+fn env_first_pricing_model_source(keys : Array[String]) -> String? {
+  for key in keys {
+    match getenv_or_none(key) {
+      Some(value) if pricing_model_source_is_valid(value) =>
+        return Some(value.trim().to_owned())
+      _ => continue
+    }
+  }
+  None
+}
+
+///|
+fn pricing_model_source_is_valid(value : String) -> Bool {
+  let trimmed = value.trim()
+  trimmed == "response" || trimmed == "request"
 }
 
 ///|
