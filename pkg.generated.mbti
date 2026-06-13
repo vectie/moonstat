@@ -14,6 +14,16 @@ pub fn build_codex_request(CodexInput, String, Bool) -> Json
 
 pub fn convert_anthropic_to_codex(AnthropicRequest, String) -> CodexInput
 
+pub fn token_usage_from_claude_response(Json) -> TokenUsage?
+
+pub fn token_usage_from_codex_response(Json) -> TokenUsage?
+
+pub fn token_usage_from_codex_response_auto(Json) -> TokenUsage?
+
+pub fn token_usage_from_gemini_response(Json) -> TokenUsage?
+
+pub fn token_usage_from_openai_response(Json) -> TokenUsage?
+
 // Errors
 
 // Types and methods
@@ -118,15 +128,30 @@ pub struct CodexTool {
 pub impl ToJson for CodexTool
 
 pub struct Gateway {
+  host : String
   port : Int
   model : String
   mut credentials : @codex.Credentials?
   stats : TrafficStats
   logger : @pino.Logger
+  started_at_ms : Int
 }
-pub fn Gateway::new(port~ : Int, model? : String) -> Self
+pub fn Gateway::host(Self) -> String
+pub fn Gateway::new(port~ : Int, host? : String, model? : String) -> Self
 pub fn Gateway::port(Self) -> Int
 pub async fn Gateway::start(Self) -> Unit
+
+pub struct TokenUsage {
+  input_tokens : Int
+  output_tokens : Int
+  cache_read_tokens : Int
+  cache_creation_tokens : Int
+  model : String?
+  message_id : String?
+}
+pub fn TokenUsage::empty() -> Self
+pub fn TokenUsage::has_billable_tokens(Self) -> Bool
+pub fn TokenUsage::new(input_tokens~ : Int, output_tokens~ : Int, cache_read_tokens? : Int, cache_creation_tokens? : Int, model? : String?, message_id? : String?) -> Self
 
 pub struct ToolCallInfo {
   id : String
@@ -135,6 +160,7 @@ pub struct ToolCallInfo {
 }
 
 pub struct TrafficStats {
+  mut active_connections : Int
   mut total_requests : Int
   mut message_requests : Int
   mut streaming_requests : Int
@@ -146,8 +172,12 @@ pub struct TrafficStats {
   mut upstream_errors : Int
   mut input_tokens : Int
   mut output_tokens : Int
+  mut cache_read_tokens : Int
+  mut cache_creation_tokens : Int
   mut request_bytes : Int
   mut response_bytes : Int
+  mut last_request_at : String?
+  mut last_error : String?
 }
 pub fn TrafficStats::new() -> Self
 pub fn TrafficStats::record_bad_request(Self) -> Unit
@@ -155,8 +185,10 @@ pub fn TrafficStats::record_inbound(Self, Int) -> Unit
 pub fn TrafficStats::record_internal_error(Self) -> Unit
 pub fn TrafficStats::record_stream_mode(Self, Bool) -> Unit
 pub fn TrafficStats::record_success(Self, Int, Int, Int) -> Unit
+pub fn TrafficStats::record_success_usage(Self, TokenUsage, Int) -> Unit
 pub fn TrafficStats::record_unauthorized(Self) -> Unit
 pub fn TrafficStats::record_upstream_error(Self, Int) -> Unit
+pub fn TrafficStats::status_json(Self, String, Int, Int, String, String) -> Json
 pub fn TrafficStats::to_json(Self) -> Json
 
 // Type aliases

@@ -1,22 +1,35 @@
 ///|
 pub struct Gateway {
+  host : String
   port : Int
   model : String
   mut credentials : @codex.Credentials?
   stats : TrafficStats
   logger : @pino.Logger
+  started_at_ms : Int
 }
 
 ///|
-pub fn Gateway::new(port~ : Int, model? : String = "gpt-4o") -> Gateway {
+pub fn Gateway::new(
+  port~ : Int,
+  host? : String = "127.0.0.1",
+  model? : String = "gpt-4o",
+) -> Gateway {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   Gateway::{
+    host,
     port,
     model,
     credentials: None,
     stats: TrafficStats::new(),
     logger,
+    started_at_ms: @async.now().to_int(),
   }
+}
+
+///|
+pub fn Gateway::host(self : Gateway) -> String {
+  self.host
 }
 
 ///|
@@ -27,7 +40,7 @@ pub fn Gateway::port(self : Gateway) -> Int {
 ///|
 pub async fn Gateway::start(self : Gateway) -> Unit {
   self.logger.info(
-    "Starting Anthropic -> Codex OAuth Gateway on port \{self.port}",
+    "Starting Anthropic -> Codex OAuth Gateway on \{self.host}:\{self.port}",
   )
   let creds_result : Result[@codex.Credentials, Error] = try? @codex.load_credentials()
   if creds_result is Ok(creds) {
@@ -43,21 +56,39 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/v1/messages", (r, w) => {
     self.handle_messages(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/claude/v1/messages", (r, w) => {
+    self.handle_messages(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/claude-desktop/v1/messages", (r, w) => {
+    self.handle_messages(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/participant/register", (_, w) => {
     self.handle_register_page(w)
   })
   router.add_handler(@httpx.Method::Get, "/health", (r, w) => {
     self.handle_health(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/status", (_, w) => {
+    self.handle_status(w)
+  })
   router.add_handler(@httpx.Method::Get, "/stats", (_, w) => {
     self.handle_stats(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/models", (_, w) => {
+    self.handle_models(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/v1/models", (_, w) => {
+    self.handle_models(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/claude-desktop/v1/models", (_, w) => {
+    self.handle_models(w)
   })
   router.add_handler(@httpx.Method::Post, "/login", (r, w) => {
     self.handle_login(r, w)
   })
   router.set_not_found_handler(file_server.handler())
-  let server = @httpx.Server::new("[::]", self.port, reuse_addr=true)
-  self.logger.info("Gateway started on port \{server.port()}")
+  let server = @httpx.Server::new(self.host, self.port, reuse_addr=true)
+  self.logger.info("Gateway started on \{self.host}:\{server.port()}")
   server.serve(router.handler())
 }
 
@@ -81,11 +112,33 @@ async fn Gateway::handle_health(
   w.write_header(@status.Ok)
   let has_creds = self.credentials is Some(_)
   let response : Map[String, Json] = {
-    "status": Json::string("ok"),
+    "status": Json::string("healthy"),
+    "timestamp": Json::string(@async.now().to_string()),
     "credentials_loaded": Json::boolean(has_creds),
     "stats": self.stats.to_json(),
   }
   w.write(response.to_json().stringify())
+  w.flush()
+}
+
+///|
+async fn Gateway::handle_status(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  w.header().set("Content-Type", "application/json")
+  w.write_header(@status.Ok)
+  w.write(
+    self.stats
+    .status_json(
+      self.host,
+      self.port,
+      self.uptime_seconds(),
+      "codex",
+      "codex-oauth",
+    )
+    .stringify(indent=2),
+  )
   w.flush()
 }
 
@@ -98,6 +151,36 @@ async fn Gateway::handle_stats(
   w.write_header(@status.Ok)
   w.write(self.stats.to_json().stringify(indent=2))
   w.flush()
+}
+
+///|
+async fn Gateway::handle_models(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  w.header().set("Content-Type", "application/json")
+  w.write_header(@status.Ok)
+  let model : Map[String, Json] = {
+    "id": Json::string(self.model),
+    "object": Json::string("model"),
+    "owned_by": Json::string("moonstat"),
+  }
+  let response : Map[String, Json] = {
+    "object": Json::string("list"),
+    "data": Json::array([model.to_json()]),
+  }
+  w.write(response.to_json().stringify())
+  w.flush()
+}
+
+///|
+fn Gateway::uptime_seconds(self : Gateway) -> Int {
+  let elapsed = @async.now().to_int() - self.started_at_ms
+  if elapsed < 0 {
+    0
+  } else {
+    elapsed / 1000
+  }
 }
 
 ///|
@@ -255,12 +338,10 @@ async fn Gateway::handle_non_streaming_request(
   )
   match response_json_result {
     Ok(json) => {
-      let (input_tokens, output_tokens) = extract_usage_tokens(json)
-      self.stats.record_success(
-        input_tokens,
-        output_tokens,
-        response_body.length(),
+      let usage = token_usage_from_codex_response_auto(json).unwrap_or(
+        TokenUsage::empty(),
       )
+      self.stats.record_success_usage(usage, response_body.length())
       let anthropic_response = convert_codex_to_anthropic(json, request.model)
       w.header().set("Content-Type", "application/json")
       w.write_header(@status.Ok)
@@ -340,21 +421,6 @@ async fn Gateway::handle_streaming_request(
   self.stats.record_success(0, 0, 0)
   w.write("event: message_stop\ndata: {}\n\n")
   w.flush()
-}
-
-///|
-fn extract_usage_tokens(codex_json : Json) -> (Int, Int) {
-  guard codex_json is Object(obj) else { return (0, 0) }
-  guard obj.get("usage") is Some(Object(usage_obj)) else { return (0, 0) }
-  let input_tokens = match usage_obj.get("input_tokens") {
-    Some(Number(n, ..)) => n.trunc().to_int()
-    _ => 0
-  }
-  let output_tokens = match usage_obj.get("output_tokens") {
-    Some(Number(n, ..)) => n.trunc().to_int()
-    _ => 0
-  }
-  (input_tokens, output_tokens)
 }
 
 ///|

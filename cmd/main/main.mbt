@@ -6,7 +6,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["login", ..] => do_login(arr)
     ["install", ..] => install_reroute(arr)
     ["uninstall"] | ["remove"] => uninstall_reroute()
-    ["status"] => check_status()
+    ["status", ..] => check_status(arr)
     ["health", ..] => check_health(arr)
     ["stats", ..] => check_stats(arr)
     ["help"] | ["--help"] | ["-h"] => print_help()
@@ -39,11 +39,13 @@ fn print_help() -> Unit {
   println("  help        Show this help message")
   println("")
   println("Start options:")
-  println("  --port <port>      Port to listen on (default: 80)")
+  println("  --host <host>      Address to listen on (default: 127.0.0.1)")
+  println("  --port <port>      Port to listen on (default: 15721)")
   println("  --model <model>    Codex model to use (default: gpt-4o)")
   println("")
   println("Examples:")
   println("  sudo moonstat install          # Install hosts reroute")
+  println("  moonstat start                 # Start gateway on 127.0.0.1:15721")
   println("  moonstat start --port 80       # Start gateway on port 80")
   println("  claude                         # Use Claude CLI through moonstat")
   println("  moonstat stats                 # Show traffic counters")
@@ -53,12 +55,13 @@ fn print_help() -> Unit {
 ///|
 async fn start_gateway(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
-  let port = parse_int_arg(args, "--port", default=80)
+  let host = parse_string_arg(args, "--host").unwrap_or("127.0.0.1")
+  let port = parse_int_arg(args, "--port", default=15721)
   let model = parse_string_arg(args, "--model").unwrap_or("gpt-4o")
-  logger.info("Starting Moonstat Gateway on port \{port}")
+  logger.info("Starting Moonstat Gateway on \{host}:\{port}")
   logger.info("Using Codex model: \{model}")
-  let gateway = @moonstat.Gateway::new(port~, model~)
-  logger.info("Gateway started on port \{gateway.port()}")
+  let gateway = @moonstat.Gateway::new(port~, host~, model~)
+  logger.info("Gateway started on \{gateway.host()}:\{gateway.port()}")
   gateway.start()
 }
 
@@ -80,7 +83,7 @@ async fn do_login(_args : Array[String]) -> Unit {
 ///|
 async fn check_health(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
-  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:80")
+  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
     let client = @http.Client::new(url, headers={})
     defer client.close()
@@ -99,7 +102,7 @@ async fn check_health(args : Array[String]) -> Unit {
 ///|
 async fn check_stats(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
-  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:80")
+  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
     let client = @http.Client::new(url, headers={})
     defer client.close()
@@ -116,8 +119,9 @@ async fn check_stats(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn check_status() -> Unit {
+async fn check_status(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
+  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
 
   // 检查 hosts reroute 状态
   let hosts_installed = @hosts.is_reroute_installed()
@@ -129,9 +133,9 @@ async fn check_status() -> Unit {
 
   // 检查网关是否在运行
   try {
-    let client = @http.Client::new("http://localhost:80", headers={})
+    let client = @http.Client::new(url, headers={})
     defer client.close()
-    let response = client.get("/health")
+    let response = client.get("/status")
     if response.code == 200 {
       let body = client.read_all().text()
       logger.info("Gateway is running: \{body}")
@@ -153,7 +157,7 @@ async fn check_status() -> Unit {
 ///|
 async fn install_reroute(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
-  let port = parse_int_arg(args, "--port", default=80)
+  let port = parse_int_arg(args, "--port", default=15721)
 
   logger.info("Installing hosts reroute for port \{port}...")
   let result = @hosts.install_and_flush(port)
