@@ -104,6 +104,12 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     | ["remove-provider-from-live-config", ..] =>
       remove_provider_from_live_config(arr)
     ["switch_provider", ..] | ["switch-provider", ..] => switch_provider(arr)
+    ["read_live_provider_settings", ..] | ["read-live-provider-settings", ..] =>
+      check_live_provider_settings(arr)
+    ["test_api_endpoints", ..] | ["test-api-endpoints", ..] =>
+      test_api_endpoints(arr)
+    ["update_providers_sort_order", ..] | ["update-providers-sort-order", ..] =>
+      update_providers_sort_order(arr)
     ["get_custom_endpoints", ..] | ["get-custom-endpoints", ..] =>
       check_provider_custom_endpoints(arr)
     ["add_custom_endpoint", ..] | ["add-custom-endpoint", ..] =>
@@ -226,6 +232,12 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       remove_provider_from_live_config(arr)
     ["provider", "switch", ..] | ["providers", "switch", ..] =>
       switch_provider(arr)
+    ["provider", "live-settings", ..] | ["providers", "live-settings", ..] =>
+      check_live_provider_settings(arr)
+    ["provider", "test-endpoints", ..] | ["providers", "test-endpoints", ..] =>
+      test_api_endpoints(arr)
+    ["provider", "sort-order", "set", ..]
+    | ["providers", "sort-order", "set", ..] => update_providers_sort_order(arr)
     ["provider", "endpoints", "list", ..]
     | ["providers", "endpoints", "list", ..] =>
       check_provider_custom_endpoints(arr)
@@ -375,6 +387,9 @@ fn print_help() -> Unit {
     "  provider remove-live   Alias for ccs remove_provider_from_live_config",
   )
   println("  provider switch        Alias for ccs switch_provider")
+  println("  provider live-settings Alias for ccs read_live_provider_settings")
+  println("  provider test-endpoints Alias for ccs test_api_endpoints")
+  println("  provider sort-order set Alias for ccs update_providers_sort_order")
   println("  provider endpoints list    Alias for ccs get_custom_endpoints")
   println("  provider endpoints add     Alias for ccs add_custom_endpoint")
   println("  provider endpoints remove  Alias for ccs remove_custom_endpoint")
@@ -886,6 +901,35 @@ async fn switch_provider(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn check_live_provider_settings(args : Array[String]) -> Unit {
+  check_json_endpoint(
+    args,
+    provider_app_path(args, "/read_live_provider_settings"),
+    "Provider",
+  )
+}
+
+///|
+async fn test_api_endpoints(args : Array[String]) -> Unit {
+  guard provider_test_endpoints_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --url or --urls")
+    return
+  }
+  check_json_endpoint(args, path, "Provider")
+}
+
+///|
+async fn update_providers_sort_order(args : Array[String]) -> Unit {
+  guard provider_sort_order_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required provider sort args: --id --sort-index")
+    return
+  }
+  check_json_post_endpoint(args, path, "Provider")
+}
+
+///|
 async fn check_provider_custom_endpoints(args : Array[String]) -> Unit {
   guard provider_id_path(args, "/get_custom_endpoints") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
@@ -1005,6 +1049,36 @@ fn provider_endpoint_url_path(args : Array[String], path : String) -> String? {
   }
   Some(
     "\{path}?app=\{cli_url_encode(provider_app_arg(args))}&providerId=\{cli_url_encode(provider_id)}&url=\{cli_url_encode(endpoint_url)}",
+  )
+}
+
+///|
+fn provider_test_endpoints_path(args : Array[String]) -> String? {
+  let urls = match parse_string_arg(args, "--urls") {
+    Some(value) => value
+    None =>
+      match parse_string_arg(args, "--url") {
+        Some(value) => value
+        None => return None
+      }
+  }
+  let query : Array[String] = [cli_query_pair("urls", urls)]
+  match parse_string_arg_any(args, "--timeout-secs", "--timeoutSecs") {
+    Some(value) => query.push(cli_query_pair("timeoutSecs", value))
+    None => ()
+  }
+  Some("/test_api_endpoints?\{query.join("&")}")
+}
+
+///|
+fn provider_sort_order_path(args : Array[String]) -> String? {
+  guard provider_id_arg(args) is Some(provider_id) else { return None }
+  guard parse_string_arg_any(args, "--sort-index", "--sortIndex")
+    is Some(sort_index) else {
+    return None
+  }
+  Some(
+    "/update_providers_sort_order?app=\{cli_url_encode(provider_app_arg(args))}&id=\{cli_url_encode(provider_id)}&sortIndex=\{cli_url_encode(sort_index)}",
   )
 }
 

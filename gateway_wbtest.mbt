@@ -127,6 +127,56 @@ test "usage query helpers parse ccs auto failover boolean parameters" {
 }
 
 ///|
+test "provider command helpers parse ccs sort and endpoint test payloads" {
+  let updates = provider_sort_updates_from_request(
+    "/update_providers_sort_order?app=codex&id=custom&sortIndex=2",
+    None,
+  )
+  assert_eq(updates.length(), 1)
+  assert_eq(updates[0].id, "custom")
+  assert_eq(updates[0].sort_index, 2)
+
+  let body_updates = provider_sort_updates_from_request(
+    "/update_providers_sort_order",
+    Some(
+      {
+        "updates": Json::array([
+          { "id": Json::string("b"), "sortIndex": Json::number(0.0) }.to_json(),
+          { "id": Json::string("a"), "sort_index": Json::number(1.0) }.to_json(),
+        ]),
+      }.to_json(),
+    ),
+  )
+  assert_eq(body_updates.length(), 2)
+  assert_eq(body_updates[0].id, "b")
+  assert_eq(body_updates[1].sort_index, 1)
+
+  json_inspect(
+    provider_endpoint_latency_results_json(
+      provider_endpoint_urls_from_request(
+        "/test_api_endpoints?urls=https%3A%2F%2Fapi.example.com%2Fv1,not-a-url",
+        None,
+      ),
+      8,
+    ),
+    content=[
+      {
+        "url": "https://api.example.com/v1",
+        "latency": 0,
+        "status": 200,
+        "error": null,
+      },
+      {
+        "url": "not-a-url",
+        "latency": null,
+        "status": null,
+        "error": "URL 无效",
+      },
+    ],
+  )
+}
+
+///|
 test "usage query helpers parse ccs request log parameters" {
   let path = "/usage/logs?page=2&pageSize=25&appType=codex&providerName=Codex+OAuth&model=anthropic%2Fclaude-sonnet-4.5&statusCode=200&startDate=10&end_date=20"
   assert_eq(usage_query_int(path, "page"), Some(2))

@@ -546,3 +546,51 @@ test "provider router custom endpoints mirror ccs metadata semantics" {
   ])
   json_inspect(router.custom_endpoints_json("codex", "missing"), content=[])
 }
+
+///|
+test "provider router mirrors ccs live settings and sort updates" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="a",
+      provider_name="Provider A",
+      settings_config=Some(
+        {
+          "apiKey": Json::string("sk-a"),
+          "baseUrl": Json::string("https://a.example.com/v1"),
+        }.to_json(),
+      ),
+    ),
+  )
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="b",
+      provider_name="Provider B",
+    ),
+  )
+  router.set_current_provider("codex", "a")
+  json_inspect(router.read_live_provider_settings("codex"), content={
+    "apiKey": "sk-a",
+    "baseUrl": "https://a.example.com/v1",
+  })
+  assert_true(
+    router.update_providers_sort_order("codex", [
+      { id: "b", sort_index: 0 },
+      { id: "a", sort_index: 1 },
+    ]),
+  )
+  guard router.providers_ccs_json("codex") is Object(providers) else {
+    fail("expected providers object")
+  }
+  guard providers["a"] is Object(provider_a) else {
+    fail("expected provider a")
+  }
+  guard providers["b"] is Object(provider_b) else {
+    fail("expected provider b")
+  }
+  assert_eq(provider_a["sortIndex"], Json::number(1.0))
+  assert_eq(provider_b["sortIndex"], Json::number(0.0))
+  json_inspect(router.read_live_provider_settings("missing"), content={})
+}

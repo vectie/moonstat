@@ -302,6 +302,22 @@ test "proxy config setter paths encode ccs command arguments" {
       "/update_endpoint_last_used?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
     ),
   )
+  assert_eq(
+    provider_test_endpoints_path([
+      "moonstat", "provider", "test-endpoints", "--urls", "https://api.example.com/v1,not-a-url",
+      "--timeoutSecs", "3",
+    ]),
+    Some(
+      "/test_api_endpoints?urls=https%3A%2F%2Fapi.example.com%2Fv1%2Cnot-a-url&timeoutSecs=3",
+    ),
+  )
+  assert_eq(
+    provider_sort_order_path([
+      "moonstat", "provider", "sort-order", "set", "--app", "codex", "--id", "custom",
+      "--sort-index", "2",
+    ]),
+    Some("/update_providers_sort_order?app=codex&id=custom&sortIndex=2"),
+  )
 }
 
 ///|

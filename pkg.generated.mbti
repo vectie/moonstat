@@ -403,6 +403,7 @@ pub struct ProviderRouter {
   max_retries : Map[String, Int]
   circuit_breakers : Map[String, CircuitBreaker]
   mut circuit_config : CircuitBreakerConfig
+  // private fields
 }
 pub fn ProviderRouter::allow_provider_request(Self, String, String, now_ms? : Int) -> AllowResult
 pub fn ProviderRouter::get_circuit_breaker_stats(Self, String, String) -> CircuitBreakerStats?

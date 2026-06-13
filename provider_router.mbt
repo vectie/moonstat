@@ -420,6 +420,7 @@ pub fn ProviderRouteTarget::to_json(self : ProviderRouteTarget) -> Json {
 fn ProviderRouteTarget::to_ccs_provider_json(
   self : ProviderRouteTarget,
   in_failover_queue : Bool,
+  sort_index? : Int? = None,
 ) -> Json {
   let empty_settings : Map[String, Json] = {}
   let obj : Map[String, Json] = {
@@ -433,6 +434,9 @@ fn ProviderRouteTarget::to_ccs_provider_json(
   }
   if self.provider_type is Some(provider_type) {
     obj["category"] = Json::string(provider_type)
+  }
+  if sort_index is Some(sort_index) {
+    obj["sortIndex"] = Json::number(sort_index.to_double())
   }
   Json::object(obj)
 }
@@ -483,6 +487,12 @@ struct CustomEndpoint {
 }
 
 ///|
+priv struct ProviderSortUpdate {
+  id : String
+  sort_index : Int
+}
+
+///|
 fn CustomEndpoint::new(url : String, added_at : Int) -> CustomEndpoint {
   { url, added_at, last_used: None }
 }
@@ -522,6 +532,7 @@ pub fn ProviderSelection::is_ok(self : ProviderSelection) -> Bool {
 pub struct ProviderRouter {
   providers : Map[String, Map[String, ProviderRouteTarget]]
   current_provider_ids : Map[String, String]
+  priv provider_sort_indices : Map[String, Map[String, Int]]
   custom_endpoints : Map[String, Map[String, Map[String, CustomEndpoint]]]
   failover_queues : Map[String, Array[String]]
   auto_failover_enabled : Map[String, Bool]
@@ -537,6 +548,7 @@ pub fn ProviderRouter::new(
   {
     providers: Map([], capacity=0),
     current_provider_ids: Map([], capacity=0),
+    provider_sort_indices: Map([], capacity=0),
     custom_endpoints: Map([], capacity=0),
     failover_queues: Map([], capacity=0),
     auto_failover_enabled: Map([], capacity=0),
@@ -646,16 +658,100 @@ fn ProviderRouter::providers_ccs_json(
   let queue = self.failover_queues.get(app_type).unwrap_or([])
   let obj : Map[String, Json] = {}
   match self.providers.get(app_type) {
-    Some(providers) =>
+    Some(providers) => {
+      let provider_ids : Array[String] = []
       for provider_id in providers.keys() {
+        provider_ids.push(provider_id)
+      }
+      provider_ids.sort_by(fn(left, right) {
+        guard providers.get(left) is Some(left_provider) else { return 1 }
+        guard providers.get(right) is Some(right_provider) else { return -1 }
+        provider_ccs_sort_compare(
+          left_provider,
+          self.provider_sort_index(app_type, left),
+          right_provider,
+          self.provider_sort_index(app_type, right),
+        )
+      })
+      for provider_id in provider_ids {
         guard providers.get(provider_id) is Some(provider) else { continue }
         obj[provider_id] = provider.to_ccs_provider_json(
           queue.contains(provider.provider_id),
+          sort_index=self.provider_sort_index(app_type, provider_id),
         )
       }
+    }
     None => ()
   }
   Json::object(obj)
+}
+
+///|
+fn provider_ccs_sort_compare(
+  left : ProviderRouteTarget,
+  left_sort_index : Int?,
+  right : ProviderRouteTarget,
+  right_sort_index : Int?,
+) -> Int {
+  match (left_sort_index, right_sort_index) {
+    (Some(left_index), Some(right_index)) if left_index != right_index =>
+      left_index.compare(right_index)
+    (Some(_), None) => -1
+    (None, Some(_)) => 1
+    _ => {
+      let by_name = left.provider_name.compare(right.provider_name)
+      if by_name != 0 {
+        by_name
+      } else {
+        left.provider_id.compare(right.provider_id)
+      }
+    }
+  }
+}
+
+///|
+fn ProviderRouter::provider_sort_index(
+  self : ProviderRouter,
+  app_type : String,
+  provider_id : String,
+) -> Int? {
+  guard self.provider_sort_indices.get(app_type) is Some(app_sort_indices) else {
+    return None
+  }
+  app_sort_indices.get(provider_id)
+}
+
+///|
+fn ProviderRouter::read_live_provider_settings(
+  self : ProviderRouter,
+  app_type : String,
+) -> Json {
+  guard self.current_provider_id(app_type) is Some(provider_id) else {
+    return Json::object({})
+  }
+  guard self.provider_by_id(app_type, provider_id) is Some(provider) else {
+    return Json::object({})
+  }
+  provider.settings_config.unwrap_or(Json::object({}))
+}
+
+///|
+fn ProviderRouter::update_providers_sort_order(
+  self : ProviderRouter,
+  app_type : String,
+  updates : Array[ProviderSortUpdate],
+) -> Bool {
+  guard self.providers.get(app_type) is Some(app_providers) else { return true }
+  let app_sort_indices = self.provider_sort_indices
+    .get(app_type)
+    .unwrap_or(Map([], capacity=0))
+  for update in updates {
+    guard app_providers.get(update.id) is Some(_) else { continue }
+    app_sort_indices.set(update.id, max_int(update.sort_index, 0))
+  }
+  self.providers.set(app_type, app_providers)
+  self.provider_sort_indices.set(app_type, app_sort_indices)
+  true
 }
 
 ///|
@@ -672,6 +768,10 @@ fn ProviderRouter::delete_provider(
   self.providers.set(app_type, app_providers)
   self.remove_from_failover_queue(app_type, provider_id)
   self.circuit_breakers.remove(circuit_key(app_type, provider_id))
+  if self.provider_sort_indices.get(app_type) is Some(app_sort_indices) {
+    app_sort_indices.remove(provider_id)
+    self.provider_sort_indices.set(app_type, app_sort_indices)
+  }
   if self.current_provider_ids.get(app_type) == Some(provider_id) {
     let mut next_provider_id : String? = None
     for candidate_id in app_providers.keys() {

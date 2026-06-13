@@ -125,6 +125,9 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `DELETE /delete_provider?app=codex&id=custom`
 - `DELETE /remove_provider_from_live_config?app=codex&id=custom`
 - `POST /switch_provider?app=codex&id=custom`
+- `GET /read_live_provider_settings?app=codex`
+- `GET|POST /test_api_endpoints?urls=https://api.example.com/v1`
+- `POST /update_providers_sort_order?app=codex&id=custom&sortIndex=0`
 - `GET /get_custom_endpoints?app=codex&providerId=custom`
 - `POST /add_custom_endpoint?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
 - `DELETE /remove_custom_endpoint?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
@@ -213,11 +216,12 @@ The `/get_providers`,
 `/get_current_provider`, `/add_provider`, `/update_provider`,
 `/delete_provider`, `/remove_provider_from_live_config`, and
 `/switch_provider` mirror ccs provider CRUD/current-provider command shapes
-against that same standalone provider router state. `/get_custom_endpoints`,
-`/add_custom_endpoint`, `/remove_custom_endpoint`, and
-`/update_endpoint_last_used` mirror ccs provider custom endpoint metadata,
-including URL normalization, newest-first listing, and best-effort last-used
-updates.
+against that same standalone provider router state. `/read_live_provider_settings`,
+`/test_api_endpoints`, and `/update_providers_sort_order` mirror the ccs live
+settings, endpoint latency result, and `sortIndex` command shapes. `/get_custom_endpoints`,
+`/add_custom_endpoint`, `/remove_custom_endpoint`, and `/update_endpoint_last_used`
+mirror ccs provider custom endpoint metadata, including URL normalization,
+newest-first listing, and best-effort last-used updates.
 `/usage/logs` returns
 recent `proxy_request_logs` rows with ccs-style provider/app/model, token,
 cache-token, cost, latency, status, session, streaming, and data-source fields.

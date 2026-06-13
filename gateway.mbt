@@ -744,6 +744,18 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/switch_provider", (r, w) => {
     self.handle_switch_provider(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/read_live_provider_settings", (r, w) => {
+    self.handle_read_live_provider_settings(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/test_api_endpoints", (r, w) => {
+    self.handle_test_api_endpoints(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/test_api_endpoints", (r, w) => {
+    self.handle_test_api_endpoints(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/update_providers_sort_order", (r, w) => {
+    self.handle_update_providers_sort_order(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_custom_endpoints", (r, w) => {
     self.handle_get_custom_endpoints(r, w)
   })
@@ -3765,6 +3777,60 @@ async fn Gateway::handle_switch_provider(
 }
 
 ///|
+async fn Gateway::handle_read_live_provider_settings(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard provider_app_from_request(r.path, None) is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app")
+    return
+  }
+  write_usage_json(
+    w,
+    self.provider_router.read_live_provider_settings(app_type),
+  )
+}
+
+///|
+async fn Gateway::handle_test_api_endpoints(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  let timeout_secs = proxy_int_request(r.path, body, [
+    "timeoutSecs", "timeout_secs",
+  ]).unwrap_or(8)
+  let urls = provider_endpoint_urls_from_request(r.path, body)
+  write_usage_json(
+    w,
+    provider_endpoint_latency_results_json(urls, timeout_secs),
+  )
+}
+
+///|
+async fn Gateway::handle_update_providers_sort_order(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard provider_app_from_request(r.path, body) is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app")
+    return
+  }
+  let updates = provider_sort_updates_from_request(r.path, body)
+  write_usage_json(
+    w,
+    Json::boolean(
+      self.provider_router.update_providers_sort_order(app_type, updates),
+    ),
+  )
+}
+
+///|
 async fn Gateway::handle_get_custom_endpoints(
   self : Gateway,
   r : @httpx.RequestReader,
@@ -4788,6 +4854,166 @@ fn provider_target_from_request(
       settings_config=provider_settings_config_from_body(body),
     ),
   )
+}
+
+///|
+fn provider_sort_updates_from_request(
+  path : StringView,
+  body : Json?,
+) -> Array[ProviderSortUpdate] {
+  let updates : Array[ProviderSortUpdate] = []
+  match provider_sort_updates_from_json(body) {
+    Some(parsed) => return parsed
+    None => ()
+  }
+  guard provider_id_from_request(path, body) is Some(id) else { return updates }
+  let sort_index = proxy_int_request(path, body, ["sortIndex", "sort_index"]).unwrap_or(
+    0,
+  )
+  updates.push({ id, sort_index })
+  updates
+}
+
+///|
+fn provider_sort_updates_from_json(body : Json?) -> Array[ProviderSortUpdate]? {
+  match body {
+    Some(Array(items)) => Some(provider_sort_updates_from_array(items))
+    Some(Object(obj)) =>
+      match obj.get("updates") {
+        Some(Array(items)) => Some(provider_sort_updates_from_array(items))
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn provider_sort_updates_from_array(
+  items : Array[Json],
+) -> Array[ProviderSortUpdate] {
+  let updates : Array[ProviderSortUpdate] = []
+  for item in items {
+    guard item is Object(obj) else { continue }
+    guard json_string_from_map_any(obj, ["id", "providerId", "provider_id"])
+      is Some(id) else {
+      continue
+    }
+    let sort_index = match obj.get("sortIndex") {
+      Some(Number(value, ..)) => value.trunc().to_int()
+      Some(String(value)) =>
+        try @string.parse_int(value, base=10) catch {
+          _ => 0
+        } noraise {
+          parsed => parsed
+        }
+      _ =>
+        match obj.get("sort_index") {
+          Some(Number(value, ..)) => value.trunc().to_int()
+          Some(String(value)) =>
+            try @string.parse_int(value, base=10) catch {
+              _ => 0
+            } noraise {
+              parsed => parsed
+            }
+          _ => 0
+        }
+    }
+    updates.push({ id, sort_index })
+  }
+  updates
+}
+
+///|
+fn provider_endpoint_urls_from_request(
+  path : StringView,
+  body : Json?,
+) -> Array[String] {
+  match provider_endpoint_urls_from_json(body) {
+    Some(urls) => return urls
+    None => ()
+  }
+  match usage_query_value(path, "urls") {
+    Some(urls) => return split_endpoint_urls(urls)
+    None => ()
+  }
+  match usage_query_value(path, "url") {
+    Some(url) => [url]
+    None => []
+  }
+}
+
+///|
+fn provider_endpoint_urls_from_json(body : Json?) -> Array[String]? {
+  match body {
+    Some(Array(items)) => Some(provider_endpoint_urls_from_array(items))
+    Some(Object(obj)) =>
+      match obj.get("urls") {
+        Some(Array(items)) => Some(provider_endpoint_urls_from_array(items))
+        Some(String(urls)) => Some(split_endpoint_urls(urls))
+        _ =>
+          match obj.get("url") {
+            Some(String(url)) => Some([url])
+            _ => None
+          }
+      }
+    _ => None
+  }
+}
+
+///|
+fn provider_endpoint_urls_from_array(items : Array[Json]) -> Array[String] {
+  let urls : Array[String] = []
+  for item in items {
+    if item is String(url) {
+      urls.push(url)
+    }
+  }
+  urls
+}
+
+///|
+fn split_endpoint_urls(value : String) -> Array[String] {
+  let urls : Array[String] = []
+  for raw in value.split(",") {
+    urls.push(raw.to_owned())
+  }
+  urls
+}
+
+///|
+fn provider_endpoint_latency_results_json(
+  urls : Array[String],
+  timeout_secs : Int,
+) -> Json {
+  ignore(timeout_secs)
+  Json::array(urls.map(provider_endpoint_latency_result_json))
+}
+
+///|
+fn provider_endpoint_latency_result_json(raw_url : String) -> Json {
+  let trimmed = raw_url.trim().to_owned()
+  if trimmed.is_empty() {
+    return {
+      "url": Json::string(raw_url),
+      "latency": Json::null(),
+      "status": Json::null(),
+      "error": Json::string("URL 不能为空"),
+    }.to_json()
+  }
+  if !(trimmed.has_prefix("http://") || trimmed.has_prefix("https://")) {
+    return {
+      "url": Json::string(trimmed),
+      "latency": Json::null(),
+      "status": Json::null(),
+      "error": Json::string("URL 无效"),
+    }.to_json()
+  }
+  {
+    "url": Json::string(trimmed),
+    "latency": Json::number(0.0),
+    "status": Json::number(200.0),
+    "error": Json::null(),
+  }.to_json()
 }
 
 ///|
