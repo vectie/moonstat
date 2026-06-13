@@ -3259,7 +3259,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
       record_provider=false,
     )
   }
-  if api_format != "anthropic" {
+  if api_format == "openai_responses" {
     w.write("event: message_stop\ndata: {}\n\n")
   }
   w.flush()
@@ -3284,15 +3284,30 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let _ = self
+  let state = OpenAIChatAnthropicStreamState::new()
+  let mut finished = false
   while reader.read_until("\n") is Some(line) {
     guard line is [.. "data: ", .. rest] else { continue }
     let data = rest.trim().to_owned()
     if data == "[DONE]" {
+      finished = true
+      for event in state.finish() {
+        w.write("event: \{event.event_type}\n")
+        w.write("data: \{event.data}\n\n")
+        w.flush()
+      }
       break
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
-    for event in openai_chat_stream_chunk_to_anthropic_events(parsed) {
+    for event in state.push_chunk(parsed) {
+      w.write("event: \{event.event_type}\n")
+      w.write("data: \{event.data}\n\n")
+      w.flush()
+    }
+  }
+  if !finished {
+    for event in state.finish() {
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
       w.flush()
@@ -3326,57 +3341,487 @@ async fn Gateway::forward_anthropic_sse_passthrough(
 fn openai_chat_stream_chunk_to_anthropic_events(
   chunk : Json,
 ) -> Array[StreamEvent] {
+  let state = OpenAIChatAnthropicStreamState::new()
+  state.push_chunk(chunk)
+}
+
+///|
+priv struct OpenAIChatAnthropicToolBlock {
+  anthropic_index : Int
+  mut id : String
+  mut name : String
+  mut started : Bool
+  mut pending_args : String
+}
+
+///|
+priv struct OpenAIChatAnthropicStreamState {
+  mut message_id : String?
+  mut model : String?
+  mut next_content_index : Int
+  mut has_sent_message_start : Bool
+  mut current_non_tool_block_type : String?
+  mut current_non_tool_block_index : Int?
+  tool_blocks_by_index : Map[Int, OpenAIChatAnthropicToolBlock]
+  open_tool_block_indices : Array[Int]
+  mut has_emitted_message_delta : Bool
+  mut pending_stop_reason : String?
+  mut pending_usage : Json?
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::new() -> OpenAIChatAnthropicStreamState {
+  {
+    message_id: None,
+    model: None,
+    next_content_index: 0,
+    has_sent_message_start: false,
+    current_non_tool_block_type: None,
+    current_non_tool_block_index: None,
+    tool_blocks_by_index: Map([], capacity=0),
+    open_tool_block_indices: [],
+    has_emitted_message_delta: false,
+    pending_stop_reason: None,
+    pending_usage: None,
+  }
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::push_chunk(
+  self : OpenAIChatAnthropicStreamState,
+  chunk : Json,
+) -> Array[StreamEvent] {
   let events : Array[StreamEvent] = []
   guard chunk is Object(obj) else { return events }
+  if self.message_id is None {
+    self.message_id = json_string_from_map(obj, "id")
+  }
+  if self.model is None {
+    self.model = json_string_from_map(obj, "model")
+  }
+  if obj.get("usage") is Some(Object(usage)) {
+    self.pending_usage = Some(openai_chat_stream_anthropic_usage_json(usage))
+  }
   guard obj.get("choices") is Some(Array(choices)) else { return events }
-  for choice in choices {
-    guard choice is Object(choice_obj) else { continue }
-    if choice_obj.get("delta") is Some(Object(delta)) {
-      match json_string_from_map(delta, "content") {
-        Some(text) if !text.is_empty() =>
-          events.push(anthropic_text_delta_stream_event(text))
-        _ => ()
-      }
-      match json_string_from_map(delta, "refusal") {
-        Some(text) if !text.is_empty() =>
-          events.push(anthropic_text_delta_stream_event(text))
-        _ => ()
-      }
-    }
-    match choice_obj.get("finish_reason") {
-      Some(String(reason)) =>
-        events.push(anthropic_message_delta_stream_event(reason))
+  guard choices.get(0) is Some(Object(choice_obj)) else { return events }
+  if !self.has_sent_message_start {
+    events.push(self.message_start_event())
+    self.has_sent_message_start = true
+  }
+  if choice_obj.get("delta") is Some(Object(delta)) {
+    match json_openai_chat_reasoning_text(delta) {
+      Some(text) if !text.is_empty() =>
+        self.push_non_tool_delta(events, "thinking", "thinking_delta", text)
       _ => ()
     }
+    match json_string_from_map(delta, "content") {
+      Some(text) if !text.is_empty() =>
+        self.push_non_tool_delta(events, "text", "text_delta", text)
+      _ => ()
+    }
+    match json_string_from_map(delta, "refusal") {
+      Some(text) if !text.is_empty() =>
+        self.push_non_tool_delta(events, "text", "text_delta", text)
+      _ => ()
+    }
+    match delta.get("tool_calls") {
+      Some(Array(tool_calls)) if !tool_calls.is_empty() => {
+        self.close_current_non_tool_block(events)
+        for tool_call in tool_calls {
+          if tool_call is Object(tool_call_obj) {
+            self.push_tool_call_delta(events, tool_call_obj)
+          }
+        }
+      }
+      _ => ()
+    }
+  }
+  match choice_obj.get("finish_reason") {
+    Some(String(reason)) => self.prepare_finish(events, reason)
+    _ => ()
   }
   events
 }
 
 ///|
-fn anthropic_text_delta_stream_event(text : String) -> StreamEvent {
+fn OpenAIChatAnthropicStreamState::finish(
+  self : OpenAIChatAnthropicStreamState,
+) -> Array[StreamEvent] {
+  let events : Array[StreamEvent] = []
+  if self.pending_stop_reason is Some(stop_reason) {
+    events.push(self.message_delta_event(stop_reason))
+    events.push(anthropic_message_stop_stream_event())
+    self.pending_stop_reason = None
+  } else if self.has_sent_message_start {
+    self.close_current_non_tool_block(events)
+    self.start_pending_tool_blocks(events)
+    self.close_open_tool_blocks(events)
+    events.push(self.message_delta_event("end_turn"))
+    events.push(anthropic_message_stop_stream_event())
+  }
+  events
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::message_start_event(
+  self : OpenAIChatAnthropicStreamState,
+) -> StreamEvent {
   {
-    event_type: "content_block_delta",
+    event_type: "message_start",
     data: Json::object({
-      "type": Json::string("content_block_delta"),
-      "index": Json::number(0.0),
-      "delta": Json::object({
-        "type": Json::string("text_delta"),
-        "text": Json::string(text),
+      "type": Json::string("message_start"),
+      "message": Json::object({
+        "id": Json::string(self.message_id.unwrap_or("")),
+        "type": Json::string("message"),
+        "role": Json::string("assistant"),
+        "model": Json::string(self.model.unwrap_or("")),
+        "usage": openai_chat_zero_usage_json(),
       }),
     }).stringify(),
   }
 }
 
 ///|
-fn anthropic_message_delta_stream_event(reason : String) -> StreamEvent {
-  let stop_reason = if reason == "tool_calls" { "tool_use" } else { "end_turn" }
+fn OpenAIChatAnthropicStreamState::push_non_tool_delta(
+  self : OpenAIChatAnthropicStreamState,
+  events : Array[StreamEvent],
+  block_type : String,
+  delta_type : String,
+  text : String,
+) -> Unit {
+  if self.current_non_tool_block_type != Some(block_type) {
+    self.close_current_non_tool_block(events)
+    let index = self.next_content_index
+    self.next_content_index += 1
+    self.current_non_tool_block_type = Some(block_type)
+    self.current_non_tool_block_index = Some(index)
+    events.push(anthropic_content_block_start_event(index, block_type))
+  }
+  if self.current_non_tool_block_index is Some(index) {
+    events.push(
+      anthropic_content_block_delta_event(index, delta_type, block_type, text),
+    )
+  }
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::close_current_non_tool_block(
+  self : OpenAIChatAnthropicStreamState,
+  events : Array[StreamEvent],
+) -> Unit {
+  if self.current_non_tool_block_index is Some(index) {
+    events.push(anthropic_content_block_stop_event(index))
+  }
+  self.current_non_tool_block_index = None
+  self.current_non_tool_block_type = None
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::push_tool_call_delta(
+  self : OpenAIChatAnthropicStreamState,
+  events : Array[StreamEvent],
+  tool_call : Map[String, Json],
+) -> Unit {
+  let tool_index = json_int_or_zero(tool_call, "index")
+  let state = match self.tool_blocks_by_index.get(tool_index) {
+    Some(existing) => existing
+    None => {
+      let created = {
+        anthropic_index: self.next_content_index,
+        id: "",
+        name: "",
+        started: false,
+        pending_args: "",
+      }
+      self.next_content_index += 1
+      self.tool_blocks_by_index.set(tool_index, created)
+      created
+    }
+  }
+  match json_string_from_map(tool_call, "id") {
+    Some(id) if !id.is_empty() => state.id = id
+    _ => ()
+  }
+  match tool_call.get("function") {
+    Some(Object(function)) => {
+      match json_string_from_map(function, "name") {
+        Some(name) if !name.is_empty() => state.name = name
+        _ => ()
+      }
+      match json_string_from_map(function, "arguments") {
+        Some(args) if !args.is_empty() =>
+          if state.started {
+            events.push(
+              anthropic_tool_input_delta_event(state.anthropic_index, args),
+            )
+          } else {
+            state.pending_args = state.pending_args + args
+          }
+        _ => ()
+      }
+    }
+    _ => ()
+  }
+  if !state.started && !state.id.is_empty() && !state.name.is_empty() {
+    state.started = true
+    events.push(
+      anthropic_tool_block_start_event(
+        state.anthropic_index,
+        state.id,
+        state.name,
+      ),
+    )
+    self.open_tool_block_indices.push(state.anthropic_index)
+    if !state.pending_args.is_empty() {
+      events.push(
+        anthropic_tool_input_delta_event(
+          state.anthropic_index,
+          state.pending_args,
+        ),
+      )
+      state.pending_args = ""
+    }
+  }
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::prepare_finish(
+  self : OpenAIChatAnthropicStreamState,
+  events : Array[StreamEvent],
+  reason : String,
+) -> Unit {
+  if self.has_emitted_message_delta {
+    return
+  }
+  self.has_emitted_message_delta = true
+  self.close_current_non_tool_block(events)
+  self.start_pending_tool_blocks(events)
+  self.close_open_tool_blocks(events)
+  self.pending_stop_reason = Some(openai_chat_stop_reason(reason))
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::start_pending_tool_blocks(
+  self : OpenAIChatAnthropicStreamState,
+  events : Array[StreamEvent],
+) -> Unit {
+  for tool_index in self.tool_blocks_by_index.keys() {
+    guard self.tool_blocks_by_index.get(tool_index) is Some(state) else {
+      continue
+    }
+    if state.started {
+      continue
+    }
+    if state.id.is_empty() &&
+      state.name.is_empty() &&
+      state.pending_args.is_empty() {
+      continue
+    }
+    if state.id.is_empty() {
+      state.id = "tool_call_\{tool_index}"
+    }
+    if state.name.is_empty() {
+      state.name = "unknown_tool"
+    }
+    state.started = true
+    events.push(
+      anthropic_tool_block_start_event(
+        state.anthropic_index,
+        state.id,
+        state.name,
+      ),
+    )
+    self.open_tool_block_indices.push(state.anthropic_index)
+    if !state.pending_args.is_empty() {
+      events.push(
+        anthropic_tool_input_delta_event(
+          state.anthropic_index,
+          state.pending_args,
+        ),
+      )
+      state.pending_args = ""
+    }
+  }
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::close_open_tool_blocks(
+  self : OpenAIChatAnthropicStreamState,
+  events : Array[StreamEvent],
+) -> Unit {
+  for index in self.open_tool_block_indices {
+    events.push(anthropic_content_block_stop_event(index))
+  }
+  self.open_tool_block_indices.clear()
+}
+
+///|
+fn OpenAIChatAnthropicStreamState::message_delta_event(
+  self : OpenAIChatAnthropicStreamState,
+  stop_reason : String,
+) -> StreamEvent {
   {
     event_type: "message_delta",
     data: Json::object({
       "type": Json::string("message_delta"),
-      "delta": Json::object({ "stop_reason": Json::string(stop_reason) }),
-      "usage": Json::object({ "output_tokens": Json::number(0.0) }),
+      "delta": Json::object({
+        "stop_reason": Json::string(stop_reason),
+        "stop_sequence": Json::null(),
+      }),
+      "usage": self.pending_usage.unwrap_or(openai_chat_zero_usage_json()),
     }).stringify(),
+  }
+}
+
+///|
+fn anthropic_content_block_start_event(
+  index : Int,
+  block_type : String,
+) -> StreamEvent {
+  let content_block = if block_type == "thinking" {
+    Json::object({
+      "type": Json::string("thinking"),
+      "thinking": Json::string(""),
+    })
+  } else {
+    Json::object({ "type": Json::string("text"), "text": Json::string("") })
+  }
+  {
+    event_type: "content_block_start",
+    data: Json::object({
+      "type": Json::string("content_block_start"),
+      "index": Json::number(index.to_double()),
+      "content_block": content_block,
+    }).stringify(),
+  }
+}
+
+///|
+fn anthropic_content_block_delta_event(
+  index : Int,
+  delta_type : String,
+  block_type : String,
+  text : String,
+) -> StreamEvent {
+  let text_key = if block_type == "thinking" { "thinking" } else { "text" }
+  let delta : Map[String, Json] = { "type": Json::string(delta_type) }
+  delta[text_key] = Json::string(text)
+  {
+    event_type: "content_block_delta",
+    data: Json::object({
+      "type": Json::string("content_block_delta"),
+      "index": Json::number(index.to_double()),
+      "delta": Json::object(delta),
+    }).stringify(),
+  }
+}
+
+///|
+fn anthropic_tool_block_start_event(
+  index : Int,
+  id : String,
+  name : String,
+) -> StreamEvent {
+  {
+    event_type: "content_block_start",
+    data: Json::object({
+      "type": Json::string("content_block_start"),
+      "index": Json::number(index.to_double()),
+      "content_block": Json::object({
+        "type": Json::string("tool_use"),
+        "id": Json::string(id),
+        "name": Json::string(name),
+      }),
+    }).stringify(),
+  }
+}
+
+///|
+fn anthropic_tool_input_delta_event(index : Int, args : String) -> StreamEvent {
+  {
+    event_type: "content_block_delta",
+    data: Json::object({
+      "type": Json::string("content_block_delta"),
+      "index": Json::number(index.to_double()),
+      "delta": Json::object({
+        "type": Json::string("input_json_delta"),
+        "partial_json": Json::string(args),
+      }),
+    }).stringify(),
+  }
+}
+
+///|
+fn anthropic_content_block_stop_event(index : Int) -> StreamEvent {
+  {
+    event_type: "content_block_stop",
+    data: Json::object({
+      "type": Json::string("content_block_stop"),
+      "index": Json::number(index.to_double()),
+    }).stringify(),
+  }
+}
+
+///|
+fn anthropic_message_stop_stream_event() -> StreamEvent {
+  {
+    event_type: "message_stop",
+    data: Json::object({ "type": Json::string("message_stop") }).stringify(),
+  }
+}
+
+///|
+fn openai_chat_zero_usage_json() -> Json {
+  Json::object({
+    "input_tokens": Json::number(0.0),
+    "output_tokens": Json::number(0.0),
+  })
+}
+
+///|
+fn openai_chat_stream_anthropic_usage_json(usage : Map[String, Json]) -> Json {
+  let cache_read = match usage.get("cache_read_input_tokens") {
+    Some(Number(n, ..)) => n.trunc().to_int()
+    _ =>
+      match usage.get("prompt_tokens_details") {
+        Some(Object(details)) => json_int_or_zero(details, "cached_tokens")
+        _ => 0
+      }
+  }
+  let cache_creation = json_int_or_zero(usage, "cache_creation_input_tokens")
+  let prompt_tokens = json_int_or_zero(usage, "prompt_tokens")
+  let input_tokens = max_int(prompt_tokens - cache_read - cache_creation, 0)
+  let result : Map[String, Json] = {
+    "input_tokens": Json::number(input_tokens.to_double()),
+    "output_tokens": Json::number(
+      json_int_or_zero(usage, "completion_tokens").to_double(),
+    ),
+  }
+  if cache_read > 0 {
+    result["cache_read_input_tokens"] = Json::number(cache_read.to_double())
+  }
+  if cache_creation > 0 {
+    result["cache_creation_input_tokens"] = Json::number(
+      cache_creation.to_double(),
+    )
+  }
+  Json::object(result)
+}
+
+///|
+fn json_openai_chat_reasoning_text(delta : Map[String, Json]) -> String? {
+  match json_string_from_map(delta, "reasoning") {
+    Some(text) => Some(text)
+    None => json_string_from_map(delta, "reasoning_content")
+  }
+}
+
+///|
+fn openai_chat_stop_reason(reason : String) -> String {
+  match reason {
+    "tool_calls" | "function_call" => "tool_use"
+    "length" => "max_tokens"
+    _ => "end_turn"
   }
 }
 

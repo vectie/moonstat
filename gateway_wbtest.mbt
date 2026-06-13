@@ -1044,6 +1044,7 @@ test "openai chat stream chunk converts to anthropic events" {
     (
       #|{
       #|  "id": "chatcmpl_1",
+      #|  "model": "gpt-4o",
       #|  "choices": [
       #|    {
       #|      "index": 0,
@@ -1055,13 +1056,42 @@ test "openai chat stream chunk converts to anthropic events" {
     ),
   )
   let events = openai_chat_stream_chunk_to_anthropic_events(chunk)
-  assert_eq(events.length(), 1)
-  assert_eq(events[0].event_type, "content_block_delta")
-  let event_data = @json.parse(events[0].data)
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].event_type, "message_start")
+  let start_data = @json.parse(events[0].data)
+  guard start_data is Object(start_obj) else { fail("expected object") }
+  guard start_obj["message"] is Object(message) else {
+    fail("expected message")
+  }
+  assert_eq(message["id"], Json::string("chatcmpl_1"))
+  assert_eq(message["model"], Json::string("gpt-4o"))
+  assert_eq(events[1].event_type, "content_block_start")
+  assert_eq(events[2].event_type, "content_block_delta")
+  let event_data = @json.parse(events[2].data)
   guard event_data is Object(obj) else { fail("expected object") }
   guard obj["delta"] is Object(delta) else { fail("expected delta") }
   assert_eq(delta["text"], Json::string("hi"))
+}
 
+///|
+test "openai chat stream finalizes usage after done" {
+  let state = OpenAIChatAnthropicStreamState::new()
+  let chunk = @json.parse(
+    (
+      #|{
+      #|  "id": "chatcmpl_1",
+      #|  "model": "gpt-4o",
+      #|  "choices": [
+      #|    {
+      #|      "index": 0,
+      #|      "delta": { "content": "hi" },
+      #|      "finish_reason": null
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(chunk)
   let done = @json.parse(
     (
       #|{
@@ -1071,17 +1101,118 @@ test "openai chat stream chunk converts to anthropic events" {
       #|      "delta": {},
       #|      "finish_reason": "tool_calls"
       #|    }
-      #|  ]
+      #|  ],
+      #|  "usage": {
+      #|    "prompt_tokens": 9,
+      #|    "completion_tokens": 3,
+      #|    "prompt_tokens_details": { "cached_tokens": 2 }
+      #|  }
       #|}
     ),
   )
-  let done_events = openai_chat_stream_chunk_to_anthropic_events(done)
-  assert_eq(done_events.length(), 1)
+  let prepared = state.push_chunk(done)
+  assert_eq(prepared.length(), 1)
+  assert_eq(prepared[0].event_type, "content_block_stop")
+  let done_events = state.finish()
+  assert_eq(done_events.length(), 2)
   assert_eq(done_events[0].event_type, "message_delta")
+  assert_eq(done_events[1].event_type, "message_stop")
   let done_data = @json.parse(done_events[0].data)
   guard done_data is Object(done_obj) else { fail("expected object") }
   guard done_obj["delta"] is Object(done_delta) else { fail("expected delta") }
   assert_eq(done_delta["stop_reason"], Json::string("tool_use"))
+  guard done_obj["usage"] is Object(usage) else { fail("expected usage") }
+  assert_eq(usage["input_tokens"], Json::number(7.0))
+  assert_eq(usage["output_tokens"], Json::number(3.0))
+  assert_eq(usage["cache_read_input_tokens"], Json::number(2.0))
+}
+
+///|
+test "openai chat stream tool calls keep distinct indexes" {
+  let state = OpenAIChatAnthropicStreamState::new()
+  let first = @json.parse(
+    (
+      #|{
+      #|  "id": "chatcmpl_2",
+      #|  "model": "gpt-4o",
+      #|  "choices": [
+      #|    {
+      #|      "delta": {
+      #|        "tool_calls": [
+      #|          {
+      #|            "index": 0,
+      #|            "id": "call_0",
+      #|            "function": { "name": "first_tool" }
+      #|          }
+      #|        ]
+      #|      }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let second = @json.parse(
+    (
+      #|{
+      #|  "choices": [
+      #|    {
+      #|      "delta": {
+      #|        "tool_calls": [
+      #|          {
+      #|            "index": 1,
+      #|            "id": "call_1",
+      #|            "function": { "name": "second_tool" }
+      #|          }
+      #|        ]
+      #|      }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let args = @json.parse(
+    (
+      #|{
+      #|  "choices": [
+      #|    {
+      #|      "delta": {
+      #|        "tool_calls": [
+      #|          { "index": 1, "function": { "arguments": "{\"b\":2}" } },
+      #|          { "index": 0, "function": { "arguments": "{\"a\":1}" } }
+      #|        ]
+      #|      },
+      #|      "finish_reason": "tool_calls"
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let first_events = state.push_chunk(first)
+  let second_events = state.push_chunk(second)
+  let arg_events = state.push_chunk(args)
+  assert_eq(first_events[1].event_type, "content_block_start")
+  assert_eq(second_events[0].event_type, "content_block_start")
+  let first_start = @json.parse(first_events[1].data)
+  let second_start = @json.parse(second_events[0].data)
+  guard first_start is Object(first_obj) else { fail("expected object") }
+  guard second_start is Object(second_obj) else { fail("expected object") }
+  assert_true(first_obj["index"] != second_obj["index"])
+  let deltas = arg_events.filter(event => {
+    event.event_type == "content_block_delta"
+  })
+  assert_eq(deltas.length(), 2)
+  let delta_a = @json.parse(deltas[1].data)
+  let delta_b = @json.parse(deltas[0].data)
+  guard delta_a is Object(delta_a_obj) else { fail("expected delta") }
+  guard delta_b is Object(delta_b_obj) else { fail("expected delta") }
+  guard delta_a_obj["delta"] is Object(delta_a_payload) else {
+    fail("expected payload")
+  }
+  guard delta_b_obj["delta"] is Object(delta_b_payload) else {
+    fail("expected payload")
+  }
+  assert_eq(delta_a_payload["partial_json"], Json::string("{\"a\":1}"))
+  assert_eq(delta_b_payload["partial_json"], Json::string("{\"b\":2}"))
 }
 
 ///|
