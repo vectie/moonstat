@@ -338,6 +338,17 @@ async test "gateway nonretryable upstream errors release half open permit" {
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
+  gateway.provider_router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="codex-alt",
+      provider_name="Codex Alt",
+    ),
+  )
+  gateway.provider_router.set_failover_queue("codex", [
+    "codex-oauth", "codex-alt",
+  ])
+  gateway.provider_router.set_auto_failover("codex", true)
 
   gateway.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
@@ -446,4 +457,38 @@ test "gateway activation can exclude already attempted failover providers" {
   }
   assert_eq(provider.provider_id, "fallback")
   assert_eq(gateway.stats.current_provider_id, Some("fallback"))
+}
+
+///|
+test "gateway activation bypasses circuit breaker for single provider" {
+  let gateway = Gateway::new(port=0)
+  gateway.provider_router.update_all_configs({
+    failure_threshold: 1,
+    success_threshold: 2,
+    timeout_seconds: 60,
+    error_rate_threshold: 0.6,
+    min_requests: 10,
+  })
+  gateway.provider_router.record_result(
+    "codex-oauth",
+    "codex",
+    false,
+    false,
+    now_ms=1000,
+  )
+  guard gateway.provider_router.get_circuit_breaker_stats(
+      "codex-oauth", "codex",
+    )
+    is Some(stats) else {
+    fail("expected circuit stats")
+  }
+  assert_true(stats.state == Open)
+
+  let selected = gateway.activate_provider("codex")
+  guard selected is Some(provider) else {
+    fail("single provider should bypass circuit gating")
+  }
+  assert_eq(provider.provider_id, "codex-oauth")
+  assert_eq(gateway.stats.current_provider_id, Some("codex-oauth"))
+  assert_false(gateway.stats.current_request_used_half_open_permit)
 }

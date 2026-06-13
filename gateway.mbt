@@ -93,11 +93,16 @@ fn Gateway::activate_first_available_provider_excluding(
   providers : Array[ProviderRouteTarget],
   attempted_provider_ids : Array[String],
 ) -> ProviderRouteTarget? {
+  let bypass_circuit_breaker = providers.length() == 1
   for provider in providers {
     if attempted_provider_ids.contains(provider.provider_id) {
       continue
     }
-    if self.activate_provider_target(app_type, provider) {
+    if self.activate_provider_target(
+        app_type,
+        provider,
+        bypass_circuit_breaker~,
+      ) {
       return Some(provider)
     }
   }
@@ -109,11 +114,13 @@ fn Gateway::activate_provider_target(
   self : Gateway,
   app_type : String,
   provider : ProviderRouteTarget,
+  bypass_circuit_breaker? : Bool = false,
 ) -> Bool {
-  let allow = self.provider_router.allow_provider_request(
-    provider.provider_id,
-    app_type,
-  )
+  let allow = if bypass_circuit_breaker {
+    { allowed: true, used_half_open_permit: false }
+  } else {
+    self.provider_router.allow_provider_request(provider.provider_id, app_type)
+  }
   guard allow.allowed else { return false }
   self.stats.current_request_used_half_open_permit = allow.used_half_open_permit
   self.stats.set_active_target(
