@@ -165,6 +165,48 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, hermes_web_ui_path(arr))
     ["launch_hermes_dashboard", ..] | ["launch-hermes-dashboard", ..] =>
       check_json_post_endpoint(arr, "/launch_hermes_dashboard", "Hermes")
+    ["get_claude_config_status", ..] | ["get-claude-config-status", ..] =>
+      check_usage_endpoint(arr, "/get_claude_config_status")
+    ["get_config_status", ..] | ["get-config-status", ..] =>
+      check_usage_endpoint(arr, config_app_path(arr, "/get_config_status"))
+    ["get_claude_code_config_path", ..] | ["get-claude-code-config-path", ..] =>
+      check_usage_endpoint(arr, "/get_claude_code_config_path")
+    ["get_config_dir", ..] | ["get-config-dir", ..] =>
+      check_usage_endpoint(arr, config_app_path(arr, "/get_config_dir"))
+    ["open_config_folder", ..] | ["open-config-folder", ..] =>
+      check_usage_endpoint(arr, config_app_path(arr, "/open_config_folder"))
+    ["pick_directory", ..] | ["pick-directory", ..] =>
+      check_usage_endpoint(arr, pick_directory_path(arr))
+    ["get_app_config_path", ..] | ["get-app-config-path", ..] =>
+      check_usage_endpoint(arr, "/get_app_config_path")
+    ["open_app_config_folder", ..] | ["open-app-config-folder", ..] =>
+      check_usage_endpoint(arr, "/open_app_config_folder")
+    ["get_claude_common_config_snippet", ..]
+    | ["get-claude-common-config-snippet", ..] =>
+      check_usage_endpoint(arr, "/get_claude_common_config_snippet")
+    ["set_claude_common_config_snippet", ..]
+    | ["set-claude-common-config-snippet", ..] =>
+      set_config_snippet(
+        arr,
+        "/set_claude_common_config_snippet",
+        app_required=false,
+      )
+    ["get_common_config_snippet", ..] | ["get-common-config-snippet", ..] =>
+      check_usage_endpoint(
+        arr,
+        config_app_path(arr, "/get_common_config_snippet"),
+      )
+    ["set_common_config_snippet", ..] | ["set-common-config-snippet", ..] =>
+      set_config_snippet(arr, "/set_common_config_snippet", app_required=true)
+    ["extract_common_config_snippet", ..]
+    | ["extract-common-config-snippet", ..] =>
+      check_usage_endpoint(arr, extract_common_config_snippet_path(arr))
+    ["check_env_conflicts", ..] | ["check-env-conflicts", ..] =>
+      check_usage_endpoint(arr, config_app_path(arr, "/check_env_conflicts"))
+    ["delete_env_vars", ..] | ["delete-env-vars", ..] =>
+      check_json_post_endpoint(arr, "/delete_env_vars", "Env")
+    ["restore_env_backup", ..] | ["restore-env-backup", ..] =>
+      restore_env_backup(arr)
     ["import_opencode_providers_from_live", ..]
     | ["import-opencode-providers-from-live", ..] =>
       import_named_live_providers(arr, "opencode")
@@ -1160,6 +1202,30 @@ async fn set_hermes_memory_enabled(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn set_config_snippet(
+  args : Array[String],
+  base_path : String,
+  app_required~ : Bool,
+) -> Unit {
+  guard config_snippet_path(args, base_path, app_required~) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --snippet")
+    return
+  }
+  check_json_post_endpoint(args, path, "Config")
+}
+
+///|
+async fn restore_env_backup(args : Array[String]) -> Unit {
+  guard restore_env_backup_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --backup-path")
+    return
+  }
+  check_json_post_endpoint(args, path, "Env")
+}
+
+///|
 async fn check_provider_live_ids(args : Array[String]) -> Unit {
   check_json_endpoint(
     args,
@@ -1504,6 +1570,63 @@ fn hermes_web_ui_path(args : Array[String]) -> String {
     None => ()
   }
   cli_path_with_query("/open_hermes_web_ui", query)
+}
+
+///|
+fn config_app_arg(args : Array[String]) -> String {
+  parse_string_arg_any(args, "--app", "--appType").unwrap_or(
+    parse_string_arg(args, "--app-type").unwrap_or("claude"),
+  )
+}
+
+///|
+fn config_app_path(args : Array[String], base_path : String) -> String {
+  "\{base_path}?\{cli_query_pair("app", config_app_arg(args))}"
+}
+
+///|
+fn pick_directory_path(args : Array[String]) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--default-path", "--defaultPath") {
+    Some(path) => query.push(cli_query_pair("defaultPath", path))
+    None => ()
+  }
+  cli_path_with_query("/pick_directory", query)
+}
+
+///|
+fn config_snippet_path(
+  args : Array[String],
+  base_path : String,
+  app_required~ : Bool,
+) -> String? {
+  guard parse_string_arg(args, "--snippet") is Some(snippet) else {
+    return None
+  }
+  let query : Array[String] = [cli_query_pair("snippet", snippet)]
+  if app_required {
+    query.push(cli_query_pair("appType", config_app_arg(args)))
+  }
+  Some("\{base_path}?\{query.join("&")}")
+}
+
+///|
+fn extract_common_config_snippet_path(args : Array[String]) -> String {
+  let query : Array[String] = [cli_query_pair("appType", config_app_arg(args))]
+  match parse_string_arg_any(args, "--settings-config", "--settingsConfig") {
+    Some(settings) => query.push(cli_query_pair("settingsConfig", settings))
+    None => ()
+  }
+  "/extract_common_config_snippet?\{query.join("&")}"
+}
+
+///|
+fn restore_env_backup_path(args : Array[String]) -> String? {
+  guard parse_string_arg_any(args, "--backup-path", "--backupPath")
+    is Some(path) else {
+    return None
+  }
+  Some("/restore_env_backup?\{cli_query_pair("backupPath", path)}")
 }
 
 ///|

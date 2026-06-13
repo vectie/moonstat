@@ -5019,6 +5019,66 @@ test "gemini native response converts to anthropic message with usage" {
 }
 
 ///|
+test "ccs config helpers normalize suite app paths" {
+  assert_eq(ccs_normalize_app_type("claude_desktop"), "claude-desktop")
+  assert_eq(ccs_normalize_app_type("open-code"), "opencode")
+  assert_eq(ccs_normalize_app_type("omo_slim"), "omo-slim")
+  assert_eq(ccs_normalize_app_type("unknown"), "claude")
+  assert_eq(ccs_config_dir("codex"), @pathx.join(ccs_home_dir(), ".codex"))
+  assert_eq(
+    ccs_config_file_path("openclaw"),
+    @pathx.join(ccs_config_dir("openclaw"), "openclaw.json"),
+  )
+  assert_eq(
+    ccs_config_file_path("hermes"),
+    @pathx.join(ccs_config_dir("hermes"), "config.yaml"),
+  )
+}
+
+///|
+async test "ccs config status keeps ccs object shape" {
+  guard ccs_config_status_json("hermes") is Object(status) else {
+    fail("expected status object")
+  }
+  assert_eq(status["path"], Json::string(ccs_config_dir("hermes")))
+  assert_true(
+    status["exists"] == Json::boolean(true) ||
+    status["exists"] == Json::boolean(false),
+  )
+}
+
+///|
+test "ccs env helpers preserve conflicts and known keys" {
+  assert_eq(ccs_env_conflict_keys("codex")[0], "OPENAI_API_KEY")
+  assert_eq(ccs_env_conflict_keys("hermes")[1], "HERMES_WEB_PORT")
+  assert_eq(ccs_env_conflict_keys("unknown")[0], "ANTHROPIC_API_KEY")
+  let conflict = {
+    "varName": Json::string("ANTHROPIC_API_KEY"),
+    "varValue": Json::string("sk-test"),
+  }.to_json()
+  let body = { "conflicts": Json::array([conflict]) }.to_json()
+  let conflicts = ccs_env_conflicts_from_body(Some(body))
+  assert_eq(conflicts.length(), 1)
+  assert_eq(conflicts[0], conflict)
+  guard ccs_env_backup_json(Some(body)) is Object(backup) else {
+    fail("expected backup object")
+  }
+  guard backup["backupPath"] is String(path) else {
+    fail("expected backup path")
+  }
+  assert_true(path.contains(".cc-switch"))
+  guard backup["timestamp"] is String(timestamp) else {
+    fail("expected timestamp")
+  }
+  assert_true(!timestamp.is_empty())
+  guard backup["conflicts"] is Array(backup_conflicts) else {
+    fail("expected conflicts")
+  }
+  assert_eq(backup_conflicts.length(), 1)
+  assert_eq(backup_conflicts[0], conflict)
+}
+
+///|
 test "gemini native response synthesizes ccs marked missing tool id" {
   let body = @json.parse(
     (

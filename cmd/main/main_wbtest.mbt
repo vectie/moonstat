@@ -557,3 +557,59 @@ test "top level ccs stream check command names build command alias paths" {
     "/save_stream_check_config?timeoutSecs=60&geminiModel=gemini-test",
   )
 }
+
+///|
+test "top level ccs config command names build config paths" {
+  assert_eq(
+    config_app_path(
+      ["moonstat", "get_config_status", "--appType", "codex"],
+      "/get_config_status",
+    ),
+    "/get_config_status?app=codex",
+  )
+  assert_eq(
+    config_app_path(
+      ["moonstat", "get_config_dir", "--app-type", "openclaw"],
+      "/get_config_dir",
+    ),
+    "/get_config_dir?app=openclaw",
+  )
+  assert_eq(
+    pick_directory_path([
+      "moonstat", "pick_directory", "--defaultPath", "/tmp/claude projects",
+    ]),
+    "/pick_directory?defaultPath=%2Ftmp%2Fclaude%20projects",
+  )
+  assert_eq(
+    config_snippet_path(
+      [
+        "moonstat", "set_common_config_snippet", "--appType", "codex", "--snippet",
+        "model=\"gpt-5\"",
+      ],
+      "/set_common_config_snippet",
+      app_required=true,
+    ),
+    Some("/set_common_config_snippet?snippet=model%3D%22gpt-5%22&appType=codex"),
+  )
+  assert_eq(
+    config_snippet_path(
+      ["moonstat", "set_claude_common_config_snippet", "--snippet", "{}"],
+      "/set_claude_common_config_snippet",
+      app_required=false,
+    ),
+    Some("/set_claude_common_config_snippet?snippet=%7B%7D"),
+  )
+  assert_eq(
+    extract_common_config_snippet_path([
+      "moonstat", "extract_common_config_snippet", "--appType", "claude", "--settingsConfig",
+      "{\"env\":{}}",
+    ]),
+    "/extract_common_config_snippet?appType=claude&settingsConfig=%7B%22env%22%3A%7B%7D%7D",
+  )
+  assert_eq(
+    restore_env_backup_path([
+      "moonstat", "restore_env_backup", "--backupPath", "/tmp/env backup.json",
+    ]),
+    Some("/restore_env_backup?backupPath=%2Ftmp%2Fenv%20backup.json"),
+  )
+}

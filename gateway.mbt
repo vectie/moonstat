@@ -31,6 +31,7 @@ pub struct Gateway {
   hermes_model_config : Json?
   hermes_memory : Map[String, String]
   hermes_memory_enabled : Map[String, Bool]
+  config_snippets : Map[String, String]
   mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int
@@ -75,6 +76,7 @@ pub fn Gateway::new(
     hermes_model_config: None,
     hermes_memory: Map([], capacity=2),
     hermes_memory_enabled: Map([("memory", true), ("user", true)], capacity=2),
+    config_snippets: Map([], capacity=8),
     stream_check_config: StreamCheckConfig::default(),
     logger,
     started_at_ms: @async.now().to_int(),
@@ -600,6 +602,61 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   })
   router.add_handler(@httpx.Method::Get, "/stats", (_, w) => {
     self.handle_stats(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_claude_config_status", (_, w) => {
+    self.handle_get_config_status(w, "claude")
+  })
+  router.add_handler(@httpx.Method::Get, "/get_config_status", (r, w) => {
+    self.handle_get_config_status_request(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_claude_code_config_path", (_, w) => {
+    self.handle_get_claude_code_config_path(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_config_dir", (r, w) => {
+    self.handle_get_config_dir(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/open_config_folder", (r, w) => {
+    self.handle_open_config_folder(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/pick_directory", (r, w) => {
+    self.handle_pick_directory(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_app_config_path", (_, w) => {
+    self.handle_get_app_config_path(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/open_app_config_folder", (_, w) => {
+    self.handle_open_app_config_folder(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_claude_common_config_snippet", (
+    _,
+    w,
+  ) => self.handle_get_common_config_snippet(w, "claude"))
+  router.add_handler(@httpx.Method::Post, "/set_claude_common_config_snippet", (
+    r,
+    w,
+  ) => self.handle_set_common_config_snippet(r, w, "claude"))
+  router.add_handler(@httpx.Method::Get, "/get_common_config_snippet", (r, w) => {
+    self.handle_get_common_config_snippet_request(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_common_config_snippet", (r, w) => {
+    self.handle_set_common_config_snippet_request(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/extract_common_config_snippet", (
+    r,
+    w,
+  ) => self.handle_extract_common_config_snippet(r, w))
+  router.add_handler(@httpx.Method::Post, "/extract_common_config_snippet", (
+    r,
+    w,
+  ) => self.handle_extract_common_config_snippet(r, w))
+  router.add_handler(@httpx.Method::Get, "/check_env_conflicts", (r, w) => {
+    self.handle_check_env_conflicts(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_env_vars", (r, w) => {
+    self.handle_delete_env_vars(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/restore_env_backup", (r, w) => {
+    self.handle_restore_env_backup(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/status", (_, w) => {
     self.handle_proxy_status(w)
@@ -3022,6 +3079,184 @@ fn getenv_or_none(key : String) -> String? {
 }
 
 ///|
+fn ccs_config_app_from_request(path : StringView, body : Json?) -> String? {
+  match proxy_string_request(path, body, ["app", "appType", "app_type"]) {
+    Some(app) => Some(ccs_normalize_app_type(app))
+    None => None
+  }
+}
+
+///|
+fn ccs_normalize_app_type(app : String) -> String {
+  match app.trim().to_lower() {
+    "claude-desktop" | "claude_desktop" => "claude-desktop"
+    "codex" => "codex"
+    "gemini" => "gemini"
+    "opencode" | "open-code" | "open_code" => "opencode"
+    "openclaw" | "open-claw" | "open_claw" => "openclaw"
+    "hermes" => "hermes"
+    "omo" => "omo"
+    "omo-slim" | "omo_slim" => "omo-slim"
+    _ => "claude"
+  }
+}
+
+///|
+fn ccs_home_dir() -> String {
+  @os.home() catch {
+    _ => "."
+  }
+}
+
+///|
+fn ccs_config_dir(app : String) -> String {
+  let home = ccs_home_dir()
+  match ccs_normalize_app_type(app) {
+    "claude" => @pathx.join(home, ".claude")
+    "claude-desktop" =>
+      @pathx.join(@pathx.join(home, "Library/Application Support"), "Claude")
+    "codex" => @pathx.join(home, ".codex")
+    "gemini" => @pathx.join(home, ".gemini")
+    "opencode" => @pathx.join(@pathx.join(home, ".config"), "opencode")
+    "openclaw" => @pathx.join(home, ".openclaw")
+    "hermes" => @pathx.join(home, ".hermes")
+    "omo" | "omo-slim" => @pathx.join(@pathx.join(home, ".config"), "opencode")
+    _ => @pathx.join(home, ".claude")
+  }
+}
+
+///|
+fn ccs_config_file_path(app : String) -> String {
+  let dir = ccs_config_dir(app)
+  match ccs_normalize_app_type(app) {
+    "claude" => @pathx.join(dir, "settings.json")
+    "claude-desktop" => @pathx.join(dir, "claude_desktop_config.json")
+    "codex" => @pathx.join(dir, "config.toml")
+    "gemini" => @pathx.join(dir, ".env")
+    "opencode" | "omo" | "omo-slim" => @pathx.join(dir, "opencode.json")
+    "openclaw" => @pathx.join(dir, "openclaw.json")
+    "hermes" => @pathx.join(dir, "config.yaml")
+    _ => @pathx.join(dir, "settings.json")
+  }
+}
+
+///|
+fn ccs_app_config_dir() -> String {
+  @pathx.join(ccs_home_dir(), ".cc-switch")
+}
+
+///|
+fn ccs_app_config_path() -> String {
+  @pathx.join(ccs_app_config_dir(), "config.json")
+}
+
+///|
+async fn ccs_config_status_json(app : String) -> Json {
+  let normalized = ccs_normalize_app_type(app)
+  let path = match normalized {
+    "codex" => ccs_config_dir(normalized)
+    "gemini" | "opencode" | "openclaw" | "hermes" | "claude-desktop" =>
+      ccs_config_dir(normalized)
+    _ => ccs_config_file_path(normalized)
+  }
+  {
+    "exists": Json::boolean(ccs_config_exists(normalized)),
+    "path": Json::string(path),
+  }.to_json()
+}
+
+///|
+async fn ccs_config_exists(app : String) -> Bool {
+  let normalized = ccs_normalize_app_type(app)
+  match normalized {
+    "codex" =>
+      @fsx.exists_as_file(@pathx.join(ccs_config_dir("codex"), "auth.json")) ||
+      @fsx.exists_as_file(ccs_config_file_path("codex"))
+    "gemini"
+    | "opencode"
+    | "openclaw"
+    | "hermes"
+    | "claude"
+    | "claude-desktop" => @fsx.exists_as_file(ccs_config_file_path(normalized))
+    _ => @fsx.exists_as_file(ccs_config_file_path(normalized))
+  }
+}
+
+///|
+fn ccs_env_conflicts_json(app : String) -> Json {
+  let conflicts : Array[Json] = []
+  for key in ccs_env_conflict_keys(ccs_normalize_app_type(app)) {
+    match getenv_or_none(key) {
+      Some(value) if !value.trim().is_empty() =>
+        conflicts.push(
+          {
+            "varName": Json::string(key),
+            "varValue": Json::string(value),
+            "sourceType": Json::string("process"),
+            "sourcePath": Json::string("environment"),
+          }.to_json(),
+        )
+      _ => ()
+    }
+  }
+  Json::array(conflicts)
+}
+
+///|
+fn ccs_env_conflict_keys(app : String) -> Array[String] {
+  match app {
+    "codex" =>
+      ["OPENAI_API_KEY", "OPENAI_BASE_URL", "CODEX_HOME", "CODEX_AUTH_TOKEN"]
+    "gemini" =>
+      [
+        "GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_BASE_URL", "GOOGLE_GEMINI_BASE_URL",
+      ]
+    "opencode" | "omo" | "omo-slim" =>
+      [
+        "OPENCODE_CONFIG_DIR", "OPENCODE_DB", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+      ]
+    "openclaw" =>
+      [
+        "OPENCLAW_CONFIG_DIR", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY",
+      ]
+    "hermes" =>
+      [
+        "HERMES_CONFIG_DIR", "HERMES_WEB_PORT", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+      ]
+    _ =>
+      [
+        "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_BEDROCK",
+      ]
+  }
+}
+
+///|
+fn ccs_env_backup_json(body : Json?) -> Json {
+  let conflicts = ccs_env_conflicts_from_body(body)
+  let timestamp = @async.now().to_int().to_string()
+  {
+    "backupPath": Json::string(
+      @pathx.join(ccs_app_config_dir(), "env-backup-\{timestamp}.json"),
+    ),
+    "timestamp": Json::string(timestamp),
+    "conflicts": Json::array(conflicts),
+  }.to_json()
+}
+
+///|
+fn ccs_env_conflicts_from_body(body : Json?) -> Array[Json] {
+  match body {
+    Some(Array(items)) => items
+    Some(Object(obj)) =>
+      match obj.get("conflicts") {
+        Some(Array(items)) => items
+        _ => []
+      }
+    _ => []
+  }
+}
+
+///|
 fn gemini_request_is_stream(endpoint : String, body : Json) -> Bool {
   endpoint.contains("streamGenerateContent") ||
   json_bool_field(body, "stream").unwrap_or(false)
@@ -3056,6 +3291,217 @@ async fn Gateway::handle_stats(
   w.write_header(@status.Ok)
   w.write(self.stats.to_json().stringify(indent=2))
   w.flush()
+}
+
+///|
+async fn Gateway::handle_get_config_status(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  app : String,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_config_status_json(app))
+}
+
+///|
+async fn Gateway::handle_get_config_status_request(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let app = ccs_config_app_from_request(r.path, None).unwrap_or("claude")
+  write_usage_json(w, ccs_config_status_json(app))
+}
+
+///|
+async fn Gateway::handle_get_claude_code_config_path(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::string(ccs_config_file_path("claude")))
+}
+
+///|
+async fn Gateway::handle_get_config_dir(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let app = ccs_config_app_from_request(r.path, None).unwrap_or("claude")
+  write_usage_json(w, Json::string(ccs_config_dir(app)))
+}
+
+///|
+async fn Gateway::handle_open_config_folder(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let app = ccs_config_app_from_request(r.path, None).unwrap_or("claude")
+  write_usage_json(
+    w,
+    {
+      "opened": Json::boolean(false),
+      "path": Json::string(ccs_config_dir(app)),
+    }.to_json(),
+  )
+}
+
+///|
+async fn Gateway::handle_pick_directory(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(
+    w,
+    match usage_query_value_any(r.path, "default_path", "defaultPath") {
+      Some(path) => Json::string(path)
+      None => Json::null()
+    },
+  )
+}
+
+///|
+async fn Gateway::handle_get_app_config_path(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::string(ccs_app_config_path()))
+}
+
+///|
+async fn Gateway::handle_open_app_config_folder(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(
+    w,
+    {
+      "opened": Json::boolean(false),
+      "path": Json::string(ccs_app_config_dir()),
+    }.to_json(),
+  )
+}
+
+///|
+async fn Gateway::handle_get_common_config_snippet(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  app_type : String,
+) -> Unit {
+  match self.config_snippets.get(app_type) {
+    Some(snippet) => write_usage_json(w, Json::string(snippet))
+    None => write_usage_json(w, Json::null())
+  }
+}
+
+///|
+async fn Gateway::handle_get_common_config_snippet_request(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let app_type = ccs_config_app_from_request(r.path, None).unwrap_or("claude")
+  self.handle_get_common_config_snippet(w, app_type)
+}
+
+///|
+async fn Gateway::handle_set_common_config_snippet(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+  app_type : String,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let snippet = proxy_string_request(r.path, body, [
+    "snippet", "content", "value",
+  ]).unwrap_or("")
+  if snippet.trim().is_empty() {
+    self.config_snippets.remove(app_type)
+  } else {
+    self.config_snippets[app_type] = snippet
+  }
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_set_common_config_snippet_request(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let app_type = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let snippet = proxy_string_request(r.path, body, [
+    "snippet", "content", "value",
+  ]).unwrap_or("")
+  if snippet.trim().is_empty() {
+    self.config_snippets.remove(app_type)
+  } else {
+    self.config_snippets[app_type] = snippet
+  }
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_extract_common_config_snippet(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let app_type = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  match
+    proxy_string_request(r.path, body, ["settingsConfig", "settings_config"]) {
+    Some(settings_config) => write_usage_json(w, Json::string(settings_config))
+    None =>
+      match self.config_snippets.get(app_type) {
+        Some(snippet) => write_usage_json(w, Json::string(snippet))
+        None => write_usage_json(w, Json::string(""))
+      }
+  }
+}
+
+///|
+async fn Gateway::handle_check_env_conflicts(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let app = ccs_config_app_from_request(r.path, None).unwrap_or("claude")
+  write_usage_json(w, ccs_env_conflicts_json(app))
+}
+
+///|
+async fn Gateway::handle_delete_env_vars(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  write_usage_json(w, ccs_env_backup_json(body))
+}
+
+///|
+async fn Gateway::handle_restore_env_backup(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  ignore(proxy_string_request(r.path, body, ["backupPath", "backup_path"]))
+  write_usage_json(w, Json::null())
 }
 
 ///|

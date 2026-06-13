@@ -154,6 +154,22 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /set_hermes_memory_enabled?kind=user&enabled=false`
 - `GET /open_hermes_web_ui?path=/`
 - `POST /launch_hermes_dashboard`
+- `GET /get_claude_config_status`
+- `GET /get_config_status?app=codex`
+- `GET /get_claude_code_config_path`
+- `GET /get_config_dir?app=codex`
+- `GET /open_config_folder?app=codex`
+- `GET /pick_directory?defaultPath=/tmp`
+- `GET /get_app_config_path`
+- `GET /open_app_config_folder`
+- `GET /get_claude_common_config_snippet`
+- `POST /set_claude_common_config_snippet?snippet={}`
+- `GET /get_common_config_snippet?appType=codex`
+- `POST /set_common_config_snippet?appType=codex&snippet=model=gpt-5`
+- `GET|POST /extract_common_config_snippet?appType=claude&settingsConfig={}`
+- `GET /check_env_conflicts?app=claude`
+- `POST /delete_env_vars`
+- `POST /restore_env_backup?backupPath=...`
 - `POST /import_opencode_providers_from_live`
 - `POST /import_openclaw_providers_from_live`
 - `POST /import_hermes_providers_from_live`
@@ -269,7 +285,13 @@ OpenClaw health scan returns an empty warning list because Moonstat does not own
 OpenClaw's live config file. The OpenClaw default-model/catalog/agents/env/tools
 commands and Hermes model/memory/dashboard commands keep CCS-compatible JSON
 shapes in Moonstat gateway state, returning `null` or CCS defaults before a
-standalone caller sets them. `/get_universal_providers`,
+standalone caller sets them. CCS config-folder, common-snippet, and environment
+conflict commands are mirrored by `/get_config_status`, `/get_config_dir`,
+`/get_common_config_snippet`, `/set_common_config_snippet`,
+`/extract_common_config_snippet`, `/check_env_conflicts`, `/delete_env_vars`,
+and `/restore_env_backup`; standalone folder open/pick and env delete/restore
+routes are intentionally non-destructive and snippets are kept in gateway memory.
+`/get_universal_providers`,
 `/get_universal_provider`, `/upsert_universal_provider`,
 `/delete_universal_provider`, and `/sync_universal_provider` preserve the ccs
 universal-provider JSON shape and can sync enabled Claude/Codex/Gemini apps into

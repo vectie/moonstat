@@ -330,6 +330,7 @@ pub struct Gateway {
   hermes_model_config : Json?
   hermes_memory : Map[String, String]
   hermes_memory_enabled : Map[String, Bool]
+  config_snippets : Map[String, String]
   mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int
