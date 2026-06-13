@@ -1176,6 +1176,8 @@ fn convert_codex_to_anthropic(
   let content : Array[AnthropicResponseBlock] = []
   let mut input_tokens = 0
   let mut output_tokens = 0
+  let mut cache_read_tokens = 0
+  let mut cache_creation_tokens = 0
   let id = generate_message_id()
   guard codex_json is Object(obj) else {
     return build_anthropic_response(id, model, "", [], 0, 0)
@@ -1241,7 +1243,29 @@ fn convert_codex_to_anthropic(
       Some(Number(n, ..)) => n.trunc().to_int()
       _ => 0
     }
+    cache_read_tokens = match usage_obj.get("cache_read_input_tokens") {
+      Some(Number(n, ..)) => n.trunc().to_int()
+      _ =>
+        match usage_obj.get("input_tokens_details") {
+          Some(Object(details)) =>
+            match details.get("cached_tokens") {
+              Some(Number(n, ..)) => n.trunc().to_int()
+              _ => 0
+            }
+          _ => 0
+        }
+    }
+    cache_creation_tokens = match usage_obj.get("cache_creation_input_tokens") {
+      Some(Number(n, ..)) => n.trunc().to_int()
+      _ => 0
+    }
   }
+  let usage = TokenUsage::new(
+    input_tokens~,
+    output_tokens~,
+    cache_read_tokens~,
+    cache_creation_tokens~,
+  )
   let has_tools = content.iter().any(fn(b) { b.type_ == "tool_use" })
   let stop_reason = if has_tools { "tool_use" } else { "end_turn" }
   {
@@ -1252,7 +1276,12 @@ fn convert_codex_to_anthropic(
     model,
     stop_reason: Some(stop_reason),
     stop_sequence: None,
-    usage: { input_tokens, output_tokens },
+    usage: {
+      input_tokens: usage.anthropic_input_tokens(),
+      output_tokens,
+      cache_read_input_tokens: optional_positive_int(cache_read_tokens),
+      cache_creation_input_tokens: optional_positive_int(cache_creation_tokens),
+    },
   }
 }
 

@@ -45,6 +45,7 @@ test "codex usage reads cached tokens from details" {
   assert_eq(usage.output_tokens, 7)
   assert_eq(usage.cache_read_tokens, 31)
   assert_eq(usage.cache_creation_tokens, 5)
+  assert_eq(usage.anthropic_input_tokens(), 64)
   assert_eq(usage.model, Some("gpt-5"))
 }
 
@@ -63,6 +64,18 @@ test "openai usage maps prompt and completion tokens" {
   assert_eq(usage.input_tokens, 12)
   assert_eq(usage.output_tokens, 8)
   assert_eq(usage.cache_read_tokens, 4)
+  assert_eq(usage.anthropic_input_tokens(), 8)
+}
+
+///|
+test "anthropic usage input clamps when cache exceeds input" {
+  let usage = TokenUsage::new(
+    input_tokens=100,
+    output_tokens=50,
+    cache_read_tokens=80,
+    cache_creation_tokens=50,
+  )
+  assert_eq(usage.anthropic_input_tokens(), 0)
 }
 
 ///|

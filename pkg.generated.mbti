@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub fn build_anthropic_response(String, String, String, Array[ToolCallInfo], Int, Int) -> AnthropicResponse
+pub fn build_anthropic_response(String, String, String, Array[ToolCallInfo], Int, Int, cache_read_input_tokens? : Int, cache_creation_input_tokens? : Int) -> AnthropicResponse
 
 pub fn build_codex_request(CodexInput, String, Bool) -> Json
 
@@ -109,7 +109,10 @@ pub impl @json.FromJson for AnthropicTool
 pub struct AnthropicUsage {
   input_tokens : Int
   output_tokens : Int
-} derive(Show, ToJson, @json.FromJson)
+  cache_read_input_tokens : Int?
+  cache_creation_input_tokens : Int?
+} derive(Show, @json.FromJson)
+pub impl ToJson for AnthropicUsage
 
 pub struct CodexInput {
   messages : Array[CodexMessage]
@@ -155,6 +158,7 @@ pub struct TokenUsage {
   model : String?
   message_id : String?
 }
+pub fn TokenUsage::anthropic_input_tokens(Self) -> Int
 pub fn TokenUsage::empty() -> Self
 pub fn TokenUsage::has_billable_tokens(Self) -> Bool
 pub fn TokenUsage::new(input_tokens~ : Int, output_tokens~ : Int, cache_read_tokens? : Int, cache_creation_tokens? : Int, model? : String?, message_id? : String?) -> Self

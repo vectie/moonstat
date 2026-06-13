@@ -41,6 +41,14 @@ pub fn TokenUsage::has_billable_tokens(self : TokenUsage) -> Bool {
 }
 
 ///|
+pub fn TokenUsage::anthropic_input_tokens(self : TokenUsage) -> Int {
+  max_int(
+    self.input_tokens - self.cache_read_tokens - self.cache_creation_tokens,
+    0,
+  )
+}
+
+///|
 pub fn token_usage_from_claude_response(body : Json) -> TokenUsage? {
   guard body is Object(obj) else { return None }
   guard obj.get("usage") is Some(Object(usage)) else { return None }

@@ -76,3 +76,36 @@ test "claude desktop gateway bearer token validation" {
   )
   assert_false(claude_desktop_authorization_valid({}, "moon-token"))
 }
+
+///|
+test "codex to anthropic response emits ccs cache usage buckets" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "id": "resp_1",
+      #|  "model": "gpt-5",
+      #|  "output": [
+      #|    {
+      #|      "type": "message",
+      #|      "content": [
+      #|        { "type": "output_text", "text": "done" }
+      #|      ]
+      #|    }
+      #|  ],
+      #|  "usage": {
+      #|    "input_tokens": 100,
+      #|    "output_tokens": 7,
+      #|    "input_tokens_details": { "cached_tokens": 31 },
+      #|    "cache_creation_input_tokens": 5
+      #|  }
+      #|}
+    ),
+  )
+  let response = convert_codex_to_anthropic(body, "claude-sonnet-4-6")
+  json_inspect(response.usage.to_json(), content={
+    "input_tokens": 64,
+    "output_tokens": 7,
+    "cache_read_input_tokens": 31,
+    "cache_creation_input_tokens": 5,
+  })
+}

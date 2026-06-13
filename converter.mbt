@@ -228,6 +228,8 @@ pub fn build_anthropic_response(
   tool_calls : Array[ToolCallInfo],
   input_tokens : Int,
   output_tokens : Int,
+  cache_read_input_tokens? : Int = 0,
+  cache_creation_input_tokens? : Int = 0,
 ) -> AnthropicResponse {
   let response_blocks : Array[AnthropicResponseBlock] = []
   if !content.is_empty() {
@@ -262,7 +264,23 @@ pub fn build_anthropic_response(
     model,
     stop_reason: Some(stop_reason),
     stop_sequence: None,
-    usage: { input_tokens, output_tokens },
+    usage: {
+      input_tokens,
+      output_tokens,
+      cache_read_input_tokens: optional_positive_int(cache_read_input_tokens),
+      cache_creation_input_tokens: optional_positive_int(
+        cache_creation_input_tokens,
+      ),
+    },
+  }
+}
+
+///|
+fn optional_positive_int(value : Int) -> Int? {
+  if value > 0 {
+    Some(value)
+  } else {
+    None
   }
 }
 

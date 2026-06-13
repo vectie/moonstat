@@ -248,7 +248,24 @@ pub struct AnthropicResponseBlock {
 pub struct AnthropicUsage {
   input_tokens : Int
   output_tokens : Int
-} derive(FromJson, Show, ToJson)
+  cache_read_input_tokens : Int?
+  cache_creation_input_tokens : Int?
+} derive(FromJson, Show)
+
+///|
+pub impl ToJson for AnthropicUsage with fn to_json(self : AnthropicUsage) -> Json {
+  let json : Map[String, Json] = {
+    "input_tokens": Json::number(self.input_tokens.to_double()),
+    "output_tokens": Json::number(self.output_tokens.to_double()),
+  }
+  if self.cache_read_input_tokens is Some(tokens) && tokens > 0 {
+    json["cache_read_input_tokens"] = Json::number(tokens.to_double())
+  }
+  if self.cache_creation_input_tokens is Some(tokens) && tokens > 0 {
+    json["cache_creation_input_tokens"] = Json::number(tokens.to_double())
+  }
+  Json::object(json)
+}
 
 ///|
 pub struct AnthropicStreamEvent {
