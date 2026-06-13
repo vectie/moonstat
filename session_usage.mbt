@@ -360,6 +360,7 @@ fn TrafficStats::ingest_opencode_database_rows_json(
             model=message.model_id,
             usage~,
             created_at=opencode_timestamp_seconds(message.timestamp_ms),
+            allow_missing_cache_creation=true,
           ) {
           result.skipped += 1
         } else {
@@ -1237,6 +1238,7 @@ fn TrafficStats::ingest_opencode_message_object(
           model=message.model_id,
           usage~,
           created_at=opencode_timestamp_seconds(message.timestamp_ms),
+          allow_missing_cache_creation=true,
         ) {
         result.skipped += 1
       } else {

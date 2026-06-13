@@ -1056,6 +1056,90 @@ test "usage aggregates deduplicate ccs session imports against proxy logs" {
 }
 
 ///|
+test "ccs session proxy dedup only relaxes cache creation for supported sources" {
+  let stats = TrafficStats::new()
+  let claude_session = RequestLog::new(
+    request_id="session:claude-cache-missing",
+    provider_id="_session",
+    app_type="claude",
+    model="claude-sonnet-4-6",
+    usage=TokenUsage::new(
+      input_tokens=100,
+      output_tokens=10,
+      cache_read_tokens=40,
+      cache_creation_tokens=0,
+    ),
+    status_code=200,
+    created_at=1000,
+    data_source="session_log",
+  )
+  let claude_proxy = RequestLog::new(
+    request_id="proxy-claude-cache-write",
+    provider_id="anthropic",
+    provider_name=Some("Anthropic"),
+    app_type="claude",
+    model="unknown",
+    usage=TokenUsage::new(
+      input_tokens=100,
+      output_tokens=10,
+      cache_read_tokens=40,
+      cache_creation_tokens=5,
+    ),
+    status_code=200,
+    created_at=1300,
+    data_source="proxy",
+  )
+  let opencode_session = RequestLog::new(
+    request_id="opencode_session:open-cache:1",
+    provider_id="_opencode_session",
+    app_type="opencode",
+    model="deepseek-v4-pro",
+    usage=TokenUsage::new(
+      input_tokens=300,
+      output_tokens=20,
+      cache_read_tokens=80,
+      cache_creation_tokens=0,
+    ),
+    status_code=200,
+    created_at=2000,
+    data_source="opencode_session",
+  )
+  let opencode_proxy = RequestLog::new(
+    request_id="proxy-open-cache-write",
+    provider_id="opencode-provider",
+    provider_name=Some("OpenCode Provider"),
+    app_type="opencode",
+    model="unknown",
+    usage=TokenUsage::new(
+      input_tokens=300,
+      output_tokens=20,
+      cache_read_tokens=80,
+      cache_creation_tokens=7,
+    ),
+    status_code=200,
+    created_at=2300,
+    data_source="proxy",
+  )
+  stats.record_request_log(claude_session)
+  stats.record_request_log(claude_proxy)
+  stats.record_request_log(opencode_session)
+  stats.record_request_log(opencode_proxy)
+
+  assert_true(stats.request_log_is_effective(claude_session))
+  assert_true(stats.request_log_is_effective(claude_proxy))
+  assert_false(stats.request_log_is_effective(opencode_session))
+  assert_true(stats.request_log_is_effective(opencode_proxy))
+  json_inspect(stats.usage_data_sources_json(), content=[
+    { "dataSource": "proxy", "requestCount": 2, "totalCostUsd": "0.000000" },
+    {
+      "dataSource": "session_log",
+      "requestCount": 1,
+      "totalCostUsd": "0.000000",
+    },
+  ])
+}
+
+///|
 test "provider stats use ccs session provider fallback names" {
   let stats = TrafficStats::new()
   stats.record_request_log(

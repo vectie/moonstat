@@ -505,6 +505,50 @@ test "opencode session import skips matching proxy log fingerprints" {
 }
 
 ///|
+test "opencode session import treats missing cache write like ccs" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="proxy-open-cache-write",
+      provider_id="opencode-provider",
+      app_type="opencode",
+      model="deepseek-v4-pro",
+      usage=TokenUsage::new(
+        input_tokens=3272,
+        output_tokens=802,
+        cache_read_tokens=52480,
+        cache_creation_tokens=7,
+        model=Some("deepseek-v4-pro"),
+      ),
+      status_code=200,
+      created_at=1779755333,
+      data_source="proxy",
+    ),
+  )
+  let data =
+    #|{
+    #|  "role": "assistant",
+    #|  "cost": 0.0023113,
+    #|  "tokens": {
+    #|    "input": 3272,
+    #|    "output": 383,
+    #|    "reasoning": 419,
+    #|    "cache": { "read": 52480 }
+    #|  },
+    #|  "modelID": "deepseek-v4-pro",
+    #|  "time": { "created": 1779755333700, "completed": 1779755350639 }
+    #|}
+  let result = stats.ingest_opencode_message_json(
+    session_id="opencode-s1",
+    message_id="msg-open-cache-write",
+    data~,
+  )
+  assert_eq(result.imported, 0)
+  assert_eq(result.skipped, 1)
+  assert_eq(stats.request_logs.length(), 1)
+}
+
+///|
 test "session timestamp parser handles offsets" {
   assert_eq(
     parse_session_timestamp_seconds("1970-01-01T08:00:10+08:00"),
