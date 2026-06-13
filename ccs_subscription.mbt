@@ -157,6 +157,68 @@ async fn ccs_get_codex_subscription_quota() -> SubscriptionQuota {
 }
 
 ///|
+async fn ccs_get_codex_oauth_quota(account_id : String?) -> SubscriptionQuota {
+  let creds = ccs_read_codex_credentials()
+  match creds.status {
+    NotFound => SubscriptionQuota::not_found("codex_oauth")
+    ParseError =>
+      ccs_quota_error(
+        "codex_oauth",
+        CredentialStatus::ParseError,
+        creds.message.unwrap_or("Failed to parse credentials"),
+      )
+    Expired => {
+      match creds.token {
+        Some(token) => {
+          let result = ccs_query_codex_quota(
+            token,
+            ccs_resolve_codex_oauth_account(account_id, creds.account_id),
+            "codex_oauth",
+            "Codex OAuth access token expired or rejected. Please re-login via cc-switch.",
+          )
+          if result.success {
+            return result
+          }
+        }
+        None => ()
+      }
+      ccs_quota_error(
+        "codex_oauth",
+        CredentialStatus::Expired,
+        creds.message.unwrap_or("Codex OAuth token unavailable"),
+      )
+    }
+    Valid =>
+      match creds.token {
+        Some(token) =>
+          ccs_query_codex_quota(
+            token,
+            ccs_resolve_codex_oauth_account(account_id, creds.account_id),
+            "codex_oauth",
+            "Codex OAuth access token expired or rejected. Please re-login via cc-switch.",
+          )
+        None =>
+          ccs_quota_error(
+            "codex_oauth",
+            CredentialStatus::ParseError,
+            "access_token is empty or missing",
+          )
+      }
+  }
+}
+
+///|
+fn ccs_resolve_codex_oauth_account(
+  explicit : String?,
+  fallback : String?,
+) -> String? {
+  match explicit {
+    Some(value) => Some(value)
+    None => fallback
+  }
+}
+
+///|
 async fn ccs_get_gemini_subscription_quota() -> SubscriptionQuota {
   let creds = ccs_read_gemini_credentials()
   match creds.status {

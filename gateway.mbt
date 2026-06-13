@@ -1244,6 +1244,18 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/get_subscription_quota", (r, w) => {
     self.handle_get_subscription_quota(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_codex_oauth_quota", (r, w) => {
+    self.handle_get_codex_oauth_quota(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_codex_oauth_quota", (r, w) => {
+    self.handle_get_codex_oauth_quota(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_coding_plan_quota", (r, w) => {
+    self.handle_get_coding_plan_quota(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_coding_plan_quota", (r, w) => {
+    self.handle_get_coding_plan_quota(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/testUsageScript", (r, w) => {
     self.handle_test_usage_script(r, w)
   })
@@ -7055,6 +7067,43 @@ async fn Gateway::handle_get_subscription_quota(
     return
   }
   let quota = ccs_get_subscription_quota(tool)
+  self.usage_cache.put_subscription(quota.tool, quota)
+  write_usage_json(w, quota.to_json())
+}
+
+///|
+async fn Gateway::handle_get_codex_oauth_quota(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let account_id = proxy_string_request(r.path, body, [
+    "accountId", "account_id", "account",
+  ])
+  let quota = ccs_get_codex_oauth_quota(account_id)
+  self.usage_cache.put_subscription(quota.tool, quota)
+  write_usage_json(w, quota.to_json())
+}
+
+///|
+async fn Gateway::handle_get_coding_plan_quota(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["baseUrl", "base_url"])
+    is Some(base_url) else {
+    write_usage_bad_request(w, "missing_base_url")
+    return
+  }
+  guard proxy_string_request(r.path, body, ["apiKey", "api_key"])
+    is Some(api_key) else {
+    write_usage_bad_request(w, "missing_api_key")
+    return
+  }
+  let quota = ccs_get_coding_plan_quota(base_url, api_key)
   self.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }

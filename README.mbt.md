@@ -252,6 +252,8 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /queryProviderUsage?providerId=codex-oauth&app=codex`
 - `GET|POST /get_balance?baseUrl=https://api.deepseek.com&apiKey=...`
 - `GET|POST /get_subscription_quota?tool=codex`
+- `GET|POST /get_codex_oauth_quota?accountId=...`
+- `GET|POST /get_coding_plan_quota?baseUrl=https://api.kimi.com/coding/v1&apiKey=...`
 - `POST /testUsageScript?providerId=codex-oauth&app=codex`
 - `POST /stream_check_provider?appType=codex&providerId=codex-oauth`
 - `POST /stream_check_all_providers?appType=codex&proxyTargetsOnly=true`
@@ -264,7 +266,8 @@ Moonstat currently exposes the ccs-compatible local routes below:
   `POST /update_model_pricing`, `DELETE /delete_model_pricing`,
   `GET /check_provider_limits`, `POST /sync_session_usage`,
   `GET /get_usage_data_sources`, `GET /queryProviderUsage`, `GET /get_balance`,
-  `GET /get_subscription_quota`, and `POST /testUsageScript`.
+  `GET /get_subscription_quota`, `GET /get_codex_oauth_quota`,
+  `GET /get_coding_plan_quota`, and `POST /testUsageScript`.
   Stream check command aliases `stream_check_provider`,
   `stream_check_all_providers`, `get_stream_check_config`, and
   `save_stream_check_config` expose the ccs camelCase config/result JSON
@@ -399,6 +402,10 @@ fallback credential files, calls the official quota endpoints, and returns the
 CCS `SubscriptionQuota` JSON shape. Gemini expired-token refresh reads
 `MOONSTAT_GEMINI_OAUTH_CLIENT_ID` and `MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET`
 (or the `GEMINI_OAUTH_*` / `GEMINI_CLI_OAUTH_*` aliases) at runtime.
+`/get_codex_oauth_quota` mirrors the CCS Codex OAuth quota command over the
+same WHAM usage protocol. `/get_coding_plan_quota` mirrors the CCS coding-plan
+quota command for Kimi, Zhipu CN/EN, MiniMax CN/EN, and ZenMux-compatible quota
+URLs, returning the same `SubscriptionQuota` tier names and fields.
 
 Claude Desktop gateway routes are open by default for standalone local use. Set
 `MOONSTAT_CLAUDE_DESKTOP_TOKEN` or `CLAUDE_DESKTOP_GATEWAY_TOKEN` to require

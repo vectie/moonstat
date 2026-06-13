@@ -833,3 +833,42 @@ test "top level ccs subscription quota command builds quota path" {
   )
   assert_true(subscription_quota_path(["moonstat", "usage", "quota"]) is None)
 }
+
+///|
+test "top level ccs codex oauth quota command builds quota path" {
+  assert_eq(
+    codex_oauth_quota_path([
+      "moonstat", "get_codex_oauth_quota", "--accountId", "acct 1",
+    ]),
+    "/get_codex_oauth_quota?accountId=acct%201",
+  )
+  assert_eq(
+    codex_oauth_quota_path(["moonstat", "usage", "codex-oauth-quota"]),
+    "/get_codex_oauth_quota",
+  )
+}
+
+///|
+test "top level ccs coding plan command builds quota path" {
+  assert_eq(
+    coding_plan_quota_path([
+      "moonstat", "get_coding_plan_quota", "--baseUrl", "https://api.kimi.com/coding/v1",
+      "--apiKey", "sk test",
+    ]),
+    Some(
+      "/get_coding_plan_quota?baseUrl=https%3A%2F%2Fapi.kimi.com%2Fcoding%2Fv1&apiKey=sk%20test",
+    ),
+  )
+  assert_eq(
+    coding_plan_quota_path([
+      "moonstat", "usage", "coding-plan", "--base-url", "https://api.minimax.io",
+      "--api-key", "key",
+    ]),
+    Some(
+      "/get_coding_plan_quota?baseUrl=https%3A%2F%2Fapi.minimax.io&apiKey=key",
+    ),
+  )
+  assert_true(
+    coding_plan_quota_path(["moonstat", "usage", "coding-plan"]) is None,
+  )
+}
