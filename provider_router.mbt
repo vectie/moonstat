@@ -585,7 +585,7 @@ fn ProviderRouter::select_current_provider(
     return ProviderSelection::err(NoProvidersConfigured)
   }
   match self.provider_by_id(app_type, provider_id) {
-    Some(provider) if provider.enabled => ProviderSelection::ok([provider])
+    Some(provider) => ProviderSelection::ok([provider])
     _ => ProviderSelection::err(NoProvidersConfigured)
   }
 }
@@ -601,9 +601,6 @@ fn ProviderRouter::select_failover_queue(
   let mut circuit_open_count = 0
   for provider_id in queue {
     guard self.provider_by_id(app_type, provider_id) is Some(provider) else {
-      continue
-    }
-    if !provider.enabled {
       continue
     }
     let breaker = self.breaker_for(app_type, provider.provider_id)

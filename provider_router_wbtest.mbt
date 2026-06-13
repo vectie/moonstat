@@ -85,6 +85,25 @@ test "provider router failover disabled uses current provider" {
 }
 
 ///|
+test "provider router current selection ignores metadata enabled flag like ccs" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="claude",
+      provider_id="a",
+      provider_name="Provider A",
+      enabled=false,
+    ),
+  )
+  router.set_current_provider("claude", "a")
+  let selected = router.select_providers("claude", now_ms=1000)
+  assert_true(selected.is_ok())
+  assert_eq(selected.providers.length(), 1)
+  assert_eq(selected.providers[0].provider_id, "a")
+  assert_false(selected.providers[0].enabled)
+}
+
+///|
 test "provider router failover enabled uses queue order ignoring current" {
   let router = ProviderRouter::new()
   router.upsert_provider(
@@ -109,6 +128,26 @@ test "provider router failover enabled uses queue order ignoring current" {
   assert_eq(selected.providers.length(), 2)
   assert_eq(selected.providers[0].provider_id, "b")
   assert_eq(selected.providers[1].provider_id, "a")
+}
+
+///|
+test "provider router failover queue ignores metadata enabled flag like ccs" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="claude",
+      provider_id="a",
+      provider_name="Provider A",
+      enabled=false,
+    ),
+  )
+  router.set_failover_queue("claude", ["a"])
+  router.set_auto_failover("claude", true)
+  let selected = router.select_providers("claude", now_ms=1000)
+  assert_true(selected.is_ok())
+  assert_eq(selected.providers.length(), 1)
+  assert_eq(selected.providers[0].provider_id, "a")
+  assert_false(selected.providers[0].enabled)
 }
 
 ///|
