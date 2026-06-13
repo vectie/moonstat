@@ -61,6 +61,17 @@ pub fn CircuitBreakerStats::to_json(self : CircuitBreakerStats) -> Json {
 }
 
 ///|
+fn CircuitBreakerConfig::to_json(self : CircuitBreakerConfig) -> Json {
+  {
+    "failureThreshold": Json::number(self.failure_threshold.to_double()),
+    "successThreshold": Json::number(self.success_threshold.to_double()),
+    "timeoutSeconds": Json::number(self.timeout_seconds.to_double()),
+    "errorRateThreshold": Json::number(self.error_rate_threshold),
+    "minRequests": Json::number(self.min_requests.to_double()),
+  }.to_json()
+}
+
+///|
 pub struct CircuitBreaker {
   mut state : CircuitState
   mut consecutive_failures : Int
@@ -589,6 +600,38 @@ pub fn ProviderRouter::get_circuit_breaker_stats(
   self.circuit_breakers
   .get(circuit_key(app_type, provider_id))
   .map(fn(breaker) { breaker.get_stats() })
+}
+
+///|
+fn ProviderRouter::provider_health_json(
+  self : ProviderRouter,
+  provider_id : String,
+  app_type : String,
+  updated_at : String,
+) -> Json {
+  let stats = self.get_circuit_breaker_stats(provider_id, app_type)
+  let is_healthy = match stats {
+    Some(stats) => stats.state != Open
+    None => true
+  }
+  let consecutive_failures = match stats {
+    Some(stats) => stats.consecutive_failures
+    None => 0
+  }
+  let last_error = match stats {
+    Some(stats) if stats.state == Open => Json::string("circuit_open")
+    _ => Json::null()
+  }
+  {
+    "provider_id": Json::string(provider_id),
+    "app_type": Json::string(app_type),
+    "is_healthy": Json::boolean(is_healthy),
+    "consecutive_failures": Json::number(consecutive_failures.to_double()),
+    "last_success_at": Json::null(),
+    "last_failure_at": Json::null(),
+    "last_error": last_error,
+    "updated_at": Json::string(updated_at),
+  }.to_json()
 }
 
 ///|

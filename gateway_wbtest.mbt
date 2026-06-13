@@ -229,6 +229,73 @@ test "proxy pricing config aliases use ccs env-backed defaults" {
 }
 
 ///|
+test "proxy circuit breaker config alias matches ccs shape" {
+  let gateway = Gateway::new(port=17006, host="127.0.0.7", model="gpt-5")
+  guard gateway.provider_router.circuit_config.to_json() is Object(config) else {
+    fail("expected circuit config object")
+  }
+  assert_eq(config["failureThreshold"], Json::number(4.0))
+  assert_eq(config["successThreshold"], Json::number(2.0))
+  assert_eq(config["timeoutSeconds"], Json::number(60.0))
+  assert_eq(config["errorRateThreshold"], Json::number(0.6))
+  assert_eq(config["minRequests"], Json::number(10.0))
+}
+
+///|
+test "proxy provider health alias mirrors circuit breaker state" {
+  let gateway = Gateway::new(port=17007, host="127.0.0.8", model="gpt-5")
+  guard gateway.provider_router.provider_health_json(
+      "codex-oauth", "claude", "test-time",
+    )
+    is Object(healthy) else {
+    fail("expected default provider health object")
+  }
+  assert_eq(healthy["provider_id"], Json::string("codex-oauth"))
+  assert_eq(healthy["app_type"], Json::string("claude"))
+  assert_eq(healthy["is_healthy"], Json::boolean(true))
+  assert_eq(healthy["consecutive_failures"], Json::number(0.0))
+  assert_eq(healthy["last_error"], Json::null())
+  assert_eq(healthy["updated_at"], Json::string("test-time"))
+
+  for _ in 0..<4 {
+    gateway.provider_router.record_result(
+      "codex-oauth",
+      "claude",
+      false,
+      false,
+      now_ms=1000,
+    )
+  }
+  guard gateway.provider_router.provider_health_json(
+      "codex-oauth", "claude", "test-time",
+    )
+    is Object(open) else {
+    fail("expected open provider health object")
+  }
+  assert_eq(open["is_healthy"], Json::boolean(false))
+  assert_eq(open["last_error"], Json::string("circuit_open"))
+  guard gateway.provider_router.get_circuit_breaker_stats(
+      "codex-oauth", "claude",
+    )
+    is Some(stats) else {
+    fail("expected circuit stats")
+  }
+  assert_true(stats.state == Open)
+  assert_eq(stats.total_requests, 4)
+  assert_eq(stats.failed_requests, 4)
+  gateway.provider_router.reset_provider_breaker("codex-oauth", "claude")
+  guard gateway.provider_router.get_circuit_breaker_stats(
+      "codex-oauth", "claude",
+    )
+    is Some(reset_stats) else {
+    fail("expected reset circuit stats")
+  }
+  assert_true(reset_stats.state == Closed)
+  assert_eq(reset_stats.total_requests, 0)
+  assert_eq(reset_stats.failed_requests, 0)
+}
+
+///|
 test "proxy status alias matches ccs proxy status shape" {
   let gateway = Gateway::new(port=17002, host="127.0.0.3", model="gpt-5")
   gateway.stats.record_inbound(16)

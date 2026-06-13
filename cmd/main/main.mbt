@@ -28,6 +28,12 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_proxy_default_cost_multiplier(arr)
     ["proxy", "pricing-model-source", ..] =>
       check_proxy_pricing_model_source(arr)
+    ["proxy", "provider-health", ..] => check_proxy_provider_health(arr)
+    ["proxy", "circuit-breaker-config", ..] =>
+      check_proxy_circuit_breaker_config(arr)
+    ["proxy", "circuit-breaker-stats", ..] =>
+      check_proxy_circuit_breaker_stats(arr)
+    ["proxy", "reset-circuit-breaker", ..] => reset_proxy_circuit_breaker(arr)
     ["proxy", "takeover-status", ..] => check_proxy_takeover_status(arr)
     ["proxy", "running", ..] => check_proxy_running(arr)
     ["usage", "logs", ..] => check_usage_logs(arr)
@@ -91,6 +97,10 @@ fn print_help() -> Unit {
   println("  proxy app-config       Show ccs-style app proxy config")
   println("  proxy default-cost-multiplier  Show ccs-style app cost multiplier")
   println("  proxy pricing-model-source     Show ccs-style app pricing mode")
+  println("  proxy provider-health          Show ccs-style provider health")
+  println("  proxy circuit-breaker-config   Show ccs-style circuit config")
+  println("  proxy circuit-breaker-stats    Show ccs-style circuit stats")
+  println("  proxy reset-circuit-breaker    Reset provider circuit breaker")
   println("  proxy takeover-status  Show ccs-style app takeover status")
   println("  proxy running          Show ccs-style proxy running boolean")
   println("  usage logs  Show ccs-style recent proxy_request_logs")
@@ -130,6 +140,7 @@ fn print_help() -> Unit {
   println("")
   println("Proxy config options:")
   println("  --app-type <app>  App type for app-level proxy config")
+  println("  --provider-id <id> Provider id for provider-level proxy commands")
   println("")
   println("Examples:")
   println("  sudo moonstat install          # Install hosts reroute")
@@ -144,6 +155,9 @@ fn print_help() -> Unit {
   println("  claude                         # Use Claude CLI through moonstat")
   println("  moonstat proxy status          # Show ccs-style proxy status")
   println("  moonstat proxy app-config --app-type codex")
+  println(
+    "  moonstat proxy provider-health --app-type codex --provider-id codex-oauth",
+  )
   println("  moonstat stats                 # Show traffic counters")
   println("  moonstat usage logs            # Show recent request logs")
   println("  moonstat usage summary         # Show aggregate token/cost usage")
@@ -257,6 +271,32 @@ async fn check_proxy_pricing_model_source(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn check_proxy_provider_health(args : Array[String]) -> Unit {
+  check_proxy_provider_endpoint(args, "/proxy/provider-health")
+}
+
+///|
+async fn check_proxy_circuit_breaker_config(args : Array[String]) -> Unit {
+  check_proxy_endpoint(args, "/proxy/circuit-breaker-config")
+}
+
+///|
+async fn check_proxy_circuit_breaker_stats(args : Array[String]) -> Unit {
+  check_proxy_provider_endpoint(args, "/proxy/circuit-breaker-stats")
+}
+
+///|
+async fn reset_proxy_circuit_breaker(args : Array[String]) -> Unit {
+  guard proxy_provider_endpoint_path(args, "/proxy/reset-circuit-breaker")
+    is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --provider-id")
+    return
+  }
+  check_json_post_endpoint(args, path, "Proxy")
+}
+
+///|
 async fn check_proxy_takeover_status(args : Array[String]) -> Unit {
   check_proxy_endpoint(args, "/proxy/takeover-status")
 }
@@ -275,6 +315,30 @@ async fn check_proxy_endpoint(args : Array[String], path : String) -> Unit {
 async fn check_proxy_app_endpoint(args : Array[String], path : String) -> Unit {
   let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
   check_proxy_endpoint(args, "\{path}?app_type=\{cli_url_encode(app_type)}")
+}
+
+///|
+async fn check_proxy_provider_endpoint(
+  args : Array[String],
+  path : String,
+) -> Unit {
+  guard proxy_provider_endpoint_path(args, path) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --provider-id")
+    return
+  }
+  check_proxy_endpoint(args, path)
+}
+
+///|
+fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? {
+  guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
+    return None
+  }
+  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  Some(
+    "\{path}?provider_id=\{cli_url_encode(provider_id)}&app_type=\{cli_url_encode(app_type)}",
+  )
 }
 
 ///|
@@ -586,6 +650,29 @@ async fn check_json_endpoint(
     }
   } catch {
     err => logger.error("\{label} check failed: \{err}")
+  }
+}
+
+///|
+async fn check_json_post_endpoint(
+  args : Array[String],
+  path : String,
+  label : String,
+) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
+  try {
+    let client = @http.Client::new(url, headers={})
+    defer client.close()
+    let response = client.post(path, "{}")
+    if response.code == 200 {
+      let body = client.read_all().text()
+      println(body)
+    } else {
+      logger.error("\{label} update failed: \{response.code}")
+    }
+  } catch {
+    err => logger.error("\{label} update failed: \{err}")
   }
 }
 

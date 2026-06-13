@@ -576,6 +576,18 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/proxy/pricing-model-source", (r, w) => {
     self.handle_proxy_pricing_model_source(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/proxy/provider-health", (r, w) => {
+    self.handle_proxy_provider_health(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/proxy/circuit-breaker-config", (_, w) => {
+    self.handle_proxy_circuit_breaker_config(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/proxy/circuit-breaker-stats", (r, w) => {
+    self.handle_proxy_circuit_breaker_stats(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/proxy/reset-circuit-breaker", (r, w) => {
+    self.handle_proxy_reset_circuit_breaker(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/proxy/takeover-status", (_, w) => {
     self.handle_proxy_takeover_status(w)
   })
@@ -2763,6 +2775,69 @@ async fn Gateway::handle_proxy_pricing_model_source(
 }
 
 ///|
+async fn Gateway::handle_proxy_provider_health(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard proxy_provider_query(r.path) is Some(query) else {
+    write_usage_bad_request(w, "missing_provider_id_or_app_type")
+    return
+  }
+  write_usage_json(
+    w,
+    self.provider_router.provider_health_json(
+      query.provider_id,
+      query.app_type,
+      @async.now().to_string(),
+    ),
+  )
+}
+
+///|
+async fn Gateway::handle_proxy_circuit_breaker_config(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.provider_router.circuit_config.to_json())
+}
+
+///|
+async fn Gateway::handle_proxy_circuit_breaker_stats(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard proxy_provider_query(r.path) is Some(query) else {
+    write_usage_bad_request(w, "missing_provider_id_or_app_type")
+    return
+  }
+  let body = match
+    self.provider_router.get_circuit_breaker_stats(
+      query.provider_id,
+      query.app_type,
+    ) {
+    Some(stats) => stats.to_json()
+    None => Json::null()
+  }
+  write_usage_json(w, body)
+}
+
+///|
+async fn Gateway::handle_proxy_reset_circuit_breaker(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard proxy_provider_query(r.path) is Some(query) else {
+    write_usage_bad_request(w, "missing_provider_id_or_app_type")
+    return
+  }
+  self.provider_router.reset_provider_breaker(query.provider_id, query.app_type)
+  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+}
+
+///|
 async fn Gateway::handle_proxy_takeover_status(
   self : Gateway,
   w : @httpx.ResponseWriter,
@@ -3127,6 +3202,24 @@ fn usage_request_detail_id(path : String) -> String {
     None => raw
   }
   usage_url_decode(without_query[:])
+}
+
+///|
+priv struct ProxyProviderQuery {
+  provider_id : String
+  app_type : String
+}
+
+///|
+fn proxy_provider_query(path : StringView) -> ProxyProviderQuery? {
+  guard usage_query_value_any(path, "provider_id", "providerId")
+    is Some(provider_id) else {
+    return None
+  }
+  guard usage_query_value_any(path, "app_type", "appType") is Some(app_type) else {
+    return None
+  }
+  Some({ provider_id, app_type })
 }
 
 ///|
