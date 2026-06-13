@@ -2545,6 +2545,14 @@ async fn Gateway::handle_usage_logs(
     start_date=usage_query_int_any(r.path, "start_date", "startDate"),
     end_date=usage_query_int_any(r.path, "end_date", "endDate"),
   )
+  let pricing_overrides = self.pricing_override_rows()
+  let backfilled = self.stats.backfill_missing_usage_costs(
+    pricing_overrides,
+    self.pricing_deleted_model_ids,
+  )
+  if backfilled > 0 {
+    self.stats.save_persistent_store()
+  }
   w.write(
     self.stats
     .usage_logs_paginated_json(
@@ -2553,6 +2561,8 @@ async fn Gateway::handle_usage_logs(
       page_size=usage_query_int_any(r.path, "page_size", "pageSize").unwrap_or(
         100,
       ),
+      pricing_overrides~,
+      deleted_model_ids=self.pricing_deleted_model_ids,
     )
     .stringify(indent=2),
   )
@@ -2786,7 +2796,20 @@ async fn Gateway::handle_usage_request_detail(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let request_id = usage_request_detail_id(r.path.to_owned())
-  match self.stats.request_detail_json(request_id) {
+  let pricing_overrides = self.pricing_override_rows()
+  let backfilled = self.stats.backfill_missing_usage_costs(
+    pricing_overrides,
+    self.pricing_deleted_model_ids,
+  )
+  if backfilled > 0 {
+    self.stats.save_persistent_store()
+  }
+  match
+    self.stats.request_detail_json_with_pricing(
+      request_id,
+      pricing_overrides,
+      self.pricing_deleted_model_ids,
+    ) {
     Some(detail) => write_usage_json(w, detail)
     None => {
       w.header().set("Content-Type", "application/json")

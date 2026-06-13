@@ -571,6 +571,72 @@ fn TrafficStats::backfill_missing_usage_costs_for_model(
 }
 
 ///|
+fn TrafficStats::backfill_missing_usage_costs(
+  self : TrafficStats,
+  pricing_overrides : Array[ModelPricing],
+  deleted_model_ids : Map[String, Bool],
+) -> Int {
+  let mut updated = 0
+  for i in 0..<self.request_logs.length() {
+    let log = self.request_logs[i]
+    if request_log_total_cost_nano(log) > 0L {
+      continue
+    }
+    let usage = TokenUsage::new(
+      input_tokens=log.input_tokens,
+      output_tokens=log.output_tokens,
+      cache_read_tokens=log.cache_read_tokens,
+      cache_creation_tokens=log.cache_creation_tokens,
+      model=Some(log.model),
+    )
+    guard usage.has_billable_tokens() else { continue }
+    guard request_log_backfill_pricing_model(log) is Some(pricing_model) else {
+      continue
+    }
+    guard find_model_pricing(
+        pricing_model, pricing_overrides, deleted_model_ids,
+      )
+      is Some(pricing) else {
+      continue
+    }
+    let cost = calculate_cost_for_app(
+      log.app_type,
+      usage,
+      pricing,
+      cost_multiplier=log.cost_multiplier,
+    )
+    self.request_logs[i] = RequestLog::new(
+      request_id=log.request_id,
+      provider_id=log.provider_id,
+      provider_name=log.provider_name,
+      app_type=log.app_type,
+      model=log.model,
+      request_model=log.request_model,
+      pricing_model=log.pricing_model,
+      usage~,
+      input_cost_usd=cost.input_cost_usd,
+      output_cost_usd=cost.output_cost_usd,
+      cache_read_cost_usd=cost.cache_read_cost_usd,
+      cache_creation_cost_usd=cost.cache_creation_cost_usd,
+      total_cost_usd=cost.total_cost_usd,
+      is_streaming=log.is_streaming,
+      latency_ms=log.latency_ms,
+      first_token_ms=log.first_token_ms,
+      duration_ms=log.duration_ms,
+      status_code=log.status_code,
+      error_message=log.error_message,
+      session_id=log.session_id,
+      provider_type=log.provider_type,
+      cost_multiplier=log.cost_multiplier,
+      created_at=log.created_at,
+      data_source=log.data_source,
+    )
+    updated += 1
+  }
+  updated
+}
+
+///|
 fn request_log_needs_cost_backfill(log : RequestLog, model_id : String) -> Bool {
   if request_log_total_cost_nano(log) > 0L {
     return false
@@ -674,7 +740,12 @@ fn TrafficStats::usage_logs_paginated_json(
   filters : RequestLogFilters,
   page? : Int = 0,
   page_size? : Int = 100,
+  pricing_overrides? : Array[ModelPricing] = [],
+  deleted_model_ids? : Map[String, Bool] = Map([], capacity=0),
 ) -> Json {
+  let _updated = self.backfill_missing_usage_costs(
+    pricing_overrides, deleted_model_ids,
+  )
   let page = max_int(page, 0)
   let page_size = max_int(page_size, 0)
   let rows : Array[RequestLog] = []
@@ -903,6 +974,19 @@ pub fn TrafficStats::request_detail_json(
   self : TrafficStats,
   request_id : String,
 ) -> Json? {
+  self.request_detail_json_with_pricing(request_id, [], Map([], capacity=0))
+}
+
+///|
+fn TrafficStats::request_detail_json_with_pricing(
+  self : TrafficStats,
+  request_id : String,
+  pricing_overrides : Array[ModelPricing],
+  deleted_model_ids : Map[String, Bool],
+) -> Json? {
+  let _updated = self.backfill_missing_usage_costs(
+    pricing_overrides, deleted_model_ids,
+  )
   let mut i = self.request_logs.length() - 1
   while i >= 0 {
     let log = self.request_logs[i]

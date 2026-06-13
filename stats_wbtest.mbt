@@ -1415,6 +1415,73 @@ test "traffic stats backfill uses persisted ccs pricing model" {
 }
 
 ///|
+test "usage logs lazily backfill missing costs like ccs reads" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-read-backfill",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="upstream-unpriced",
+      request_model=Some("client-alias"),
+      pricing_model=Some("custom-backfill"),
+      usage=TokenUsage::new(input_tokens=10, output_tokens=5),
+      total_cost_usd="0",
+      status_code=200,
+      created_at=1,
+    ),
+  )
+  guard stats.usage_logs_paginated_json(
+      RequestLogFilters::new(),
+      page=0,
+      page_size=10,
+      pricing_overrides=[
+        mp("custom-backfill", "Custom Backfill", "2", "4", "0", "0"),
+      ],
+      deleted_model_ids=Map([], capacity=0),
+    )
+    is Object(page) else {
+    fail("expected usage logs page")
+  }
+  guard page["data"] is Array(rows) else { fail("expected rows") }
+  guard rows[0] is Object(row) else { fail("expected row") }
+  assert_eq(row["inputCostUsd"], Json::string("0.00002"))
+  assert_eq(row["outputCostUsd"], Json::string("0.00002"))
+  assert_eq(row["totalCostUsd"], Json::string("0.00004"))
+  assert_eq(stats.request_logs[0].total_cost_usd, "0.00004")
+}
+
+///|
+test "request detail lazily backfills missing costs like ccs reads" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-detail-backfill",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="upstream-unpriced",
+      pricing_model=Some("custom-backfill"),
+      usage=TokenUsage::new(input_tokens=10, output_tokens=5),
+      total_cost_usd="0",
+      status_code=200,
+      created_at=1,
+    ),
+  )
+  guard stats.request_detail_json_with_pricing(
+      "req-detail-backfill",
+      [mp("custom-backfill", "Custom Backfill", "2", "4", "0", "0")],
+      Map([], capacity=0),
+    )
+    is Some(Object(detail)) else {
+    fail("expected backfilled detail")
+  }
+  assert_eq(detail["inputCostUsd"], Json::string("0.00002"))
+  assert_eq(detail["outputCostUsd"], Json::string("0.00002"))
+  assert_eq(detail["totalCostUsd"], Json::string("0.00004"))
+  assert_eq(stats.request_logs[0].total_cost_usd, "0.00004")
+}
+
+///|
 test "traffic stats backfill does not use request model for real unpriced model" {
   let stats = TrafficStats::new()
   stats.record_request_log(
