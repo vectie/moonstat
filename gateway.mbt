@@ -2920,6 +2920,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
   let api_format = provider.claude_api_format()
   let upstream_body = prepare_upstream_request_body(
     claude_request_json_for_upstream(request_json, upstream_model),
+    provider=Some(provider),
   )
   let endpoint = claude_transform_endpoint(api_format, false).replace_all(
     old="__MODEL__",
@@ -3449,6 +3450,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   let api_format = provider.claude_api_format()
   let upstream_body = prepare_upstream_request_body(
     claude_stream_request_json_for_upstream(request_json, upstream_model),
+    provider=Some(provider),
   )
   let endpoint = claude_transform_endpoint(api_format, true).replace_all(
     old="__MODEL__",
@@ -3651,9 +3653,12 @@ fn claude_stream_request_json_for_upstream(
 }
 
 ///|
-fn prepare_upstream_request_body(body : Json) -> Json {
+fn prepare_upstream_request_body(
+  body : Json,
+  provider? : ProviderRouteTarget? = None,
+) -> Json {
   let filtered = filter_private_params_for_upstream(body, None)
-  replace_images_for_text_only_model(filtered).body
+  replace_images_for_text_only_model(filtered, provider~).body
 }
 
 ///|
@@ -3695,13 +3700,210 @@ priv struct MediaReplacementResult {
 }
 
 ///|
-fn replace_images_for_text_only_model(body : Json) -> MediaReplacementResult {
+fn replace_images_for_text_only_model(
+  body : Json,
+  provider? : ProviderRouteTarget? = None,
+) -> MediaReplacementResult {
   guard body is Object(obj) else { return { body, count: 0 } }
   let model = json_string_from_map(obj, "model").unwrap_or("")
+  match explicit_model_image_support(provider, model) {
+    Some(true) => return { body: Json::object(obj), count: 0 }
+    Some(false) => return replace_image_blocks_with_marker(Json::object(obj))
+    None => ()
+  }
   if !known_text_only_model(model) {
     return { body: Json::object(obj), count: 0 }
   }
   replace_image_blocks_with_marker(Json::object(obj))
+}
+
+///|
+fn explicit_model_image_support(
+  provider : ProviderRouteTarget?,
+  model : String,
+) -> Bool? {
+  guard provider is Some(provider) else { return None }
+  guard provider.settings_config is Some(settings) else { return None }
+  match settings {
+    Object(obj) => {
+      match obj.get("modelCatalog") {
+        Some(Object(catalog)) =>
+          match catalog.get("models") {
+            Some(models) =>
+              match explicit_model_image_support_in_value(models, model) {
+                Some(value) => return Some(value)
+                None => ()
+              }
+            None => ()
+          }
+        _ => ()
+      }
+      match obj.get("modelCatalog") {
+        Some(catalog) =>
+          match explicit_model_image_support_in_value(catalog, model) {
+            Some(value) => return Some(value)
+            None => ()
+          }
+        None => ()
+      }
+      match obj.get("models") {
+        Some(models) => explicit_model_image_support_in_value(models, model)
+        None => None
+      }
+    }
+    _ => None
+  }
+}
+
+///|
+fn explicit_model_image_support_in_value(value : Json, model : String) -> Bool? {
+  match value {
+    Array(models) => {
+      for entry in models {
+        if model_entry_matches(entry, None, model) {
+          match explicit_image_support(entry) {
+            Some(value) => return Some(value)
+            None => ()
+          }
+        }
+      }
+      None
+    }
+    Object(entries) => {
+      for key, entry in entries {
+        if model_entry_matches(entry, Some(key), model) {
+          match explicit_image_support(entry) {
+            Some(value) => return Some(value)
+            None => ()
+          }
+        }
+      }
+      None
+    }
+    _ => None
+  }
+}
+
+///|
+fn explicit_image_support(entry : Json) -> Bool? {
+  guard entry is Object(obj) else { return None }
+  match
+    json_bool_from_map_any(obj, ["supportsImage", "supports_image", "vision"]) {
+    Some(value) => return Some(value)
+    None => ()
+  }
+  match obj.get("input") {
+    Some(input) =>
+      match input_modalities_support_image(input) {
+        Some(value) => return Some(value)
+        None => ()
+      }
+    None => ()
+  }
+  match obj.get("modalities") {
+    Some(Object(modalities)) =>
+      match modalities.get("input") {
+        Some(input) =>
+          match input_modalities_support_image(input) {
+            Some(value) => return Some(value)
+            None => ()
+          }
+        None => ()
+      }
+    _ => ()
+  }
+  match obj.get("input_modalities") {
+    Some(input) =>
+      match input_modalities_support_image(input) {
+        Some(value) => return Some(value)
+        None => ()
+      }
+    None => ()
+  }
+  match obj.get("inputModalities") {
+    Some(input) => input_modalities_support_image(input)
+    None => None
+  }
+}
+
+///|
+fn input_modalities_support_image(value : Json) -> Bool? {
+  guard value is Array(modalities) else { return None }
+  Some(
+    modalities.any(item => {
+      match item {
+        String(text) => text.trim().to_lower() == "image"
+        _ => false
+      }
+    }),
+  )
+}
+
+///|
+fn model_entry_matches(entry : Json, key : String?, model : String) -> Bool {
+  match key {
+    Some(key) if model_ids_match(key, model) => return true
+    _ => ()
+  }
+  guard entry is Object(obj) else { return false }
+  ["model", "id", "name"].any(field => {
+    match json_string_from_map(obj, field) {
+      Some(candidate) => model_ids_match(candidate, model)
+      None => false
+    }
+  })
+}
+
+///|
+fn model_ids_match(candidate : String, model : String) -> Bool {
+  let candidate = normalize_media_model_id(candidate)
+  let model = normalize_media_model_id(model)
+  if candidate.is_empty() || model.is_empty() {
+    return false
+  }
+  if candidate == model {
+    return true
+  }
+  let candidate_tail = model_id_tail(candidate)
+  let model_tail = model_id_tail(model)
+  candidate_tail == model_tail ||
+  candidate == model_tail ||
+  candidate_tail == model
+}
+
+///|
+fn normalize_media_model_id(value : String) -> String {
+  let lower = value.trim().to_lower()
+  let without_model_prefix = if lower.has_prefix("models/") {
+    lower["models/".length():].to_owned()
+  } else {
+    lower.to_owned()
+  }
+  strip_one_m_suffix_for_upstream(without_model_prefix).trim().to_owned()
+}
+
+///|
+fn model_id_tail(model : String) -> String {
+  let parts = model.split("/").collect()
+  match parts.last() {
+    Some(part) => part.to_owned()
+    None => model
+  }
+}
+
+///|
+fn json_bool_from_map_any(
+  obj : Map[String, Json],
+  keys : Array[String],
+) -> Bool? {
+  for key in keys {
+    match obj.get(key) {
+      Some(true) => return Some(true)
+      Some(false) => return Some(false)
+      _ => ()
+    }
+  }
+  None
 }
 
 ///|

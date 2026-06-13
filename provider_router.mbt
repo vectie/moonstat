@@ -275,6 +275,7 @@ pub struct ProviderRouteTarget {
   api_key : String?
   is_full_url : Bool
   model_mapping : ModelMapping?
+  settings_config : Json?
 }
 
 ///|
@@ -291,6 +292,7 @@ pub fn ProviderRouteTarget::new(
   api_key? : String? = None,
   is_full_url? : Bool = false,
   model_mapping? : ModelMapping? = None,
+  settings_config? : Json? = None,
 ) -> ProviderRouteTarget {
   {
     app_type,
@@ -305,6 +307,7 @@ pub fn ProviderRouteTarget::new(
     api_key,
     is_full_url,
     model_mapping,
+    settings_config,
   }
 }
 
@@ -322,6 +325,9 @@ pub fn ProviderRouteTarget::to_json(self : ProviderRouteTarget) -> Json {
   }
   if self.api_format is Some(api_format) {
     obj["apiFormat"] = Json::string(api_format)
+  }
+  if self.settings_config is Some(settings_config) {
+    obj["settingsConfig"] = settings_config
   }
   Json::object(obj)
 }
