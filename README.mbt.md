@@ -36,6 +36,15 @@ moon run cmd/main -- status
 moon run cmd/main -- stats
 ```
 
+Provider model discovery uses the same ccs-compatible `/v1/models` candidate
+logic and returns the same frontend wire shape, `[{ "id": "...", "ownedBy":
+"..." }]`:
+
+```sh
+moon run cmd/main -- models fetch --base-url https://api.example.com --api-key sk-...
+moon run cmd/main -- models candidates --base-url https://api.deepseek.com/anthropic
+```
+
 ## Proxy Surface
 
 Moonstat currently exposes the ccs-compatible local routes below:

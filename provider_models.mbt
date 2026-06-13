@@ -142,10 +142,7 @@ fn models_url_target(url : String) -> Result[ModelsUrlTarget, String] {
   let (origin, raw_path) = if raw_path.is_empty() {
     match raw_origin.find("?") {
       Some(index) =>
-        (
-          raw_origin[:index].to_owned(),
-          "/\{raw_origin[index:].to_owned()}",
-        )
+        (raw_origin[:index].to_owned(), "/\{raw_origin[index:].to_owned()}")
       None => (raw_origin, raw_path)
     }
   } else {

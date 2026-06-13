@@ -12,6 +12,8 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["codex", "install", ..] => install_codex(arr)
     ["codex", "uninstall" | "remove", ..] => uninstall_codex()
     ["codex", "status", ..] => status_codex()
+    ["models", "fetch", ..] => fetch_provider_models(arr)
+    ["models", "candidates", ..] => print_model_candidates(arr)
     ["status", ..] => check_status(arr)
     ["health", ..] => check_health(arr)
     ["stats", ..] => check_stats(arr)
@@ -47,6 +49,10 @@ fn print_help() -> Unit {
   )
   println("  codex uninstall           Remove Moonstat Codex config block")
   println("  codex status              Show Codex config.toml Moonstat status")
+  println(
+    "  models fetch              Fetch provider models using ccs-compatible logic",
+  )
+  println("  models candidates         Print /v1/models candidate URLs")
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")
   println("  login       Login to OpenAI Codex OAuth")
@@ -59,12 +65,22 @@ fn print_help() -> Unit {
   println("  --port <port>      Port to listen on (default: 15721)")
   println("  --model <model>    Codex model to use (default: gpt-5)")
   println("")
+  println("Model fetch options:")
+  println("  --base-url <url>      Provider base URL")
+  println("  --api-key <key>       Provider API key")
+  println("  --full-url            Treat base URL as a full request endpoint")
+  println("  --models-url <url>    Exact model-list endpoint override")
+  println("  --user-agent <ua>     Custom User-Agent header")
+  println("")
   println("Examples:")
   println("  sudo moonstat install          # Install hosts reroute")
   println("  moonstat start                 # Start gateway on 127.0.0.1:15721")
   println("  moonstat start --port 80       # Start gateway on port 80")
   println("  moonstat claude-desktop install --port 15721")
   println("  moonstat codex install --port 15721 --model gpt-5")
+  println(
+    "  moonstat models fetch --base-url https://api.example.com --api-key sk-...",
+  )
   println("  claude                         # Use Claude CLI through moonstat")
   println("  moonstat stats                 # Show traffic counters")
   println("  moonstat uninstall             # Remove hosts reroute")
@@ -294,6 +310,73 @@ async fn status_codex() -> Unit {
 }
 
 ///|
+async fn fetch_provider_models(args : Array[String]) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  guard parse_string_arg(args, "--base-url") is Some(base_url) else {
+    logger.error("Missing required --base-url")
+    return
+  }
+  guard parse_string_arg(args, "--api-key") is Some(api_key) else {
+    logger.error("Missing required --api-key")
+    return
+  }
+  let is_full_url = has_flag(args, "--full-url") ||
+    has_flag(args, "--is-full-url")
+  let models_url = parse_string_arg(args, "--models-url")
+  let user_agent = parse_string_arg(args, "--user-agent")
+  let result = @moonstat.fetch_models(
+    base_url, api_key, is_full_url, models_url, user_agent,
+  )
+  match result {
+    Ok(models) => println(provider_models_to_json(models).stringify(indent=2))
+    Err(e) => logger.error(e)
+  }
+}
+
+///|
+async fn print_model_candidates(args : Array[String]) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  guard parse_string_arg(args, "--base-url") is Some(base_url) else {
+    logger.error("Missing required --base-url")
+    return
+  }
+  let is_full_url = has_flag(args, "--full-url") ||
+    has_flag(args, "--is-full-url")
+  let models_url = parse_string_arg(args, "--models-url")
+  match
+    @moonstat.build_models_url_candidates(base_url, is_full_url, models_url) {
+    Ok(candidates) =>
+      println(
+        Json::array(candidates.map(fn(url) { Json::string(url) })).stringify(
+          indent=2,
+        ),
+      )
+    Err(e) => logger.error(e)
+  }
+}
+
+///|
+fn provider_models_to_json(models : Array[@moonstat.FetchedModel]) -> Json {
+  Json::array(models.map(provider_model_to_json))
+}
+
+///|
+fn provider_model_to_json(model : @moonstat.FetchedModel) -> Json {
+  provider_model_fields_to_json(model.id, model.owned_by)
+}
+
+///|
+fn provider_model_fields_to_json(id : String, owned_by : String?) -> Json {
+  Json::object({
+    "id": Json::string(id),
+    "ownedBy": match owned_by {
+      Some(value) => Json::string(value)
+      None => Json::null()
+    },
+  })
+}
+
+///|
 fn parse_string_arg(args : Array[String], name : String) -> String? {
   let mut i = 0
   while i < args.length() {
@@ -303,6 +386,16 @@ fn parse_string_arg(args : Array[String], name : String) -> String? {
     i = i + 1
   }
   None
+}
+
+///|
+fn has_flag(args : Array[String], name : String) -> Bool {
+  for arg in args {
+    if arg == name {
+      return true
+    }
+  }
+  false
 }
 
 ///|
