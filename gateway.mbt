@@ -636,19 +636,59 @@ fn normalize_gemini_endpoint(path : StringView) -> String {
 
 ///|
 fn gemini_proxy_url(endpoint : String) -> String? {
-  let base = "https://generativelanguage.googleapis.com"
-  if endpoint.contains("?key=") || endpoint.contains("&key=") {
-    Some("\{base}\{endpoint}")
+  let url = resolve_gemini_native_url(
+    gemini_base_url(),
+    endpoint,
+    gemini_base_is_full_url(),
+  )
+  if url_contains_query_key(url) {
+    Some(url)
   } else {
     match gemini_api_key() {
       Some(key) =>
-        if endpoint.contains("?") {
-          Some("\{base}\{endpoint}&key=\{key}")
+        if url.contains("?") {
+          Some("\{url}&key=\{key}")
         } else {
-          Some("\{base}\{endpoint}?key=\{key}")
+          Some("\{url}?key=\{key}")
         }
       None => None
     }
+  }
+}
+
+///|
+fn gemini_base_url() -> String {
+  match getenv_or_none("GOOGLE_GEMINI_BASE_URL") {
+    Some(url) if !url.is_empty() => url
+    _ =>
+      match getenv_or_none("GEMINI_BASE_URL") {
+        Some(url) if !url.is_empty() => url
+        _ => "https://generativelanguage.googleapis.com"
+      }
+  }
+}
+
+///|
+fn gemini_base_is_full_url() -> Bool {
+  env_bool("MOONSTAT_GEMINI_FULL_URL") || env_bool("GEMINI_FULL_URL")
+}
+
+///|
+fn url_contains_query_key(url : String) -> Bool {
+  url.contains("?key=") || url.contains("&key=")
+}
+
+///|
+fn env_bool(key : String) -> Bool {
+  match getenv_or_none(key) {
+    Some(value) => {
+      let normalized = value.trim().to_lower()
+      normalized == "1" ||
+      normalized == "true" ||
+      normalized == "yes" ||
+      normalized == "on"
+    }
+    None => false
   }
 }
 
