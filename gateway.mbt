@@ -525,7 +525,13 @@ async fn Gateway::handle_models(
     "object": Json::string("model"),
     "owned_by": Json::string("moonstat"),
   }
+  let codex_model : Map[String, Json] = {
+    "id": Json::string(self.model),
+    "name": Json::string(self.model),
+    "provider": Json::string("codex-oauth"),
+  }
   let response : Map[String, Json] = {
+    "models": Json::array([codex_model.to_json()]),
     "object": Json::string("list"),
     "data": Json::array([model.to_json()]),
   }
