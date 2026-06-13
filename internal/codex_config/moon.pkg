@@ -1,0 +1,9 @@
+import {
+  "vectie/moonstat/internal/fsx",
+  "vectie/moonstat/internal/os",
+  "vectie/moonstat/internal/pathx",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

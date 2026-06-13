@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/moonstat/internal/codex_config"
+
+// Values
+pub async fn install_proxy_config(String, Int, String) -> Result[CodexConfigInstall, String]
+
+pub async fn status() -> CodexConfigStatus
+
+pub async fn uninstall_proxy_config() -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+pub struct CodexConfigInstall {
+  config_path : String
+  base_url : String
+  model : String
+}
+
+pub struct CodexConfigStatus {
+  configured : Bool
+  config_path : String
+  base_url : String?
+  model : String?
+}
+
+// Type aliases
+
+// Traits
+

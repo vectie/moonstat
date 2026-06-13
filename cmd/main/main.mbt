@@ -9,6 +9,9 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["claude-desktop", "install", ..] => install_claude_desktop(arr)
     ["claude-desktop", "uninstall" | "remove", ..] => uninstall_claude_desktop()
     ["claude-desktop", "status", ..] => status_claude_desktop()
+    ["codex", "install", ..] => install_codex(arr)
+    ["codex", "uninstall" | "remove", ..] => uninstall_codex()
+    ["codex", "status", ..] => status_codex()
     ["status", ..] => check_status(arr)
     ["health", ..] => check_health(arr)
     ["stats", ..] => check_stats(arr)
@@ -39,6 +42,11 @@ fn print_help() -> Unit {
   )
   println("  claude-desktop uninstall  Remove Claude Desktop gateway profile")
   println("  claude-desktop status     Show Claude Desktop profile status")
+  println(
+    "  codex install             Configure Codex config.toml for Moonstat",
+  )
+  println("  codex uninstall           Remove Moonstat Codex config block")
+  println("  codex status              Show Codex config.toml Moonstat status")
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")
   println("  login       Login to OpenAI Codex OAuth")
@@ -49,13 +57,14 @@ fn print_help() -> Unit {
   println("Start options:")
   println("  --host <host>      Address to listen on (default: 127.0.0.1)")
   println("  --port <port>      Port to listen on (default: 15721)")
-  println("  --model <model>    Codex model to use (default: gpt-4o)")
+  println("  --model <model>    Codex model to use (default: gpt-5)")
   println("")
   println("Examples:")
   println("  sudo moonstat install          # Install hosts reroute")
   println("  moonstat start                 # Start gateway on 127.0.0.1:15721")
   println("  moonstat start --port 80       # Start gateway on port 80")
   println("  moonstat claude-desktop install --port 15721")
+  println("  moonstat codex install --port 15721 --model gpt-5")
   println("  claude                         # Use Claude CLI through moonstat")
   println("  moonstat stats                 # Show traffic counters")
   println("  moonstat uninstall             # Remove hosts reroute")
@@ -66,7 +75,7 @@ async fn start_gateway(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   let host = parse_string_arg(args, "--host").unwrap_or("127.0.0.1")
   let port = parse_int_arg(args, "--port", default=15721)
-  let model = parse_string_arg(args, "--model").unwrap_or("gpt-4o")
+  let model = parse_string_arg(args, "--model").unwrap_or("gpt-5")
   logger.info("Starting Moonstat Gateway on \{host}:\{port}")
   logger.info("Using Codex model: \{model}")
   let gateway = @moonstat.Gateway::new(port~, host~, model~)
@@ -231,6 +240,55 @@ async fn status_claude_desktop() -> Unit {
       "profile_path": Json::string(status.profile_path),
       "meta_path": Json::string(status.meta_path),
       "token_configured": Json::boolean(status.token_configured),
+    }).stringify(indent=2),
+  )
+}
+
+///|
+async fn install_codex(args : Array[String]) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  let host = parse_string_arg(args, "--host").unwrap_or("127.0.0.1")
+  let port = parse_int_arg(args, "--port", default=15721)
+  let model = parse_string_arg(args, "--model").unwrap_or("gpt-5")
+  logger.info("Installing Codex config.toml Moonstat provider...")
+  let result = @codex_config.install_proxy_config(host, port, model)
+  match result {
+    Ok(installed) => {
+      logger.info("Codex Moonstat provider installed")
+      logger.info("Config: \{installed.config_path}")
+      logger.info("Gateway base URL: \{installed.base_url}")
+      logger.info("Model: \{installed.model}")
+    }
+    Err(e) => logger.error(e)
+  }
+}
+
+///|
+async fn uninstall_codex() -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  logger.info("Removing Codex config.toml Moonstat provider...")
+  let result = @codex_config.uninstall_proxy_config()
+  match result {
+    Ok(_) => logger.info("Codex Moonstat provider removed")
+    Err(e) => logger.error(e)
+  }
+}
+
+///|
+async fn status_codex() -> Unit {
+  let status = @codex_config.status()
+  println(
+    Json::object({
+      "configured": Json::boolean(status.configured),
+      "config_path": Json::string(status.config_path),
+      "base_url": match status.base_url {
+        Some(value) => Json::string(value)
+        None => Json::null()
+      },
+      "model": match status.model {
+        Some(value) => Json::string(value)
+        None => Json::null()
+      },
     }).stringify(indent=2),
   )
 }

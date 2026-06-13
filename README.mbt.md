@@ -19,7 +19,7 @@ moon run cmd/main -- start
 Use a custom bind address or port:
 
 ```sh
-moon run cmd/main -- start --host 127.0.0.1 --port 15721
+moon run cmd/main -- start --host 127.0.0.1 --port 15721 --model gpt-5
 ```
 
 Login uses Codex OAuth credentials:
@@ -81,6 +81,13 @@ profile shape as ccs under Claude Desktop's `Claude-3p/configLibrary`, stores a
 local token at `~/.moonstat/claude_desktop_gateway_token`, and the gateway reads
 that token automatically. Use `moonstat claude-desktop uninstall` to restore the
 profile mode.
+
+For Codex standalone setup, run
+`moonstat codex install --port 15721 --model gpt-5`. Moonstat writes a managed
+Moonstat provider block to `~/.codex/config.toml` using
+`wire_api = "responses"` and `base_url = "http://127.0.0.1:15721/v1"`, matching
+ccs proxy takeover expectations while preserving unrelated user config. Use
+`moonstat codex uninstall` to remove only the managed block.
 
 Gemini routes proxy to `https://generativelanguage.googleapis.com` by default
 and accept either a `?key=` query parameter or `GEMINI_API_KEY` /
