@@ -3404,13 +3404,13 @@ fn body_snippet(body : String, max_chars : Int) -> String {
     } else if ch == '\r' {
       ()
     } else if ch.to_int() < 32 {
-      snippet += "?"
+      snippet += "\u{FFFD}"
     } else {
       snippet += body[i:i + 1].to_owned()
     }
   }
   if body.length() > max_chars {
-    snippet += "..."
+    snippet += "\u{2026}"
   }
   snippet
 }
@@ -3429,7 +3429,7 @@ fn responses_sse_to_response_value(body : String) -> Json? {
   let mut buffer = ""
   let mut completed_response : Json? = None
   let mut output_items : Array[Json] = []
-  let normalized = body
+  let normalized = strip_utf8_bom(body)
     .replace_all(old="\r\n", new="\n")
     .replace_all(old="\r", new="\n")
   for line_view in normalized.split("\n") {

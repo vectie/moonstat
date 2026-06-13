@@ -1395,6 +1395,22 @@ test "ccs responses sse parser handles missing trailing blank line" {
 }
 
 ///|
+test "ccs responses sse parser strips bom before parsing" {
+  let sse = "\u{feff}event: response.completed\n" +
+    "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_bom\",\"status\":\"completed\",\"model\":\"gpt-5.4\",\"output\":[],\"usage\":{\"input_tokens\":3,\"output_tokens\":1}}}"
+  guard parse_claude_compatible_non_stream_body_with_diagnostics(
+      "openai_responses",
+      sse,
+      {},
+    )
+    is Ok(parsed) else {
+    fail("expected parsed response")
+  }
+  guard parsed is Object(obj) else { fail("expected object") }
+  assert_eq(obj["id"], Json::string("resp_bom"))
+}
+
+///|
 test "ccs responses sse parser ignores truncated trailing block" {
   let sse =
     #|event: response.completed
@@ -1452,7 +1468,7 @@ test "ccs upstream parse diagnostics include headers and body snippet" {
   let suffix = body_diagnostics_suffix(headers, "<html>\r\nblocked\u{0}</html>")
   assert_true(suffix.contains("content-type: text/html"))
   assert_true(suffix.contains("content-encoding: gzip"))
-  assert_true(suffix.contains("<html>\\nblocked?</html>"))
+  assert_true(suffix.contains("<html>\\nblocked\u{FFFD}</html>"))
 }
 
 ///|
@@ -1472,7 +1488,7 @@ test "ccs upstream parse diagnostics mark missing headers" {
 ///|
 test "ccs upstream parse diagnostics truncate long body snippets" {
   let body = "abcdefghijklmnopqrstuvwxyz"
-  assert_eq(body_snippet(body, 5), "abcde...")
+  assert_eq(body_snippet(body, 5), "abcde\u{2026}")
 }
 
 ///|
