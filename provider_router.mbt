@@ -738,6 +738,72 @@ fn ProviderRouter::read_live_provider_settings(
 }
 
 ///|
+fn ProviderRouter::sync_current_provider_targets(
+  self : ProviderRouter,
+) -> Array[ProviderRouteTarget] {
+  let targets : Array[ProviderRouteTarget] = []
+  let app_types : Array[String] = []
+  for app_type in self.providers.keys() {
+    app_types.push(app_type)
+  }
+  app_types.sort()
+  for app_type in app_types {
+    guard self.providers.get(app_type) is Some(app_providers) else { continue }
+    if app_providers.is_empty() {
+      self.current_provider_ids.remove(app_type)
+      continue
+    }
+    let provider_id = match self.current_provider_ids.get(app_type) {
+      Some(current) if app_providers.get(current) is Some(_) => current
+      _ => {
+        let fallback = self.default_current_provider_id(app_type, app_providers)
+        match fallback {
+          Some(id) => {
+            self.current_provider_ids.set(app_type, id)
+            id
+          }
+          None => {
+            self.current_provider_ids.remove(app_type)
+            continue
+          }
+        }
+      }
+    }
+    match app_providers.get(provider_id) {
+      Some(provider) => targets.push(provider)
+      None => ()
+    }
+  }
+  targets
+}
+
+///|
+fn ProviderRouter::default_current_provider_id(
+  self : ProviderRouter,
+  app_type : String,
+  app_providers : Map[String, ProviderRouteTarget],
+) -> String? {
+  let ids : Array[String] = []
+  for id in app_providers.keys() {
+    ids.push(id)
+  }
+  if ids.is_empty() {
+    return None
+  }
+  ids.sort_by(fn(left, right) {
+    guard app_providers.get(left) is Some(left_provider) else { return 1 }
+    guard app_providers.get(right) is Some(right_provider) else { return -1 }
+    provider_ccs_sort_compare(
+      left_provider,
+      self.provider_sort_index(app_type, left),
+      right_provider,
+      self.provider_sort_index(app_type, right),
+    )
+  })
+  ids.get(0)
+}
+
+///|
 fn ProviderRouter::live_provider_ids_json(
   self : ProviderRouter,
   app_type : String,

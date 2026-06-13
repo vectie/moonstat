@@ -148,6 +148,8 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     | ["remove-provider-from-live-config", ..] =>
       remove_provider_from_live_config(arr)
     ["switch_provider", ..] | ["switch-provider", ..] => switch_provider(arr)
+    ["sync_current_providers_live", ..] | ["sync-current-providers-live", ..] =>
+      sync_current_providers_live(arr)
     ["read_live_provider_settings", ..] | ["read-live-provider-settings", ..] =>
       check_live_provider_settings(arr)
     ["get_claude_plugin_status", ..] | ["get-claude-plugin-status", ..] =>
@@ -514,6 +516,8 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       remove_provider_from_live_config(arr)
     ["provider", "switch", ..] | ["providers", "switch", ..] =>
       switch_provider(arr)
+    ["provider", "sync-live", ..] | ["providers", "sync-live", ..] =>
+      sync_current_providers_live(arr)
     ["provider", "live-settings", ..] | ["providers", "live-settings", ..] =>
       check_live_provider_settings(arr)
     ["settings", "get", ..] => check_usage_endpoint(arr, "/get_settings")
@@ -760,6 +764,7 @@ fn print_help() -> Unit {
   println(
     "  provider remove-live   Alias for ccs remove_provider_from_live_config",
   )
+  println("  provider sync-live     Alias for ccs sync_current_providers_live")
   println("  provider switch        Alias for ccs switch_provider")
   println("  provider live-settings Alias for ccs read_live_provider_settings")
   println("  provider test-endpoints Alias for ccs test_api_endpoints")
@@ -1329,6 +1334,11 @@ async fn switch_provider(args : Array[String]) -> Unit {
     return
   }
   check_json_post_endpoint(args, path, "Provider")
+}
+
+///|
+async fn sync_current_providers_live(args : Array[String]) -> Unit {
+  check_json_post_endpoint(args, "/sync_current_providers_live", "Provider")
 }
 
 ///|

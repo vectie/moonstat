@@ -601,6 +601,41 @@ test "provider router mirrors ccs live settings and sort updates" {
 }
 
 ///|
+test "provider router syncs current live providers with ccs sort order" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="b",
+      provider_name="Provider B",
+    ),
+  )
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="a",
+      provider_name="Provider A",
+    ),
+  )
+  router.set_current_provider("codex", "stale")
+  assert_true(
+    router.update_providers_sort_order("codex", [
+      { id: "b", sort_index: 0 },
+      { id: "a", sort_index: 1 },
+    ]),
+  )
+  let targets = router.sync_current_provider_targets()
+  assert_eq(targets.length(), 1)
+  assert_eq(targets[0].provider_id, "b")
+  assert_eq(router.current_provider_id("codex"), Some("b"))
+  router.set_current_provider("codex", "a")
+  let preserved = router.sync_current_provider_targets()
+  assert_eq(preserved.length(), 1)
+  assert_eq(preserved[0].provider_id, "a")
+  assert_eq(router.current_provider_id("codex"), Some("a"))
+}
+
+///|
 test "provider router syncs universal providers into app providers" {
   let router = ProviderRouter::new()
   assert_true(

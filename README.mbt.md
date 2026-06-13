@@ -130,6 +130,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `DELETE /delete_provider?app=codex&id=custom`
 - `DELETE /remove_provider_from_live_config?app=codex&id=custom`
 - `POST /switch_provider?app=codex&id=custom`
+- `POST /sync_current_providers_live`
 - `GET /read_live_provider_settings?app=codex`
 - `GET /get_opencode_live_provider_ids`
 - `GET /get_openclaw_live_provider_ids`
@@ -329,8 +330,9 @@ The `/get_providers`,
 `/delete_provider`, `/remove_provider_from_live_config`, and
 `/switch_provider` mirror ccs provider CRUD/current-provider command shapes
 against that same standalone provider router state. `/read_live_provider_settings`,
-`/test_api_endpoints`, and `/update_providers_sort_order` mirror the ccs live
-settings, endpoint latency result, and `sortIndex` command shapes.
+`/sync_current_providers_live`, `/test_api_endpoints`, and
+`/update_providers_sort_order` mirror the ccs live settings, live sync,
+endpoint latency result, and `sortIndex` command shapes.
 `/get_opencode_live_provider_ids`, `/get_openclaw_live_provider_ids`,
 `/get_hermes_live_provider_ids`, `/get_openclaw_live_provider`,
 `/get_hermes_live_provider`, `/scan_openclaw_config_health`, and the matching

@@ -961,6 +961,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/switch_proxy_provider", (r, w) => {
     self.handle_proxy_switch_provider(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/sync_current_providers_live", (_, w) => {
+    self.handle_sync_current_providers_live(w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_providers", (r, w) => {
     self.handle_get_providers(r, w)
   })
@@ -6010,6 +6013,28 @@ async fn Gateway::handle_switch_provider(
     provider.provider_name,
   )
   write_usage_json(w, { "warnings": Json::array([]) }.to_json())
+}
+
+///|
+async fn Gateway::handle_sync_current_providers_live(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let targets = self.provider_router.sync_current_provider_targets()
+  for target in targets {
+    self.stats.set_active_target(
+      target.app_type,
+      target.provider_id,
+      target.provider_name,
+    )
+  }
+  write_usage_json(
+    w,
+    {
+      "success": Json::boolean(true),
+      "message": Json::string("Live configuration synchronized"),
+    }.to_json(),
+  )
 }
 
 ///|
