@@ -256,6 +256,6 @@ fn truncate_model_fetch_error_body(body : String) -> String {
   if body.length() <= MODEL_FETCH_ERROR_BODY_MAX_CHARS {
     body
   } else {
-    body[:MODEL_FETCH_ERROR_BODY_MAX_CHARS].to_owned() + "..."
+    body[:MODEL_FETCH_ERROR_BODY_MAX_CHARS].to_owned() + "…"
   }
 }

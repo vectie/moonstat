@@ -251,6 +251,13 @@ test "model url target rejects invalid url" {
 }
 
 ///|
+test "model fetch error body truncates like ccs" {
+  let body = "a".repeat(513)
+  let truncated = truncate_model_fetch_error_body(body)
+  assert_eq(truncated, "\{"a".repeat(512)}…")
+}
+
+///|
 test "parse provider models response sorts openai data" {
   let models = parse_models_response_body(
     (
@@ -331,8 +338,8 @@ test "parse provider models response rejects malformed entry" {
 test "provider model fetch error body truncates long text" {
   let long = "x".repeat(520)
   let truncated = truncate_model_fetch_error_body(long)
-  assert_eq(truncated.length(), 515)
-  assert_true(truncated.has_suffix("..."))
+  assert_eq(truncated.length(), 513)
+  assert_true(truncated.has_suffix("…"))
 }
 
 ///|
