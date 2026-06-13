@@ -553,6 +553,164 @@ test "usage aggregate lists match ccs route payloads" {
 }
 
 ///|
+test "usage aggregate filters match ccs date and app semantics" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-codex-old",
+      provider_id="codex-oauth",
+      provider_name=Some("Codex OAuth"),
+      app_type="codex",
+      model="gpt-5",
+      pricing_model=Some("gpt-5"),
+      usage=TokenUsage::new(input_tokens=10, output_tokens=2),
+      total_cost_usd="0.000010",
+      status_code=200,
+      latency_ms=10,
+      created_at=90,
+      data_source="proxy",
+    ),
+  )
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-codex-window",
+      provider_id="codex-oauth",
+      provider_name=Some("Codex OAuth"),
+      app_type="codex",
+      model="gpt-5",
+      pricing_model=Some("gpt-5"),
+      usage=TokenUsage::new(input_tokens=100, output_tokens=20),
+      total_cost_usd="0.000100",
+      status_code=200,
+      latency_ms=30,
+      created_at=150,
+      data_source="proxy",
+    ),
+  )
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-claude-window",
+      provider_id="anthropic",
+      provider_name=Some("Anthropic"),
+      app_type="claude",
+      model="claude-sonnet-4-6",
+      pricing_model=Some("claude-sonnet-4-6"),
+      usage=TokenUsage::new(input_tokens=200, output_tokens=30),
+      total_cost_usd="0.000200",
+      status_code=500,
+      latency_ms=70,
+      created_at=180,
+      data_source="proxy",
+    ),
+  )
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-codex-new",
+      provider_id="codex-oauth",
+      provider_name=Some("Codex OAuth"),
+      app_type="codex",
+      model="gpt-5",
+      pricing_model=Some("gpt-5"),
+      usage=TokenUsage::new(input_tokens=300, output_tokens=40),
+      total_cost_usd="0.000300",
+      status_code=200,
+      latency_ms=90,
+      created_at=250,
+      data_source="proxy",
+    ),
+  )
+
+  json_inspect(
+    stats.usage_summary_filtered_json(
+      start_date=Some(100),
+      end_date=Some(200),
+      app_type=Some("codex"),
+    ),
+    content={
+      "totalRequests": 1,
+      "totalCost": "0.000100",
+      "totalInputTokens": 100,
+      "totalOutputTokens": 20,
+      "totalCacheCreationTokens": 0,
+      "totalCacheReadTokens": 0,
+      "successRate": 100,
+      "realTotalTokens": 120,
+      "cacheHitRate": 0,
+    },
+  )
+  json_inspect(
+    stats.usage_summary_by_app_filtered_json(
+      start_date=Some(100),
+      end_date=Some(200),
+    ),
+    content=[
+      {
+        "appType": "claude",
+        "summary": {
+          "totalRequests": 1,
+          "totalCost": "0.000200",
+          "totalInputTokens": 200,
+          "totalOutputTokens": 30,
+          "totalCacheCreationTokens": 0,
+          "totalCacheReadTokens": 0,
+          "successRate": 0,
+          "realTotalTokens": 230,
+          "cacheHitRate": 0,
+        },
+      },
+      {
+        "appType": "codex",
+        "summary": {
+          "totalRequests": 1,
+          "totalCost": "0.000100",
+          "totalInputTokens": 100,
+          "totalOutputTokens": 20,
+          "totalCacheCreationTokens": 0,
+          "totalCacheReadTokens": 0,
+          "successRate": 100,
+          "realTotalTokens": 120,
+          "cacheHitRate": 0,
+        },
+      },
+    ],
+  )
+  json_inspect(
+    stats.provider_stats_filtered_json(
+      start_date=Some(100),
+      end_date=Some(200),
+      app_type=Some("codex"),
+    ),
+    content=[
+      {
+        "providerId": "codex-oauth",
+        "providerName": "Codex OAuth",
+        "requestCount": 1,
+        "totalTokens": 120,
+        "totalCost": "0.000100",
+        "successRate": 100,
+        "avgLatencyMs": 30,
+      },
+    ],
+  )
+  json_inspect(
+    stats.model_stats_filtered_json(
+      start_date=Some(100),
+      end_date=Some(200),
+      app_type=Some("codex"),
+    ),
+    content=[
+      {
+        "model": "gpt-5",
+        "requestCount": 1,
+        "totalTokens": 120,
+        "totalCost": "0.000100",
+        "avgCostPerRequest": "0.000100",
+      },
+    ],
+  )
+}
+
+///|
 test "usage aggregates deduplicate ccs session imports against proxy logs" {
   let stats = TrafficStats::new()
   let session_log = RequestLog::new(

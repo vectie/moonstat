@@ -376,11 +376,11 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/usage/logs", (r, w) => {
     self.handle_usage_logs(r, w)
   })
-  router.add_handler(@httpx.Method::Get, "/usage/summary", (_, w) => {
-    self.handle_usage_summary(w)
+  router.add_handler(@httpx.Method::Get, "/usage/summary", (r, w) => {
+    self.handle_usage_summary(r, w)
   })
-  router.add_handler(@httpx.Method::Get, "/usage/summary/by-app", (_, w) => {
-    self.handle_usage_summary_by_app(w)
+  router.add_handler(@httpx.Method::Get, "/usage/summary/by-app", (r, w) => {
+    self.handle_usage_summary_by_app(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/trends", (r, w) => {
     self.handle_usage_trends(r, w)
@@ -388,11 +388,11 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/usage/provider-limits", (r, w) => {
     self.handle_usage_provider_limits(r, w)
   })
-  router.add_handler(@httpx.Method::Get, "/usage/provider-stats", (_, w) => {
-    self.handle_usage_provider_stats(w)
+  router.add_handler(@httpx.Method::Get, "/usage/provider-stats", (r, w) => {
+    self.handle_usage_provider_stats(r, w)
   })
-  router.add_handler(@httpx.Method::Get, "/usage/model-stats", (_, w) => {
-    self.handle_usage_model_stats(w)
+  router.add_handler(@httpx.Method::Get, "/usage/model-stats", (r, w) => {
+    self.handle_usage_model_stats(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/data-sources", (_, w) => {
     self.handle_usage_data_sources(w)
@@ -1728,17 +1728,32 @@ async fn Gateway::handle_usage_logs(
 ///|
 async fn Gateway::handle_usage_summary(
   self : Gateway,
+  r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.stats.usage_summary_json())
+  write_usage_json(
+    w,
+    self.stats.usage_summary_filtered_json(
+      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
+      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
+      app_type=usage_query_value_any(r.path, "app_type", "appType"),
+    ),
+  )
 }
 
 ///|
 async fn Gateway::handle_usage_summary_by_app(
   self : Gateway,
+  r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.stats.usage_summary_by_app_json())
+  write_usage_json(
+    w,
+    self.stats.usage_summary_by_app_filtered_json(
+      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
+      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
+    ),
+  )
 }
 
 ///|
@@ -1795,17 +1810,33 @@ async fn Gateway::handle_usage_provider_limits(
 ///|
 async fn Gateway::handle_usage_provider_stats(
   self : Gateway,
+  r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.stats.provider_stats_json())
+  write_usage_json(
+    w,
+    self.stats.provider_stats_filtered_json(
+      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
+      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
+      app_type=usage_query_value_any(r.path, "app_type", "appType"),
+    ),
+  )
 }
 
 ///|
 async fn Gateway::handle_usage_model_stats(
   self : Gateway,
+  r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.stats.model_stats_json())
+  write_usage_json(
+    w,
+    self.stats.model_stats_filtered_json(
+      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
+      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
+      app_type=usage_query_value_any(r.path, "app_type", "appType"),
+    ),
+  )
 }
 
 ///|

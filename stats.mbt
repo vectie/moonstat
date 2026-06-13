@@ -558,10 +558,20 @@ pub fn TrafficStats::usage_summary_json(
   self : TrafficStats,
   app_type? : String? = None,
 ) -> Json {
+  self.usage_summary_filtered_json(app_type~)
+}
+
+///|
+fn TrafficStats::usage_summary_filtered_json(
+  self : TrafficStats,
+  start_date? : Int? = None,
+  end_date? : Int? = None,
+  app_type? : String? = None,
+) -> Json {
   let acc = UsageSummaryAccumulator::new()
   for log in self.request_logs {
     if self.request_log_is_effective(log) &&
-      request_log_matches_app(log, app_type) {
+      request_log_matches_usage_aggregate(log, start_date, end_date, app_type) {
       acc.add(log)
     }
   }
@@ -570,9 +580,19 @@ pub fn TrafficStats::usage_summary_json(
 
 ///|
 pub fn TrafficStats::usage_summary_by_app_json(self : TrafficStats) -> Json {
+  self.usage_summary_by_app_filtered_json()
+}
+
+///|
+fn TrafficStats::usage_summary_by_app_filtered_json(
+  self : TrafficStats,
+  start_date? : Int? = None,
+  end_date? : Int? = None,
+) -> Json {
   let summaries : Map[String, UsageSummaryAccumulator] = Map([], capacity=0)
   for log in self.request_logs {
-    if !self.request_log_is_effective(log) {
+    if !self.request_log_is_effective(log) ||
+      !request_log_matches_usage_aggregate(log, start_date, end_date, None) {
       continue
     }
     let acc = summaries
@@ -613,10 +633,20 @@ pub fn TrafficStats::provider_stats_json(
   self : TrafficStats,
   app_type? : String? = None,
 ) -> Json {
+  self.provider_stats_filtered_json(app_type~)
+}
+
+///|
+fn TrafficStats::provider_stats_filtered_json(
+  self : TrafficStats,
+  start_date? : Int? = None,
+  end_date? : Int? = None,
+  app_type? : String? = None,
+) -> Json {
   let stats : Map[String, ProviderStatsAccumulator] = Map([], capacity=0)
   for log in self.request_logs {
     if !self.request_log_is_effective(log) ||
-      !request_log_matches_app(log, app_type) {
+      !request_log_matches_usage_aggregate(log, start_date, end_date, app_type) {
       continue
     }
     let key = "\{log.provider_id}|\{log.app_type}"
@@ -645,10 +675,20 @@ pub fn TrafficStats::model_stats_json(
   self : TrafficStats,
   app_type? : String? = None,
 ) -> Json {
+  self.model_stats_filtered_json(app_type~)
+}
+
+///|
+fn TrafficStats::model_stats_filtered_json(
+  self : TrafficStats,
+  start_date? : Int? = None,
+  end_date? : Int? = None,
+  app_type? : String? = None,
+) -> Json {
   let stats : Map[String, ModelStatsAccumulator] = Map([], capacity=0)
   for log in self.request_logs {
     if !self.request_log_is_effective(log) ||
-      !request_log_matches_app(log, app_type) {
+      !request_log_matches_usage_aggregate(log, start_date, end_date, app_type) {
       continue
     }
     let model = request_log_pricing_model(log)
@@ -979,6 +1019,27 @@ fn request_log_matches_app(log : RequestLog, app_type : String?) -> Bool {
     Some(filter) if !filter.is_empty() => log.app_type == filter
     _ => true
   }
+}
+
+///|
+fn request_log_matches_usage_aggregate(
+  log : RequestLog,
+  start_date : Int?,
+  end_date : Int?,
+  app_type : String?,
+) -> Bool {
+  if !request_log_matches_app(log, app_type) {
+    return false
+  }
+  match start_date {
+    Some(start) if log.created_at < start => return false
+    _ => ()
+  }
+  match end_date {
+    Some(end) if log.created_at > end => return false
+    _ => ()
+  }
+  true
 }
 
 ///|
