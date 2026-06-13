@@ -961,6 +961,31 @@ test "provider stats use ccs session provider fallback names" {
 }
 
 ///|
+fn[T] with_test_timezone(zone : String, f : () -> T raise) -> T raise {
+  let old_tz = @os.getenv("TZ") catch { _ => None }
+  @os.setenv("TZ", zone, overwrite=true)
+  try f() catch {
+    error => {
+      restore_test_timezone(old_tz)
+      raise error
+    }
+  } noraise {
+    value => {
+      restore_test_timezone(old_tz)
+      value
+    }
+  }
+}
+
+///|
+fn restore_test_timezone(old_tz : String?) -> Unit {
+  match old_tz {
+    Some(value) => @os.setenv("TZ", value, overwrite=true) catch { _ => () }
+    None => @os.unsetenv("TZ") catch { _ => () }
+  }
+}
+
+///|
 test "usage trends use ccs hourly buckets for short ranges" {
   let stats = TrafficStats::new()
   stats.record_request_log(
@@ -1017,6 +1042,18 @@ test "usage trends use ccs hourly buckets for short ranges" {
   assert_eq(second["totalOutputTokens"], Json::number(5.0))
   assert_eq(second["totalCacheCreationTokens"], Json::number(10.0))
   assert_eq(second["totalCacheReadTokens"], Json::number(20.0))
+}
+
+///|
+test "usage trends follow process local timezone like ccs" {
+  with_test_timezone("UTC", fn() raise {
+    assert_eq(trend_timestamp_rfc3339(0), "1970-01-01T00:00:00+00:00")
+    assert_eq(trend_local_day_key(-1), "1969-12-31")
+  })
+  with_test_timezone("PST8PDT", fn() raise {
+    assert_eq(trend_timestamp_rfc3339(0), "1969-12-31T16:00:00-08:00")
+    assert_eq(trend_local_day_key(0), "1969-12-31")
+  })
 }
 
 ///|

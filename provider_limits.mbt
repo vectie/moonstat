@@ -89,13 +89,13 @@ fn TrafficStats::provider_daily_usage_nano(
   app_type : String,
   now_ts : Int,
 ) -> Int64 {
-  let today = trend_local_day_index(now_ts)
+  let today = trend_local_day_key(now_ts)
   let mut total = 0L
   for log in self.request_logs {
     if self.request_log_is_effective(log) &&
       log.provider_id == provider_id &&
       log.app_type == app_type &&
-      trend_local_day_index(log.created_at) == today {
+      trend_local_day_key(log.created_at) == today {
       total += request_log_total_cost_nano(log)
     }
   }
@@ -109,13 +109,13 @@ fn TrafficStats::provider_monthly_usage_nano(
   app_type : String,
   now_ts : Int,
 ) -> Int64 {
-  let month = provider_limit_month_key(now_ts)
+  let month = trend_local_month_key(now_ts)
   let mut total = 0L
   for log in self.request_logs {
     if self.request_log_is_effective(log) &&
       log.provider_id == provider_id &&
       log.app_type == app_type &&
-      provider_limit_month_key(log.created_at) == month {
+      trend_local_month_key(log.created_at) == month {
       total += request_log_total_cost_nano(log)
     }
   }
@@ -128,13 +128,8 @@ fn provider_limit_key(provider_id : String, app_type : String) -> String {
 }
 
 ///|
-fn provider_limit_month_key(timestamp : Int) -> String {
-  let stamp = trend_timestamp_rfc3339(timestamp)
-  if stamp.length() >= 7 {
-    stamp[:7].to_owned()
-  } else {
-    stamp
-  }
+fn trend_local_month_key(timestamp : Int) -> String {
+  @os.local_month_key(timestamp.to_int64())
 }
 
 ///|

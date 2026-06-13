@@ -194,6 +194,46 @@ pub fn unix_seconds() -> Int {
 }
 
 ///|
+extern "c" fn os_local_rfc3339(timestamp : Int64) -> Bytes = "moonbit_moonclaw_os_local_rfc3339"
+
+///|
+pub fn local_rfc3339(timestamp : Int64) -> String {
+  @encoding/utf8.decode_lossy(os_local_rfc3339(timestamp))
+}
+
+///|
+extern "c" fn os_local_date_key(timestamp : Int64) -> Bytes = "moonbit_moonclaw_os_local_date_key"
+
+///|
+pub fn local_date_key(timestamp : Int64) -> String {
+  @encoding/utf8.decode_lossy(os_local_date_key(timestamp))
+}
+
+///|
+extern "c" fn os_local_month_key(timestamp : Int64) -> Bytes = "moonbit_moonclaw_os_local_month_key"
+
+///|
+pub fn local_month_key(timestamp : Int64) -> String {
+  @encoding/utf8.decode_lossy(os_local_month_key(timestamp))
+}
+
+///|
+extern "c" fn os_local_day_start_seconds(timestamp : Int64) -> Int64 = "moonbit_moonclaw_os_local_day_start_seconds"
+
+///|
+pub fn local_day_start_seconds(timestamp : Int) -> Int {
+  os_local_day_start_seconds(timestamp.to_int64()).to_int()
+}
+
+///|
+extern "c" fn os_local_next_day_start_seconds(timestamp : Int64) -> Int64 = "moonbit_moonclaw_os_local_next_day_start_seconds"
+
+///|
+pub fn local_next_day_start_seconds(timestamp : Int) -> Int {
+  os_local_next_day_start_seconds(timestamp.to_int64()).to_int()
+}
+
+///|
 #borrow(buf)
 extern "c" fn os_executable(buf : FixedArray[Byte]) -> Int = "moonbit_moonclaw_os_executable"
 

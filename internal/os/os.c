@@ -3,9 +3,11 @@
 #include <limits.h>
 #include <pwd.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
@@ -117,6 +119,106 @@ moonbit_moonclaw_os_unix_seconds(void) {
     return 0;
   }
   return (int64_t)tv.tv_sec;
+}
+
+static moonbit_bytes_t
+moonbit_moonclaw_os_bytes_from_cstr(const char *str) {
+  int32_t len = (int32_t)strlen(str);
+  moonbit_bytes_t bytes = moonbit_make_bytes(len, 0);
+  memcpy(bytes, str, len);
+  return bytes;
+}
+
+static int
+moonbit_moonclaw_os_local_tm(int64_t timestamp, struct tm *tm) {
+  time_t raw = (time_t)timestamp;
+  tzset();
+  return localtime_r(&raw, tm) != NULL;
+}
+
+MOONBIT_FFI_EXPORT
+moonbit_bytes_t
+moonbit_moonclaw_os_local_rfc3339(int64_t timestamp) {
+  struct tm tm;
+  char compact[40];
+  char formatted[48];
+  if (!moonbit_moonclaw_os_local_tm(timestamp, &tm) ||
+      strftime(compact, sizeof(compact), "%Y-%m-%dT%H:%M:%S%z", &tm) == 0) {
+    snprintf(formatted, sizeof(formatted), "%lld", (long long)timestamp);
+    return moonbit_moonclaw_os_bytes_from_cstr(formatted);
+  }
+  size_t len = strlen(compact);
+  if (len >= 5 &&
+      (compact[len - 5] == '+' || compact[len - 5] == '-')) {
+    size_t prefix = len - 5;
+    snprintf(
+      formatted,
+      sizeof(formatted),
+      "%.*s%c%c%c:%c%c",
+      (int)prefix,
+      compact,
+      compact[prefix],
+      compact[prefix + 1],
+      compact[prefix + 2],
+      compact[prefix + 3],
+      compact[prefix + 4]
+    );
+    return moonbit_moonclaw_os_bytes_from_cstr(formatted);
+  }
+  return moonbit_moonclaw_os_bytes_from_cstr(compact);
+}
+
+MOONBIT_FFI_EXPORT
+moonbit_bytes_t
+moonbit_moonclaw_os_local_date_key(int64_t timestamp) {
+  struct tm tm;
+  char formatted[16];
+  if (!moonbit_moonclaw_os_local_tm(timestamp, &tm) ||
+      strftime(formatted, sizeof(formatted), "%Y-%m-%d", &tm) == 0) {
+    snprintf(formatted, sizeof(formatted), "1970-01-01");
+  }
+  return moonbit_moonclaw_os_bytes_from_cstr(formatted);
+}
+
+MOONBIT_FFI_EXPORT
+moonbit_bytes_t
+moonbit_moonclaw_os_local_month_key(int64_t timestamp) {
+  struct tm tm;
+  char formatted[16];
+  if (!moonbit_moonclaw_os_local_tm(timestamp, &tm) ||
+      strftime(formatted, sizeof(formatted), "%Y-%m", &tm) == 0) {
+    snprintf(formatted, sizeof(formatted), "1970-01");
+  }
+  return moonbit_moonclaw_os_bytes_from_cstr(formatted);
+}
+
+MOONBIT_FFI_EXPORT
+int64_t
+moonbit_moonclaw_os_local_day_start_seconds(int64_t timestamp) {
+  struct tm tm;
+  if (!moonbit_moonclaw_os_local_tm(timestamp, &tm)) {
+    return timestamp;
+  }
+  tm.tm_hour = 0;
+  tm.tm_min = 0;
+  tm.tm_sec = 0;
+  tm.tm_isdst = -1;
+  return (int64_t)mktime(&tm);
+}
+
+MOONBIT_FFI_EXPORT
+int64_t
+moonbit_moonclaw_os_local_next_day_start_seconds(int64_t timestamp) {
+  struct tm tm;
+  if (!moonbit_moonclaw_os_local_tm(timestamp, &tm)) {
+    return timestamp + 86400;
+  }
+  tm.tm_mday += 1;
+  tm.tm_hour = 0;
+  tm.tm_min = 0;
+  tm.tm_sec = 0;
+  tm.tm_isdst = -1;
+  return (int64_t)mktime(&tm);
 }
 
 MOONBIT_FFI_EXPORT

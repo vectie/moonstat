@@ -5,9 +5,6 @@ const TREND_HOUR_SECONDS : Int = 60 * 60
 const TREND_DAY_SECONDS : Int = 24 * 60 * 60
 
 ///|
-const TREND_ZONE_OFFSET_SECONDS : Int = 8 * 60 * 60
-
-///|
 pub fn TrafficStats::usage_trends_json(
   self : TrafficStats,
   start_ts? : Int? = None,
@@ -151,25 +148,35 @@ fn TrafficStats::daily_usage_trends_json(
   end_ts : Int,
   app_type : String?,
 ) -> Json {
-  let start_day = trend_local_day_index(start_ts)
-  let end_day = trend_local_day_index(end_ts)
-  let bucket_count = max_int(end_day - start_day + 1, 1)
   let buckets : Array[DailyStatsAccumulator] = []
-  for i in 0..<bucket_count {
+  let bucket_indices : Map[String, Int] = Map([], capacity=0)
+  let end_day_start = trend_local_day_start_ts(end_ts)
+  let mut bucket_start = trend_local_day_start_ts(start_ts)
+  while bucket_start <= end_day_start {
+    let key = trend_local_day_key(bucket_start)
+    bucket_indices.set(key, buckets.length())
     buckets.push(
-      DailyStatsAccumulator::new(
-        trend_timestamp_rfc3339(trend_local_day_start_ts(start_day + i)),
-      ),
+      DailyStatsAccumulator::new(trend_timestamp_rfc3339(bucket_start)),
     )
+    let next_bucket_start = trend_local_next_day_start_ts(bucket_start)
+    if next_bucket_start <= bucket_start {
+      break
+    }
+    bucket_start = next_bucket_start
+  }
+  if buckets.length() == 0 {
+    let key = trend_local_day_key(start_ts)
+    bucket_indices.set(key, 0)
+    buckets.push(DailyStatsAccumulator::new(trend_timestamp_rfc3339(start_ts)))
   }
   for log in self.request_logs {
     if !self.request_log_is_effective(log) ||
       !request_log_matches_trend(log, start_ts, end_ts, app_type) {
       continue
     }
-    let bucket_index = trend_local_day_index(log.created_at) - start_day
-    if bucket_index >= 0 && bucket_index < bucket_count {
-      buckets[bucket_index].add(log)
+    match bucket_indices.get(trend_local_day_key(log.created_at)) {
+      Some(bucket_index) => buckets[bucket_index].add(log)
+      None => ()
     }
   }
   Json::array(buckets.map(fn(bucket) { bucket.to_json() }))
@@ -193,16 +200,6 @@ fn trend_bucket_count(duration : Int, bucket_seconds : Int) -> Int {
 }
 
 ///|
-fn trend_local_day_index(timestamp : Int) -> Int {
-  floor_div_int(timestamp + TREND_ZONE_OFFSET_SECONDS, TREND_DAY_SECONDS)
-}
-
-///|
-fn trend_local_day_start_ts(day_index : Int) -> Int {
-  day_index * TREND_DAY_SECONDS - TREND_ZONE_OFFSET_SECONDS
-}
-
-///|
 fn floor_div_int(value : Int, divisor : Int) -> Int {
   if value >= 0 {
     value / divisor
@@ -212,19 +209,21 @@ fn floor_div_int(value : Int, divisor : Int) -> Int {
 }
 
 ///|
-fn trend_timestamp_rfc3339(timestamp : Int) -> String {
-  let zone = trend_display_zone()
-  try @time.unix(timestamp.to_int64(), zone~) catch {
-    _ => timestamp.to_string()
-  } noraise {
-    zoned =>
-      "\{zoned.to_plain_date_time().to_string()}\{zoned.offset().to_string()}"
-  }
+fn trend_local_day_start_ts(timestamp : Int) -> Int {
+  @os.local_day_start_seconds(timestamp)
 }
 
 ///|
-fn trend_display_zone() -> @time.Zone {
-  @time.fixed_zone("Asia/Shanghai", TREND_ZONE_OFFSET_SECONDS) catch {
-    _ => @time.utc_zone
-  }
+fn trend_local_next_day_start_ts(timestamp : Int) -> Int {
+  @os.local_next_day_start_seconds(timestamp)
+}
+
+///|
+fn trend_local_day_key(timestamp : Int) -> String {
+  @os.local_date_key(timestamp.to_int64())
+}
+
+///|
+fn trend_timestamp_rfc3339(timestamp : Int) -> String {
+  @os.local_rfc3339(timestamp.to_int64())
 }
