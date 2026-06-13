@@ -78,6 +78,43 @@ test "claude desktop gateway bearer token validation" {
 }
 
 ///|
+test "claude desktop model normalization matches ccs aliases" {
+  assert_eq(
+    normalize_claude_desktop_model_id("claude-opus-4-7"),
+    "claude-opus-4-8",
+  )
+  assert_eq(
+    normalize_claude_desktop_model_id("claude-opus-4-8[1m]"),
+    "claude-opus-4-8",
+  )
+  assert_eq(
+    normalize_claude_desktop_model_id("claude-sonnet-4-6 [1M]"),
+    "claude-sonnet-4-6",
+  )
+  assert_eq(
+    normalize_claude_desktop_model_id("claude-haiku-4-5-20251001"),
+    "claude-haiku-4-5",
+  )
+  assert_eq(
+    normalize_claude_desktop_model_id("anthropic/claude-opus-4-8"),
+    "claude-opus-4-8",
+  )
+  assert_eq(normalize_claude_desktop_model_id("gpt-5[1m]"), "gpt-5[1m]")
+}
+
+///|
+test "claude safe model id rejects ccs unsafe ids" {
+  assert_false(is_claude_safe_model_id("claude-sonnet-4-6 [1m]"))
+  assert_false(is_claude_safe_model_id("claude-old"))
+  assert_false(is_claude_safe_model_id("claude-3-5-sonnet-20241022"))
+  assert_false(is_claude_safe_model_id("claude-deepseek-v4-pro"))
+  assert_false(is_claude_safe_model_id("claude-gpt-5-4"))
+  assert_false(is_claude_safe_model_id("claude-sonnet-"))
+  assert_true(is_claude_safe_model_id("  claude-sonnet-4-6  "))
+  assert_true(is_claude_safe_model_id("anthropic/claude-opus-4-8"))
+}
+
+///|
 test "codex to anthropic response emits ccs cache usage buckets" {
   let body = @json.parse(
     (

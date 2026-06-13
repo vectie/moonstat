@@ -900,6 +900,87 @@ fn claude_desktop_model_json(id : String) -> Json {
 }
 
 ///|
+fn normalize_claude_desktop_request_model(
+  request : AnthropicRequest,
+  app_type : String,
+) -> AnthropicRequest {
+  if app_type != "claude-desktop" {
+    return request
+  }
+  let model = normalize_claude_desktop_model_id(request.model)
+  if model == request.model {
+    request
+  } else {
+    {
+      model,
+      max_tokens: request.max_tokens,
+      messages: request.messages,
+      system: request.system,
+      tools: request.tools,
+      stream: request.stream,
+    }
+  }
+}
+
+///|
+fn normalize_claude_desktop_model_id(model : String) -> String {
+  let trimmed = model.trim().to_owned()
+  let route_id = strip_one_m_suffix_for_route_lookup(trimmed)
+  if !is_claude_safe_model_id(route_id) {
+    return model.trim().to_owned()
+  }
+  match claude_role_keyword(route_id) {
+    Some("opus") => "claude-opus-4-8"
+    Some("haiku") => "claude-haiku-4-5"
+    Some("sonnet") => "claude-sonnet-4-6"
+    _ => route_id
+  }
+}
+
+///|
+fn strip_one_m_suffix_for_route_lookup(model : String) -> String {
+  let trimmed = model.trim().to_owned()
+  let marker = "[1m]"
+  if trimmed.to_lower().has_suffix(marker) {
+    trimmed[:trimmed.length() - marker.length()].trim().to_owned()
+  } else {
+    trimmed
+  }
+}
+
+///|
+fn is_claude_safe_model_id(model : String) -> Bool {
+  let normalized = model.trim().to_lower()
+  if normalized.contains("[1m]") {
+    return false
+  }
+  let tail = if normalized.has_prefix("anthropic/claude-") {
+    normalized["anthropic/claude-".length():]
+  } else if normalized.has_prefix("claude-") {
+    normalized["claude-".length():]
+  } else {
+    return false
+  }
+  ["sonnet-", "opus-", "haiku-"].any(prefix => {
+    tail.has_prefix(prefix) && tail.length() > prefix.length()
+  })
+}
+
+///|
+fn claude_role_keyword(model : String) -> String? {
+  let normalized = model.to_lower()
+  if normalized.contains("opus") {
+    Some("opus")
+  } else if normalized.contains("haiku") {
+    Some("haiku")
+  } else if normalized.contains("sonnet") {
+    Some("sonnet")
+  } else {
+    None
+  }
+}
+
+///|
 fn Gateway::uptime_seconds(self : Gateway) -> Int {
   let elapsed = @async.now().to_int() - self.started_at_ms
   if elapsed < 0 {
@@ -996,6 +1077,9 @@ async fn Gateway::handle_messages(
           return
         }
         Ok(anthropic_request) => {
+          let anthropic_request = normalize_claude_desktop_request_model(
+            anthropic_request, app_type,
+          )
           self.logger.info(
             "Received Anthropic request for model: \{anthropic_request.model}",
           )
