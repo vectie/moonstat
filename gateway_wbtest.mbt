@@ -1411,6 +1411,39 @@ test "ccs responses sse parser strips bom before parsing" {
 }
 
 ///|
+test "ccs responses stream parser accepts data field without space" {
+  let block = "event:response.output_text.delta\n" +
+    "data:{\"type\":\"response.output_text.delta\",\"delta\":\"hi\"}\n\n"
+  let (done, parsed, event) = codex_stream_event_from_sse_block(
+    block, "gpt-5.4",
+  )
+  assert_false(done)
+  assert_true(parsed is Some(_))
+  guard event is Some(event) else { fail("expected stream event") }
+  assert_eq(event.event_type, "content_block_delta")
+  let data = @json.parse(event.data) catch {
+    _ => fail("expected json event data")
+  }
+  guard data is Object(obj) else { fail("expected object") }
+  guard obj["delta"] is Object(delta) else { fail("expected delta") }
+  assert_eq(delta["text"], Json::string("hi"))
+}
+
+///|
+test "ccs responses stream parser skips non emitting lifecycle blocks" {
+  let block =
+    #|event: response.in_progress
+    #|data: {"type":"response.in_progress"}
+    #|
+  let (done, parsed, event) = codex_stream_event_from_sse_block(
+    block, "gpt-5.4",
+  )
+  assert_false(done)
+  assert_true(parsed is Some(_))
+  assert_true(event is None)
+}
+
+///|
 test "ccs responses sse parser ignores truncated trailing block" {
   let sse =
     #|event: response.completed

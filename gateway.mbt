@@ -6296,6 +6296,7 @@ priv struct CodexStreamReader {
   reader : &@io.Reader
   model : String
   events : Array[Json]
+  mut partial_block : String
 }
 
 ///|
@@ -6303,33 +6304,75 @@ fn CodexStreamReader::new(
   reader : &@io.Reader,
   model : String,
 ) -> CodexStreamReader {
-  CodexStreamReader::{ reader, model, events: [] }
+  CodexStreamReader::{ reader, model, events: [], partial_block: "" }
 }
 
 ///|
 async fn CodexStreamReader::read(self : CodexStreamReader) -> StreamEvent? {
   for ;; {
-    guard self.reader.read_until("\n") is Some(line) else { return None }
-    guard line is [.. "data: ", .. rest] else { continue }
-    let data = rest.trim().to_string()
-    if data == "[DONE]" {
+    match self.reader.read_until("\n") {
+      Some(line) => {
+        self.partial_block += line
+        if !line.trim().is_empty() {
+          continue
+        }
+      }
+      None => if self.partial_block.trim().is_empty() { return None }
+    }
+    let block = self.partial_block
+    self.partial_block = ""
+    let (done, json, event) = codex_stream_event_from_sse_block(
+      block,
+      self.model,
+    )
+    if done {
       return None
     }
-    push_sse_json_event(self.events, data)
-    let json_result : Result[Json, Error] = try? @json.parse(data)
-    guard json_result is Ok(Object(_)) else { return None }
-    let json = json_result.unwrap()
-    guard json is Object(obj) else { return None }
-    let event_type = match obj.get("type") {
-      Some(String(t)) => t
-      _ => return None
+    if json is Some(parsed) {
+      self.events.push(parsed)
     }
-    let anthropic_event = convert_stream_event(event_type, obj, self.model)
-    match anthropic_event {
-      Some(event) => return Some(event)
-      None => return None
+    if event is Some(event) {
+      return Some(event)
     }
   }
+}
+
+///|
+fn codex_stream_event_from_sse_block(
+  block : String,
+  model : String,
+) -> (Bool, Json?, StreamEvent?) {
+  if block.trim().is_empty() {
+    return (false, None, None)
+  }
+  let mut event_name = ""
+  let data_lines : Array[String] = []
+  for line_view in block.split("\n") {
+    let line = line_view.to_owned().trim().to_owned()
+    match strip_sse_field(line, "event") {
+      Some(event) => event_name = event.trim().to_owned()
+      None =>
+        match strip_sse_field(line, "data") {
+          Some(data) => data_lines.push(data)
+          None => ()
+        }
+    }
+  }
+  if data_lines.is_empty() {
+    return (false, None, None)
+  }
+  let data = data_lines.join("\n")
+  if data.trim() == "[DONE]" {
+    return (true, None, None)
+  }
+  let parsed = @json.parse(data) catch { _ => return (false, None, None) }
+  guard parsed is Object(obj) else { return (false, Some(parsed), None) }
+  let actual_event_name = if event_name.is_empty() {
+    json_string_from_map(obj, "type").unwrap_or("")
+  } else {
+    event_name
+  }
+  (false, Some(parsed), convert_stream_event(actual_event_name, obj, model))
 }
 
 ///|
