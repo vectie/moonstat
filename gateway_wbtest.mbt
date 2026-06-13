@@ -1597,6 +1597,84 @@ test "ccs responses stream state closes dangling text on completed" {
 }
 
 ///|
+test "ccs responses stream state emits reasoning thinking blocks" {
+  let state = ResponsesStreamState::new("o3")
+  let reasoning_block =
+    #|event: response.reasoning.delta
+    #|data: {"type":"response.reasoning.delta","delta":"Let me think..."}
+    #|
+  let (done, parsed, events) = codex_stream_events_from_sse_block(
+    reasoning_block, state,
+  )
+  assert_false(done)
+  assert_true(parsed is Some(_))
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].event_type, "message_start")
+  assert_eq(events[1].event_type, "content_block_start")
+  assert_eq(events[2].event_type, "content_block_delta")
+  let start_data = @json.parse(events[1].data) catch {
+    _ => fail("expected start json")
+  }
+  guard start_data is Object(start_obj) else { fail("expected object") }
+  assert_eq(start_obj["index"], Json::number(0.0))
+  guard start_obj["content_block"] is Object(content_block) else {
+    fail("expected content block")
+  }
+  assert_eq(content_block["type"], Json::string("thinking"))
+  assert_eq(content_block["thinking"], Json::string(""))
+  let delta_data = @json.parse(events[2].data) catch {
+    _ => fail("expected delta json")
+  }
+  guard delta_data is Object(delta_obj) else { fail("expected object") }
+  guard delta_obj["delta"] is Object(delta) else { fail("expected delta") }
+  assert_eq(delta["type"], Json::string("thinking_delta"))
+  assert_eq(delta["thinking"], Json::string("Let me think..."))
+
+  let done_block =
+    #|event: response.reasoning.done
+    #|data: {"type":"response.reasoning.done"}
+    #|
+  let (_, _, done_events) = codex_stream_events_from_sse_block(
+    done_block, state,
+  )
+  assert_eq(done_events.length(), 1)
+  assert_eq(done_events[0].event_type, "content_block_stop")
+  let stop_data = @json.parse(done_events[0].data) catch {
+    _ => fail("expected stop json")
+  }
+  guard stop_data is Object(stop_obj) else { fail("expected object") }
+  assert_eq(stop_obj["index"], Json::number(0.0))
+}
+
+///|
+test "ccs responses stream state closes reasoning before text on completed" {
+  let state = ResponsesStreamState::new("o3")
+  let reasoning_block =
+    #|event: response.reasoning.delta
+    #|data: {"type":"response.reasoning.delta","text":"thinking without done"}
+    #|
+  let (_, _, reasoning_events) = codex_stream_events_from_sse_block(
+    reasoning_block, state,
+  )
+  assert_eq(reasoning_events.length(), 3)
+  let completed_block =
+    #|event: response.completed
+    #|data: {"type":"response.completed","response":{"id":"resp_done","status":"completed","model":"o3","output":[],"usage":{"input_tokens":6,"output_tokens":2}}}
+    #|
+  let (_, _, completed_events) = codex_stream_events_from_sse_block(
+    completed_block, state,
+  )
+  assert_eq(completed_events.length(), 2)
+  assert_eq(completed_events[0].event_type, "content_block_stop")
+  assert_eq(completed_events[1].event_type, "message_delta")
+  let stop_data = @json.parse(completed_events[0].data) catch {
+    _ => fail("expected stop json")
+  }
+  guard stop_data is Object(stop_obj) else { fail("expected object") }
+  assert_eq(stop_obj["index"], Json::number(0.0))
+}
+
+///|
 test "ccs responses stream state emits function call argument deltas" {
   let state = ResponsesStreamState::new("gpt-5.4")
   let added_block =

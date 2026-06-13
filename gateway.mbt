@@ -6445,6 +6445,7 @@ priv struct ResponsesStreamState {
   mut has_tool_use : Bool
   mut next_content_index : Int
   mut current_text_index : Int?
+  mut current_thinking_index : Int?
   mut last_tool_index : Int?
   open_indices : Array[Int]
   tool_index_by_item_id : Map[String, Int]
@@ -6461,6 +6462,7 @@ fn ResponsesStreamState::new(model : String) -> ResponsesStreamState {
     has_tool_use: false,
     next_content_index: 0,
     current_text_index: None,
+    current_thinking_index: None,
     last_tool_index: None,
     open_indices: [],
     tool_index_by_item_id: {},
@@ -6509,8 +6511,27 @@ fn ResponsesStreamState::push_event(
         anthropic_content_block_delta_event(index, "text_delta", "text", delta),
       )
     }
+    "response.reasoning.delta" => {
+      let delta = match obj.get("delta") {
+        Some(String(text)) => text
+        _ =>
+          match obj.get("text") {
+            Some(String(text)) => text
+            _ => return events
+          }
+      }
+      self.ensure_message_start(events)
+      self.close_current_text_block(events)
+      let index = self.ensure_thinking_block(events)
+      events.push(
+        anthropic_content_block_delta_event(
+          index, "thinking_delta", "thinking", delta,
+        ),
+      )
+    }
     "response.output_text.done" | "response.refusal.done" =>
       self.close_current_text_block(events)
+    "response.reasoning.done" => self.close_current_thinking_block(events)
     "response.output_item.added" => self.push_output_item_added(obj, events)
     "response.function_call_arguments.delta" =>
       self.push_function_call_arguments_delta(obj, events)
@@ -6518,6 +6539,7 @@ fn ResponsesStreamState::push_event(
       self.finish_function_call_arguments(obj, events)
     "response.completed" => {
       self.close_current_text_block(events)
+      self.close_current_thinking_block(events)
       self.close_open_blocks(events)
       events.push(
         responses_stream_completed_event(obj, self.model, self.has_tool_use),
@@ -6567,6 +6589,7 @@ fn ResponsesStreamState::push_output_item_added(
   }
   self.has_tool_use = true
   self.close_current_text_block(events)
+  self.close_current_thinking_block(events)
   self.ensure_message_start(events)
   let index = match responses_stream_item_id(obj, item) {
     Some(item_id) =>
@@ -6745,6 +6768,27 @@ fn ResponsesStreamState::ensure_text_block(
 }
 
 ///|
+fn ResponsesStreamState::ensure_thinking_block(
+  self : ResponsesStreamState,
+  events : Array[StreamEvent],
+) -> Int {
+  self.ensure_message_start(events)
+  match self.current_thinking_index {
+    Some(index) => index
+    None => {
+      let index = self.next_content_index
+      self.next_content_index += 1
+      self.current_thinking_index = Some(index)
+      if !self.open_indices.contains(index) {
+        self.open_indices.push(index)
+        events.push(anthropic_content_block_start_event(index, "thinking"))
+      }
+      index
+    }
+  }
+}
+
+///|
 fn ResponsesStreamState::close_current_text_block(
   self : ResponsesStreamState,
   events : Array[StreamEvent],
@@ -6752,6 +6796,20 @@ fn ResponsesStreamState::close_current_text_block(
   match self.current_text_index {
     Some(index) => {
       self.current_text_index = None
+      self.close_open_block(events, index)
+    }
+    None => ()
+  }
+}
+
+///|
+fn ResponsesStreamState::close_current_thinking_block(
+  self : ResponsesStreamState,
+  events : Array[StreamEvent],
+) -> Unit {
+  match self.current_thinking_index {
+    Some(index) => {
+      self.current_thinking_index = None
       self.close_open_block(events, index)
     }
     None => ()
