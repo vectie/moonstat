@@ -385,16 +385,35 @@ fn TrafficStats::record_completed_request(
     Some(request_model) => Some(request_model)
     None => Some(model)
   }
+  let app_type = self.current_request_app_type.unwrap_or("unknown")
+  let pricing = find_static_model_pricing(model)
+  let cost = match pricing {
+    Some(model_pricing) if usage.has_billable_tokens() =>
+      calculate_cost_for_app(app_type, usage, model_pricing)
+    _ =>
+      {
+        input_cost_usd: "0",
+        output_cost_usd: "0",
+        cache_read_cost_usd: "0",
+        cache_creation_cost_usd: "0",
+        total_cost_usd: "0",
+      }
+  }
   self.record_request_log(
     RequestLog::new(
       request_id~,
       provider_id=self.current_provider_id.unwrap_or("unknown"),
       provider_name=self.current_provider,
-      app_type=self.current_request_app_type.unwrap_or("unknown"),
+      app_type~,
       model~,
       request_model~,
       pricing_model=Some(model),
       usage~,
+      input_cost_usd=cost.input_cost_usd,
+      output_cost_usd=cost.output_cost_usd,
+      cache_read_cost_usd=cost.cache_read_cost_usd,
+      cache_creation_cost_usd=cost.cache_creation_cost_usd,
+      total_cost_usd=cost.total_cost_usd,
       status_code~,
       latency_ms~,
       duration_ms=Some(latency_ms),

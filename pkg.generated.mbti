@@ -14,11 +14,15 @@ pub fn build_codex_request(CodexInput, String, Bool) -> Json
 
 pub fn build_models_url_candidates(String, Bool, String?) -> Result[Array[String], String]
 
+pub fn calculate_cost_for_app(String, TokenUsage, ModelPricing, cost_multiplier? : String) -> CostBreakdown
+
 pub fn convert_anthropic_to_codex(AnthropicRequest, String) -> CodexInput
 
 pub fn default_moonstat_suite_status_path() -> String
 
 pub async fn fetch_models(String, String, Bool, String?, String?) -> Result[Array[FetchedModel], String]
+
+pub fn find_static_model_pricing(String) -> ModelPricing?
 
 pub fn moonstat_suite_manifest_json(host? : String, port? : Int, model? : String) -> Json
 
@@ -150,6 +154,14 @@ pub struct CodexTool {
 }
 pub impl ToJson for CodexTool
 
+pub struct CostBreakdown {
+  input_cost_usd : String
+  output_cost_usd : String
+  cache_read_cost_usd : String
+  cache_creation_cost_usd : String
+  total_cost_usd : String
+}
+
 pub struct FetchedModel {
   id : String
   owned_by : String?
@@ -168,6 +180,15 @@ pub fn Gateway::host(Self) -> String
 pub fn Gateway::new(port~ : Int, host? : String, model? : String) -> Self
 pub fn Gateway::port(Self) -> Int
 pub async fn Gateway::start(Self) -> Unit
+
+pub struct ModelPricing {
+  model_id : String
+  display_name : String
+  input_cost_per_million : String
+  output_cost_per_million : String
+  cache_read_cost_per_million : String
+  cache_creation_cost_per_million : String
+}
 
 pub struct RequestLog {
   request_id : String
