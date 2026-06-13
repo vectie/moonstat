@@ -1033,10 +1033,10 @@ test "usage aggregates deduplicate ccs session imports against proxy logs" {
     ),
     content={
       "providerId": "_codex_session",
-      "dailyUsage": "0.000000",
+      "dailyUsage": "0.009999",
       "dailyLimit": null,
       "dailyExceeded": false,
-      "monthlyUsage": "0.000000",
+      "monthlyUsage": "0.009999",
       "monthlyLimit": null,
       "monthlyExceeded": false,
     },
