@@ -56,3 +56,23 @@ test "codex responses endpoints preserve request query" {
     "/backend-api/codex/responses/compact?beta=true",
   )
 }
+
+///|
+test "claude desktop gateway bearer token validation" {
+  assert_eq(bearer_token("Bearer moon-token"), Some("moon-token"))
+  assert_eq(bearer_token("bearer moon-token  "), Some("moon-token"))
+  assert_eq(bearer_token("Token moon-token"), None)
+  assert_true(
+    claude_desktop_authorization_valid(
+      { "authorization": "Bearer moon-token" },
+      "moon-token",
+    ),
+  )
+  assert_false(
+    claude_desktop_authorization_valid(
+      { "authorization": "Bearer wrong-token" },
+      "moon-token",
+    ),
+  )
+  assert_false(claude_desktop_authorization_valid({}, "moon-token"))
+}

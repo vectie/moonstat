@@ -69,6 +69,12 @@ Moonstat currently exposes the ccs-compatible local routes below:
 counts, active connections, token totals, cache token totals, last request time,
 last error, current provider metadata, and success rate.
 
+Claude Desktop gateway routes are open by default for standalone local use. Set
+`MOONSTAT_CLAUDE_DESKTOP_TOKEN` or `CLAUDE_DESKTOP_GATEWAY_TOKEN` to require
+`Authorization: Bearer <token>` on `/claude-desktop/v1/models` and
+`/claude-desktop/v1/messages`, matching ccs gateway-token behavior without the
+ccs database dependency.
+
 Gemini routes proxy to `https://generativelanguage.googleapis.com` by default
 and accept either a `?key=` query parameter or `GEMINI_API_KEY` /
 `GOOGLE_API_KEY` in the environment. Set `GOOGLE_GEMINI_BASE_URL` or

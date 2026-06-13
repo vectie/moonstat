@@ -96,6 +96,7 @@ pub struct RequestReader {
   body : &@io.Reader
   method_ : Method
   path : StringView
+  headers : Map[String, String]
   vars : Map[StringView, StringView]
 }
 

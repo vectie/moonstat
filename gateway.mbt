@@ -127,8 +127,8 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/v1/models", (_, w) => {
     self.handle_models(w)
   })
-  router.add_handler(@httpx.Method::Get, "/claude-desktop/v1/models", (_, w) => {
-    self.handle_claude_desktop_models(w)
+  router.add_handler(@httpx.Method::Get, "/claude-desktop/v1/models", (r, w) => {
+    self.handle_claude_desktop_models(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/login", (r, w) => {
     self.handle_login(r, w)
@@ -806,12 +806,83 @@ async fn Gateway::handle_models(
 ///|
 async fn Gateway::handle_claude_desktop_models(
   self : Gateway,
+  r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  guard self.validate_claude_desktop_gateway_auth(r, w) else { return }
   self.stats.set_active_target("claude-desktop", "codex-oauth", "Codex OAuth")
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
   w.write(claude_desktop_model_list_json().stringify())
+  w.flush()
+}
+
+///|
+async fn Gateway::validate_claude_desktop_gateway_auth(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Bool {
+  let _ = self
+  match claude_desktop_gateway_token() {
+    None => true
+    Some(expected) =>
+      if claude_desktop_authorization_valid(r.headers, expected) {
+        true
+      } else {
+        self.stats.record_unauthorized()
+        write_auth_error(w, "Claude Desktop gateway token invalid or missing")
+        false
+      }
+  }
+}
+
+///|
+fn claude_desktop_gateway_token() -> String? {
+  match getenv_or_none("MOONSTAT_CLAUDE_DESKTOP_TOKEN") {
+    Some(token) if !token.trim().is_empty() => Some(token.trim().to_owned())
+    _ =>
+      match getenv_or_none("CLAUDE_DESKTOP_GATEWAY_TOKEN") {
+        Some(token) if !token.trim().is_empty() => Some(token.trim().to_owned())
+        _ => None
+      }
+  }
+}
+
+///|
+fn claude_desktop_authorization_valid(
+  headers : Map[String, String],
+  expected : String,
+) -> Bool {
+  let expected = expected.trim()
+  if expected.is_empty() {
+    return true
+  }
+  match headers.get("authorization") {
+    Some(value) => bearer_token(value) == Some(expected.to_owned())
+    None => false
+  }
+}
+
+///|
+fn bearer_token(value : String) -> String? {
+  let trimmed = value.trim()
+  if trimmed.has_prefix("Bearer ") {
+    Some(trimmed["Bearer ".length():].trim().to_owned())
+  } else if trimmed.has_prefix("bearer ") {
+    Some(trimmed["bearer ".length():].trim().to_owned())
+  } else {
+    None
+  }
+}
+
+///|
+async fn write_auth_error(w : @httpx.ResponseWriter, message : String) -> Unit {
+  w.header().set("Content-Type", "application/json")
+  w.write_header(@status.Unauthorized)
+  w.write(
+    "{\"error\":{\"message\":\"\{message}\",\"type\":\"authentication_error\"}}",
+  )
   w.flush()
 }
 
@@ -903,14 +974,15 @@ async fn Gateway::handle_messages(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let body = r.body.read_all()
-  let body_str = body.text()
-  self.stats.record_inbound(body_str.length())
   let app_type = if r.path.has_prefix("/claude-desktop") {
+    guard self.validate_claude_desktop_gateway_auth(r, w) else { return }
     "claude-desktop"
   } else {
     "claude"
   }
+  let body = r.body.read_all()
+  let body_str = body.text()
+  self.stats.record_inbound(body_str.length())
   self.stats.set_active_target(app_type, "codex-oauth", "Codex OAuth")
   let json_result : Result[Json, Error] = try? @json.parse(body_str)
   match json_result {
