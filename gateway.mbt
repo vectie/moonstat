@@ -3842,7 +3842,8 @@ fn prepare_upstream_request_body(
   provider? : ProviderRouteTarget? = None,
 ) -> Json {
   let filtered = filter_private_params_for_upstream(body, None)
-  replace_images_for_text_only_model(filtered, provider~).body
+  let optimized = apply_ccs_optimizer_for_provider(filtered, provider)
+  replace_images_for_text_only_model(optimized, provider~).body
 }
 
 ///|

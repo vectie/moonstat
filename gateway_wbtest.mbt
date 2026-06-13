@@ -1392,6 +1392,147 @@ test "ccs upstream body filter removes private fields" {
 }
 
 ///|
+test "ccs cache injector adds cache breakpoints at provider send sites" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "anthropic.claude-sonnet-4-5-20250514-v1:0",
+      #|  "tools": [
+      #|    { "name": "read" },
+      #|    { "name": "write" }
+      #|  ],
+      #|  "system": "sys prompt",
+      #|  "messages": [
+      #|    { "role": "user", "content": [{ "type": "text", "text": "hi" }] },
+      #|    { "role": "assistant", "content": [
+      #|      { "type": "thinking", "thinking": "skip" },
+      #|      { "type": "text", "text": "hello" }
+      #|    ] }
+      #|  ]
+      #|}
+    ),
+  )
+  let optimized = inject_ccs_cache_breakpoints(body, "1h")
+  guard optimized is Object(obj) else { fail("expected object") }
+  guard obj["tools"] is Array(tools) else { fail("expected tools") }
+  guard tools[0] is Object(first_tool) else { fail("expected first tool") }
+  guard tools[1] is Object(last_tool) else { fail("expected last tool") }
+  assert_true(first_tool.get("cache_control") is None)
+  assert_eq(
+    last_tool["cache_control"],
+    Json::object({
+      "type": Json::string("ephemeral"),
+      "ttl": Json::string("1h"),
+    }),
+  )
+  guard obj["system"] is Array(system) else { fail("expected system array") }
+  guard system[0] is Object(system_block) else { fail("expected system block") }
+  assert_eq(system_block["text"], Json::string("sys prompt"))
+  assert_true(system_block.get("cache_control") is Some(_))
+  guard obj["messages"] is Array(messages) else { fail("expected messages") }
+  guard messages[1] is Object(assistant) else { fail("expected assistant") }
+  guard assistant["content"] is Array(content) else {
+    fail("expected assistant content")
+  }
+  guard content[0] is Object(thinking) else { fail("expected thinking") }
+  guard content[1] is Object(text) else { fail("expected text") }
+  assert_true(thinking.get("cache_control") is None)
+  assert_true(text.get("cache_control") is Some(_))
+  assert_eq(count_ccs_cache_breakpoints(optimized), 3)
+}
+
+///|
+test "ccs cache injector only upgrades ttl after four existing breakpoints" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "test",
+      #|  "tools": [
+      #|    { "name": "t1", "cache_control": { "type": "ephemeral" } },
+      #|    { "name": "t2", "cache_control": { "type": "ephemeral", "ttl": "5m" } }
+      #|  ],
+      #|  "system": [
+      #|    { "type": "text", "text": "sys", "cache_control": { "type": "ephemeral" } }
+      #|  ],
+      #|  "messages": [
+      #|    { "role": "assistant", "content": [
+      #|      { "type": "text", "text": "ok", "cache_control": { "type": "ephemeral" } }
+      #|    ] }
+      #|  ],
+      #|  "metadata": {
+      #|    "cache_control": { "type": "ephemeral", "ttl": "old" }
+      #|  }
+      #|}
+    ),
+  )
+  let optimized = inject_ccs_cache_breakpoints(body, "5m")
+  guard optimized is Object(obj) else { fail("expected object") }
+  guard obj["tools"] is Array(tools) else { fail("expected tools") }
+  guard tools[0] is Object(first_tool) else { fail("expected first tool") }
+  guard first_tool["cache_control"] is Object(first_cache) else {
+    fail("expected cache control")
+  }
+  assert_true(first_cache.get("ttl") is None)
+  guard obj["metadata"] is Object(metadata) else { fail("expected metadata") }
+  guard metadata["cache_control"] is Object(metadata_cache) else {
+    fail("expected metadata cache")
+  }
+  assert_eq(metadata_cache["ttl"], Json::string("old"))
+  assert_eq(count_ccs_cache_breakpoints(optimized), 4)
+}
+
+///|
+test "ccs optimizer runs only for enabled bedrock providers" {
+  let keys = ["MOONSTAT_OPTIMIZER_ENABLED", "MOONSTAT_CACHE_TTL"]
+  for key in keys {
+    @os.unsetenv(key) catch {
+      _ => ()
+    }
+  }
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="bedrock",
+    provider_name="Bedrock",
+    settings_config=Some(
+      @json.parse(
+        (
+          #|{
+          #|  "env": { "CLAUDE_CODE_USE_BEDROCK": "1" }
+          #|}
+        ),
+      ),
+    ),
+  )
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "test",
+      #|  "tools": [{ "name": "lookup" }],
+      #|  "messages": [{ "role": "user", "content": "hi" }]
+      #|}
+    ),
+  )
+  let disabled = prepare_upstream_request_body(body, provider=Some(provider))
+  assert_eq(count_ccs_cache_breakpoints(disabled), 0)
+  @os.setenv("MOONSTAT_OPTIMIZER_ENABLED", "true", overwrite=true)
+  @os.setenv("MOONSTAT_CACHE_TTL", "1h", overwrite=true)
+  let enabled = prepare_upstream_request_body(body, provider=Some(provider))
+  assert_eq(count_ccs_cache_breakpoints(enabled), 1)
+  let non_bedrock = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="plain",
+    provider_name="Plain",
+  )
+  let skipped = prepare_upstream_request_body(body, provider=Some(non_bedrock))
+  assert_eq(count_ccs_cache_breakpoints(skipped), 0)
+  for key in keys {
+    @os.unsetenv(key) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
 test "ccs media sanitizer replaces images for known text-only models" {
   let body = @json.parse(
     (
