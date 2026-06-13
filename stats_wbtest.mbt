@@ -488,7 +488,17 @@ test "usage logs provider name filter matches ccs joined provider name semantics
     is Object(session_filtered) else {
     fail("expected filtered session page")
   }
-  assert_eq(session_filtered["total"], Json::number(0.0))
+  assert_eq(session_filtered["total"], Json::number(1.0))
+  guard session_filtered["data"] is Array(session_filtered_rows) else {
+    fail("expected filtered session rows")
+  }
+  guard session_filtered_rows[0] is Object(filtered_session_row) else {
+    fail("expected filtered session row")
+  }
+  assert_eq(
+    filtered_session_row["providerName"],
+    Json::string("Codex (Session)"),
+  )
   guard stats.usage_logs_paginated_json(
       RequestLogFilters::new(provider_name=Some("OAuth")),
       page=0,

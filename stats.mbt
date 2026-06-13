@@ -1243,10 +1243,7 @@ fn request_log_provider_name_matches_ccs_filter(
   log : RequestLog,
   needle : String,
 ) -> Bool {
-  match log.provider_name {
-    Some(provider_name) => request_log_text_contains(provider_name, needle)
-    None => false
-  }
+  request_log_text_contains(request_log_provider_name(log), needle)
 }
 
 ///|
