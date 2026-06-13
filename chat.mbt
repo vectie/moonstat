@@ -62,6 +62,459 @@ fn openai_chat_to_codex_response_request(
 }
 
 ///|
+fn codex_responses_request_to_openai_chat_completion(
+  body : Json,
+  fallback_model : String,
+) -> Json? {
+  guard body is Object(obj) else { return None }
+  let messages : Array[Json] = []
+  match json_string_from_map(obj, "instructions") {
+    Some(instructions) if !instructions.trim().is_empty() =>
+      messages.push(
+        Json::object({
+          "role": Json::string("system"),
+          "content": Json::string(instructions),
+        }),
+      )
+    _ => ()
+  }
+  append_codex_responses_input_as_openai_chat_messages(
+    obj.get("input"),
+    messages,
+  )
+  let result : Map[String, Json] = {
+    "model": Json::string(
+      json_string_from_map(obj, "model").unwrap_or(fallback_model),
+    ),
+    "messages": Json::array(messages),
+    "stream": Json::boolean(json_bool_from_map(obj, "stream").unwrap_or(false)),
+  }
+  if obj.get("max_output_tokens") is Some(value) {
+    result["max_tokens"] = value
+  }
+  for key in ["temperature", "top_p", "metadata", "reasoning"] {
+    if obj.get(key) is Some(value) {
+      result[key] = value
+    }
+  }
+  append_codex_responses_tools_as_openai_chat_tools(obj, result)
+  if obj.get("tool_choice") is Some(value) {
+    result["tool_choice"] = codex_tool_choice_to_openai_chat(value)
+  }
+  Some(Json::object(result))
+}
+
+///|
+fn append_codex_responses_input_as_openai_chat_messages(
+  input : Json?,
+  messages : Array[Json],
+) -> Unit {
+  let pending_tool_calls : Array[Json] = []
+  let flush_pending_tool_calls = fn() {
+    if !pending_tool_calls.is_empty() {
+      messages.push(
+        Json::object({
+          "role": Json::string("assistant"),
+          "content": Json::null(),
+          "tool_calls": Json::array(pending_tool_calls.copy()),
+        }),
+      )
+      pending_tool_calls.clear()
+    }
+  }
+  let items = match input {
+    Some(Array(items)) => items
+    Some(Object(_)) => [input.unwrap()]
+    Some(String(text)) =>
+      [
+        Json::object({
+          "role": Json::string("user"),
+          "content": Json::string(text),
+        }),
+      ]
+    _ => []
+  }
+  for item in items {
+    guard item is Object(item_obj) else { continue }
+    match json_string_from_map(item_obj, "type") {
+      Some(type_) if codex_chat_is_call_item_type(type_) =>
+        pending_tool_calls.push(openai_chat_tool_call_from_codex_item(item_obj))
+      Some(type_) if codex_chat_is_call_output_item_type(type_) => {
+        flush_pending_tool_calls()
+        messages.push(openai_chat_tool_message_from_codex_output(item_obj))
+      }
+      _ => {
+        flush_pending_tool_calls()
+        messages.push(openai_chat_message_from_codex_input_item(item_obj))
+      }
+    }
+  }
+  flush_pending_tool_calls()
+}
+
+///|
+fn openai_chat_message_from_codex_input_item(item : Map[String, Json]) -> Json {
+  let role = json_string_from_map(item, "role").unwrap_or("user")
+  Json::object({
+    "role": Json::string(if role == "assistant" { "assistant" } else { "user" }),
+    "content": codex_responses_content_to_chat_content(item.get("content")),
+  })
+}
+
+///|
+fn codex_responses_content_to_chat_content(content : Json?) -> Json {
+  match content {
+    Some(String(text)) => Json::string(text)
+    Some(Array(parts)) => {
+      let chat_parts : Array[Json] = []
+      let text_parts : Array[String] = []
+      let mut has_non_text_part = false
+      for part in parts {
+        match part {
+          Object(part_obj) =>
+            match json_string_from_map(part_obj, "type") {
+              Some("input_text") | Some("output_text") =>
+                if json_string_from_map(part_obj, "text") is Some(text) &&
+                  !text.is_empty() {
+                  text_parts.push(text)
+                  chat_parts.push(
+                    Json::object({
+                      "type": Json::string("text"),
+                      "text": Json::string(text),
+                    }),
+                  )
+                }
+              Some("text") =>
+                if json_string_from_map(part_obj, "text") is Some(text) &&
+                  !text.is_empty() {
+                  text_parts.push(text)
+                  chat_parts.push(
+                    Json::object({
+                      "type": Json::string("text"),
+                      "text": Json::string(text),
+                    }),
+                  )
+                }
+              Some("refusal") =>
+                if json_string_from_map(part_obj, "refusal") is Some(text) &&
+                  !text.is_empty() {
+                  text_parts.push(text)
+                  chat_parts.push(
+                    Json::object({
+                      "type": Json::string("text"),
+                      "text": Json::string(text),
+                    }),
+                  )
+                }
+              Some("input_image") =>
+                if part_obj.get("image_url") is Some(image_url) {
+                  let chat_image_url = match image_url {
+                    Object(_) => image_url
+                    String(url) => Json::object({ "url": Json::string(url) })
+                    _ => Json::object({ "url": Json::string("") })
+                  }
+                  chat_parts.push(
+                    Json::object({
+                      "type": Json::string("image_url"),
+                      "image_url": chat_image_url,
+                    }),
+                  )
+                  has_non_text_part = true
+                }
+              Some("input_file") =>
+                if codex_responses_input_file_to_chat_file(part_obj)
+                  is Some(file) {
+                  chat_parts.push(
+                    Json::object({ "type": Json::string("file"), "file": file }),
+                  )
+                  has_non_text_part = true
+                }
+              Some("input_audio") =>
+                if part_obj.get("input_audio") is Some(input_audio) {
+                  chat_parts.push(
+                    Json::object({
+                      "type": Json::string("input_audio"),
+                      "input_audio": input_audio,
+                    }),
+                  )
+                  has_non_text_part = true
+                }
+              _ => ()
+            }
+          _ => ()
+        }
+      }
+      if has_non_text_part {
+        Json::array(chat_parts)
+      } else {
+        Json::string(text_parts.join("\n"))
+      }
+    }
+    Some(value) => value
+    None => Json::string("")
+  }
+}
+
+///|
+fn codex_responses_input_file_to_chat_file(part : Map[String, Json]) -> Json? {
+  let file : Map[String, Json] = {}
+  let mut has_supported_file_ref = false
+  for key in ["file_id", "file_data", "filename"] {
+    if part.get(key) is Some(value) {
+      file[key] = value
+      if key != "filename" {
+        has_supported_file_ref = true
+      }
+    }
+  }
+  if has_supported_file_ref {
+    Some(Json::object(file))
+  } else {
+    None
+  }
+}
+
+///|
+fn openai_chat_tool_call_from_codex_item(item : Map[String, Json]) -> Json {
+  Json::object({
+    "id": Json::string(
+      codex_chat_response_item_call_id(Json::object(item)).unwrap_or(
+        generate_chat_completion_id(),
+      ),
+    ),
+    "type": Json::string("function"),
+    "function": Json::object({
+      "name": Json::string(json_string_from_map(item, "name").unwrap_or("tool")),
+      "arguments": Json::string(codex_responses_call_arguments(item)),
+    }),
+  })
+}
+
+///|
+fn codex_responses_call_arguments(item : Map[String, Json]) -> String {
+  match item.get("arguments") {
+    Some(String(args)) => args
+    Some(value) => canonicalize_tool_arguments(Some(value))
+    None =>
+      match item.get("input") {
+        Some(String(text)) =>
+          Json::object({ "input": Json::string(text) }).stringify()
+        Some(value) => canonicalize_tool_arguments(Some(value))
+        None => "{}"
+      }
+  }
+}
+
+///|
+fn openai_chat_tool_message_from_codex_output(item : Map[String, Json]) -> Json {
+  Json::object({
+    "role": Json::string("tool"),
+    "tool_call_id": Json::string(
+      codex_chat_response_item_call_id(Json::object(item)).unwrap_or(""),
+    ),
+    "content": Json::string(codex_responses_tool_output_text(item)),
+  })
+}
+
+///|
+fn codex_responses_tool_output_text(item : Map[String, Json]) -> String {
+  match item.get("output") {
+    Some(String(text)) => text
+    Some(value) => value.stringify()
+    None =>
+      match item.get("content") {
+        Some(String(text)) => text
+        Some(value) => value.stringify()
+        None => ""
+      }
+  }
+}
+
+///|
+fn append_codex_responses_tools_as_openai_chat_tools(
+  source : Map[String, Json],
+  target : Map[String, Json],
+) -> Unit {
+  guard source.get("tools") is Some(Array(tools)) else { return }
+  let converted : Array[Json] = []
+  for tool in tools {
+    guard tool is Object(tool_obj) else { continue }
+    let name = json_string_from_map(tool_obj, "name").unwrap_or("")
+    if name.trim().is_empty() {
+      continue
+    }
+    converted.push(
+      Json::object({
+        "type": Json::string("function"),
+        "function": Json::object({
+          "name": Json::string(name),
+          "description": tool_obj.get("description").unwrap_or(Json::string("")),
+          "parameters": tool_obj
+          .get("parameters")
+          .unwrap_or(tool_obj.get("input_schema").unwrap_or(Json::object({}))),
+        }),
+      }),
+    )
+  }
+  if !converted.is_empty() {
+    target["tools"] = Json::array(converted)
+  }
+}
+
+///|
+fn codex_tool_choice_to_openai_chat(choice : Json) -> Json {
+  match choice {
+    String("auto") | String("none") | String("required") => choice
+    Object(obj) =>
+      if obj.get("type") is Some(String("function")) ||
+        obj.get("type") is Some(String("tool")) {
+        Json::object({
+          "type": Json::string("function"),
+          "function": Json::object({
+            "name": Json::string(
+              json_string_from_map(obj, "name").unwrap_or(""),
+            ),
+          }),
+        })
+      } else {
+        Json::object(obj)
+      }
+    _ => choice
+  }
+}
+
+///|
+fn openai_chat_completion_to_codex_response(
+  body : Json,
+  fallback_model : String,
+) -> Json {
+  let response_id = openai_chat_completion_id(body).unwrap_or(
+    generate_chat_completion_id(),
+  )
+  let output : Array[Json] = []
+  let mut model = fallback_model
+  guard body is Object(obj) else {
+    return codex_response_from_output(
+      response_id,
+      model,
+      output,
+      Json::object({}),
+    )
+  }
+  model = json_string_from_map(obj, "model").unwrap_or(model)
+  if obj.get("choices") is Some(Array(choices)) &&
+    choices.get(0) is Some(Object(choice)) &&
+    choice.get("message") is Some(Object(message)) {
+    append_openai_chat_message_as_codex_output(message, output)
+  }
+  codex_response_from_output(
+    response_id,
+    model,
+    output,
+    openai_chat_usage_to_codex_usage(obj.get("usage")),
+  )
+}
+
+///|
+fn append_openai_chat_message_as_codex_output(
+  message : Map[String, Json],
+  output : Array[Json],
+) -> Unit {
+  match json_string_from_map(message, "content") {
+    Some(text) if !text.is_empty() =>
+      output.push(
+        Json::object({
+          "type": Json::string("message"),
+          "role": Json::string("assistant"),
+          "content": Json::array([
+            Json::object({
+              "type": Json::string("output_text"),
+              "text": Json::string(text),
+            }),
+          ]),
+        }),
+      )
+    _ => ()
+  }
+  if message.get("tool_calls") is Some(Array(tool_calls)) {
+    for tool_call in tool_calls {
+      guard tool_call is Object(tool_call_obj) else { continue }
+      output.push(codex_function_call_from_openai_tool_call(tool_call_obj))
+    }
+  }
+}
+
+///|
+fn codex_function_call_from_openai_tool_call(
+  tool_call : Map[String, Json],
+) -> Json {
+  let function = match tool_call.get("function") {
+    Some(Object(function)) => function
+    _ => {}
+  }
+  let item : Map[String, Json] = {
+    "type": Json::string("function_call"),
+    "call_id": Json::string(
+      json_string_from_map(tool_call, "id").unwrap_or(
+        generate_chat_completion_id(),
+      ),
+    ),
+    "name": Json::string(
+      json_string_from_map(function, "name").unwrap_or("tool"),
+    ),
+    "arguments": Json::string(
+      canonicalize_tool_arguments(function.get("arguments")),
+    ),
+  }
+  match json_string_from_map(tool_call, "reasoning_content") {
+    Some(reasoning) if !reasoning.is_empty() =>
+      item["reasoning_content"] = Json::string(reasoning)
+    _ => ()
+  }
+  Json::object(item)
+}
+
+///|
+fn codex_response_from_output(
+  id : String,
+  model : String,
+  output : Array[Json],
+  usage : Json,
+) -> Json {
+  Json::object({
+    "id": Json::string(id),
+    "object": Json::string("response"),
+    "status": Json::string("completed"),
+    "model": Json::string(model),
+    "output": Json::array(output),
+    "usage": usage,
+  })
+}
+
+///|
+fn openai_chat_usage_to_codex_usage(usage : Json?) -> Json {
+  guard usage is Some(Object(obj)) else {
+    return Json::object({
+      "input_tokens": Json::number(0.0),
+      "output_tokens": Json::number(0.0),
+    })
+  }
+  let input_tokens = json_int(obj, "prompt_tokens").unwrap_or(0)
+  let output_tokens = json_int(obj, "completion_tokens").unwrap_or(0)
+  let cached_tokens = match obj.get("prompt_tokens_details") {
+    Some(Object(details)) => json_int(details, "cached_tokens").unwrap_or(0)
+    _ => 0
+  }
+  Json::object({
+    "input_tokens": Json::number(input_tokens.to_double()),
+    "output_tokens": Json::number(output_tokens.to_double()),
+    "input_tokens_details": Json::object({
+      "cached_tokens": Json::number(cached_tokens.to_double()),
+    }),
+  })
+}
+
+///|
 fn append_chat_message_as_response_item(
   message : Json,
   input_items : Array[Json],

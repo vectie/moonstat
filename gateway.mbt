@@ -1053,14 +1053,40 @@ async fn Gateway::forward_non_streaming_codex_response(
       active_provider, request,
     )
     let (response, response_body) = match active_provider {
-      Some(provider) if provider.can_use_codex_compatible_upstream() =>
+      Some(provider) if provider.can_use_codex_compatible_upstream() => {
+        let use_chat_bridge = provider.codex_uses_chat_completions()
+        let provider_endpoint = if use_chat_bridge {
+          codex_compatible_chat_completions_endpoint(endpoint)
+        } else {
+          codex_compatible_responses_endpoint(endpoint)
+        }
+        let provider_request = if use_chat_bridge {
+          codex_responses_request_to_openai_chat_completion(
+            outbound_request,
+            codex_request_model(request, self.model),
+          ).unwrap_or(outbound_request)
+        } else {
+          outbound_request
+        }
         match
           self.post_codex_compatible_provider_json(
-            provider,
-            codex_compatible_responses_endpoint(endpoint),
-            outbound_request,
+            provider, provider_endpoint, provider_request,
           ) {
-          Ok(result) => result
+          Ok((response, body)) =>
+            if use_chat_bridge && response.code == 200 {
+              let converted = try @json.parse(body) catch {
+                _ => body
+              } noraise {
+                chat_response =>
+                  openai_chat_completion_to_codex_response(
+                    chat_response,
+                    codex_request_model(request, self.model),
+                  ).stringify()
+              }
+              (response, converted)
+            } else {
+              (response, body)
+            }
           Err(error) => {
             let error_body = "{\"error\":{\"message\":\"Codex upstream request failed: \{error}\",\"type\":\"upstream_error\"}}"
             if !providers.is_empty() {
@@ -1091,6 +1117,7 @@ async fn Gateway::forward_non_streaming_codex_response(
             return
           }
         }
+      }
       _ => {
         guard self.credentials is Some(creds) else {
           self.record_unauthorized()
@@ -1168,6 +1195,12 @@ fn Gateway::codex_provider_outbound_request(
       self.codex_chat_history.enriched_request(request)
     _ => request
   }
+}
+
+///|
+fn codex_request_model(request : Json, fallback : String) -> String {
+  guard request is Object(obj) else { return fallback }
+  json_string_from_map(obj, "model").unwrap_or(fallback)
 }
 
 ///|
@@ -1359,6 +1392,19 @@ fn ProviderRouteTarget::can_use_codex_compatible_upstream(
 }
 
 ///|
+fn ProviderRouteTarget::codex_uses_chat_completions(
+  self : ProviderRouteTarget,
+) -> Bool {
+  if self.api_format == Some("openai_chat") {
+    return true
+  }
+  match self.base_url {
+    Some(base_url) => base_url.trim().has_suffix("/chat/completions")
+    None => false
+  }
+}
+
+///|
 fn ProviderRouteTarget::can_use_claude_compatible_upstream(
   self : ProviderRouteTarget,
 ) -> Bool {
@@ -1479,6 +1525,15 @@ fn codex_compatible_responses_endpoint(endpoint : String) -> String {
     None => ""
   }
   "/responses\{query}"
+}
+
+///|
+fn codex_compatible_chat_completions_endpoint(endpoint : String) -> String {
+  let query = match endpoint.find("?") {
+    Some(index) => endpoint[index:]
+    None => ""
+  }
+  "/chat/completions\{query}"
 }
 
 ///|
@@ -1809,6 +1864,9 @@ fn codex_provider_from_env() -> ProviderRouteTarget? {
       ),
       base_url=Some(base_url),
       api_key=Some(api_key),
+      api_format=env_first_non_empty([
+        "MOONSTAT_CODEX_API_FORMAT", "CODEX_API_FORMAT", "OPENAI_API_FORMAT",
+      ]),
       is_full_url=codex_base_is_full_url(),
       settings_config=provider_settings_config_from_env([
         "MOONSTAT_CODEX_SETTINGS_CONFIG", "CODEX_SETTINGS_CONFIG", "OPENAI_SETTINGS_CONFIG",

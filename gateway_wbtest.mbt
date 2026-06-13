@@ -1335,6 +1335,36 @@ test "claude compatible provider api format follows ccs endpoints" {
 }
 
 ///|
+test "codex compatible provider detects chat completions bridge" {
+  let format_provider = ProviderRouteTarget::new(
+    app_type="codex",
+    provider_id="chat-format",
+    provider_name="Chat Format",
+    api_format=Some("openai_chat"),
+    base_url=Some("https://api.example.com/v1"),
+    api_key=Some("sk-test"),
+  )
+  assert_true(format_provider.codex_uses_chat_completions())
+  assert_eq(
+    codex_compatible_provider_url(
+      "https://api.example.com/v1",
+      codex_compatible_chat_completions_endpoint(
+        "/backend-api/codex/responses?x=1",
+      ),
+    ),
+    "https://api.example.com/v1/chat/completions?x=1",
+  )
+  let full_url_provider = ProviderRouteTarget::new(
+    app_type="codex",
+    provider_id="chat-url",
+    provider_name="Chat URL",
+    base_url=Some("https://api.example.com/v1/chat/completions"),
+    api_key=Some("sk-test"),
+  )
+  assert_true(full_url_provider.codex_uses_chat_completions())
+}
+
+///|
 test "claude upstream request json rewrites mapped model" {
   let body = @json.parse(
     (

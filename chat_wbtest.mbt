@@ -121,3 +121,156 @@ test "codex response converts to chat completion response" {
   assert_eq(usage["completion_tokens"], Json::number(3.0))
   assert_eq(usage["total_tokens"], Json::number(5.0))
 }
+
+///|
+test "codex responses request converts to chat completion request" {
+  let body = chat_parse_json_for_test(
+    (
+      #|{
+      #|  "model": "gpt-5",
+      #|  "instructions": "be concise",
+      #|  "max_output_tokens": 99,
+      #|  "input": [
+      #|    { "role": "user", "content": "read it" },
+      #|    {
+      #|      "type": "function_call",
+      #|      "call_id": "call_1",
+      #|      "name": "read_file",
+      #|      "arguments": "{\"path\":\"README.md\"}",
+      #|      "reasoning_content": "Need to inspect the file."
+      #|    },
+      #|    {
+      #|      "type": "function_call_output",
+      #|      "call_id": "call_1",
+      #|      "output": "ok"
+      #|    }
+      #|  ],
+      #|  "tools": [
+      #|    { "type": "function", "name": "read_file", "parameters": { "type": "object" } }
+      #|  ]
+      #|}
+    ),
+  )
+  let chat = codex_responses_request_to_openai_chat_completion(
+    body, "fallback-model",
+  ).unwrap()
+  guard chat is Object(obj) else { fail("expected object") }
+  assert_eq(obj["model"], Json::string("gpt-5"))
+  assert_eq(obj["max_tokens"], Json::number(99.0))
+  guard obj["messages"] is Array(messages) else { fail("expected messages") }
+  assert_eq(messages.length(), 4)
+  guard messages[0] is Object(system) else { fail("expected system") }
+  assert_eq(system["role"], Json::string("system"))
+  guard messages[2] is Object(assistant) else { fail("expected assistant") }
+  guard assistant["tool_calls"] is Array(tool_calls) else {
+    fail("expected tool calls")
+  }
+  guard tool_calls[0] is Object(tool_call) else { fail("expected tool call") }
+  assert_eq(tool_call["id"], Json::string("call_1"))
+  guard tool_call["function"] is Object(function) else {
+    fail("expected function")
+  }
+  assert_eq(function["name"], Json::string("read_file"))
+  assert_eq(function["arguments"], Json::string("{\"path\":\"README.md\"}"))
+  guard messages[3] is Object(tool_message) else { fail("expected tool") }
+  assert_eq(tool_message["role"], Json::string("tool"))
+  assert_eq(tool_message["tool_call_id"], Json::string("call_1"))
+  guard obj["tools"] is Array(tools) else { fail("expected tools") }
+  guard tools[0] is Object(tool) else { fail("expected tool") }
+  guard tool["function"] is Object(tool_function) else {
+    fail("expected tool function")
+  }
+  assert_eq(tool_function["name"], Json::string("read_file"))
+}
+
+///|
+test "codex responses content parts convert to chat content" {
+  let text_only = chat_parse_json_for_test(
+    (
+      #|[
+      #|  { "type": "input_text", "text": "Weather?" },
+      #|  { "type": "input_text", "text": "Use Celsius." }
+      #|]
+    ),
+  )
+  assert_eq(
+    codex_responses_content_to_chat_content(Some(text_only)),
+    Json::string("Weather?\nUse Celsius."),
+  )
+  let mixed = chat_parse_json_for_test(
+    (
+      #|[
+      #|  { "type": "input_text", "text": "Summarize this." },
+      #|  { "type": "input_image", "image_url": "data:image/png;base64,abc" },
+      #|  { "type": "input_file", "file_id": "file_1", "filename": "a.txt" }
+      #|]
+    ),
+  )
+  let chat_content = codex_responses_content_to_chat_content(Some(mixed))
+  guard chat_content is Array(parts) else { fail("expected content parts") }
+  assert_eq(parts.length(), 3)
+  guard parts[0] is Object(text_part) else { fail("expected text part") }
+  assert_eq(text_part["type"], Json::string("text"))
+  assert_eq(text_part["text"], Json::string("Summarize this."))
+  guard parts[1] is Object(image_part) else { fail("expected image part") }
+  assert_eq(image_part["type"], Json::string("image_url"))
+  guard image_part["image_url"] is Object(image_url) else {
+    fail("expected image url")
+  }
+  assert_eq(image_url["url"], Json::string("data:image/png;base64,abc"))
+  guard parts[2] is Object(file_part) else { fail("expected file part") }
+  assert_eq(file_part["type"], Json::string("file"))
+  guard file_part["file"] is Object(file) else { fail("expected file") }
+  assert_eq(file["file_id"], Json::string("file_1"))
+  assert_eq(file["filename"], Json::string("a.txt"))
+}
+
+///|
+test "chat completion response converts back to codex response" {
+  let body = chat_parse_json_for_test(
+    (
+      #|{
+      #|  "id": "chatcmpl_1",
+      #|  "model": "deepseek-chat",
+      #|  "choices": [{
+      #|    "message": {
+      #|      "role": "assistant",
+      #|      "content": null,
+      #|      "tool_calls": [{
+      #|        "id": "call_1",
+      #|        "type": "function",
+      #|        "function": {
+      #|          "name": "lookup",
+      #|          "arguments": "{ \"q\": \"moon\" }"
+      #|        }
+      #|      }]
+      #|    },
+      #|    "finish_reason": "tool_calls"
+      #|  }],
+      #|  "usage": {
+      #|    "prompt_tokens": 10,
+      #|    "completion_tokens": 5,
+      #|    "prompt_tokens_details": { "cached_tokens": 3 }
+      #|  }
+      #|}
+    ),
+  )
+  let response = openai_chat_completion_to_codex_response(body, "fallback")
+  guard response is Object(obj) else { fail("expected object") }
+  assert_eq(obj["id"], Json::string("chatcmpl_1"))
+  assert_eq(obj["object"], Json::string("response"))
+  assert_eq(obj["model"], Json::string("deepseek-chat"))
+  guard obj["output"] is Array(output) else { fail("expected output") }
+  guard output[0] is Object(call) else { fail("expected function call") }
+  assert_eq(call["type"], Json::string("function_call"))
+  assert_eq(call["call_id"], Json::string("call_1"))
+  assert_eq(call["name"], Json::string("lookup"))
+  assert_eq(call["arguments"], Json::string("{\"q\":\"moon\"}"))
+  guard obj["usage"] is Object(usage) else { fail("expected usage") }
+  assert_eq(usage["input_tokens"], Json::number(10.0))
+  assert_eq(usage["output_tokens"], Json::number(5.0))
+  guard usage["input_tokens_details"] is Object(details) else {
+    fail("expected details")
+  }
+  assert_eq(details["cached_tokens"], Json::number(3.0))
+}
