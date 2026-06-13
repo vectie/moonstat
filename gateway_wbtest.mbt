@@ -1391,6 +1391,69 @@ test "ccs responses sse parser collects output items" {
 }
 
 ///|
+test "ccs chat sse parser aggregates text and usage" {
+  let sse =
+    #|data: {"id":"chatcmpl_1","model":"gpt-4o","choices":[{"index":0,"delta":{"content":"Hel"},"finish_reason":null}]}
+    #|
+    #|data: {"choices":[{"index":0,"delta":{"content":"lo"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"prompt_tokens_details":{"cached_tokens":2}}}
+    #|
+    #|data: [DONE]
+    #|
+  let parsed = parse_claude_compatible_non_stream_body("openai_chat", sse).unwrap()
+  let response = openai_chat_completion_to_anthropic(
+    parsed, "claude-sonnet-4-6",
+  )
+  assert_eq(response.id, "chatcmpl_1")
+  assert_eq(response.content.length(), 1)
+  assert_eq(response.content[0].text, Some("Hello"))
+  assert_eq(response.usage.input_tokens, 8)
+  assert_eq(response.usage.output_tokens, 5)
+  assert_eq(response.usage.cache_read_input_tokens, Some(2))
+}
+
+///|
+test "ccs chat sse parser merges tool call argument fragments" {
+  let sse =
+    #|data: {"id":"chatcmpl_tool","model":"gpt-4o","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"lookup","arguments":"{\"q\""}}]},"finish_reason":null}]}
+    #|
+    #|data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":":\"moon\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":4,"completion_tokens":2}}
+    #|
+  let parsed = parse_claude_compatible_non_stream_body("openai_chat", sse).unwrap()
+  guard parsed is Object(obj) else { fail("expected object") }
+  guard obj["choices"] is Array(choices) else { fail("expected choices") }
+  guard choices[0] is Object(choice) else { fail("expected choice") }
+  guard choice["message"] is Object(message) else { fail("expected message") }
+  guard message["tool_calls"] is Array(tool_calls) else {
+    fail("expected tool calls")
+  }
+  guard tool_calls[0] is Object(call) else { fail("expected call") }
+  guard call["function"] is Object(function) else { fail("expected function") }
+  assert_eq(function["name"], Json::string("lookup"))
+  assert_eq(function["arguments"], Json::string("{\"q\":\"moon\"}"))
+  let response = openai_chat_completion_to_anthropic(
+    parsed, "claude-sonnet-4-6",
+  )
+  assert_eq(response.stop_reason, Some("tool_use"))
+  assert_eq(response.content.length(), 1)
+  assert_eq(response.content[0].id, Some("call_1"))
+}
+
+///|
+test "ccs chat sse parser ignores truncated trailing block after done" {
+  let sse =
+    #|data: {"id":"chatcmpl_ok","model":"gpt-4o","choices":[{"index":0,"delta":{"content":"done"},"finish_reason":"stop"}]}
+    #|
+    #|data: {"choices":[{"index":0,"delta":{"content":"unterminated
+  let parsed = parse_claude_compatible_non_stream_body("openai_chat", sse).unwrap()
+  guard parsed is Object(obj) else { fail("expected object") }
+  assert_eq(obj["id"], Json::string("chatcmpl_ok"))
+  guard obj["choices"] is Array(choices) else { fail("expected choices") }
+  guard choices[0] is Object(choice) else { fail("expected choice") }
+  guard choice["message"] is Object(message) else { fail("expected message") }
+  assert_eq(message["content"], Json::string("done"))
+}
+
+///|
 test "ccs upstream body filter removes private fields" {
   let body = @json.parse(
     (

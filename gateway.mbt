@@ -3340,6 +3340,9 @@ fn parse_claude_compatible_non_stream_body(
       if api_format == "openai_responses" && body_looks_like_sse(body) {
         return responses_sse_to_response_value(body)
       }
+      if api_format == "openai_chat" && body_looks_like_sse(body) {
+        return chat_sse_to_response_value(body)
+      }
       return None
     }
   }
@@ -3469,6 +3472,297 @@ fn strip_sse_field(line : String, field : String) -> String? {
     value = value[1:].to_owned()
   }
   Some(value)
+}
+
+///|
+priv struct OpenAIChatSseToolCall {
+  mut id : String
+  mut name : String
+  mut arguments : String
+}
+
+///|
+priv struct OpenAIChatSseState {
+  mut id : String?
+  mut created : Json?
+  mut model : String?
+  mut content : String
+  mut finish_reason : String?
+  mut usage : Json?
+  mut saw_choice : Bool
+  mut saw_done : Bool
+  tool_calls : Map[Int, OpenAIChatSseToolCall]
+}
+
+///|
+fn OpenAIChatSseState::new() -> OpenAIChatSseState {
+  {
+    id: None,
+    created: None,
+    model: None,
+    content: "",
+    finish_reason: None,
+    usage: None,
+    saw_choice: false,
+    saw_done: false,
+    tool_calls: Map([], capacity=0),
+  }
+}
+
+///|
+fn chat_sse_to_response_value(body : String) -> Json? {
+  let state = OpenAIChatSseState::new()
+  let mut buffer = ""
+  let normalized = body
+    .replace_all(old="\r\n", new="\n")
+    .replace_all(old="\r", new="\n")
+  for line_view in normalized.split("\n") {
+    let line = line_view.to_owned()
+    if line.trim().is_empty() {
+      process_chat_sse_block(buffer, true, state)
+      buffer = ""
+    } else if buffer.is_empty() {
+      buffer = line
+    } else {
+      buffer = "\{buffer}\n\{line}"
+    }
+  }
+  process_chat_sse_block(buffer, false, state)
+  if !state.saw_choice && !state.saw_done {
+    return None
+  }
+  Some(state.to_chat_completion_json())
+}
+
+///|
+fn process_chat_sse_block(
+  block : String,
+  strict : Bool,
+  state : OpenAIChatSseState,
+) -> Unit {
+  if block.trim().is_empty() {
+    return
+  }
+  let mut event_name = ""
+  let data_lines : Array[String] = []
+  for line_view in block.split("\n") {
+    let line = line_view.to_owned().trim().to_owned()
+    match strip_sse_field(line, "event") {
+      Some(event) => event_name = event.trim().to_owned()
+      None =>
+        match strip_sse_field(line, "data") {
+          Some(data) => data_lines.push(data)
+          None => ()
+        }
+    }
+  }
+  if data_lines.is_empty() {
+    return
+  }
+  let data = data_lines.join("\n")
+  if data.trim() == "[DONE]" {
+    state.saw_done = true
+    return
+  }
+  let parsed = @json.parse(data) catch {
+    _ => if strict { return } else { return }
+  }
+  guard parsed is Object(obj) else { return }
+  if event_name.to_lower() == "error" {
+    return
+  }
+  state.push_chat_sse_chunk(obj)
+}
+
+///|
+fn OpenAIChatSseState::push_chat_sse_chunk(
+  self : OpenAIChatSseState,
+  obj : Map[String, Json],
+) -> Unit {
+  if self.id is None {
+    self.id = json_string_from_map(obj, "id")
+  }
+  if self.model is None {
+    self.model = json_string_from_map(obj, "model")
+  }
+  if self.created is None {
+    match obj.get("created") {
+      Some(created) => self.created = Some(created)
+      None => ()
+    }
+  }
+  match obj.get("usage") {
+    Some(Object(_)) => self.usage = obj.get("usage")
+    _ => ()
+  }
+  guard obj.get("choices") is Some(Array(choices)) else { return }
+  guard choices.get(0) is Some(Object(choice)) else { return }
+  self.saw_choice = true
+  match choice.get("message") {
+    Some(Object(message)) => self.push_chat_sse_message(message)
+    _ => ()
+  }
+  match choice.get("delta") {
+    Some(Object(delta)) => self.push_chat_sse_delta(delta)
+    _ => ()
+  }
+  match json_string_from_map(choice, "finish_reason") {
+    Some(reason) if self.finish_reason is None =>
+      self.finish_reason = Some(reason)
+    _ => ()
+  }
+}
+
+///|
+fn OpenAIChatSseState::push_chat_sse_message(
+  self : OpenAIChatSseState,
+  message : Map[String, Json],
+) -> Unit {
+  match json_string_from_map(message, "content") {
+    Some(text) => self.content = text
+    None => ()
+  }
+  match message.get("tool_calls") {
+    Some(Array(tool_calls)) => {
+      let mut index = 0
+      for tool_call in tool_calls {
+        if tool_call is Object(call) {
+          self.push_chat_sse_tool_call(index, call)
+        }
+        index += 1
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn OpenAIChatSseState::push_chat_sse_delta(
+  self : OpenAIChatSseState,
+  delta : Map[String, Json],
+) -> Unit {
+  match json_string_from_map(delta, "content") {
+    Some(text) => self.content = self.content + text
+    None => ()
+  }
+  match json_string_from_map(delta, "refusal") {
+    Some(text) => self.content = self.content + text
+    None => ()
+  }
+  match delta.get("tool_calls") {
+    Some(Array(tool_calls)) =>
+      for tool_call in tool_calls {
+        if tool_call is Object(call) {
+          self.push_chat_sse_tool_call(json_int_or_zero(call, "index"), call)
+        }
+      }
+    _ => ()
+  }
+}
+
+///|
+fn OpenAIChatSseState::push_chat_sse_tool_call(
+  self : OpenAIChatSseState,
+  index : Int,
+  call : Map[String, Json],
+) -> Unit {
+  let state = match self.tool_calls.get(index) {
+    Some(existing) => existing
+    None => {
+      let created : OpenAIChatSseToolCall = { id: "", name: "", arguments: "" }
+      self.tool_calls.set(index, created)
+      created
+    }
+  }
+  match json_string_from_map(call, "id") {
+    Some(id) if !id.is_empty() => state.id = id
+    _ => ()
+  }
+  match call.get("function") {
+    Some(Object(function)) => {
+      match json_string_from_map(function, "name") {
+        Some(name) if !name.is_empty() => state.name = name
+        _ => ()
+      }
+      match json_string_from_map(function, "arguments") {
+        Some(arguments) => state.arguments = state.arguments + arguments
+        None => ()
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn OpenAIChatSseState::to_chat_completion_json(
+  self : OpenAIChatSseState,
+) -> Json {
+  let message : Map[String, Json] = {
+    "role": Json::string("assistant"),
+    "content": Json::string(self.content),
+  }
+  let tool_calls = self.chat_sse_tool_calls_json()
+  if !tool_calls.is_empty() {
+    message["tool_calls"] = Json::array(tool_calls)
+  }
+  let choice : Map[String, Json] = {
+    "index": Json::number(0.0),
+    "message": Json::object(message),
+    "finish_reason": Json::string(self.finish_reason.unwrap_or("stop")),
+  }
+  let response : Map[String, Json] = {
+    "id": Json::string(self.id.unwrap_or(generate_chat_completion_id())),
+    "object": Json::string("chat.completion"),
+    "model": Json::string(self.model.unwrap_or("")),
+    "choices": Json::array([Json::object(choice)]),
+  }
+  match self.created {
+    Some(created) => response["created"] = created
+    None => ()
+  }
+  match self.usage {
+    Some(usage) => response["usage"] = usage
+    None => ()
+  }
+  Json::object(response)
+}
+
+///|
+fn OpenAIChatSseState::chat_sse_tool_calls_json(
+  self : OpenAIChatSseState,
+) -> Array[Json] {
+  let indexes = self.tool_calls.keys().collect()
+  indexes.sort_by(fn(a, b) { a.compare(b) })
+  let calls : Array[Json] = []
+  for index in indexes {
+    guard self.tool_calls.get(index) is Some(call) else { continue }
+    if call.id.is_empty() && call.name.is_empty() && call.arguments.is_empty() {
+      continue
+    }
+    calls.push(
+      Json::object({
+        "id": Json::string(
+          if call.id.is_empty() {
+            "tool_call_\{index}"
+          } else {
+            call.id
+          },
+        ),
+        "type": Json::string("function"),
+        "function": Json::object({
+          "name": Json::string(
+            if call.name.is_empty() {
+              "unknown_tool"
+            } else {
+              call.name
+            },
+          ),
+          "arguments": Json::string(call.arguments),
+        }),
+      }),
+    )
+  }
+  calls
 }
 
 ///|
