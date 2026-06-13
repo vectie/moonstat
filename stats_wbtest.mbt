@@ -352,20 +352,47 @@ test "request detail lookup returns retained proxy request log" {
     RequestLog::new(
       request_id="req-detail",
       provider_id="provider",
+      provider_name=Some("Provider One"),
       app_type="codex",
       model="gpt-5",
+      request_model=Some("gpt-5"),
+      pricing_model=Some("gpt-5"),
       usage=TokenUsage::new(input_tokens=1, output_tokens=2),
       status_code=200,
       total_cost_usd="0.000010",
+      latency_ms=37,
+      created_at=123,
+      data_source="proxy",
     ),
   )
   assert_true(stats.request_detail_json("missing") is None)
+  assert_true(stats.ccs_request_detail_json("missing") is None)
   guard stats.request_detail_json("req-detail") is Some(detail) else {
     fail("expected request detail")
   }
   guard detail is Object(obj) else { fail("expected detail object") }
   assert_eq(obj["request_id"], Json::string("req-detail"))
   assert_eq(obj["total_cost_usd"], Json::string("0.000010"))
+  guard stats.ccs_request_detail_json("req-detail") is Some(ccs_detail) else {
+    fail("expected ccs request detail")
+  }
+  guard ccs_detail is Object(ccs) else { fail("expected ccs detail object") }
+  assert_eq(ccs["requestId"], Json::string("req-detail"))
+  assert_eq(ccs["providerId"], Json::string("provider"))
+  assert_eq(ccs["providerName"], Json::string("Provider One"))
+  assert_eq(ccs["appType"], Json::string("codex"))
+  assert_eq(ccs["model"], Json::string("gpt-5"))
+  assert_eq(ccs["requestModel"], Json::string("gpt-5"))
+  assert_eq(ccs["pricingModel"], Json::string("gpt-5"))
+  assert_eq(ccs["inputTokens"], Json::number(1.0))
+  assert_eq(ccs["outputTokens"], Json::number(2.0))
+  assert_eq(ccs["totalCostUsd"], Json::string("0.000010"))
+  assert_eq(ccs["latencyMs"], Json::number(37.0))
+  assert_eq(ccs["statusCode"], Json::number(200.0))
+  assert_eq(ccs["createdAt"], Json::number(123.0))
+  assert_eq(ccs["dataSource"], Json::string("proxy"))
+  assert_true(ccs.get("request_id") is None)
+  assert_true(ccs.get("total_cost_usd") is None)
 }
 
 ///|

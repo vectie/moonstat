@@ -1900,7 +1900,7 @@ async fn Gateway::handle_usage_request_detail(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let request_id = usage_request_detail_id(r.path.to_owned())
-  match self.stats.request_detail_json(request_id) {
+  match self.stats.ccs_request_detail_json(request_id) {
     Some(detail) => write_usage_json(w, detail)
     None => {
       w.header().set("Content-Type", "application/json")
