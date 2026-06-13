@@ -816,3 +816,20 @@ test "top level ccs balance command builds balance path" {
     is None,
   )
 }
+
+///|
+test "top level ccs subscription quota command builds quota path" {
+  assert_eq(
+    subscription_quota_path([
+      "moonstat", "get_subscription_quota", "--tool", "codex",
+    ]),
+    Some("/get_subscription_quota?tool=codex"),
+  )
+  assert_eq(
+    subscription_quota_path([
+      "moonstat", "usage", "quota", "--appType", "gemini",
+    ]),
+    Some("/get_subscription_quota?tool=gemini"),
+  )
+  assert_true(subscription_quota_path(["moonstat", "usage", "quota"]) is None)
+}

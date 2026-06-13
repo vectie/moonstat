@@ -1,6 +1,6 @@
 ///|
 fn fake_quota() -> SubscriptionQuota {
-  SubscriptionQuota::new("claude", queried_at=Some(0))
+  SubscriptionQuota::new("claude", queried_at=Some(0L))
 }
 
 ///|

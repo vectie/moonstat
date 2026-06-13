@@ -514,10 +514,10 @@ pub struct SubscriptionQuota {
   tiers : Array[Json]
   extra_usage : Json?
   error : String?
-  queried_at : Int?
+  queried_at : Int64?
 }
 pub fn SubscriptionQuota::error(String, CredentialStatus, String) -> Self
-pub fn SubscriptionQuota::new(String, credential_status? : CredentialStatus, credential_message? : String?, success? : Bool, tiers? : Array[Json], extra_usage? : Json?, error? : String?, queried_at? : Int?) -> Self
+pub fn SubscriptionQuota::new(String, credential_status? : CredentialStatus, credential_message? : String?, success? : Bool, tiers? : Array[Json], extra_usage? : Json?, error? : String?, queried_at? : Int64?) -> Self
 pub fn SubscriptionQuota::not_found(String) -> Self
 pub fn SubscriptionQuota::to_json(Self) -> Json
 

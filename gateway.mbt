@@ -1238,6 +1238,12 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/get_balance", (r, w) => {
     self.handle_get_balance(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_subscription_quota", (r, w) => {
+    self.handle_get_subscription_quota(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_subscription_quota", (r, w) => {
+    self.handle_get_subscription_quota(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/testUsageScript", (r, w) => {
     self.handle_test_usage_script(r, w)
   })
@@ -7032,6 +7038,25 @@ async fn Gateway::handle_get_balance(
     return
   }
   write_usage_json(w, ccs_get_balance(base_url, api_key).to_json())
+}
+
+///|
+async fn Gateway::handle_get_subscription_quota(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, [
+      "tool", "app", "appType", "app_type",
+    ])
+    is Some(tool) else {
+    write_usage_bad_request(w, "missing_tool")
+    return
+  }
+  let quota = ccs_get_subscription_quota(tool)
+  self.usage_cache.put_subscription(quota.tool, quota)
+  write_usage_json(w, quota.to_json())
 }
 
 ///|

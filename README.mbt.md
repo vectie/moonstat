@@ -251,6 +251,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /usage/request-detail/{request_id}`
 - `GET /queryProviderUsage?providerId=codex-oauth&app=codex`
 - `GET|POST /get_balance?baseUrl=https://api.deepseek.com&apiKey=...`
+- `GET|POST /get_subscription_quota?tool=codex`
 - `POST /testUsageScript?providerId=codex-oauth&app=codex`
 - `POST /stream_check_provider?appType=codex&providerId=codex-oauth`
 - `POST /stream_check_all_providers?appType=codex&proxyTargetsOnly=true`
@@ -263,8 +264,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
   `POST /update_model_pricing`, `DELETE /delete_model_pricing`,
   `GET /check_provider_limits`, `POST /sync_session_usage`,
   `GET /get_usage_data_sources`, `GET /queryProviderUsage`, `GET /get_balance`,
-  and
-  `POST /testUsageScript`.
+  `GET /get_subscription_quota`, and `POST /testUsageScript`.
   Stream check command aliases `stream_check_provider`,
   `stream_check_all_providers`, `get_stream_check_config`, and
   `save_stream_check_config` expose the ccs camelCase config/result JSON
@@ -392,6 +392,13 @@ fallback, defaulting to `~/.local/share/opencode/opencode.messages.jsonl`.
 SiliconFlow CN/EN, OpenRouter, and Novita AI by detecting provider from
 `baseUrl`, querying the vendor balance endpoint with `apiKey`, and returning the
 same `UsageResult` shape used by `queryProviderUsage`.
+
+`/get_subscription_quota` mirrors the CCS native subscription quota command for
+`claude`, `codex`, and `gemini`. It reads the same macOS keychain entries and
+fallback credential files, calls the official quota endpoints, and returns the
+CCS `SubscriptionQuota` JSON shape. Gemini expired-token refresh reads
+`MOONSTAT_GEMINI_OAUTH_CLIENT_ID` and `MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET`
+(or the `GEMINI_OAUTH_*` / `GEMINI_CLI_OAUTH_*` aliases) at runtime.
 
 Claude Desktop gateway routes are open by default for standalone local use. Set
 `MOONSTAT_CLAUDE_DESKTOP_TOKEN` or `CLAUDE_DESKTOP_GATEWAY_TOKEN` to require

@@ -174,7 +174,7 @@ pub struct SubscriptionQuota {
   tiers : Array[Json]
   extra_usage : Json?
   error : String?
-  queried_at : Int?
+  queried_at : Int64?
 }
 
 ///|
@@ -186,7 +186,7 @@ pub fn SubscriptionQuota::new(
   tiers? : Array[Json] = [],
   extra_usage? : Json? = None,
   error? : String? = None,
-  queried_at? : Int? = None,
+  queried_at? : Int64? = None,
 ) -> SubscriptionQuota {
   {
     tool,
