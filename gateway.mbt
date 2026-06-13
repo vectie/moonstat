@@ -266,6 +266,17 @@ async fn Gateway::record_success_usage(
 }
 
 ///|
+async fn Gateway::record_success_stats_only(
+  self : Gateway,
+  input_tokens : Int,
+  output_tokens : Int,
+  response_bytes : Int,
+) -> Unit {
+  self.stats.record_success(input_tokens, output_tokens, response_bytes)
+  self.stats.save_persistent_store()
+}
+
+///|
 pub async fn Gateway::start(self : Gateway) -> Unit {
   self.logger.info(
     "Starting Anthropic -> Codex OAuth Gateway on \{self.host}:\{self.port}",
@@ -786,48 +797,125 @@ async fn Gateway::forward_streaming_chat_completion(
     w.flush()
     return
   }
-  let client = self.codex_client(creds, accept="text/event-stream", session_id~)
-  defer client.close()
-  let response = client.post("/backend-api/codex/responses", request)
-  if response.code != 200 {
-    let error_body = client.read_all().text()
-    self.record_upstream_error_status(error_body.length(), response.code)
-    w.header().set("Content-Type", "application/json")
-    w.write_header(response.code)
-    w.write(error_body)
-    w.flush()
-    return
-  }
-  w.header().set("Content-Type", "text/event-stream")
-  w.header().set("Cache-Control", "no-cache")
-  w.header().set("Connection", "keep-alive")
-  w.write_header(@status.Ok)
-  let id = generate_chat_completion_id()
-  let created = @async.now().to_int() / 1000
-  w.write(
-    "data: \{openai_chat_role_chunk(id, response_model, created).stringify()}\n\n",
-  )
-  w.flush()
-  let mut response_bytes = 0
-  while client.read_until("\n") is Some(line) {
-    guard line is [.. "data: ", .. rest] else { continue }
-    let data = rest.trim().to_owned()
-    if data == "[DONE]" {
-      break
-    }
-    if codex_stream_event_to_openai_chat_chunk(
-        data, id, response_model, created,
-      )
-      is Some(chunk) {
-      let payload = chunk.stringify()
-      response_bytes += payload.length()
-      w.write("data: \{payload}\n\n")
+  let selection = self.provider_router.select_providers("codex")
+  let providers = if selection.is_ok() { selection.providers } else { [] }
+  let attempted_provider_ids : Array[String] = []
+  for ;; {
+    let client = self.codex_client(
+      creds,
+      accept="text/event-stream",
+      session_id~,
+    )
+    let response = client.post("/backend-api/codex/responses", request)
+    if response.code != 200 {
+      let error_body = client.read_all().text()
+      client.close()
+      if !providers.is_empty() {
+        let next = self.activate_next_provider_after_upstream_status(
+          "codex",
+          providers,
+          attempted_provider_ids,
+          response.code,
+        )
+        if next is Some(_) {
+          continue
+        }
+        self.stats.record_upstream_error_status(
+          error_body.length(),
+          response.code,
+        )
+        self.stats.save_persistent_store()
+      } else {
+        self.record_upstream_error_status(error_body.length(), response.code)
+      }
+      w.header().set("Content-Type", "application/json")
+      w.write_header(response.code)
+      w.write(error_body)
       w.flush()
+      return
+    }
+    match client.read_until("\n") {
+      None => {
+        client.close()
+        let error_body = "{\"error\":{\"message\":\"Streaming response ended before first chunk\",\"type\":\"upstream_error\"}}"
+        if !providers.is_empty() {
+          let next = self.activate_next_provider_after_upstream_status(
+            "codex",
+            providers,
+            attempted_provider_ids,
+            @status.BadGateway,
+          )
+          if next is Some(_) {
+            continue
+          }
+          self.stats.record_upstream_error_status(
+            error_body.length(),
+            @status.BadGateway,
+          )
+          self.stats.save_persistent_store()
+        } else {
+          self.record_upstream_error_status(
+            error_body.length(),
+            @status.BadGateway,
+          )
+        }
+        w.header().set("Content-Type", "application/json")
+        w.write_header(@status.BadGateway)
+        w.write(error_body)
+        w.flush()
+        return
+      }
+      Some(first_line) => {
+        self.record_provider_result(true)
+        w.header().set("Content-Type", "text/event-stream")
+        w.header().set("Cache-Control", "no-cache")
+        w.header().set("Connection", "keep-alive")
+        w.write_header(@status.Ok)
+        let id = generate_chat_completion_id()
+        let created = @async.now().to_int() / 1000
+        w.write(
+          "data: \{openai_chat_role_chunk(id, response_model, created).stringify()}\n\n",
+        )
+        w.flush()
+        let mut response_bytes = 0
+        if first_line is [.. "data: ", .. rest] {
+          let data = rest.trim().to_owned()
+          if data != "[DONE]" {
+            if codex_stream_event_to_openai_chat_chunk(
+                data, id, response_model, created,
+              )
+              is Some(chunk) {
+              let payload = chunk.stringify()
+              response_bytes += payload.length()
+              w.write("data: \{payload}\n\n")
+              w.flush()
+            }
+          }
+        }
+        while client.read_until("\n") is Some(line) {
+          guard line is [.. "data: ", .. rest] else { continue }
+          let data = rest.trim().to_owned()
+          if data == "[DONE]" {
+            break
+          }
+          if codex_stream_event_to_openai_chat_chunk(
+              data, id, response_model, created,
+            )
+            is Some(chunk) {
+            let payload = chunk.stringify()
+            response_bytes += payload.length()
+            w.write("data: \{payload}\n\n")
+            w.flush()
+          }
+        }
+        client.close()
+        self.record_success_stats_only(0, 0, response_bytes)
+        w.write("data: [DONE]\n\n")
+        w.flush()
+        return
+      }
     }
   }
-  self.record_success(0, 0, response_bytes)
-  w.write("data: [DONE]\n\n")
-  w.flush()
 }
 
 ///|
@@ -920,31 +1008,97 @@ async fn Gateway::forward_streaming_codex_response(
     w.flush()
     return
   }
-  let client = self.codex_client(creds, accept="text/event-stream", session_id~)
-  defer client.close()
-  let response = client.post(endpoint, request)
-  if response.code != 200 {
-    let error_body = client.read_all().text()
-    self.record_upstream_error_status(error_body.length(), response.code)
-    w.header().set("Content-Type", "application/json")
-    w.write_header(response.code)
-    w.write(error_body)
-    w.flush()
-    return
+  let selection = self.provider_router.select_providers("codex")
+  let providers = if selection.is_ok() { selection.providers } else { [] }
+  let attempted_provider_ids : Array[String] = []
+  for ;; {
+    let client = self.codex_client(
+      creds,
+      accept="text/event-stream",
+      session_id~,
+    )
+    let response = client.post(endpoint, request)
+    if response.code != 200 {
+      let error_body = client.read_all().text()
+      client.close()
+      if !providers.is_empty() {
+        let next = self.activate_next_provider_after_upstream_status(
+          "codex",
+          providers,
+          attempted_provider_ids,
+          response.code,
+        )
+        if next is Some(_) {
+          continue
+        }
+        self.stats.record_upstream_error_status(
+          error_body.length(),
+          response.code,
+        )
+        self.stats.save_persistent_store()
+      } else {
+        self.record_upstream_error_status(error_body.length(), response.code)
+      }
+      w.header().set("Content-Type", "application/json")
+      w.write_header(response.code)
+      w.write(error_body)
+      w.flush()
+      return
+    }
+    match client.read_until("\n") {
+      None => {
+        client.close()
+        let error_body = "{\"error\":{\"message\":\"Streaming response ended before first chunk\",\"type\":\"upstream_error\"}}"
+        if !providers.is_empty() {
+          let next = self.activate_next_provider_after_upstream_status(
+            "codex",
+            providers,
+            attempted_provider_ids,
+            @status.BadGateway,
+          )
+          if next is Some(_) {
+            continue
+          }
+          self.stats.record_upstream_error_status(
+            error_body.length(),
+            @status.BadGateway,
+          )
+          self.stats.save_persistent_store()
+        } else {
+          self.record_upstream_error_status(
+            error_body.length(),
+            @status.BadGateway,
+          )
+        }
+        w.header().set("Content-Type", "application/json")
+        w.write_header(@status.BadGateway)
+        w.write(error_body)
+        w.flush()
+        return
+      }
+      Some(first_line) => {
+        self.record_provider_result(true)
+        w.header().set("Content-Type", "text/event-stream")
+        w.header().set("Cache-Control", "no-cache")
+        w.header().set("Connection", "keep-alive")
+        w.write_header(@status.Ok)
+        let mut response_bytes = first_line.length() + 1
+        w.write(first_line)
+        w.write("\n")
+        w.flush()
+        while client.read_until("\n") is Some(line) {
+          response_bytes += line.length() + 1
+          w.write(line)
+          w.write("\n")
+          w.flush()
+        }
+        client.close()
+        self.record_success_stats_only(0, 0, response_bytes)
+        w.flush()
+        return
+      }
+    }
   }
-  w.header().set("Content-Type", "text/event-stream")
-  w.header().set("Cache-Control", "no-cache")
-  w.header().set("Connection", "keep-alive")
-  w.write_header(@status.Ok)
-  let mut response_bytes = 0
-  while client.read_until("\n") is Some(line) {
-    response_bytes += line.length() + 1
-    w.write(line)
-    w.write("\n")
-    w.flush()
-  }
-  self.record_success(0, 0, response_bytes)
-  w.flush()
 }
 
 ///|

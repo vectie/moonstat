@@ -387,6 +387,55 @@ async test "gateway nonretryable upstream errors release half open permit" {
 }
 
 ///|
+async test "gateway streaming success records provider health before request completion" {
+  let gateway = Gateway::new(port=0)
+  gateway.provider_router.update_all_configs({
+    failure_threshold: 1,
+    success_threshold: 2,
+    timeout_seconds: 60,
+    error_rate_threshold: 0.6,
+    min_requests: 10,
+  })
+  gateway.stats.record_inbound(16)
+  gateway.stats.record_request_context(
+    "codex",
+    "gpt-5",
+    provider_type=Some("codex"),
+  )
+  gateway.stats.record_stream_mode(true)
+  let selected = gateway.activate_provider("codex")
+  guard selected is Some(provider) else { fail("expected provider") }
+  assert_true(provider.provider_id == "codex-oauth")
+
+  gateway.record_provider_result(true)
+  guard gateway.provider_router.get_circuit_breaker_stats(
+      "codex-oauth", "codex",
+    )
+    is Some(stats_after_first_chunk) else {
+    fail("expected circuit stats")
+  }
+  assert_true(stats_after_first_chunk.total_requests == 1)
+  assert_true(stats_after_first_chunk.failed_requests == 0)
+  assert_true(gateway.stats.successful_responses == 0)
+  guard gateway.stats.current_request_id is Some(_) else {
+    fail("request should remain open until stream end")
+  }
+
+  gateway.record_success_stats_only(0, 0, 24)
+  assert_true(gateway.stats.successful_responses == 1)
+  assert_true(gateway.stats.response_bytes == 24)
+  assert_true(gateway.stats.current_request_id is None)
+  guard gateway.provider_router.get_circuit_breaker_stats(
+      "codex-oauth", "codex",
+    )
+    is Some(stats_after_stream_end) else {
+    fail("expected circuit stats")
+  }
+  assert_true(stats_after_stream_end.total_requests == 1)
+  assert_true(stats_after_stream_end.failed_requests == 0)
+}
+
+///|
 test "gateway activation skips occupied half open provider in failover chain" {
   let gateway = Gateway::new(port=0)
   gateway.provider_router.update_all_configs({
