@@ -46,6 +46,12 @@ test "suite manifest publishes moonstat service contract" {
     ),
   )
   assert_eq(
+    obj["usage_model_pricing_file"],
+    Json::string(
+      @pathx.join(default_moonstat_stats_dir(), MOONSTAT_MODEL_PRICING_FILE),
+    ),
+  )
+  assert_eq(
     obj["usage_opencode_export_file"],
     Json::string(default_opencode_export_path()),
   )
@@ -65,6 +71,8 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /usage/data-sources")))
   assert_true(routes.contains(Json::string("POST /usage/sync-session")))
   assert_true(routes.contains(Json::string("GET /usage/model-pricing")))
+  assert_true(routes.contains(Json::string("POST /usage/model-pricing")))
+  assert_true(routes.contains(Json::string("DELETE /usage/model-pricing")))
   assert_true(
     routes.contains(Json::string("GET /usage/request-detail/{request_id}")),
   )
@@ -115,6 +123,12 @@ async test "suite status writes discovery file" {
       obj["usage_session_sync_file"],
       Json::string(
         @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
+      ),
+    )
+    assert_eq(
+      obj["usage_model_pricing_file"],
+      Json::string(
+        @pathx.join(default_moonstat_stats_dir(), MOONSTAT_MODEL_PRICING_FILE),
       ),
     )
     assert_eq(

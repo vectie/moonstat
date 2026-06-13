@@ -5,6 +5,9 @@ const MOONSTAT_REQUEST_LOGS_FILE : String = "proxy_request_logs.jsonl"
 const MOONSTAT_SESSION_SYNC_FILE : String = "session_log_sync.jsonl"
 
 ///|
+const MOONSTAT_MODEL_PRICING_FILE : String = "model_pricing.jsonl"
+
+///|
 pub fn default_moonstat_stats_dir() -> String {
   default_moonstat_dir()
 }

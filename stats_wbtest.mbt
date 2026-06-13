@@ -1132,3 +1132,42 @@ test "provider limit status allows standalone query limits" {
     },
   )
 }
+
+///|
+test "traffic stats backfills missing costs after ccs pricing update" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-zero",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="custom-backfill",
+      usage=TokenUsage::new(input_tokens=10, output_tokens=5),
+      total_cost_usd="0",
+      status_code=200,
+      created_at=1,
+    ),
+  )
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-priced",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="custom-backfill",
+      usage=TokenUsage::new(input_tokens=10, output_tokens=5),
+      total_cost_usd="9.000000",
+      status_code=200,
+      created_at=2,
+    ),
+  )
+  let updated = stats.backfill_missing_usage_costs_for_model(
+    "custom-backfill",
+    [mp("custom-backfill", "Custom Backfill", "2", "4", "0", "0")],
+    Map([], capacity=0),
+  )
+  assert_eq(updated, 1)
+  assert_eq(stats.request_logs[0].input_cost_usd, "0.00002")
+  assert_eq(stats.request_logs[0].output_cost_usd, "0.00002")
+  assert_eq(stats.request_logs[0].total_cost_usd, "0.00004")
+  assert_eq(stats.request_logs[1].total_cost_usd, "9.000000")
+}

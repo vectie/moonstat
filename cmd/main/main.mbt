@@ -30,6 +30,8 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, "/usage/provider-stats")
     ["usage", "models", ..] => check_usage_endpoint(arr, "/usage/model-stats")
     ["usage", "sources", ..] => check_usage_endpoint(arr, "/usage/data-sources")
+    ["usage", "pricing", "set", ..] => update_usage_pricing(arr)
+    ["usage", "pricing", "delete", ..] => delete_usage_pricing(arr)
     ["usage", "pricing", ..] =>
       check_usage_endpoint(arr, "/usage/model-pricing")
     ["usage", "detail", ..] => check_usage_detail(arr)
@@ -85,7 +87,9 @@ fn print_help() -> Unit {
   println("  usage providers  Show ccs-style provider statistics")
   println("  usage models     Show ccs-style model statistics")
   println("  usage sources    Show ccs-style data source breakdown")
-  println("  usage pricing    Show ccs-style static model pricing")
+  println("  usage pricing    Show ccs-style editable model pricing")
+  println("  usage pricing set       Upsert ccs-style model pricing")
+  println("  usage pricing delete    Delete ccs-style model pricing")
   println("  usage detail     Show one ccs-style request detail by id")
   println("  login       Login to OpenAI Codex OAuth")
   println("  health      Check gateway health")
@@ -126,6 +130,10 @@ fn print_help() -> Unit {
   println(
     "  moonstat usage sync --projects-dir ~/.claude/projects --codex-dir ~/.codex --gemini-dir ~/.gemini --opencode-db-path ~/.local/share/opencode/opencode.db",
   )
+  println(
+    "  moonstat usage pricing set --model-id gpt-x --display-name GPT-X --input-cost 1 --output-cost 2 --cache-read-cost 0.1 --cache-creation-cost 0",
+  )
+  println("  moonstat usage pricing delete --model-id gpt-x")
   println("  moonstat usage detail --request-id req_x")
   println("  moonstat uninstall             # Remove hosts reroute")
 }
@@ -306,6 +314,89 @@ fn usage_sync_path(args : Array[String]) -> String {
     "/usage/sync-session"
   } else {
     "/usage/sync-session?\{query.join("&")}"
+  }
+}
+
+///|
+fn usage_pricing_update_path(args : Array[String]) -> String? {
+  guard parse_string_arg(args, "--model-id") is Some(model_id) else {
+    return None
+  }
+  guard parse_string_arg(args, "--display-name") is Some(display_name) else {
+    return None
+  }
+  guard parse_string_arg(args, "--input-cost") is Some(input_cost) else {
+    return None
+  }
+  guard parse_string_arg(args, "--output-cost") is Some(output_cost) else {
+    return None
+  }
+  guard parse_string_arg(args, "--cache-read-cost") is Some(cache_read_cost) else {
+    return None
+  }
+  guard parse_string_arg(args, "--cache-creation-cost")
+    is Some(cache_creation_cost) else {
+    return None
+  }
+  Some(
+    "/usage/model-pricing?model_id=\{model_id}&display_name=\{display_name}&input_cost=\{input_cost}&output_cost=\{output_cost}&cache_read_cost=\{cache_read_cost}&cache_creation_cost=\{cache_creation_cost}",
+  )
+}
+
+///|
+fn usage_pricing_delete_path(args : Array[String]) -> String? {
+  guard parse_string_arg(args, "--model-id") is Some(model_id) else {
+    return None
+  }
+  Some("/usage/model-pricing?model_id=\{model_id}")
+}
+
+///|
+async fn update_usage_pricing(args : Array[String]) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  guard usage_pricing_update_path(args) is Some(path) else {
+    logger.error(
+      "Missing required pricing args: --model-id --display-name --input-cost --output-cost --cache-read-cost --cache-creation-cost",
+    )
+    return
+  }
+  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
+  try {
+    let client = @http.Client::new(url, headers={})
+    defer client.close()
+    let response = client.post(path, "{}")
+    let body = client.read_all().text()
+    if response.code == 200 {
+      println(body)
+    } else {
+      logger.error("Usage pricing update failed: \{response.code} \{body}")
+    }
+  } catch {
+    err => logger.error("Usage pricing update failed: \{err}")
+  }
+}
+
+///|
+async fn delete_usage_pricing(args : Array[String]) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  guard usage_pricing_delete_path(args) is Some(path) else {
+    logger.error("Missing required --model-id")
+    return
+  }
+  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
+  try {
+    let client = @http.Client::new(url, headers={})
+    defer client.close()
+    client.request(@http.RequestMethod::Delete, path)
+    let response = client.end_request()
+    if response.code == 204 {
+      println("Deleted model pricing")
+    } else {
+      let body = client.read_all().text()
+      logger.error("Usage pricing delete failed: \{response.code} \{body}")
+    }
+  } catch {
+    err => logger.error("Usage pricing delete failed: \{err}")
   }
 }
 

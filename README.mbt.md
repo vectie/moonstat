@@ -66,6 +66,18 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /status`
 - `GET /stats`
 - `GET /usage/logs`
+- `GET /usage/summary`
+- `GET /usage/summary/by-app`
+- `GET /usage/trends`
+- `GET /usage/provider-limits`
+- `GET /usage/provider-stats`
+- `GET /usage/model-stats`
+- `GET /usage/data-sources`
+- `POST /usage/sync-session`
+- `GET /usage/model-pricing`
+- `POST /usage/model-pricing`
+- `DELETE /usage/model-pricing`
+- `GET /usage/request-detail/{request_id}`
 - `GET /models`
 - `GET /v1/models`
 - `GET /claude-desktop/v1/models`
@@ -95,8 +107,9 @@ recent `proxy_request_logs` rows with ccs-style provider/app/model, token,
 cache-token, cost, latency, status, session, streaming, and data-source fields.
 Gateway startup loads file-backed usage state from
 `~/.moonstat/proxy_request_logs.jsonl` and session sync offsets from
-`~/.moonstat/session_log_sync.jsonl`; manual `moonstat usage sync` saves both
-after importing Claude, Codex, Gemini, and OpenCode-compatible session logs.
+`~/.moonstat/session_log_sync.jsonl`; editable ccs-style model pricing is stored
+in `~/.moonstat/model_pricing.jsonl`. Manual `moonstat usage sync` saves usage
+state after importing Claude, Codex, Gemini, and OpenCode-compatible session logs.
 OpenCode sync reads `opencode.db` directly when `sqlite3` is available, honoring
 `OPENCODE_DB` and `XDG_DATA_HOME` like ccs. It also accepts JSONL rows exported
 from `opencode.db` with `session_id`, `message_id`, and `data` fields as a

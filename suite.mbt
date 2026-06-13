@@ -65,6 +65,9 @@ pub fn moonstat_suite_manifest_json(
     "usage_session_sync_file": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
     ),
+    "usage_model_pricing_file": Json::string(
+      @pathx.join(default_moonstat_stats_dir(), MOONSTAT_MODEL_PRICING_FILE),
+    ),
     "usage_opencode_db_file": Json::string(default_opencode_db_path()),
     "usage_opencode_export_file": Json::string(default_opencode_export_path()),
     "models_url": Json::string("\{moonstat_openai_base_url(host, port)}/models"),
@@ -171,6 +174,9 @@ pub fn moonstat_suite_status_json(
     "usage_session_sync_file": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
     ),
+    "usage_model_pricing_file": Json::string(
+      @pathx.join(default_moonstat_stats_dir(), MOONSTAT_MODEL_PRICING_FILE),
+    ),
     "usage_opencode_db_file": Json::string(default_opencode_db_path()),
     "usage_opencode_export_file": Json::string(default_opencode_export_path()),
     "openai_base_url": Json::string(moonstat_openai_base_url(host, port)),
@@ -249,12 +255,13 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET /usage/summary", "GET /usage/summary/by-app", "GET /usage/provider-stats",
     "GET /usage/trends", "GET /usage/provider-limits", "GET /usage/model-stats",
     "GET /usage/data-sources", "POST /usage/sync-session", "GET /usage/model-pricing",
-    "GET /usage/request-detail/{request_id}", "GET /v1/models", "GET /claude-desktop/v1/models",
-    "POST /v1/messages", "POST /claude/v1/messages", "POST /claude-desktop/v1/messages",
-    "POST /responses", "POST /v1/responses", "POST /v1/v1/responses", "POST /codex/v1/responses",
-    "POST /responses/compact", "POST /v1/responses/compact", "POST /v1/v1/responses/compact",
-    "POST /codex/v1/responses/compact", "POST /chat/completions", "POST /v1/chat/completions",
-    "POST /v1/v1/chat/completions", "POST /codex/v1/chat/completions", "GET|POST /v1beta/*path",
-    "GET|POST /gemini/v1beta/*path", "GET|POST /gemini/v1/*path",
+    "POST /usage/model-pricing", "DELETE /usage/model-pricing", "GET /usage/request-detail/{request_id}",
+    "GET /v1/models", "GET /claude-desktop/v1/models", "POST /v1/messages", "POST /claude/v1/messages",
+    "POST /claude-desktop/v1/messages", "POST /responses", "POST /v1/responses",
+    "POST /v1/v1/responses", "POST /codex/v1/responses", "POST /responses/compact",
+    "POST /v1/responses/compact", "POST /v1/v1/responses/compact", "POST /codex/v1/responses/compact",
+    "POST /chat/completions", "POST /v1/chat/completions", "POST /v1/v1/chat/completions",
+    "POST /codex/v1/chat/completions", "GET|POST /v1beta/*path", "GET|POST /gemini/v1beta/*path",
+    "GET|POST /gemini/v1/*path",
   ]
 }

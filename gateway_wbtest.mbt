@@ -121,6 +121,24 @@ test "usage pricing query helpers parse and validate ccs pricing update" {
 }
 
 ///|
+test "usage pricing store rows use ccs field names" {
+  let row = model_pricing_store_json(
+    mp("test-model", "Test Model", "1", "2", "0.1", "0"),
+    deleted=false,
+  )
+  guard row is Object(obj) else { fail("expected pricing row") }
+  assert_eq(obj["modelId"], Json::string("test-model"))
+  assert_eq(obj["displayName"], Json::string("Test Model"))
+  assert_eq(obj["inputCostPerMillion"], Json::string("1"))
+  assert_eq(obj["deleted"], Json::boolean(false))
+  guard model_pricing_from_store_json(obj) is Some(parsed) else {
+    fail("expected parsed pricing row")
+  }
+  assert_eq(parsed.model_id, "test-model")
+  assert_eq(parsed.cache_read_cost_per_million, "0.1")
+}
+
+///|
 test "codex responses endpoints preserve request query" {
   assert_eq(
     codex_backend_responses_endpoint(

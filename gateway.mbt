@@ -303,6 +303,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     "Starting Anthropic -> Codex OAuth Gateway on \{self.host}:\{self.port}",
   )
   self.stats.load_persistent_store()
+  self.load_model_pricing_store()
   let creds_result : Result[@codex.Credentials, Error] = try? @codex.load_credentials()
   if creds_result is Ok(creds) {
     self.credentials = Some(creds)
@@ -1926,6 +1927,13 @@ async fn Gateway::handle_usage_update_model_pricing(
   }
   self.pricing_overrides.set(pricing.model_id, pricing)
   self.pricing_deleted_model_ids.set(pricing.model_id, false)
+  let _backfilled = self.stats.backfill_missing_usage_costs_for_model(
+    pricing.model_id,
+    self.pricing_override_rows(),
+    self.pricing_deleted_model_ids,
+  )
+  self.save_model_pricing_store()
+  self.stats.save_persistent_store()
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
   w.write(pricing.to_json().stringify(indent=2))
@@ -1948,6 +1956,7 @@ async fn Gateway::handle_usage_delete_model_pricing(
     return
   }
   self.pricing_deleted_model_ids.set(trimmed, true)
+  self.save_model_pricing_store()
   w.write_header(@status.NoContent)
   w.flush()
 }
@@ -2146,6 +2155,127 @@ fn Gateway::pricing_override_rows(self : Gateway) -> Array[ModelPricing] {
     rows.push(pricing)
   }
   rows
+}
+
+///|
+async fn Gateway::load_model_pricing_store(self : Gateway) -> Unit {
+  let path = @pathx.join(
+    default_moonstat_stats_dir(),
+    MOONSTAT_MODEL_PRICING_FILE,
+  )
+  if !@fsx.exists_as_file(path) {
+    return
+  }
+  let content = @fsx.read_file(path) catch { _ => return }
+  for line_view in content.split("\n") {
+    let line = line_view.to_owned().trim()
+    if line.is_empty() {
+      continue
+    }
+    let parsed = @json.parse(line) catch { _ => continue }
+    guard parsed is Object(obj) else { continue }
+    guard store_json_string(obj, "modelId") is Some(model_id) else { continue }
+    if store_json_bool_or_false(obj, "deleted") {
+      self.pricing_deleted_model_ids.set(model_id, true)
+    } else {
+      match model_pricing_from_store_json(obj) {
+        Some(pricing) => {
+          self.pricing_overrides.set(pricing.model_id, pricing)
+          self.pricing_deleted_model_ids.set(model_id, false)
+        }
+        None => ()
+      }
+    }
+  }
+}
+
+///|
+async fn Gateway::save_model_pricing_store(self : Gateway) -> Unit {
+  let storage_dir = default_moonstat_stats_dir()
+  @fsx.make_directory(storage_dir, recursive=true, exists_ok=true) catch {
+    _ => return
+  }
+  let lines : Array[String] = []
+  for pricing in self.pricing_override_rows() {
+    if model_pricing_is_deleted(
+        pricing.model_id,
+        self.pricing_deleted_model_ids,
+      ) {
+      continue
+    }
+    lines.push(model_pricing_store_json(pricing, deleted=false).stringify())
+  }
+  for model_id in self.pricing_deleted_model_ids.keys() {
+    if !self.pricing_deleted_model_ids.get(model_id).unwrap_or(false) {
+      continue
+    }
+    lines.push(
+      { "modelId": Json::string(model_id), "deleted": Json::boolean(true) }
+      .to_json()
+      .stringify(),
+    )
+  }
+  @fsx.write_to_file(
+    @pathx.join(storage_dir, MOONSTAT_MODEL_PRICING_FILE),
+    lines.join("\n"),
+  ) catch {
+    _ => ()
+  }
+}
+
+///|
+fn model_pricing_from_store_json(obj : Map[String, Json]) -> ModelPricing? {
+  guard store_json_string(obj, "modelId") is Some(model_id) else { return None }
+  guard store_json_string(obj, "displayName") is Some(display_name) else {
+    return None
+  }
+  guard store_json_string(obj, "inputCostPerMillion") is Some(input_cost) else {
+    return None
+  }
+  guard store_json_string(obj, "outputCostPerMillion") is Some(output_cost) else {
+    return None
+  }
+  guard store_json_string(obj, "cacheReadCostPerMillion")
+    is Some(cache_read_cost) else {
+    return None
+  }
+  guard store_json_string(obj, "cacheCreationCostPerMillion")
+    is Some(cache_creation_cost) else {
+    return None
+  }
+  if model_id.trim().is_empty() || display_name.trim().is_empty() {
+    return None
+  }
+  for value in [input_cost, output_cost, cache_read_cost, cache_creation_cost] {
+    if !usage_non_negative_decimal(value) {
+      return None
+    }
+  }
+  Some(
+    mp(
+      model_id.trim().to_owned(),
+      display_name.trim().to_owned(),
+      input_cost.trim().to_owned(),
+      output_cost.trim().to_owned(),
+      cache_read_cost.trim().to_owned(),
+      cache_creation_cost.trim().to_owned(),
+    ),
+  )
+}
+
+///|
+fn model_pricing_store_json(pricing : ModelPricing, deleted~ : Bool) -> Json {
+  {
+    "modelId": Json::string(pricing.model_id),
+    "displayName": Json::string(pricing.display_name),
+    "inputCostPerMillion": Json::string(pricing.input_cost_per_million),
+    "outputCostPerMillion": Json::string(pricing.output_cost_per_million),
+    "cacheReadCostPerMillion": Json::string(pricing.cache_read_cost_per_million),
+    "cacheCreationCostPerMillion": Json::string(
+      pricing.cache_creation_cost_per_million,
+    ),
+    "deleted": Json::boolean(deleted),
+  }.to_json()
 }
 
 ///|
