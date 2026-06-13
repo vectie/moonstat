@@ -1839,7 +1839,10 @@ fn claude_provider_from_env(app_type : String) -> ProviderRouteTarget? {
 
 ///|
 fn provider_cost_multiplier(provider : ProviderRouteTarget) -> String {
-  guard provider.settings_config is Some(settings) else { return "1.0" }
+  let default_multiplier = default_cost_multiplier_for_app(provider.app_type)
+  guard provider.settings_config is Some(settings) else {
+    return default_multiplier
+  }
   match settings {
     Object(obj) => {
       match
@@ -1854,12 +1857,50 @@ fn provider_cost_multiplier(provider : ProviderRouteTarget) -> String {
             json_string_from_map_any(meta, ["costMultiplier", "cost_multiplier"]) {
             Some(value) if usage_non_negative_decimal(value) =>
               value.trim().to_owned()
-            _ => "1.0"
+            _ => default_multiplier
           }
-        _ => "1.0"
+        _ => default_multiplier
       }
     }
-    _ => "1.0"
+    _ => default_multiplier
+  }
+}
+
+///|
+fn default_cost_multiplier_for_app(app_type : String) -> String {
+  let global_keys = [
+    "MOONSTAT_DEFAULT_COST_MULTIPLIER", "MOONSTAT_COST_MULTIPLIER",
+  ]
+  let app_keys = match app_type {
+    "claude" | "claude-desktop" =>
+      [
+        "MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER", "MOONSTAT_CLAUDE_COST_MULTIPLIER",
+        "ANTHROPIC_DEFAULT_COST_MULTIPLIER", "ANTHROPIC_COST_MULTIPLIER",
+      ]
+    "codex" =>
+      [
+        "MOONSTAT_CODEX_DEFAULT_COST_MULTIPLIER", "MOONSTAT_CODEX_COST_MULTIPLIER",
+        "CODEX_DEFAULT_COST_MULTIPLIER", "CODEX_COST_MULTIPLIER",
+      ]
+    "gemini" =>
+      [
+        "MOONSTAT_GEMINI_DEFAULT_COST_MULTIPLIER", "MOONSTAT_GEMINI_COST_MULTIPLIER",
+        "GEMINI_DEFAULT_COST_MULTIPLIER", "GEMINI_COST_MULTIPLIER",
+      ]
+    "opencode" =>
+      [
+        "MOONSTAT_OPENCODE_DEFAULT_COST_MULTIPLIER", "MOONSTAT_OPENCODE_COST_MULTIPLIER",
+        "OPENCODE_DEFAULT_COST_MULTIPLIER", "OPENCODE_COST_MULTIPLIER",
+      ]
+    _ => []
+  }
+  match env_first_non_negative_decimal(app_keys) {
+    Some(value) => value
+    None =>
+      match env_first_non_negative_decimal(global_keys) {
+        Some(value) => value
+        None => "1.0"
+      }
   }
 }
 
@@ -1901,6 +1942,18 @@ fn env_first_non_empty(keys : Array[String]) -> String? {
   for key in keys {
     match getenv_or_none(key) {
       Some(value) if !value.trim().is_empty() =>
+        return Some(value.trim().to_owned())
+      _ => continue
+    }
+  }
+  None
+}
+
+///|
+fn env_first_non_negative_decimal(keys : Array[String]) -> String? {
+  for key in keys {
+    match getenv_or_none(key) {
+      Some(value) if usage_non_negative_decimal(value) =>
         return Some(value.trim().to_owned())
       _ => continue
     }

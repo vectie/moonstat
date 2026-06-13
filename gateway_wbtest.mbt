@@ -399,6 +399,85 @@ test "claude provider env carries ccs settings config" {
 }
 
 ///|
+test "ccs default cost multiplier env falls back per app" {
+  let keys = [
+    "MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER", "MOONSTAT_DEFAULT_COST_MULTIPLIER",
+  ]
+  for key in keys {
+    @os.unsetenv(key) catch {
+      _ => ()
+    }
+  }
+  @os.setenv("MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER", "1.75", overwrite=true)
+  @os.setenv("MOONSTAT_DEFAULT_COST_MULTIPLIER", "2.0", overwrite=true)
+  let provider = ProviderRouteTarget::new(
+    app_type="claude-desktop",
+    provider_id="default-cost",
+    provider_name="Default Cost",
+  )
+  assert_eq(provider_cost_multiplier(provider), "1.75")
+  for key in keys {
+    @os.unsetenv(key) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+test "ccs provider cost multiplier overrides default env" {
+  let key = "MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER"
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+  @os.setenv(key, "1.75", overwrite=true)
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="provider-cost",
+    provider_name="Provider Cost",
+    settings_config=Some(
+      @json.parse(
+        (
+          #|{
+          #|  "meta": { "costMultiplier": "2.5" }
+          #|}
+        ),
+      ),
+    ),
+  )
+  assert_eq(provider_cost_multiplier(provider), "2.5")
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+}
+
+///|
+test "invalid ccs provider cost multiplier falls back to default env" {
+  let key = "MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER"
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+  @os.setenv(key, "1.75", overwrite=true)
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="invalid-provider-cost",
+    provider_name="Invalid Provider Cost",
+    settings_config=Some(
+      @json.parse(
+        (
+          #|{
+          #|  "meta": { "costMultiplier": "bad" }
+          #|}
+        ),
+      ),
+    ),
+  )
+  assert_eq(provider_cost_multiplier(provider), "1.75")
+  @os.unsetenv(key) catch {
+    _ => ()
+  }
+}
+
+///|
 test "gateway records upstream failures into provider router before finish" {
   let gateway = Gateway::new(port=0)
   gateway.provider_router.update_all_configs({
