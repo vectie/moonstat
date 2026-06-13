@@ -1037,6 +1037,162 @@ test "ccs upstream body filter removes private fields" {
 }
 
 ///|
+test "ccs media sanitizer replaces images for known text-only models" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "deepseek/deepseek-v4-pro",
+      #|  "messages": [
+      #|    {
+      #|      "role": "user",
+      #|      "content": [
+      #|        {
+      #|          "type": "image",
+      #|          "source": {
+      #|            "type": "base64",
+      #|            "media_type": "image/png",
+      #|            "data": "AAAA"
+      #|          },
+      #|          "cache_control": { "type": "ephemeral" }
+      #|        },
+      #|        { "type": "text", "text": "caption" }
+      #|      ]
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let prepared = prepare_upstream_request_body(body)
+  guard prepared is Object(obj) else { fail("expected object") }
+  guard obj["messages"] is Array(messages) else { fail("expected messages") }
+  guard messages[0] is Object(message) else { fail("expected message") }
+  guard message["content"] is Array(content) else { fail("expected content") }
+  guard content[0] is Object(marker) else { fail("expected marker") }
+  assert_eq(marker["type"], Json::string("text"))
+  assert_eq(marker["text"], Json::string("[Unsupported Image]"))
+  assert_true(marker.get("source") is None)
+  assert_eq(
+    marker["cache_control"],
+    Json::object({ "type": Json::string("ephemeral") }),
+  )
+  assert_eq(
+    content[1],
+    Json::object({
+      "type": Json::string("text"),
+      "text": Json::string("caption"),
+    }),
+  )
+}
+
+///|
+test "ccs media sanitizer preserves images for unknown models" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "kimi/kimi-k2.6",
+      #|  "messages": [
+      #|    {
+      #|      "role": "user",
+      #|      "content": [
+      #|        {
+      #|          "type": "image_url",
+      #|          "image_url": { "url": "data:image/png;base64,AAAA" }
+      #|        }
+      #|      ]
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let prepared = prepare_upstream_request_body(body)
+  guard prepared is Object(obj) else { fail("expected object") }
+  guard obj["messages"] is Array(messages) else { fail("expected messages") }
+  guard messages[0] is Object(message) else { fail("expected message") }
+  guard message["content"] is Array(content) else { fail("expected content") }
+  guard content[0] is Object(image) else { fail("expected image") }
+  assert_eq(image["type"], Json::string("image_url"))
+  assert_true(image.get("image_url") is Some(_))
+}
+
+///|
+test "ccs media sanitizer replaces nested and responses image blocks" {
+  let nested_body = @json.parse(
+    (
+      #|{
+      #|  "model": "therouter/qwen/qwen3-coder-480b",
+      #|  "messages": [
+      #|    {
+      #|      "role": "user",
+      #|      "content": [
+      #|        {
+      #|          "type": "tool_result",
+      #|          "tool_use_id": "tool_1",
+      #|          "content": [
+      #|            {
+      #|              "type": "image_url",
+      #|              "image_url": { "url": "data:image/png;base64,AAAA" }
+      #|            }
+      #|          ]
+      #|        }
+      #|      ]
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let nested_prepared = prepare_upstream_request_body(nested_body)
+  guard nested_prepared is Object(nested_obj) else { fail("expected object") }
+  guard nested_obj["messages"] is Array(messages) else {
+    fail("expected messages")
+  }
+  guard messages[0] is Object(message) else { fail("expected message") }
+  guard message["content"] is Array(content) else { fail("expected content") }
+  guard content[0] is Object(tool_result) else { fail("expected tool result") }
+  guard tool_result["content"] is Array(tool_content) else {
+    fail("expected tool content")
+  }
+  guard tool_content[0] is Object(nested_marker) else {
+    fail("expected marker")
+  }
+  assert_eq(nested_marker["type"], Json::string("text"))
+  assert_eq(nested_marker["text"], Json::string("[Unsupported Image]"))
+
+  let responses_body = @json.parse(
+    (
+      #|{
+      #|  "model": "deepseek-v4-flash",
+      #|  "input": [
+      #|    {
+      #|      "role": "user",
+      #|      "content": [
+      #|        {
+      #|          "type": "input_image",
+      #|          "image_url": "data:image/png;base64,AAAA"
+      #|        }
+      #|      ]
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let responses_prepared = prepare_upstream_request_body(responses_body)
+  guard responses_prepared is Object(responses_obj) else {
+    fail("expected object")
+  }
+  guard responses_obj["input"] is Array(input) else { fail("expected input") }
+  guard input[0] is Object(input_item) else { fail("expected input item") }
+  guard input_item["content"] is Array(input_content) else {
+    fail("expected input content")
+  }
+  guard input_content[0] is Object(input_marker) else {
+    fail("expected input marker")
+  }
+  assert_eq(input_marker["type"], Json::string("input_text"))
+  assert_eq(input_marker["text"], Json::string("[Unsupported Image]"))
+  assert_true(input_marker.get("image_url") is None)
+}
+
+///|
 test "openai chat completion converts to anthropic response" {
   let body = @json.parse(
     (

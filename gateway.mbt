@@ -3547,7 +3547,8 @@ fn claude_stream_request_json_for_upstream(
 
 ///|
 fn prepare_upstream_request_body(body : Json) -> Json {
-  filter_private_params_for_upstream(body, None)
+  let filtered = filter_private_params_for_upstream(body, None)
+  replace_images_for_text_only_model(filtered).body
 }
 
 ///|
@@ -3577,6 +3578,195 @@ fn filter_private_params_for_upstream(
     }
     _ => body
   }
+}
+
+///|
+const UNSUPPORTED_IMAGE_MARKER = "[Unsupported Image]"
+
+///|
+priv struct MediaReplacementResult {
+  body : Json
+  count : Int
+}
+
+///|
+fn replace_images_for_text_only_model(body : Json) -> MediaReplacementResult {
+  guard body is Object(obj) else { return { body, count: 0 } }
+  let model = json_string_from_map(obj, "model").unwrap_or("")
+  if !known_text_only_model(model) {
+    return { body: Json::object(obj), count: 0 }
+  }
+  replace_image_blocks_with_marker(Json::object(obj))
+}
+
+///|
+fn replace_image_blocks_with_marker(body : Json) -> MediaReplacementResult {
+  guard body is Object(obj) else { return { body, count: 0 } }
+  let mut count = 0
+  match obj.get("messages") {
+    Some(Array(messages)) => {
+      let replaced_messages : Array[Json] = []
+      for message in messages {
+        match message {
+          Object(message_obj) =>
+            match message_obj.get("content") {
+              Some(content) => {
+                let result = replace_images_in_content(content, "text")
+                count += result.count
+                message_obj["content"] = result.body
+                replaced_messages.push(Json::object(message_obj))
+              }
+              None => replaced_messages.push(Json::object(message_obj))
+            }
+          _ => replaced_messages.push(message)
+        }
+      }
+      obj["messages"] = Json::array(replaced_messages)
+    }
+    _ => ()
+  }
+  match obj.get("input") {
+    Some(input) => {
+      let result = replace_images_in_responses_input(input)
+      count += result.count
+      obj["input"] = result.body
+    }
+    None => ()
+  }
+  { body: Json::object(obj), count }
+}
+
+///|
+fn replace_images_in_content(
+  content : Json,
+  text_type : String,
+) -> MediaReplacementResult {
+  guard content is Array(blocks) else { return { body: content, count: 0 } }
+  let replaced_blocks : Array[Json] = []
+  let mut count = 0
+  for block in blocks {
+    if is_image_block(block) {
+      replaced_blocks.push(image_marker_block(block, text_type))
+      count += 1
+      continue
+    }
+    match block {
+      Object(block_obj) =>
+        match block_obj.get("content") {
+          Some(nested) => {
+            let result = replace_images_in_content(nested, text_type)
+            count += result.count
+            block_obj["content"] = result.body
+            replaced_blocks.push(Json::object(block_obj))
+          }
+          None => replaced_blocks.push(Json::object(block_obj))
+        }
+      _ => replaced_blocks.push(block)
+    }
+  }
+  { body: Json::array(replaced_blocks), count }
+}
+
+///|
+fn replace_images_in_responses_input(input : Json) -> MediaReplacementResult {
+  match input {
+    Array(items) => {
+      let replaced_items : Array[Json] = []
+      let mut count = 0
+      for item in items {
+        let result = replace_images_in_responses_input_item(item)
+        count += result.count
+        replaced_items.push(result.body)
+      }
+      { body: Json::array(replaced_items), count }
+    }
+    Object(_) => replace_images_in_responses_input_item(input)
+    _ => { body: input, count: 0 }
+  }
+}
+
+///|
+fn replace_images_in_responses_input_item(
+  item : Json,
+) -> MediaReplacementResult {
+  guard item is Object(item_obj) else { return { body: item, count: 0 } }
+  let mut count = 0
+  if json_string_from_map(item_obj, "type") == Some("input_image") {
+    let marker = image_marker_block(Json::object(item_obj), "input_text")
+    guard marker is Object(marker_obj) else {
+      return { body: marker, count: 1 }
+    }
+    count += 1
+    match marker_obj.get("content") {
+      Some(content) => {
+        let result = replace_images_in_content(content, "input_text")
+        count += result.count
+        marker_obj["content"] = result.body
+      }
+      None => ()
+    }
+    return { body: Json::object(marker_obj), count }
+  }
+  match item_obj.get("content") {
+    Some(content) => {
+      let result = replace_images_in_content(content, "input_text")
+      count += result.count
+      item_obj["content"] = result.body
+    }
+    None => ()
+  }
+  { body: Json::object(item_obj), count }
+}
+
+///|
+fn is_image_block(block : Json) -> Bool {
+  guard block is Object(obj) else { return false }
+  match json_string_from_map(obj, "type") {
+    Some("image") | Some("image_url") | Some("input_image") => true
+    _ => false
+  }
+}
+
+///|
+fn image_marker_block(block : Json, text_type : String) -> Json {
+  let cache_control = match block {
+    Object(obj) => obj.get("cache_control")
+    _ => None
+  }
+  let marker : Map[String, Json] = {
+    "type": Json::string(text_type),
+    "text": Json::string(UNSUPPORTED_IMAGE_MARKER),
+  }
+  match cache_control {
+    Some(cache_control) => marker["cache_control"] = cache_control
+    None => ()
+  }
+  Json::object(marker)
+}
+
+///|
+fn known_text_only_model(model : String) -> Bool {
+  let lower = model.trim().to_lower()
+  let without_model_prefix = if lower.has_prefix("models/") {
+    lower["models/".length():].to_owned()
+  } else {
+    lower.to_owned()
+  }
+  let normalized = strip_one_m_suffix_for_upstream(without_model_prefix)
+  let parts = normalized.split("/").collect()
+  let tail = match parts.last() {
+    Some(part) => part.to_owned()
+    None => normalized
+  }
+  [
+    "ark-code-latest", "deepseek-chat", "deepseek-reasoner", "deepseek-v4-flash",
+    "deepseek-v4-pro", "glm-5.1", "kat-coder", "kat-coder-pro", "kat-coder-pro v1",
+    "kat-coder-pro v2", "kat-coder-pro-v1", "kat-coder-pro-v2", "ling-2.5-1t", "longcat-flash-chat",
+    "mimo-v2.5-pro", "us.deepseek.r1-v1",
+  ].contains(tail) ||
+  ["minimax-m2.7", "qwen3-coder", "step-3.5-flash"].any(prefix => {
+    tail.has_prefix(prefix)
+  })
 }
 
 ///|
