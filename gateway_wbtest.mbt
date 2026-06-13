@@ -3902,6 +3902,16 @@ test "gemini native claude compatible provider uses gemini url and headers" {
   assert_eq(headers["x-goog-api-key"], "gemini-key")
   assert_eq(headers["x-goog-api-client"], "GeminiCLI/1.0")
   assert_true(headers.get("Authorization") is None)
+  assert_true(headers.get("anthropic-beta") is None)
+}
+
+///|
+test "anthropic claude compatible provider sends ccs claude code beta headers" {
+  let headers = claude_compatible_provider_headers("anthropic-key", "anthropic")
+  assert_eq(headers["x-api-key"], "anthropic-key")
+  assert_eq(headers["anthropic-version"], "2023-06-01")
+  assert_eq(headers["anthropic-beta"], "claude-code-20250219")
+  assert_true(headers.get("Authorization") is None)
 }
 
 ///|

@@ -1613,6 +1613,7 @@ fn claude_compatible_provider_headers(
     "anthropic" => {
       headers["x-api-key"] = api_key
       headers["anthropic-version"] = "2023-06-01"
+      headers["anthropic-beta"] = ccs_claude_code_beta_header()
     }
     "gemini_native" => {
       headers["x-goog-api-key"] = api_key
@@ -1621,6 +1622,11 @@ fn claude_compatible_provider_headers(
     _ => headers["Authorization"] = "Bearer \{api_key}"
   }
   headers
+}
+
+///|
+fn ccs_claude_code_beta_header() -> String {
+  "claude-code-20250219"
 }
 
 ///|
