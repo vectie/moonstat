@@ -1667,6 +1667,101 @@ test "ccs responses stream state emits function call argument deltas" {
 }
 
 ///|
+test "ccs responses stream state sanitizes read tool empty pages" {
+  let state = ResponsesStreamState::new("gpt-5.4")
+  let added_block =
+    #|event: response.output_item.added
+    #|data: {"type":"response.output_item.added","item":{"id":"fc_read","type":"function_call","call_id":"call_read","name":"Read"}}
+    #|
+  let (_, _, added_events) = codex_stream_events_from_sse_block(
+    added_block, state,
+  )
+  assert_eq(added_events.length(), 2)
+
+  let delta_block =
+    #|event: response.function_call_arguments.delta
+    #|data: {"type":"response.function_call_arguments.delta","item_id":"fc_read","delta":"{\"file_path\":\"/tmp/demo.py\",\"limit\":2000,\"offset\":0,\"pages\":\"\"}"}
+    #|
+  let (_, _, delta_events) = codex_stream_events_from_sse_block(
+    delta_block, state,
+  )
+  assert_eq(delta_events.length(), 0)
+
+  let done_block =
+    #|event: response.function_call_arguments.done
+    #|data: {"type":"response.function_call_arguments.done","item_id":"fc_read","arguments":"{\"file_path\":\"/tmp/demo.py\",\"limit\":2000,\"offset\":0,\"pages\":\"\"}"}
+    #|
+  let (_, _, done_events) = codex_stream_events_from_sse_block(
+    done_block, state,
+  )
+  assert_eq(done_events.length(), 2)
+  assert_eq(done_events[0].event_type, "content_block_delta")
+  assert_eq(done_events[1].event_type, "content_block_stop")
+  let data = @json.parse(done_events[0].data) catch {
+    _ => fail("expected delta json")
+  }
+  guard data is Object(obj) else { fail("expected object") }
+  guard obj["delta"] is Object(delta) else { fail("expected delta") }
+  guard delta["partial_json"] is String(partial) else {
+    fail("expected partial json")
+  }
+  let partial_json = @json.parse(partial) catch {
+    _ => fail("expected sanitized partial json")
+  }
+  guard partial_json is Object(input) else { fail("expected input object") }
+  assert_eq(input["file_path"], Json::string("/tmp/demo.py"))
+  assert_eq(input["limit"], Json::number(2000.0))
+  assert_eq(input["offset"], Json::number(0.0))
+  assert_true(input.get("pages") is None)
+}
+
+///|
+test "ccs responses stream state read duplicate start preserves buffered args" {
+  let state = ResponsesStreamState::new("gpt-5.4")
+  let added_block =
+    #|event: response.output_item.added
+    #|data: {"type":"response.output_item.added","item":{"id":"fc_read","type":"function_call","call_id":"call_read","name":"Read"}}
+    #|
+  let (_, _, first_added) = codex_stream_events_from_sse_block(
+    added_block, state,
+  )
+  assert_eq(first_added.length(), 2)
+  let delta_block =
+    #|event: response.function_call_arguments.delta
+    #|data: {"type":"response.function_call_arguments.delta","item_id":"fc_read","delta":"{\"file_path\":\"/tmp/demo.py\",\"limit\":2000,\"offset\":0,\"pages\":\"\"}"}
+    #|
+  let (_, _, delta_events) = codex_stream_events_from_sse_block(
+    delta_block, state,
+  )
+  assert_eq(delta_events.length(), 0)
+  let (_, _, duplicate_added) = codex_stream_events_from_sse_block(
+    added_block, state,
+  )
+  assert_eq(duplicate_added.length(), 0)
+  let done_block =
+    #|event: response.function_call_arguments.done
+    #|data: {"type":"response.function_call_arguments.done","item_id":"fc_read"}
+    #|
+  let (_, _, done_events) = codex_stream_events_from_sse_block(
+    done_block, state,
+  )
+  assert_eq(done_events.length(), 2)
+  let data = @json.parse(done_events[0].data) catch {
+    _ => fail("expected delta json")
+  }
+  guard data is Object(obj) else { fail("expected object") }
+  guard obj["delta"] is Object(delta) else { fail("expected delta") }
+  guard delta["partial_json"] is String(partial) else {
+    fail("expected partial json")
+  }
+  let partial_json = @json.parse(partial) catch {
+    _ => fail("expected sanitized partial json")
+  }
+  guard partial_json is Object(input) else { fail("expected input object") }
+  assert_true(input.get("pages") is None)
+}
+
+///|
 test "ccs responses sse parser ignores truncated trailing block" {
   let sse =
     #|event: response.completed

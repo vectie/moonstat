@@ -6449,6 +6449,7 @@ priv struct ResponsesStreamState {
   open_indices : Array[Int]
   tool_index_by_item_id : Map[String, Int]
   tool_name_by_index : Map[Int, String]
+  tool_args_by_index : Map[Int, String]
 }
 
 ///|
@@ -6464,6 +6465,7 @@ fn ResponsesStreamState::new(model : String) -> ResponsesStreamState {
     open_indices: [],
     tool_index_by_item_id: {},
     tool_name_by_index: {},
+    tool_args_by_index: {},
   }
 }
 
@@ -6566,17 +6568,31 @@ fn ResponsesStreamState::push_output_item_added(
   self.has_tool_use = true
   self.close_current_text_block(events)
   self.ensure_message_start(events)
-  let index = self.next_content_index
-  self.next_content_index += 1
-  self.last_tool_index = Some(index)
-  match responses_stream_item_id(obj, item) {
-    Some(item_id) => self.tool_index_by_item_id[item_id] = index
-    None => ()
+  let index = match responses_stream_item_id(obj, item) {
+    Some(item_id) =>
+      match self.tool_index_by_item_id.get(item_id) {
+        Some(existing) => existing
+        None => {
+          let created = self.next_content_index
+          self.next_content_index += 1
+          self.tool_index_by_item_id[item_id] = created
+          created
+        }
+      }
+    None => {
+      let created = self.next_content_index
+      self.next_content_index += 1
+      created
+    }
   }
+  self.last_tool_index = Some(index)
   let name = json_string_from_map(item, "name").unwrap_or("")
   self.tool_name_by_index[index] = name
   if !self.open_indices.contains(index) {
     self.open_indices.push(index)
+    if self.tool_args_by_index.get(index) is None {
+      self.tool_args_by_index[index] = ""
+    }
     events.push(
       anthropic_tool_block_start_event(
         index,
@@ -6600,7 +6616,12 @@ fn ResponsesStreamState::push_function_call_arguments_delta(
   self.has_tool_use = true
   let index = self.tool_index_from_event(obj)
   self.ensure_tool_block(index, obj, events)
-  events.push(anthropic_tool_input_delta_event(index, delta))
+  if self.tool_name_by_index.get(index) == Some("Read") {
+    let buffered = self.tool_args_by_index.get(index).unwrap_or("")
+    self.tool_args_by_index[index] = buffered + delta
+  } else {
+    events.push(anthropic_tool_input_delta_event(index, delta))
+  }
 }
 
 ///|
@@ -6615,12 +6636,22 @@ fn ResponsesStreamState::finish_function_call_arguments(
     return
   }
   let index = self.tool_index_from_event(obj)
+  if self.tool_name_by_index.get(index) == Some("Read") {
+    let raw = json_string_from_map(obj, "arguments").unwrap_or(
+      self.tool_args_by_index.get(index).unwrap_or(""),
+    )
+    let sanitized = sanitize_anthropic_tool_use_input_json("Read", raw)
+    if !sanitized.is_empty() {
+      events.push(anthropic_tool_input_delta_event(index, sanitized))
+    }
+  }
   self.close_open_block(events, index)
   match json_string_from_map(obj, "item_id") {
     Some(item_id) => self.tool_index_by_item_id.remove(item_id)
     None => ()
   }
   self.tool_name_by_index.remove(index)
+  self.tool_args_by_index.remove(index)
 }
 
 ///|
@@ -6678,6 +6709,9 @@ fn ResponsesStreamState::ensure_tool_block(
     None => json_string_from_map(obj, "name").unwrap_or("")
   }
   self.tool_name_by_index[index] = name
+  if self.tool_args_by_index.get(index) is None {
+    self.tool_args_by_index[index] = ""
+  }
   events.push(
     anthropic_tool_block_start_event(
       index,
@@ -6767,6 +6801,23 @@ fn responses_stream_item_id(
           }
       }
   }
+}
+
+///|
+fn sanitize_anthropic_tool_use_input_json(
+  name : String,
+  raw : String,
+) -> String {
+  if name != "Read" || raw.is_empty() {
+    return raw
+  }
+  let parsed = @json.parse(raw) catch { _ => return raw }
+  guard parsed is Object(obj) else { return raw }
+  match obj.get("pages") {
+    Some(String(value)) if value.is_empty() => obj.remove("pages")
+    _ => ()
+  }
+  Json::object(obj).stringify()
 }
 
 ///|
