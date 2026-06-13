@@ -303,3 +303,41 @@ test "proxy config setter paths encode ccs command arguments" {
     ),
   )
 }
+
+///|
+test "top level ccs proxy command names build command alias paths" {
+  assert_eq(
+    proxy_global_config_update_path(
+      [
+        "moonstat", "update_global_proxy_config", "--proxyEnabled", "true", "--listenAddress",
+        "127.0.0.1", "--listenPort", "15721",
+      ],
+      "/proxy/global-config",
+    ),
+    "/proxy/global-config?proxyEnabled=true&listenAddress=127.0.0.1&listenPort=15721",
+  )
+  assert_eq(
+    proxy_app_config_update_path([
+      "moonstat", "update_proxy_config_for_app", "--appType", "codex", "--enabled",
+      "true", "--autoFailoverEnabled", "true",
+    ]),
+    "/proxy/app-config?appType=codex&enabled=true&autoFailoverEnabled=true",
+  )
+  assert_eq(
+    proxy_provider_endpoint_path(
+      [
+        "moonstat", "switch_proxy_provider", "--app-type", "codex", "--provider-id",
+        "codex oauth",
+      ],
+      "/switch_proxy_provider",
+    ),
+    Some("/switch_proxy_provider?provider_id=codex%20oauth&app_type=codex"),
+  )
+  assert_eq(
+    proxy_auto_failover_enabled_path([
+      "moonstat", "set_auto_failover_enabled", "--appType", "codex", "--enabled",
+      "true",
+    ]),
+    Some("/proxy/auto-failover-enabled?app_type=codex&enabled=true"),
+  )
+}

@@ -32,6 +32,68 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["status", ..] => check_status(arr)
     ["health", ..] => check_health(arr)
     ["stats", ..] => check_stats(arr)
+    ["get_proxy_status", ..] | ["get-proxy-status", ..] =>
+      check_proxy_status(arr)
+    ["start_proxy_server", ..] | ["start-proxy-server", ..] =>
+      start_proxy_server(arr)
+    ["stop_proxy_server", ..] | ["stop-proxy-server", ..] =>
+      stop_proxy_server(arr)
+    ["stop_proxy_with_restore", ..] | ["stop-proxy-with-restore", ..] =>
+      stop_proxy_with_restore(arr)
+    ["get_proxy_config", ..] | ["get-proxy-config", ..] =>
+      check_proxy_config(arr)
+    ["update_proxy_config", ..] | ["update-proxy-config", ..] =>
+      update_proxy_config(arr)
+    ["get_global_proxy_config", ..] | ["get-global-proxy-config", ..] =>
+      check_proxy_global_config(arr)
+    ["update_global_proxy_config", ..] | ["update-global-proxy-config", ..] =>
+      update_proxy_global_config(arr)
+    ["get_proxy_config_for_app", ..] | ["get-proxy-config-for-app", ..] =>
+      check_proxy_app_config(arr)
+    ["update_proxy_config_for_app", ..] | ["update-proxy-config-for-app", ..] =>
+      update_proxy_app_config(arr)
+    ["get_default_cost_multiplier", ..] | ["get-default-cost-multiplier", ..] =>
+      check_proxy_default_cost_multiplier(arr)
+    ["set_default_cost_multiplier", ..] | ["set-default-cost-multiplier", ..] =>
+      set_proxy_default_cost_multiplier(arr)
+    ["get_pricing_model_source", ..] | ["get-pricing-model-source", ..] =>
+      check_proxy_pricing_model_source(arr)
+    ["set_pricing_model_source", ..] | ["set-pricing-model-source", ..] =>
+      set_proxy_pricing_model_source(arr)
+    ["get_provider_health", ..] | ["get-provider-health", ..] =>
+      check_proxy_provider_health(arr)
+    ["get_circuit_breaker_config", ..] | ["get-circuit-breaker-config", ..] =>
+      check_proxy_circuit_breaker_config(arr)
+    ["update_circuit_breaker_config", ..]
+    | ["update-circuit-breaker-config", ..] =>
+      update_proxy_circuit_breaker_config(arr)
+    ["get_circuit_breaker_stats", ..] | ["get-circuit-breaker-stats", ..] =>
+      check_proxy_circuit_breaker_stats(arr)
+    ["reset_circuit_breaker", ..] | ["reset-circuit-breaker", ..] =>
+      reset_proxy_circuit_breaker(arr)
+    ["get_failover_queue", ..] | ["get-failover-queue", ..] =>
+      check_proxy_failover_queue(arr)
+    ["get_available_providers_for_failover", ..]
+    | ["get-available-providers-for-failover", ..] =>
+      check_proxy_available_failover_providers(arr)
+    ["add_to_failover_queue", ..] | ["add-to-failover-queue", ..] =>
+      add_proxy_failover_queue(arr)
+    ["remove_from_failover_queue", ..] | ["remove-from-failover-queue", ..] =>
+      remove_proxy_failover_queue(arr)
+    ["get_auto_failover_enabled", ..] | ["get-auto-failover-enabled", ..] =>
+      check_proxy_auto_failover_enabled(arr)
+    ["set_auto_failover_enabled", ..] | ["set-auto-failover-enabled", ..] =>
+      set_proxy_auto_failover_enabled(arr)
+    ["get_proxy_takeover_status", ..] | ["get-proxy-takeover-status", ..] =>
+      check_proxy_takeover_status(arr)
+    ["set_proxy_takeover_for_app", ..] | ["set-proxy-takeover-for-app", ..] =>
+      set_proxy_takeover_status(arr)
+    ["is_live_takeover_active", ..] | ["is-live-takeover-active", ..] =>
+      check_proxy_endpoint(arr, "/is_live_takeover_active")
+    ["switch_proxy_provider", ..] | ["switch-proxy-provider", ..] =>
+      switch_proxy_provider(arr)
+    ["is_proxy_running", ..] | ["is-proxy-running", ..] =>
+      check_proxy_running(arr)
     ["proxy", "status", ..] => check_proxy_status(arr)
     ["proxy", "start-proxy-server", ..] => start_proxy_server(arr)
     ["proxy", "stop-proxy-server", ..] => stop_proxy_server(arr)
@@ -198,6 +260,9 @@ fn print_help() -> Unit {
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")
   println("  proxy status           Show ccs-style proxy server status")
+  println(
+    "  <ccs_proxy_command>    Direct alias for CCS proxy/failover command names",
+  )
   println(
     "  proxy start-proxy-server  Enable proxy routing and print server info",
   )
@@ -919,7 +984,9 @@ fn provider_upsert_path(
 ///|
 fn proxy_app_value_update_path(args : Array[String], path : String) -> String? {
   guard parse_string_arg(args, "--value") is Some(value) else { return None }
-  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
+    "claude",
+  )
   Some(
     "\{path}?app_type=\{cli_url_encode(app_type)}&value=\{cli_url_encode(value)}",
   )
@@ -990,7 +1057,9 @@ fn proxy_global_config_update_path(
 
 ///|
 fn proxy_app_config_update_path(args : Array[String]) -> String {
-  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
+    "claude",
+  )
   let query : Array[String] = [cli_query_pair("appType", app_type)]
   match parse_string_arg(args, "--enabled") {
     Some(value) => query.push(cli_query_pair("enabled", value))
@@ -1060,7 +1129,9 @@ fn proxy_takeover_update_path(args : Array[String]) -> String? {
   guard parse_string_arg(args, "--enabled") is Some(enabled) else {
     return None
   }
-  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
+    "claude",
+  )
   Some(
     "/proxy/takeover-status?app_type=\{cli_url_encode(app_type)}&enabled=\{cli_url_encode(enabled)}",
   )
@@ -1071,7 +1142,9 @@ fn proxy_auto_failover_enabled_path(args : Array[String]) -> String? {
   guard parse_string_arg(args, "--enabled") is Some(enabled) else {
     return None
   }
-  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
+    "claude",
+  )
   Some(
     "/proxy/auto-failover-enabled?app_type=\{cli_url_encode(app_type)}&enabled=\{cli_url_encode(enabled)}",
   )
