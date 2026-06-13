@@ -290,6 +290,28 @@ test "proxy global config alias matches ccs v3 shape" {
 }
 
 ///|
+test "global proxy url helpers use ccs response shapes" {
+  assert_true(upstream_proxy_url_is_valid("http://127.0.0.1:7890"))
+  assert_true(upstream_proxy_url_is_valid("socks5://127.0.0.1:1080"))
+  assert_false(upstream_proxy_url_is_valid("ftp://127.0.0.1:21"))
+  json_inspect(proxy_test_result_json(""), content={
+    "success": false,
+    "latencyMs": 0,
+    "error": "Proxy URL is empty",
+  })
+  json_inspect(proxy_test_result_json("ftp://127.0.0.1:21"), content={
+    "success": false,
+    "latencyMs": 0,
+    "error": "Invalid proxy URL",
+  })
+  json_inspect(proxy_test_result_json("http://127.0.0.1:7890"), content={
+    "success": true,
+    "latencyMs": 0,
+    "error": null,
+  })
+}
+
+///|
 test "proxy app config alias matches ccs app config shape" {
   let gateway = Gateway::new(port=17005, host="127.0.0.6", model="gpt-5")
   guard gateway.proxy_app_config_json("claude") is Object(config) else {

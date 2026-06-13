@@ -22,6 +22,7 @@ pub struct Gateway {
   proxy_non_streaming_timeout : Map[String, Int]
   proxy_default_cost_multipliers : Map[String, String]
   proxy_pricing_model_sources : Map[String, String]
+  mut upstream_proxy_url : String?
   mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int
@@ -57,6 +58,7 @@ pub fn Gateway::new(
     proxy_non_streaming_timeout: Map([], capacity=0),
     proxy_default_cost_multipliers: Map([], capacity=0),
     proxy_pricing_model_sources: Map([], capacity=0),
+    upstream_proxy_url: None,
     stream_check_config: StreamCheckConfig::default(),
     logger,
     started_at_ms: @async.now().to_int(),
@@ -606,6 +608,24 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   })
   router.add_handler(@httpx.Method::Post, "/proxy/global-config", (r, w) => {
     self.handle_proxy_update_global_config(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_global_proxy_url", (_, w) => {
+    self.handle_get_global_proxy_url(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_global_proxy_url", (r, w) => {
+    self.handle_set_global_proxy_url(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/test_proxy_url", (r, w) => {
+    self.handle_test_proxy_url(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/test_proxy_url", (r, w) => {
+    self.handle_test_proxy_url(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_upstream_proxy_status", (_, w) => {
+    self.handle_get_upstream_proxy_status(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/scan_local_proxies", (_, w) => {
+    self.handle_scan_local_proxies(w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/app-config", (r, w) => {
     self.handle_proxy_app_config(r, w)
@@ -3093,6 +3113,111 @@ async fn Gateway::handle_proxy_update_global_config(
     true => write_usage_json(w, self.proxy_global_config_json())
     false => write_usage_bad_request(w, "invalid_global_proxy_config")
   }
+}
+
+///|
+async fn Gateway::handle_get_global_proxy_url(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  match self.upstream_proxy_url {
+    Some(url) => write_usage_json(w, Json::string(url))
+    None => write_usage_json(w, Json::null())
+  }
+}
+
+///|
+async fn Gateway::handle_set_global_proxy_url(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  let config = proxy_embedded_config(body)
+  let url = proxy_string_request(r.path, config, ["url"]).unwrap_or("")
+  let trimmed = url.trim().to_owned()
+  if trimmed.is_empty() {
+    self.upstream_proxy_url = None
+    write_usage_json(w, Json::null())
+    return
+  }
+  if !upstream_proxy_url_is_valid(trimmed) {
+    write_usage_bad_request(w, "invalid_proxy_url")
+    return
+  }
+  self.upstream_proxy_url = Some(trimmed)
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_test_proxy_url(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  let config = proxy_embedded_config(body)
+  let url = proxy_string_request(r.path, config, ["url"]).unwrap_or("")
+  write_usage_json(w, proxy_test_result_json(url))
+}
+
+///|
+async fn Gateway::handle_get_upstream_proxy_status(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(
+    w,
+    {
+      "enabled": Json::boolean(self.upstream_proxy_url is Some(_)),
+      "proxyUrl": match self.upstream_proxy_url {
+        Some(url) => Json::string(url)
+        None => Json::null()
+      },
+    }.to_json(),
+  )
+}
+
+///|
+async fn Gateway::handle_scan_local_proxies(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::array([]))
+}
+
+///|
+fn upstream_proxy_url_is_valid(url : String) -> Bool {
+  url.has_prefix("http://") ||
+  url.has_prefix("https://") ||
+  url.has_prefix("socks5://") ||
+  url.has_prefix("socks5h://")
+}
+
+///|
+fn proxy_test_result_json(url : String) -> Json {
+  let trimmed = url.trim().to_owned()
+  if trimmed.is_empty() {
+    return {
+      "success": Json::boolean(false),
+      "latencyMs": Json::number(0.0),
+      "error": Json::string("Proxy URL is empty"),
+    }.to_json()
+  }
+  if !upstream_proxy_url_is_valid(trimmed) {
+    return {
+      "success": Json::boolean(false),
+      "latencyMs": Json::number(0.0),
+      "error": Json::string("Invalid proxy URL"),
+    }.to_json()
+  }
+  {
+    "success": Json::boolean(true),
+    "latencyMs": Json::number(0.0),
+    "error": Json::null(),
+  }.to_json()
 }
 
 ///|

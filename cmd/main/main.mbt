@@ -48,6 +48,16 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_proxy_global_config(arr)
     ["update_global_proxy_config", ..] | ["update-global-proxy-config", ..] =>
       update_proxy_global_config(arr)
+    ["get_global_proxy_url", ..] | ["get-global-proxy-url", ..] =>
+      check_usage_endpoint(arr, "/get_global_proxy_url")
+    ["set_global_proxy_url", ..] | ["set-global-proxy-url", ..] =>
+      set_global_proxy_url(arr)
+    ["test_proxy_url", ..] | ["test-proxy-url", ..] =>
+      test_global_proxy_url(arr)
+    ["get_upstream_proxy_status", ..] | ["get-upstream-proxy-status", ..] =>
+      check_usage_endpoint(arr, "/get_upstream_proxy_status")
+    ["scan_local_proxies", ..] | ["scan-local-proxies", ..] =>
+      check_usage_endpoint(arr, "/scan_local_proxies")
     ["get_proxy_config_for_app", ..] | ["get-proxy-config-for-app", ..] =>
       check_proxy_app_config(arr)
     ["update_proxy_config_for_app", ..] | ["update-proxy-config-for-app", ..] =>
@@ -200,6 +210,15 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["proxy", "global-config", "set", ..] => update_proxy_global_config(arr)
     ["proxy", "update-global-config", ..] => update_proxy_global_config(arr)
     ["proxy", "global-config", ..] => check_proxy_global_config(arr)
+    ["proxy", "global-url", "set", ..] => set_global_proxy_url(arr)
+    ["proxy", "set-global-url", ..] => set_global_proxy_url(arr)
+    ["proxy", "global-url", ..] =>
+      check_usage_endpoint(arr, "/get_global_proxy_url")
+    ["proxy", "test-url", ..] => test_global_proxy_url(arr)
+    ["proxy", "upstream-status", ..] =>
+      check_usage_endpoint(arr, "/get_upstream_proxy_status")
+    ["proxy", "scan-local", ..] =>
+      check_usage_endpoint(arr, "/scan_local_proxies")
     ["proxy", "app-config", "set", ..] => update_proxy_app_config(arr)
     ["proxy", "update-app-config", ..] => update_proxy_app_config(arr)
     ["proxy", "app-config", ..] => check_proxy_app_config(arr)
@@ -719,6 +738,26 @@ async fn update_proxy_global_config(args : Array[String]) -> Unit {
     proxy_global_config_update_path(args, "/proxy/global-config"),
     "Proxy",
   )
+}
+
+///|
+async fn set_global_proxy_url(args : Array[String]) -> Unit {
+  guard global_proxy_url_path(args, "/set_global_proxy_url") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --url")
+    return
+  }
+  check_json_post_endpoint(args, path, "Proxy")
+}
+
+///|
+async fn test_global_proxy_url(args : Array[String]) -> Unit {
+  guard global_proxy_url_path(args, "/test_proxy_url") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --url")
+    return
+  }
+  check_json_endpoint(args, path, "Proxy")
 }
 
 ///|
@@ -1440,6 +1479,12 @@ fn proxy_global_config_update_path(
   } else {
     "\{path}?\{query.join("&")}"
   }
+}
+
+///|
+fn global_proxy_url_path(args : Array[String], path : String) -> String? {
+  guard parse_string_arg(args, "--url") is Some(url) else { return None }
+  Some("\{path}?url=\{cli_url_encode(url)}")
 }
 
 ///|

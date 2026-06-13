@@ -321,6 +321,7 @@ pub struct Gateway {
   proxy_non_streaming_timeout : Map[String, Int]
   proxy_default_cost_multipliers : Map[String, String]
   proxy_pricing_model_sources : Map[String, String]
+  mut upstream_proxy_url : String?
   mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int

@@ -356,6 +356,20 @@ test "top level ccs proxy command names build command alias paths" {
     ]),
     Some("/proxy/auto-failover-enabled?app_type=codex&enabled=true"),
   )
+  assert_eq(
+    global_proxy_url_path(
+      ["moonstat", "set_global_proxy_url", "--url", "http://127.0.0.1:7890"],
+      "/set_global_proxy_url",
+    ),
+    Some("/set_global_proxy_url?url=http%3A%2F%2F127.0.0.1%3A7890"),
+  )
+  assert_eq(
+    global_proxy_url_path(
+      ["moonstat", "test_proxy_url", "--url", "socks5://127.0.0.1:1080"],
+      "/test_proxy_url",
+    ),
+    Some("/test_proxy_url?url=socks5%3A%2F%2F127.0.0.1%3A1080"),
+  )
 }
 
 ///|

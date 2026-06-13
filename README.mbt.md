@@ -84,6 +84,11 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /proxy/config`
 - `GET /proxy/global-config`
 - `POST /proxy/global-config`
+- `GET /get_global_proxy_url`
+- `POST /set_global_proxy_url?url=http://127.0.0.1:7890`
+- `GET|POST /test_proxy_url?url=http://127.0.0.1:7890`
+- `GET /get_upstream_proxy_status`
+- `GET /scan_local_proxies`
 - `GET /proxy/app-config?app_type=claude`
 - `POST /proxy/app-config?app_type=claude&enabled=true`
 - `GET /proxy/default-cost-multiplier?app_type=claude`
@@ -226,6 +231,11 @@ proxy, failover, provider, usage, and stream-check command names directly, for
 example `moonstat start_proxy_server`,
 `moonstat update_proxy_config_for_app --appType codex --enabled true`, and
 `moonstat get_usage_summary --appType codex`.
+`/get_global_proxy_url`, `/set_global_proxy_url`, `/test_proxy_url`,
+`/get_upstream_proxy_status`, and `/scan_local_proxies` mirror ccs' global
+outbound proxy command shapes; Moonstat stores the configured upstream proxy in
+standalone gateway state and uses deterministic validation/test responses so the
+feature does not require external network access.
 The `/get_providers`,
 `/get_current_provider`, `/add_provider`, `/update_provider`,
 `/delete_provider`, `/remove_provider_from_live_config`, and
