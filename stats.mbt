@@ -148,7 +148,8 @@ pub struct TrafficStats {
   mut failover_count : Int
   active_targets : Map[String, ActiveTarget]
   provider_limits : Map[String, ProviderLimitConfig]
-  session_sync_state : Map[String, SessionFileSyncState]
+  mut session_sync_state : Map[String, SessionFileSyncState]
+  mut storage_dir : String?
   mut last_request_at : String?
   mut last_error : String?
   request_logs : Array[RequestLog]
@@ -193,6 +194,7 @@ pub fn TrafficStats::new() -> TrafficStats {
     active_targets: Map([], capacity=0),
     provider_limits: Map([], capacity=0),
     session_sync_state: Map([], capacity=0),
+    storage_dir: None,
     last_request_at: None,
     last_error: None,
     request_logs: [],
@@ -468,7 +470,13 @@ pub fn TrafficStats::usage_logs_json(
     "data": self.request_logs_json(limit~),
     "total": Json::number(self.request_logs.length().to_double()),
     "limit": Json::number((if limit < 0 { 0 } else { limit }).to_double()),
-    "source": Json::string("memory"),
+    "source": Json::string(
+      if self.storage_dir is Some(_) {
+        "file"
+      } else {
+        "memory"
+      },
+    ),
     "table": Json::string("proxy_request_logs"),
   }.to_json()
 }

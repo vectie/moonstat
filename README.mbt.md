@@ -91,9 +91,12 @@ Moonstat currently exposes the ccs-compatible local routes below:
 `/status` and `/stats` include ccs-style request counts, success/failure
 counts, active connections, token totals, cache token totals, last request time,
 last error, current provider metadata, and success rate. `/usage/logs` returns
-recent in-memory `proxy_request_logs` rows with ccs-style provider/app/model,
-token, cache-token, cost, latency, status, session, streaming, and data-source
-fields.
+recent `proxy_request_logs` rows with ccs-style provider/app/model, token,
+cache-token, cost, latency, status, session, streaming, and data-source fields.
+Gateway startup loads file-backed usage state from
+`~/.moonstat/proxy_request_logs.jsonl` and session sync offsets from
+`~/.moonstat/session_log_sync.jsonl`; manual `moonstat usage sync` saves both
+after importing Claude, Codex, and Gemini session logs.
 
 Claude Desktop gateway routes are open by default for standalone local use. Set
 `MOONSTAT_CLAUDE_DESKTOP_TOKEN` or `CLAUDE_DESKTOP_GATEWAY_TOKEN` to require

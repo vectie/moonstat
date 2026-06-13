@@ -42,6 +42,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   self.logger.info(
     "Starting Anthropic -> Codex OAuth Gateway on \{self.host}:\{self.port}",
   )
+  self.stats.load_persistent_store()
   let creds_result : Result[@codex.Credentials, Error] = try? @codex.load_credentials()
   if creds_result is Ok(creds) {
     self.credentials = Some(creds)
@@ -1127,6 +1128,7 @@ async fn Gateway::handle_usage_sync_session(
     codex_dir~,
     gemini_dir~,
   )
+  self.stats.save_persistent_store()
   write_usage_json(w, result.to_json())
 }
 

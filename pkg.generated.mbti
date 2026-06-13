@@ -24,6 +24,8 @@ pub fn default_codex_config_dir() -> String
 
 pub fn default_gemini_dir() -> String
 
+pub fn default_moonstat_stats_dir() -> String
+
 pub fn default_moonstat_suite_status_path() -> String
 
 pub async fn fetch_models(String, String, Bool, String?, String?) -> Result[Array[FetchedModel], String]
@@ -292,7 +294,8 @@ pub struct TrafficStats {
   mut failover_count : Int
   active_targets : Map[String, ActiveTarget]
   provider_limits : Map[String, ProviderLimitConfig]
-  session_sync_state : Map[String, SessionFileSyncState]
+  mut session_sync_state : Map[String, SessionFileSyncState]
+  mut storage_dir : String?
   mut last_request_at : String?
   mut last_error : String?
   request_logs : Array[RequestLog]
@@ -304,9 +307,11 @@ pub struct TrafficStats {
   mut current_request_provider_type : String?
   mut current_request_is_streaming : Bool
 }
+pub async fn TrafficStats::enable_persistent_store(Self, storage_dir? : String) -> Unit
 pub fn TrafficStats::ingest_claude_session_jsonl(Self, file_path~ : String, content~ : String, last_modified~ : Int64) -> SessionSyncResult
 pub fn TrafficStats::ingest_codex_session_jsonl(Self, file_path~ : String, content~ : String, last_modified~ : Int64) -> SessionSyncResult
 pub fn TrafficStats::ingest_gemini_session_json(Self, file_path~ : String, content~ : String, last_modified~ : Int64) -> SessionSyncResult
+pub async fn TrafficStats::load_persistent_store(Self, storage_dir? : String) -> Unit
 pub fn TrafficStats::model_stats_json(Self, app_type? : String?) -> Json
 pub fn TrafficStats::new() -> Self
 pub fn TrafficStats::provider_limit_status_json(Self, String, String, daily_limit_usd? : String?, monthly_limit_usd? : String?, now_ts? : Int?) -> Json
@@ -324,6 +329,7 @@ pub fn TrafficStats::record_upstream_error(Self, Int) -> Unit
 pub fn TrafficStats::record_upstream_error_status(Self, Int, Int) -> Unit
 pub fn TrafficStats::request_detail_json(Self, String) -> Json?
 pub fn TrafficStats::request_logs_json(Self, limit? : Int) -> Json
+pub async fn TrafficStats::save_persistent_store(Self) -> Unit
 pub fn TrafficStats::set_active_target(Self, String, String, String) -> Unit
 pub fn TrafficStats::set_provider_limits(Self, String, String, daily_limit_usd? : String?, monthly_limit_usd? : String?) -> Unit
 pub fn TrafficStats::status_json(Self, String, Int, Int) -> Json

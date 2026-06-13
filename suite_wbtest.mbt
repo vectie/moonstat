@@ -32,6 +32,19 @@ test "suite manifest publishes moonstat service contract" {
     obj["usage_sync_session_url"],
     Json::string("http://127.0.0.1:15721/usage/sync-session"),
   )
+  assert_eq(obj["usage_store_dir"], Json::string(default_moonstat_stats_dir()))
+  assert_eq(
+    obj["usage_request_logs_file"],
+    Json::string(
+      @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
+    ),
+  )
+  assert_eq(
+    obj["usage_session_sync_file"],
+    Json::string(
+      @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
+    ),
+  )
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
   assert_true(routes.contains(Json::string("GET /stats")))
   assert_true(routes.contains(Json::string("GET /usage/logs")))
@@ -83,6 +96,18 @@ async test "suite status writes discovery file" {
     assert_eq(
       obj["usage_sync_session_url"],
       Json::string("http://127.0.0.1:17000/usage/sync-session"),
+    )
+    assert_eq(
+      obj["usage_request_logs_file"],
+      Json::string(
+        @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
+      ),
+    )
+    assert_eq(
+      obj["usage_session_sync_file"],
+      Json::string(
+        @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
+      ),
     )
     guard obj["manifest"] is Object(manifest) else {
       fail("expected manifest object")
