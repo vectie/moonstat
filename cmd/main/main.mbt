@@ -29,8 +29,12 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["proxy", "pricing-model-source", ..] =>
       check_proxy_pricing_model_source(arr)
     ["proxy", "provider-health", ..] => check_proxy_provider_health(arr)
+    ["proxy", "circuit-breaker-config", "set", ..] =>
+      update_proxy_circuit_breaker_config(arr)
     ["proxy", "circuit-breaker-config", ..] =>
       check_proxy_circuit_breaker_config(arr)
+    ["proxy", "update-circuit-breaker-config", ..] =>
+      update_proxy_circuit_breaker_config(arr)
     ["proxy", "circuit-breaker-stats", ..] =>
       check_proxy_circuit_breaker_stats(arr)
     ["proxy", "reset-circuit-breaker", ..] => reset_proxy_circuit_breaker(arr)
@@ -99,6 +103,7 @@ fn print_help() -> Unit {
   println("  proxy pricing-model-source     Show ccs-style app pricing mode")
   println("  proxy provider-health          Show ccs-style provider health")
   println("  proxy circuit-breaker-config   Show ccs-style circuit config")
+  println("  proxy circuit-breaker-config set  Update ccs-style circuit config")
   println("  proxy circuit-breaker-stats    Show ccs-style circuit stats")
   println("  proxy reset-circuit-breaker    Reset provider circuit breaker")
   println("  proxy takeover-status  Show ccs-style app takeover status")
@@ -141,6 +146,11 @@ fn print_help() -> Unit {
   println("Proxy config options:")
   println("  --app-type <app>  App type for app-level proxy config")
   println("  --provider-id <id> Provider id for provider-level proxy commands")
+  println("  --failure-threshold <n>     Circuit failures before open")
+  println("  --success-threshold <n>     Half-open successes before close")
+  println("  --timeout-seconds <n>       Circuit open timeout in seconds")
+  println("  --error-rate-threshold <n>  Circuit error-rate threshold, 0.0-1.0")
+  println("  --min-requests <n>          Minimum requests for error-rate open")
   println("")
   println("Examples:")
   println("  sudo moonstat install          # Install hosts reroute")
@@ -157,6 +167,9 @@ fn print_help() -> Unit {
   println("  moonstat proxy app-config --app-type codex")
   println(
     "  moonstat proxy provider-health --app-type codex --provider-id codex-oauth",
+  )
+  println(
+    "  moonstat proxy circuit-breaker-config set --failure-threshold 4 --success-threshold 2 --timeout-seconds 60 --error-rate-threshold 0.6 --min-requests 10",
   )
   println("  moonstat stats                 # Show traffic counters")
   println("  moonstat usage logs            # Show recent request logs")
@@ -281,6 +294,18 @@ async fn check_proxy_circuit_breaker_config(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn update_proxy_circuit_breaker_config(args : Array[String]) -> Unit {
+  guard proxy_circuit_config_update_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error(
+      "Missing required circuit config args: --failure-threshold --success-threshold --timeout-seconds --error-rate-threshold --min-requests",
+    )
+    return
+  }
+  check_json_post_endpoint(args, path, "Proxy")
+}
+
+///|
 async fn check_proxy_circuit_breaker_stats(args : Array[String]) -> Unit {
   check_proxy_provider_endpoint(args, "/proxy/circuit-breaker-stats")
 }
@@ -339,6 +364,40 @@ fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? 
   Some(
     "\{path}?provider_id=\{cli_url_encode(provider_id)}&app_type=\{cli_url_encode(app_type)}",
   )
+}
+
+///|
+fn proxy_circuit_config_update_path(args : Array[String]) -> String? {
+  guard parse_string_arg_any(args, "--failure-threshold", "--failureThreshold")
+    is Some(failure_threshold) else {
+    return None
+  }
+  guard parse_string_arg_any(args, "--success-threshold", "--successThreshold")
+    is Some(success_threshold) else {
+    return None
+  }
+  guard parse_string_arg_any(args, "--timeout-seconds", "--timeoutSeconds")
+    is Some(timeout_seconds) else {
+    return None
+  }
+  guard parse_string_arg_any(
+      args, "--error-rate-threshold", "--errorRateThreshold",
+    )
+    is Some(error_rate_threshold) else {
+    return None
+  }
+  guard parse_string_arg_any(args, "--min-requests", "--minRequests")
+    is Some(min_requests) else {
+    return None
+  }
+  let query = [
+    cli_query_pair("failureThreshold", failure_threshold),
+    cli_query_pair("successThreshold", success_threshold),
+    cli_query_pair("timeoutSeconds", timeout_seconds),
+    cli_query_pair("errorRateThreshold", error_rate_threshold),
+    cli_query_pair("minRequests", min_requests),
+  ].join("&")
+  Some("/proxy/circuit-breaker-config?\{query}")
 }
 
 ///|

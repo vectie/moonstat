@@ -72,6 +72,79 @@ fn CircuitBreakerConfig::to_json(self : CircuitBreakerConfig) -> Json {
 }
 
 ///|
+fn circuit_breaker_config_from_json(json : Json) -> CircuitBreakerConfig? {
+  let config_json = match json {
+    Object(obj) =>
+      match obj.get("config") {
+        Some(Object(config_obj)) => Json::object(config_obj)
+        _ => json
+      }
+    _ => json
+  }
+  guard config_json is Object(obj) else { return None }
+  guard circuit_config_int_json(obj, "failureThreshold")
+    is Some(failure_threshold) else {
+    return None
+  }
+  guard circuit_config_int_json(obj, "successThreshold")
+    is Some(success_threshold) else {
+    return None
+  }
+  guard circuit_config_int_json(obj, "timeoutSeconds") is Some(timeout_seconds) else {
+    return None
+  }
+  guard circuit_config_double_json(obj, "errorRateThreshold")
+    is Some(error_rate_threshold) else {
+    return None
+  }
+  guard circuit_config_int_json(obj, "minRequests") is Some(min_requests) else {
+    return None
+  }
+  let config = {
+    failure_threshold,
+    success_threshold,
+    timeout_seconds,
+    error_rate_threshold,
+    min_requests,
+  }
+  if circuit_breaker_config_is_valid(config) {
+    Some(config)
+  } else {
+    None
+  }
+}
+
+///|
+fn circuit_config_int_json(obj : Map[String, Json], key : String) -> Int? {
+  match obj.get(key) {
+    Some(Number(n, ..)) => Some(n.trunc().to_int())
+    _ => None
+  }
+}
+
+///|
+fn circuit_config_double_json(obj : Map[String, Json], key : String) -> Double? {
+  match obj.get(key) {
+    Some(Number(n, ..)) => Some(n)
+    _ => None
+  }
+}
+
+///|
+fn circuit_breaker_config_is_valid(config : CircuitBreakerConfig) -> Bool {
+  config.failure_threshold >= 1 &&
+  config.failure_threshold <= 20 &&
+  config.success_threshold >= 1 &&
+  config.success_threshold <= 10 &&
+  config.timeout_seconds >= 0 &&
+  config.timeout_seconds <= 300 &&
+  config.error_rate_threshold >= 0.0 &&
+  config.error_rate_threshold <= 1.0 &&
+  config.min_requests >= 5 &&
+  config.min_requests <= 100
+}
+
+///|
 pub struct CircuitBreaker {
   mut state : CircuitState
   mut consecutive_failures : Int

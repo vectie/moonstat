@@ -242,6 +242,79 @@ test "proxy circuit breaker config alias matches ccs shape" {
 }
 
 ///|
+test "proxy circuit breaker config update accepts ccs body and query shapes" {
+  let direct = @json.parse(
+    "{\"failureThreshold\":5,\"successThreshold\":3,\"timeoutSeconds\":30,\"errorRateThreshold\":0.4,\"minRequests\":12}",
+  )
+  guard circuit_breaker_config_from_json(direct) is Some(config) else {
+    fail("expected direct ccs circuit config")
+  }
+  assert_eq(config.failure_threshold, 5)
+  assert_eq(config.success_threshold, 3)
+  assert_eq(config.timeout_seconds, 30)
+  assert_eq(config.error_rate_threshold, 0.4)
+  assert_eq(config.min_requests, 12)
+
+  let wrapped = @json.parse(
+    "{\"config\":{\"failureThreshold\":6,\"successThreshold\":2,\"timeoutSeconds\":0,\"errorRateThreshold\":0.75,\"minRequests\":20}}",
+  )
+  guard circuit_breaker_config_from_json(wrapped) is Some(wrapped_config) else {
+    fail("expected wrapped ccs circuit config")
+  }
+  assert_eq(wrapped_config.failure_threshold, 6)
+  assert_eq(wrapped_config.timeout_seconds, 0)
+  assert_eq(wrapped_config.error_rate_threshold, 0.75)
+
+  let path = "/proxy/circuit-breaker-config?failureThreshold=7&successThreshold=4&timeoutSeconds=45&errorRateThreshold=0.25&minRequests=15"
+  guard proxy_circuit_config_from_query(path) is Some(query_config) else {
+    fail("expected query circuit config")
+  }
+  assert_eq(query_config.failure_threshold, 7)
+  assert_eq(query_config.success_threshold, 4)
+  assert_eq(query_config.timeout_seconds, 45)
+  assert_eq(query_config.error_rate_threshold, 0.25)
+  assert_eq(query_config.min_requests, 15)
+
+  assert_true(
+    circuit_breaker_config_from_json(
+      @json.parse(
+        "{\"failureThreshold\":0,\"successThreshold\":3,\"timeoutSeconds\":30,\"errorRateThreshold\":0.4,\"minRequests\":12}",
+      ),
+    )
+    is None,
+  )
+}
+
+///|
+test "proxy circuit breaker config update hot applies to existing breakers" {
+  let router = ProviderRouter::new()
+  for _ in 0..<3 {
+    router.record_result("codex-oauth", "claude", false, false, now_ms=1000)
+  }
+  router.update_all_configs({
+    failure_threshold: 5,
+    success_threshold: 2,
+    timeout_seconds: 60,
+    error_rate_threshold: 1.0,
+    min_requests: 10,
+  })
+  router.record_result("codex-oauth", "claude", false, false, now_ms=1000)
+  guard router.get_circuit_breaker_stats("codex-oauth", "claude")
+    is Some(after_four) else {
+    fail("expected stats after four failures")
+  }
+  assert_true(after_four.state == Closed)
+  assert_eq(after_four.consecutive_failures, 4)
+
+  router.record_result("codex-oauth", "claude", false, false, now_ms=1000)
+  guard router.get_circuit_breaker_stats("codex-oauth", "claude")
+    is Some(after_five) else {
+    fail("expected stats after five failures")
+  }
+  assert_true(after_five.state == Open)
+}
+
+///|
 test "proxy provider health alias mirrors circuit breaker state" {
   let gateway = Gateway::new(port=17007, host="127.0.0.8", model="gpt-5")
   guard gateway.provider_router.provider_health_json(

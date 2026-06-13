@@ -582,6 +582,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/proxy/circuit-breaker-config", (_, w) => {
     self.handle_proxy_circuit_breaker_config(w)
   })
+  router.add_handler(@httpx.Method::Post, "/proxy/circuit-breaker-config", (
+    r,
+    w,
+  ) => self.handle_proxy_update_circuit_breaker_config(r, w))
   router.add_handler(@httpx.Method::Get, "/proxy/circuit-breaker-stats", (r, w) => {
     self.handle_proxy_circuit_breaker_stats(r, w)
   })
@@ -2803,6 +2807,35 @@ async fn Gateway::handle_proxy_circuit_breaker_config(
 }
 
 ///|
+async fn Gateway::handle_proxy_update_circuit_breaker_config(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = r.body.read_all().text()
+  let config = if body.trim().is_empty() {
+    proxy_circuit_config_from_query(r.path)
+  } else {
+    let parsed = @json.parse(body) catch {
+      _ => {
+        write_usage_bad_request(w, "invalid_circuit_breaker_config")
+        return
+      }
+    }
+    match circuit_breaker_config_from_json(parsed) {
+      Some(config) => Some(config)
+      None => proxy_circuit_config_from_query(r.path)
+    }
+  }
+  guard config is Some(config) else {
+    write_usage_bad_request(w, "invalid_circuit_breaker_config")
+    return
+  }
+  self.provider_router.update_all_configs(config)
+  write_usage_json(w, config.to_json())
+}
+
+///|
 async fn Gateway::handle_proxy_circuit_breaker_stats(
   self : Gateway,
   r : @httpx.RequestReader,
@@ -3223,6 +3256,44 @@ fn proxy_provider_query(path : StringView) -> ProxyProviderQuery? {
 }
 
 ///|
+fn proxy_circuit_config_from_query(path : StringView) -> CircuitBreakerConfig? {
+  guard usage_query_int_any(path, "failure_threshold", "failureThreshold")
+    is Some(failure_threshold) else {
+    return None
+  }
+  guard usage_query_int_any(path, "success_threshold", "successThreshold")
+    is Some(success_threshold) else {
+    return None
+  }
+  guard usage_query_int_any(path, "timeout_seconds", "timeoutSeconds")
+    is Some(timeout_seconds) else {
+    return None
+  }
+  guard usage_query_double_any(
+      path, "error_rate_threshold", "errorRateThreshold",
+    )
+    is Some(error_rate_threshold) else {
+    return None
+  }
+  guard usage_query_int_any(path, "min_requests", "minRequests")
+    is Some(min_requests) else {
+    return None
+  }
+  let config = {
+    failure_threshold,
+    success_threshold,
+    timeout_seconds,
+    error_rate_threshold,
+    min_requests,
+  }
+  if circuit_breaker_config_is_valid(config) {
+    Some(config)
+  } else {
+    None
+  }
+}
+
+///|
 fn usage_query_value_any(
   path : StringView,
   left_key : String,
@@ -3252,6 +3323,18 @@ fn usage_query_int_any(
 }
 
 ///|
+fn usage_query_double_any(
+  path : StringView,
+  left_key : String,
+  right_key : String,
+) -> Double? {
+  match usage_query_value_any(path, left_key, right_key) {
+    Some(value) => parse_non_negative_decimal_to_double(value)
+    None => None
+  }
+}
+
+///|
 fn usage_query_int(path : StringView, key : String) -> Int? {
   match usage_query_value(path, key) {
     Some(value) =>
@@ -3262,6 +3345,34 @@ fn usage_query_int(path : StringView, key : String) -> Int? {
       }
     None => None
   }
+}
+
+///|
+fn parse_non_negative_decimal_to_double(value : String) -> Double? {
+  let trimmed = value.trim().to_owned()
+  if trimmed.is_empty() {
+    return None
+  }
+  let mut seen_dot = false
+  let mut seen_digit = false
+  for ch in trimmed {
+    if ch == '.' {
+      if seen_dot {
+        return None
+      }
+      seen_dot = true
+    } else {
+      let code = ch.to_int()
+      if code < '0'.to_int() || code > '9'.to_int() {
+        return None
+      }
+      seen_digit = true
+    }
+  }
+  if !seen_digit {
+    return None
+  }
+  Some(parse_decimal_scaled(trimmed, 1_000_000L).to_double() / 1_000_000.0)
 }
 
 ///|
