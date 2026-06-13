@@ -204,11 +204,11 @@ shape as ccs, including `failureThreshold`, `successThreshold`,
 existing breakers. `/proxy/failover-queue`,
 `/proxy/available-failover-providers`, and `/proxy/auto-failover-enabled`
 mirror the ccs failover queue and app auto-failover command shapes using
-Moonstat's standalone provider router state. The standalone CLI accepts the
-same CCS proxy and failover command names directly, for example
-`moonstat start_proxy_server`,
+Moonstat's standalone provider router state. The standalone CLI accepts CCS
+proxy, failover, provider, usage, and stream-check command names directly, for
+example `moonstat start_proxy_server`,
 `moonstat update_proxy_config_for_app --appType codex --enabled true`, and
-`moonstat set_auto_failover_enabled --appType codex --enabled true`.
+`moonstat get_usage_summary --appType codex`.
 The `/get_providers`,
 `/get_current_provider`, `/add_provider`, `/update_provider`,
 `/delete_provider`, `/remove_provider_from_live_config`, and

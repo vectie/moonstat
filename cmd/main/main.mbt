@@ -94,6 +94,62 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       switch_proxy_provider(arr)
     ["is_proxy_running", ..] | ["is-proxy-running", ..] =>
       check_proxy_running(arr)
+    ["get_providers", ..] | ["get-providers", ..] => check_providers(arr)
+    ["get_current_provider", ..] | ["get-current-provider", ..] =>
+      check_current_provider(arr)
+    ["add_provider", ..] | ["add-provider", ..] => add_provider(arr)
+    ["update_provider", ..] | ["update-provider", ..] => update_provider(arr)
+    ["delete_provider", ..] | ["delete-provider", ..] => delete_provider(arr)
+    ["remove_provider_from_live_config", ..]
+    | ["remove-provider-from-live-config", ..] =>
+      remove_provider_from_live_config(arr)
+    ["switch_provider", ..] | ["switch-provider", ..] => switch_provider(arr)
+    ["get_custom_endpoints", ..] | ["get-custom-endpoints", ..] =>
+      check_provider_custom_endpoints(arr)
+    ["add_custom_endpoint", ..] | ["add-custom-endpoint", ..] =>
+      add_provider_custom_endpoint(arr)
+    ["remove_custom_endpoint", ..] | ["remove-custom-endpoint", ..] =>
+      remove_provider_custom_endpoint(arr)
+    ["update_endpoint_last_used", ..] | ["update-endpoint-last-used", ..] =>
+      update_provider_endpoint_last_used(arr)
+    ["get_usage_summary", ..] | ["get-usage-summary", ..] =>
+      check_usage_summary(arr)
+    ["get_usage_summary_by_app", ..] | ["get-usage-summary-by-app", ..] =>
+      check_usage_apps(arr)
+    ["get_usage_trends", ..] | ["get-usage-trends", ..] =>
+      check_usage_trends(arr)
+    ["get_provider_stats", ..] | ["get-provider-stats", ..] =>
+      check_usage_providers(arr)
+    ["get_model_stats", ..] | ["get-model-stats", ..] => check_usage_models(arr)
+    ["get_request_logs", ..] | ["get-request-logs", ..] => check_usage_logs(arr)
+    ["get_request_detail", ..] | ["get-request-detail", ..] =>
+      check_usage_detail(arr)
+    ["get_model_pricing", ..] | ["get-model-pricing", ..] =>
+      check_usage_endpoint(arr, "/usage/model-pricing")
+    ["update_model_pricing", ..] | ["update-model-pricing", ..] =>
+      update_usage_pricing(arr)
+    ["delete_model_pricing", ..] | ["delete-model-pricing", ..] =>
+      delete_usage_pricing(arr)
+    ["check_provider_limits", ..] | ["check-provider-limits", ..] =>
+      check_usage_limits(arr)
+    ["sync_session_usage", ..] | ["sync-session-usage", ..] =>
+      sync_session_usage(arr)
+    ["get_usage_data_sources", ..] | ["get-usage-data-sources", ..] =>
+      check_usage_endpoint(arr, "/usage/data-sources")
+    ["queryProviderUsage", ..]
+    | ["query_provider_usage", ..]
+    | ["query-provider-usage", ..] => check_usage_provider_script(arr)
+    ["testUsageScript", ..]
+    | ["test_usage_script", ..]
+    | ["test-usage-script", ..] => test_usage_script(arr)
+    ["stream_check_provider", ..] | ["stream-check-provider", ..] =>
+      stream_check_provider(arr)
+    ["stream_check_all_providers", ..] | ["stream-check-all-providers", ..] =>
+      stream_check_all_providers(arr)
+    ["get_stream_check_config", ..] | ["get-stream-check-config", ..] =>
+      check_usage_endpoint(arr, "/get_stream_check_config")
+    ["save_stream_check_config", ..] | ["save-stream-check-config", ..] =>
+      save_stream_check_config(arr)
     ["proxy", "status", ..] => check_proxy_status(arr)
     ["proxy", "start-proxy-server", ..] => start_proxy_server(arr)
     ["proxy", "stop-proxy-server", ..] => stop_proxy_server(arr)
@@ -262,6 +318,13 @@ fn print_help() -> Unit {
   println("  proxy status           Show ccs-style proxy server status")
   println(
     "  <ccs_proxy_command>    Direct alias for CCS proxy/failover command names",
+  )
+  println(
+    "  <ccs_provider_command> Direct alias for CCS provider command names",
+  )
+  println("  <ccs_usage_command>    Direct alias for CCS usage command names")
+  println(
+    "  <ccs_stream_command>   Direct alias for CCS stream check command names",
   )
   println(
     "  proxy start-proxy-server  Enable proxy routing and print server info",
@@ -871,7 +934,9 @@ async fn check_proxy_endpoint(args : Array[String], path : String) -> Unit {
 
 ///|
 async fn check_proxy_app_endpoint(args : Array[String], path : String) -> Unit {
-  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
+    "claude",
+  )
   check_proxy_endpoint(args, "\{path}?app_type=\{cli_url_encode(app_type)}")
 }
 
@@ -890,10 +955,13 @@ async fn check_proxy_provider_endpoint(
 
 ///|
 fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
+  guard parse_string_arg_any(args, "--provider-id", "--providerId")
+    is Some(provider_id) else {
     return None
   }
-  let app_type = parse_string_arg(args, "--app-type").unwrap_or("claude")
+  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
+    "claude",
+  )
   Some(
     "\{path}?provider_id=\{cli_url_encode(provider_id)}&app_type=\{cli_url_encode(app_type)}",
   )
@@ -901,14 +969,17 @@ fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? 
 
 ///|
 fn provider_app_arg(args : Array[String]) -> String {
-  parse_string_arg_any(args, "--app", "--app-type").unwrap_or("claude")
+  match parse_string_arg_any(args, "--app", "--app-type") {
+    Some(value) => value
+    None => parse_string_arg(args, "--appType").unwrap_or("claude")
+  }
 }
 
 ///|
 fn provider_id_arg(args : Array[String]) -> String? {
   match parse_string_arg(args, "--id") {
     Some(id) => Some(id)
-    None => parse_string_arg(args, "--provider-id")
+    None => parse_string_arg_any(args, "--provider-id", "--providerId")
   }
 }
 
@@ -1438,11 +1509,11 @@ fn cli_path_with_query(path : String, query : Array[String]) -> String {
 ///|
 fn usage_limits_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg(args, "--provider-id") {
+  match parse_string_arg_any(args, "--provider-id", "--providerId") {
     Some(value) => query.push(cli_query_pair("provider_id", value))
     None => ()
   }
-  match parse_string_arg(args, "--app-type") {
+  match parse_string_arg_any(args, "--app-type", "--appType") {
     Some(value) => query.push(cli_query_pair("app_type", value))
     None => ()
   }
@@ -1467,12 +1538,15 @@ fn usage_provider_script_path(
   path : String,
   include_script : Bool,
 ) -> String? {
-  guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
+  guard parse_string_arg_any(args, "--provider-id", "--providerId")
+    is Some(provider_id) else {
     return None
   }
-  guard parse_string_arg_any(args, "--app", "--app-type") is Some(app) else {
-    return None
+  let app = match parse_string_arg_any(args, "--app", "--app-type") {
+    Some(value) => Some(value)
+    None => parse_string_arg(args, "--appType")
   }
+  guard app is Some(app) else { return None }
   let query = [
     cli_query_pair("providerId", provider_id),
     cli_query_pair("app", app),
@@ -1518,22 +1592,28 @@ fn usage_sync_path(args : Array[String]) -> String {
 
 ///|
 fn usage_pricing_update_path(args : Array[String]) -> String? {
-  guard parse_string_arg(args, "--model-id") is Some(model_id) else {
+  guard parse_string_arg_any(args, "--model-id", "--modelId") is Some(model_id) else {
     return None
   }
-  guard parse_string_arg(args, "--display-name") is Some(display_name) else {
+  guard parse_string_arg_any(args, "--display-name", "--displayName")
+    is Some(display_name) else {
     return None
   }
-  guard parse_string_arg(args, "--input-cost") is Some(input_cost) else {
+  guard parse_string_arg_any(args, "--input-cost", "--inputCost")
+    is Some(input_cost) else {
     return None
   }
-  guard parse_string_arg(args, "--output-cost") is Some(output_cost) else {
+  guard parse_string_arg_any(args, "--output-cost", "--outputCost")
+    is Some(output_cost) else {
     return None
   }
-  guard parse_string_arg(args, "--cache-read-cost") is Some(cache_read_cost) else {
+  guard parse_string_arg_any(args, "--cache-read-cost", "--cacheReadCost")
+    is Some(cache_read_cost) else {
     return None
   }
-  guard parse_string_arg(args, "--cache-creation-cost")
+  guard parse_string_arg_any(
+      args, "--cache-creation-cost", "--cacheCreationCost",
+    )
     is Some(cache_creation_cost) else {
     return None
   }
@@ -1550,7 +1630,7 @@ fn usage_pricing_update_path(args : Array[String]) -> String? {
 
 ///|
 fn usage_pricing_delete_path(args : Array[String]) -> String? {
-  guard parse_string_arg(args, "--model-id") is Some(model_id) else {
+  guard parse_string_arg_any(args, "--model-id", "--modelId") is Some(model_id) else {
     return None
   }
   Some("/usage/model-pricing?\{cli_query_pair("model_id", model_id)}")
@@ -1683,7 +1763,8 @@ async fn check_json_delete_endpoint(
 ///|
 async fn check_usage_detail(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
-  guard parse_string_arg(args, "--request-id") is Some(request_id) else {
+  guard parse_string_arg_any(args, "--request-id", "--requestId")
+    is Some(request_id) else {
     logger.error("Missing required --request-id")
     return
   }

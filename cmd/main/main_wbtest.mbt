@@ -341,3 +341,118 @@ test "top level ccs proxy command names build command alias paths" {
     Some("/proxy/auto-failover-enabled?app_type=codex&enabled=true"),
   )
 }
+
+///|
+test "top level ccs provider command names build command alias paths" {
+  assert_eq(
+    provider_app_path(
+      ["moonstat", "get_providers", "--appType", "codex"],
+      "/get_providers",
+    ),
+    "/get_providers?app=codex",
+  )
+  assert_eq(
+    provider_id_path(
+      [
+        "moonstat", "switch_provider", "--appType", "codex", "--providerId", "custom provider",
+      ],
+      "/switch_provider",
+    ),
+    Some("/switch_provider?app=codex&id=custom%20provider"),
+  )
+  assert_eq(
+    provider_endpoint_url_path(
+      [
+        "moonstat", "add_custom_endpoint", "--appType", "codex", "--providerId",
+        "custom", "--endpointUrl", "https://backup.example.com/v1",
+      ],
+      "/add_custom_endpoint",
+    ),
+    Some(
+      "/add_custom_endpoint?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
+    ),
+  )
+}
+
+///|
+test "top level ccs usage command names build command alias paths" {
+  assert_eq(
+    usage_filtered_path(
+      [
+        "moonstat", "get_usage_summary", "--startDate", "10", "--endDate", "20",
+        "--appType", "codex",
+      ],
+      "/usage/summary",
+      app_filter=true,
+    ),
+    "/usage/summary?start_date=10&end_date=20&app_type=codex",
+  )
+  assert_eq(
+    usage_logs_path([
+      "moonstat", "get_request_logs", "--appType", "claude", "--pageSize", "25",
+      "--providerName", "Provider A", "--statusCode", "200",
+    ]),
+    "/usage/logs?app_type=claude&pageSize=25&providerName=Provider%20A&statusCode=200",
+  )
+  assert_eq(
+    usage_limits_path([
+      "moonstat", "check_provider_limits", "--providerId", "p1", "--appType", "codex",
+    ]),
+    "/usage/provider-limits?provider_id=p1&app_type=codex",
+  )
+  assert_eq(
+    usage_provider_script_path(
+      [
+        "moonstat", "queryProviderUsage", "--providerId", "p1", "--appType", "codex",
+      ],
+      "/queryProviderUsage",
+      false,
+    ),
+    Some("/queryProviderUsage?providerId=p1&app=codex"),
+  )
+  assert_eq(
+    usage_pricing_update_path([
+      "moonstat", "update_model_pricing", "--modelId", "gpt/5", "--displayName",
+      "GPT 5", "--inputCost", "1", "--outputCost", "2", "--cacheReadCost", "0.1",
+      "--cacheCreationCost", "0.2",
+    ]),
+    Some(
+      "/usage/model-pricing?model_id=gpt%2F5&display_name=GPT%205&input_cost=1&output_cost=2&cache_read_cost=0.1&cache_creation_cost=0.2",
+    ),
+  )
+  assert_eq(
+    usage_pricing_delete_path([
+      "moonstat", "delete_model_pricing", "--modelId", "gpt/5",
+    ]),
+    Some("/usage/model-pricing?model_id=gpt%2F5"),
+  )
+  assert_eq(
+    "/usage/request-detail/\{cli_url_encode("req/1")}",
+    "/usage/request-detail/req%2F1",
+  )
+}
+
+///|
+test "top level ccs stream check command names build command alias paths" {
+  assert_eq(
+    stream_check_provider_path([
+      "moonstat", "stream_check_provider", "--appType", "codex", "--providerId",
+      "codex oauth",
+    ]),
+    Some("/stream_check_provider?appType=codex&providerId=codex%20oauth"),
+  )
+  assert_eq(
+    stream_check_all_path([
+      "moonstat", "stream_check_all_providers", "--appType", "codex", "--proxyTargetsOnly",
+      "true",
+    ]),
+    "/stream_check_all_providers?appType=codex&proxyTargetsOnly=true",
+  )
+  assert_eq(
+    stream_check_config_update_path([
+      "moonstat", "save_stream_check_config", "--timeoutSecs", "60", "--geminiModel",
+      "gemini-test",
+    ]),
+    "/save_stream_check_config?timeoutSecs=60&geminiModel=gemini-test",
+  )
+}
