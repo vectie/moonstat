@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "vectie/hij/internal/rand"
+package "vectie/moonstat/internal/rand"
 
 import {
   "moonbitlang/core/random",
-  "vectie/hij/internal/errno",
+  "vectie/moonstat/internal/errno",
 }
 
 // Values

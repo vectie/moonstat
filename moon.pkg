@@ -1,11 +1,12 @@
 import {
+  "vectie/moonstat/internal/fsx",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
   "moonbitlang/async/http",
   "moonbitlang/async/io",
-  "vectie/hij/internal/httpx",
-  "vectie/hij/internal/httpx/status",
-  "vectie/hij/internal/pino",
-  "vectie/hij/internal/uuid",
-  "vectie/hij/oauth/codex",
+  "vectie/moonstat/internal/httpx",
+  "vectie/moonstat/internal/httpx/status",
+  "vectie/moonstat/internal/pino",
+  "vectie/moonstat/internal/uuid",
+  "vectie/moonstat/oauth/codex",
 }

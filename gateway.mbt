@@ -3,13 +3,20 @@ pub struct Gateway {
   port : Int
   model : String
   mut credentials : @codex.Credentials?
+  stats : TrafficStats
   logger : @pino.Logger
 }
 
 ///|
 pub fn Gateway::new(port~ : Int, model? : String = "gpt-4o") -> Gateway {
-  let logger = @pino.logger("hijack", @pino.Transport::console())
-  Gateway::{ port, model, credentials: None, logger }
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  Gateway::{
+    port,
+    model,
+    credentials: None,
+    stats: TrafficStats::new(),
+    logger,
+  }
 }
 
 ///|
@@ -28,22 +35,40 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.logger.info("Loaded credentials from file")
   } else {
     self.logger.warn(
-      "No credentials found. Please login first with: hijack login",
+      "No credentials found. Please login first with: moonstat login",
     )
   }
   let router = @httpx.Router::new()
+  let file_server = @httpx.FileServer::new("public")
   router.add_handler(@httpx.Method::Post, "/v1/messages", (r, w) => {
     self.handle_messages(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/participant/register", (_, w) => {
+    self.handle_register_page(w)
   })
   router.add_handler(@httpx.Method::Get, "/health", (r, w) => {
     self.handle_health(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/stats", (_, w) => {
+    self.handle_stats(w)
+  })
   router.add_handler(@httpx.Method::Post, "/login", (r, w) => {
     self.handle_login(r, w)
   })
+  router.set_not_found_handler(file_server.handler())
   let server = @httpx.Server::new("[::]", self.port, reuse_addr=true)
   self.logger.info("Gateway started on port \{server.port()}")
   server.serve(router.handler())
+}
+
+///|
+async fn Gateway::handle_register_page(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.write_static_file(
+    w, "public/participant-register.html", "text/html; charset=utf-8",
+  )
 }
 
 ///|
@@ -58,8 +83,44 @@ async fn Gateway::handle_health(
   let response : Map[String, Json] = {
     "status": Json::string("ok"),
     "credentials_loaded": Json::boolean(has_creds),
+    "stats": self.stats.to_json(),
   }
   w.write(response.to_json().stringify())
+  w.flush()
+}
+
+///|
+async fn Gateway::handle_stats(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  w.header().set("Content-Type", "application/json")
+  w.write_header(@status.Ok)
+  w.write(self.stats.to_json().stringify(indent=2))
+  w.flush()
+}
+
+///|
+async fn Gateway::write_static_file(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  path : String,
+  content_type : String,
+) -> Unit {
+  let result : Result[String, Error] = try? @fsx.read_file(path)
+  match result {
+    Ok(content) => {
+      w.header().set("Content-Type", content_type)
+      w.write_header(@status.Ok)
+      w.write(content)
+    }
+    Err(error) => {
+      self.logger.error("Failed to serve static file \{path}: \{error}")
+      w.header().set("Content-Type", "text/plain; charset=utf-8")
+      w.write_header(@status.NotFound)
+      w.write("Not Found")
+    }
+  }
   w.flush()
 }
 
@@ -94,9 +155,11 @@ async fn Gateway::handle_messages(
 ) -> Unit {
   let body = r.body.read_all()
   let body_str = body.text()
+  self.stats.record_inbound(body_str.length())
   let json_result : Result[Json, Error] = try? @json.parse(body_str)
   match json_result {
     Err(_) => {
+      self.stats.record_bad_request()
       w.header().set("Content-Type", "application/json")
       w.write_header(@status.BadRequest)
       w.write("{\"error\":\"Invalid JSON\"}")
@@ -109,6 +172,7 @@ async fn Gateway::handle_messages(
       )
       match anthropic_request_result {
         Err(_) => {
+          self.stats.record_bad_request()
           w.header().set("Content-Type", "application/json")
           w.write_header(@status.BadRequest)
           w.write("{\"error\":\"Invalid Anthropic request\"}")
@@ -122,6 +186,7 @@ async fn Gateway::handle_messages(
           let model = self.model
           self.logger.debug("Using Codex model: \{model}")
           let stream = anthropic_request.stream.unwrap_or(false)
+          self.stats.record_stream_mode(stream)
           if stream {
             self.handle_streaming_request(anthropic_request, model, w)
           } else {
@@ -141,6 +206,7 @@ async fn Gateway::handle_non_streaming_request(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
+    self.stats.record_unauthorized()
     w.header().set("Content-Type", "application/json")
     w.write_header(@status.Unauthorized)
     w.write("{\"error\":\"Not authenticated. Please login first.\"}")
@@ -155,8 +221,8 @@ async fn Gateway::handle_non_streaming_request(
     "ChatGPT-Account-ID": creds.accountId,
     "Content-Type": "application/json",
     "Accept": "application/json",
-    "originator": "hijack_gateway",
-    "User-Agent": "hijack/1.0.0",
+    "originator": "moonstat_gateway",
+    "User-Agent": "moonstat/1.0.0",
   })
   defer client.close()
   let response = client.post("/backend-api/codex/responses", codex_request)
@@ -176,6 +242,7 @@ async fn Gateway::handle_non_streaming_request(
         Err(_) => ()
       }
     }
+    self.stats.record_upstream_error(error_body.length())
     w.header().set("Content-Type", "application/json")
     w.write_header(response.code)
     w.write("{\"error\":\"Codex API error: \{response.code}\"}")
@@ -188,12 +255,19 @@ async fn Gateway::handle_non_streaming_request(
   )
   match response_json_result {
     Ok(json) => {
+      let (input_tokens, output_tokens) = extract_usage_tokens(json)
+      self.stats.record_success(
+        input_tokens,
+        output_tokens,
+        response_body.length(),
+      )
       let anthropic_response = convert_codex_to_anthropic(json, request.model)
       w.header().set("Content-Type", "application/json")
       w.write_header(@status.Ok)
       w.write(anthropic_response.to_json().stringify())
     }
     Err(_) => {
+      self.stats.record_internal_error()
       w.header().set("Content-Type", "application/json")
       w.write_header(@status.InternalServerError)
       w.write("{\"error\":\"Failed to parse Codex response\"}")
@@ -210,6 +284,7 @@ async fn Gateway::handle_streaming_request(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
+    self.stats.record_unauthorized()
     w.header().set("Content-Type", "application/json")
     w.write_header(@status.Unauthorized)
     w.write("{\"error\":\"Not authenticated. Please login first.\"}")
@@ -224,8 +299,8 @@ async fn Gateway::handle_streaming_request(
     "ChatGPT-Account-ID": creds.accountId,
     "Content-Type": "application/json",
     "Accept": "text/event-stream",
-    "originator": "hijack_gateway",
-    "User-Agent": "hijack/1.0.0",
+    "originator": "moonstat_gateway",
+    "User-Agent": "moonstat/1.0.0",
   })
   defer client.close()
   let response = client.post("/backend-api/codex/responses", codex_request)
@@ -245,6 +320,7 @@ async fn Gateway::handle_streaming_request(
         Err(_) => ()
       }
     }
+    self.stats.record_upstream_error(error_body.length())
     w.header().set("Content-Type", "application/json")
     w.write_header(response.code)
     w.write("{\"error\":\"Codex API error: \{response.code}\"}")
@@ -261,8 +337,24 @@ async fn Gateway::handle_streaming_request(
     w.write("data: \{event.data}\n\n")
     w.flush()
   }
+  self.stats.record_success(0, 0, 0)
   w.write("event: message_stop\ndata: {}\n\n")
   w.flush()
+}
+
+///|
+fn extract_usage_tokens(codex_json : Json) -> (Int, Int) {
+  guard codex_json is Object(obj) else { return (0, 0) }
+  guard obj.get("usage") is Some(Object(usage_obj)) else { return (0, 0) }
+  let input_tokens = match usage_obj.get("input_tokens") {
+    Some(Number(n, ..)) => n.trunc().to_int()
+    _ => 0
+  }
+  let output_tokens = match usage_obj.get("output_tokens") {
+    Some(Number(n, ..)) => n.trunc().to_int()
+    _ => 0
+  }
+  (input_tokens, output_tokens)
 }
 
 ///|

@@ -1,5 +1,5 @@
 import {
-  "vectie/hij/internal/errno",
+  "vectie/moonstat/internal/errno",
   "moonbitlang/core/json",
   "moonbitlang/core/random",
 }

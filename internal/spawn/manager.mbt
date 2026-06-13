@@ -38,12 +38,12 @@ fn Manager::new_pid(self : Manager) -> Pid {
 struct Pid(Int) derive(Hash, Eq)
 
 ///|
-pub impl ToJson for Pid with to_json(self : Pid) -> Json {
+pub impl ToJson for Pid with fn to_json(self : Pid) -> Json {
   self.0.to_json()
 }
 
 ///|
-pub impl Show for Pid with output(self : Pid, logger : &Logger) -> Unit {
+pub impl Show for Pid with fn output(self : Pid, logger : &Logger) -> Unit {
   logger.write_string(self.0.to_string())
 }
 

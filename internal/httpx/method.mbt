@@ -13,7 +13,7 @@ pub(all) enum Method {
 } derive(Eq, Compare, Hash, ToJson)
 
 ///|
-pub impl Show for Method with to_string(self : Method) -> String {
+pub impl Show for Method with fn to_string(self : Method) -> String {
   match self {
     Method::Get => "GET"
     Method::Head => "HEAD"
@@ -28,7 +28,7 @@ pub impl Show for Method with to_string(self : Method) -> String {
 }
 
 ///|
-pub impl Show for Method with output(self : Method, out : &Logger) -> Unit {
+pub impl Show for Method with fn output(self : Method, out : &Logger) -> Unit {
   out.write_string(self.to_string())
 }
 

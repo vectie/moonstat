@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "vectie/hij/cmd/main"
+package "vectie/moonstat/cmd/main"
 
 // Values
 pub async fn start(ArrayView[String]) -> Unit

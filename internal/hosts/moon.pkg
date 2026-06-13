@@ -1,5 +1,5 @@
 import {
   "moonbitlang/core/json",
-  "vectie/hij/internal/fsx",
-  "vectie/hij/internal/spawn",
+  "vectie/moonstat/internal/fsx",
+  "vectie/moonstat/internal/spawn",
 }

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "vectie/hij/internal/pathx"
+package "vectie/moonstat/internal/pathx"
 
 // Values
 pub fn basename(StringView) -> StringView

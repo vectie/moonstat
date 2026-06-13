@@ -6,7 +6,7 @@ pub struct TokenResponse {
 } derive(Show)
 
 ///|
-impl @json.FromJson for TokenResponse with from_json(
+impl @json.FromJson for TokenResponse with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> TokenResponse raise @json.JsonDecodeError {

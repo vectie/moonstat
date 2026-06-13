@@ -6,7 +6,7 @@ struct RefreshResponse {
 } derive(Show)
 
 ///|
-impl @json.FromJson for RefreshResponse with from_json(
+impl @json.FromJson for RefreshResponse with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> RefreshResponse raise @json.JsonDecodeError {

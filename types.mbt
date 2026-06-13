@@ -9,7 +9,7 @@ pub struct AnthropicRequest {
 }
 
 ///|
-pub impl ToJson for AnthropicRequest with to_json(self : AnthropicRequest) -> Json {
+pub impl ToJson for AnthropicRequest with fn to_json(self : AnthropicRequest) -> Json {
   let json : Map[String, Json] = {
     "model": Json::string(self.model),
     "max_tokens": self.max_tokens.to_json(),
@@ -28,7 +28,7 @@ pub impl ToJson for AnthropicRequest with to_json(self : AnthropicRequest) -> Js
 }
 
 ///|
-pub impl FromJson for AnthropicRequest with from_json(
+pub impl FromJson for AnthropicRequest with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicRequest raise @json.JsonDecodeError {
@@ -86,7 +86,7 @@ pub struct AnthropicMessage {
 }
 
 ///|
-pub impl ToJson for AnthropicMessage with to_json(self : AnthropicMessage) -> Json {
+pub impl ToJson for AnthropicMessage with fn to_json(self : AnthropicMessage) -> Json {
   let json : Map[String, Json] = { "role": Json::string(self.role) }
   match self.content {
     Text(t) => json["content"] = Json::string(t)
@@ -96,7 +96,7 @@ pub impl ToJson for AnthropicMessage with to_json(self : AnthropicMessage) -> Js
 }
 
 ///|
-pub impl FromJson for AnthropicMessage with from_json(
+pub impl FromJson for AnthropicMessage with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicMessage raise @json.JsonDecodeError {
@@ -137,7 +137,7 @@ pub struct AnthropicBlock {
 }
 
 ///|
-pub impl ToJson for AnthropicBlock with to_json(self : AnthropicBlock) -> Json {
+pub impl ToJson for AnthropicBlock with fn to_json(self : AnthropicBlock) -> Json {
   let json : Map[String, Json] = { "type": Json::string(self.type_) }
   if self.text is Some(text) {
     json["text"] = Json::string(text)
@@ -152,7 +152,7 @@ pub impl ToJson for AnthropicBlock with to_json(self : AnthropicBlock) -> Json {
 }
 
 ///|
-pub impl FromJson for AnthropicBlock with from_json(
+pub impl FromJson for AnthropicBlock with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicBlock raise @json.JsonDecodeError {
@@ -186,7 +186,7 @@ pub struct AnthropicTool {
 }
 
 ///|
-pub impl ToJson for AnthropicTool with to_json(self : AnthropicTool) -> Json {
+pub impl ToJson for AnthropicTool with fn to_json(self : AnthropicTool) -> Json {
   let json : Map[String, Json] = {
     "name": Json::string(self.name),
     "input_schema": self.input_schema,
@@ -198,7 +198,7 @@ pub impl ToJson for AnthropicTool with to_json(self : AnthropicTool) -> Json {
 }
 
 ///|
-pub impl FromJson for AnthropicTool with from_json(
+pub impl FromJson for AnthropicTool with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicTool raise @json.JsonDecodeError {

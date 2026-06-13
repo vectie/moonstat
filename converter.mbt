@@ -14,7 +14,7 @@ pub struct CodexMessage {
 }
 
 ///|
-pub impl ToJson for CodexMessage with to_json(self : CodexMessage) -> Json {
+pub impl ToJson for CodexMessage with fn to_json(self : CodexMessage) -> Json {
   let json : Map[String, Json] = {
     "role": Json::string(self.role),
     "content": Json::string(self.content),
@@ -40,7 +40,7 @@ pub struct CodexTool {
 }
 
 ///|
-pub impl ToJson for CodexTool with to_json(self : CodexTool) -> Json {
+pub impl ToJson for CodexTool with fn to_json(self : CodexTool) -> Json {
   let json : Map[String, Json] = {
     "type": Json::string(self.type_),
     "name": Json::string(self.name),

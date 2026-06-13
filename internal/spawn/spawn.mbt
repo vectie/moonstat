@@ -22,7 +22,7 @@ pub suberror Failed {
 } derive(ToJson)
 
 ///|
-pub impl Show for Failed with output(self : Failed, logger : &Logger) -> Unit {
+pub impl Show for Failed with fn output(self : Failed, logger : &Logger) -> Unit {
   let Failed(self) = self
   logger.write_string("Process ")
   logger.write_string(self.exec.escape())

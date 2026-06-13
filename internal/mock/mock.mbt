@@ -20,14 +20,14 @@ priv struct Clock {
 }
 
 ///|
-impl @clock.Clock for Clock with now(self : Clock) -> @clock.Timestamp {
+impl @clock.Clock for Clock with fn now(self : Clock) -> @clock.Timestamp {
   let ts = self.timestamp
   self.timestamp += 1
   @clock.Timestamp::from_ms(ts)
 }
 
 ///|
-impl @clock.Clock for Clock with now_str(self : Clock) -> String {
+impl @clock.Clock for Clock with fn now_str(self : Clock) -> String {
   let t = self.now()
   "Tick:\{t.ms()}"
 }

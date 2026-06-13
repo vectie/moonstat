@@ -4,5 +4,5 @@ import {
 }
 
 import {
-  "vectie/hij/internal/rand",
+  "vectie/moonstat/internal/rand",
 } for "test"

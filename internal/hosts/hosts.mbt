@@ -1,10 +1,10 @@
 ///|
-/// 自动 hosts 文件劫持模块
-/// 通过将 api.anthropic.com 重定向到本地网关实现透明劫持
+/// Hosts-file reroute support.
+/// Routes api.anthropic.com to the local gateway for transparent proxying.
 const ANTHROPIC_HOST = "api.anthropic.com"
 
 ///|
-const HIJACK_COMMENT = "# hijack-auto-hijack"
+const REROUTE_COMMENT = "# moonstat-auto-reroute"
 
 ///|
 /// 获取系统的 hosts 文件路径
@@ -19,7 +19,7 @@ pub async fn check_permission() -> Bool {
   try {
     let _ = @fsx.read_file(hosts_path)
     // 如果能读取，尝试写入测试
-    let test_line = "# hijack-permission-test\n"
+    let test_line = "# moonstat-permission-test\n"
     let content = @fsx.read_file(hosts_path)
     let new_content = content + test_line
     @fsx.write_to_file(hosts_path, new_content, create=0o644)
@@ -34,26 +34,26 @@ pub async fn check_permission() -> Bool {
 }
 
 ///|
-/// 生成劫持条目
-fn generate_hijack_entry(_port : Int) -> String {
-  "127.0.0.1 \{ANTHROPIC_HOST} \{HIJACK_COMMENT}\n"
+/// Generates the hosts entry.
+fn generate_reroute_entry(_port : Int) -> String {
+  "127.0.0.1 \{ANTHROPIC_HOST} \{REROUTE_COMMENT}\n"
 }
 
 ///|
-/// 检查是否已经安装了劫持
-pub async fn is_hijack_installed() -> Bool {
+/// Checks whether the hosts reroute is installed.
+pub async fn is_reroute_installed() -> Bool {
   let hosts_path = get_hosts_path()
   try {
     let content = @fsx.read_file(hosts_path)
-    content.contains(HIJACK_COMMENT)
+    content.contains(REROUTE_COMMENT)
   } catch {
     _ => false
   }
 }
 
 ///|
-/// 安装 hosts 劫持
-pub async fn install_hijack(port : Int) -> Result[Unit, String] {
+/// Installs the hosts reroute.
+pub async fn install_reroute(port : Int) -> Result[Unit, String] {
   let hosts_path = get_hosts_path()
 
   // 检查权限
@@ -62,13 +62,13 @@ pub async fn install_hijack(port : Int) -> Result[Unit, String] {
   }
 
   // 检查是否已安装
-  if is_hijack_installed() {
-    return Err("hosts 劫持已经安装")
+  if is_reroute_installed() {
+    return Err("hosts reroute is already installed")
   }
 
   try {
     let content = @fsx.read_file(hosts_path)
-    let entry = generate_hijack_entry(port)
+    let entry = generate_reroute_entry(port)
     let new_content = content + entry
     @fsx.write_to_file(hosts_path, new_content, create=0o644)
     Ok(())
@@ -78,8 +78,8 @@ pub async fn install_hijack(port : Int) -> Result[Unit, String] {
 }
 
 ///|
-/// 卸载 hosts 劫持
-pub async fn uninstall_hijack() -> Result[Unit, String] {
+/// Uninstalls the hosts reroute.
+pub async fn uninstall_reroute() -> Result[Unit, String] {
   let hosts_path = get_hosts_path()
 
   // 检查权限
@@ -88,8 +88,8 @@ pub async fn uninstall_hijack() -> Result[Unit, String] {
   }
 
   // 检查是否已安装
-  if not(is_hijack_installed()) {
-    return Err("hosts 劫持未安装")
+  if not(is_reroute_installed()) {
+    return Err("hosts reroute is not installed")
   }
 
   try {
@@ -97,7 +97,7 @@ pub async fn uninstall_hijack() -> Result[Unit, String] {
     let lines = content.split("\n").to_array()
     let filtered_lines = lines
       .iter()
-      .filter(fn(line) { not(line.contains(HIJACK_COMMENT)) })
+      .filter(fn(line) { not(line.contains(REROUTE_COMMENT)) })
       .collect()
     let new_content = filtered_lines.join("\n")
     @fsx.write_to_file(hosts_path, new_content, create=0o644)
@@ -118,7 +118,7 @@ async fn flush_dns() -> Unit {
 ///|
 /// 安装并刷新 DNS
 pub async fn install_and_flush(port : Int) -> Result[Unit, String] {
-  let result = install_hijack(port)
+  let result = install_reroute(port)
   match result {
     Ok(_) => {
       flush_dns()
@@ -131,7 +131,7 @@ pub async fn install_and_flush(port : Int) -> Result[Unit, String] {
 ///|
 /// 卸载并刷新 DNS
 pub async fn uninstall_and_flush() -> Result[Unit, String] {
-  let result = uninstall_hijack()
+  let result = uninstall_reroute()
   match result {
     Ok(_) => {
       flush_dns()

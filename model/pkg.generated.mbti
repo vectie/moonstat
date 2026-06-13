@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "vectie/hij/model"
+package "vectie/moonstat/model"
 
 // Values
 pub fn open_router_model(api_key~ : String, name? : CommonModels) -> Model
@@ -9,8 +9,7 @@ pub fn open_router_model(api_key~ : String, name? : CommonModels) -> Model
 // Types and methods
 pub(all) enum CommonModels {
   Qwen3CoderPlus
-}
-pub impl Show for CommonModels
+} derive(Show)
 
 pub struct Model {
   name : String
@@ -26,8 +25,7 @@ pub struct Model {
   account_id : String?
   refresh_token : String?
   id_token : String?
-}
-pub impl Show for Model
+} derive(Show)
 
 pub(all) enum Provider {
   OpenAI
@@ -37,15 +35,11 @@ pub(all) enum Provider {
   Qwen
   Kimi
   KimiCoding
-}
-pub impl Eq for Provider
-pub impl Show for Provider
+} derive(Eq, Show)
 
 pub(all) enum Type {
   SaaS(Provider)
-}
-pub impl Eq for Type
-pub impl Show for Type
+} derive(Eq, Show)
 
 // Type aliases
 

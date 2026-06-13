@@ -1,6 +1,6 @@
 import {
-  "vectie/hij/internal/errno",
-  "vectie/hij/internal/c",
+  "vectie/moonstat/internal/errno",
+  "vectie/moonstat/internal/c",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/env",
   "moonbitlang/core/json",
@@ -9,7 +9,7 @@ import {
 }
 
 import {
-  "vectie/hij/internal/spawn",
+  "vectie/moonstat/internal/spawn",
   "moonbitlang/async",
 } for "test"
 

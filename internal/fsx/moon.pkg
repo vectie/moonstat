@@ -1,9 +1,9 @@
 import {
   "moonbitlang/async/fs",
-  "vectie/hij/internal/pathx",
+  "vectie/moonstat/internal/pathx",
   "moonbitlang/async/io",
-  "vectie/hij/internal/errno",
-  "vectie/hij/internal/os",
+  "vectie/moonstat/internal/errno",
+  "vectie/moonstat/internal/os",
   "moonbitlang/async/os_error",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/json",
@@ -12,7 +12,7 @@ import {
 
 import {
   "moonbitlang/async",
-  "vectie/hij/internal/spawn",
+  "vectie/moonstat/internal/spawn",
   "moonbitlang/async/process",
 } for "test"
 

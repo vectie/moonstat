@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "vectie/hij"
+package "vectie/moonstat"
 
 import {
   "moonbitlang/core/json",
-  "vectie/hij/internal/pino",
-  "vectie/hij/oauth/codex",
+  "vectie/moonstat/internal/pino",
+  "vectie/moonstat/oauth/codex",
 }
 
 // Values
@@ -35,9 +35,7 @@ pub struct AnthropicDelta {
   type_ : String?
   text : String?
   stop_reason : String?
-}
-pub impl Show for AnthropicDelta
-pub impl @json.FromJson for AnthropicDelta
+} derive(Show, @json.FromJson)
 
 pub struct AnthropicMessage {
   role : String
@@ -66,10 +64,7 @@ pub struct AnthropicResponse {
   stop_reason : String?
   stop_sequence : String?
   usage : AnthropicUsage
-}
-pub impl Show for AnthropicResponse
-pub impl ToJson for AnthropicResponse
-pub impl @json.FromJson for AnthropicResponse
+} derive(Show, ToJson, @json.FromJson)
 
 pub struct AnthropicResponseBlock {
   type_ : String
@@ -77,10 +72,7 @@ pub struct AnthropicResponseBlock {
   name : String?
   input : Json?
   id : String?
-}
-pub impl Show for AnthropicResponseBlock
-pub impl ToJson for AnthropicResponseBlock
-pub impl @json.FromJson for AnthropicResponseBlock
+} derive(Show, ToJson, @json.FromJson)
 
 pub struct AnthropicStreamEvent {
   type_ : String
@@ -88,9 +80,7 @@ pub struct AnthropicStreamEvent {
   delta : AnthropicDelta?
   content_block : AnthropicResponseBlock?
   message : AnthropicResponse?
-}
-pub impl Show for AnthropicStreamEvent
-pub impl @json.FromJson for AnthropicStreamEvent
+} derive(Show, @json.FromJson)
 
 pub struct AnthropicTool {
   name : String
@@ -103,10 +93,7 @@ pub impl @json.FromJson for AnthropicTool
 pub struct AnthropicUsage {
   input_tokens : Int
   output_tokens : Int
-}
-pub impl Show for AnthropicUsage
-pub impl ToJson for AnthropicUsage
-pub impl @json.FromJson for AnthropicUsage
+} derive(Show, ToJson, @json.FromJson)
 
 pub struct CodexInput {
   messages : Array[CodexMessage]
@@ -134,6 +121,7 @@ pub struct Gateway {
   port : Int
   model : String
   mut credentials : @codex.Credentials?
+  stats : TrafficStats
   logger : @pino.Logger
 }
 pub fn Gateway::new(port~ : Int, model? : String) -> Self
@@ -145,6 +133,31 @@ pub struct ToolCallInfo {
   name : String
   arguments : String
 }
+
+pub struct TrafficStats {
+  mut total_requests : Int
+  mut message_requests : Int
+  mut streaming_requests : Int
+  mut non_streaming_requests : Int
+  mut successful_responses : Int
+  mut failed_responses : Int
+  mut unauthorized_responses : Int
+  mut bad_requests : Int
+  mut upstream_errors : Int
+  mut input_tokens : Int
+  mut output_tokens : Int
+  mut request_bytes : Int
+  mut response_bytes : Int
+}
+pub fn TrafficStats::new() -> Self
+pub fn TrafficStats::record_bad_request(Self) -> Unit
+pub fn TrafficStats::record_inbound(Self, Int) -> Unit
+pub fn TrafficStats::record_internal_error(Self) -> Unit
+pub fn TrafficStats::record_stream_mode(Self, Bool) -> Unit
+pub fn TrafficStats::record_success(Self, Int, Int, Int) -> Unit
+pub fn TrafficStats::record_unauthorized(Self) -> Unit
+pub fn TrafficStats::record_upstream_error(Self, Int) -> Unit
+pub fn TrafficStats::to_json(Self) -> Json
 
 // Type aliases
 

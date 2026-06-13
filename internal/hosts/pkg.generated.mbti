@@ -1,18 +1,18 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "vectie/hij/internal/hosts"
+package "vectie/moonstat/internal/hosts"
 
 // Values
 pub async fn check_permission() -> Bool
 
 pub async fn install_and_flush(Int) -> Result[Unit, String]
 
-pub async fn install_hijack(Int) -> Result[Unit, String]
+pub async fn install_reroute(Int) -> Result[Unit, String]
 
-pub async fn is_hijack_installed() -> Bool
+pub async fn is_reroute_installed() -> Bool
 
 pub async fn uninstall_and_flush() -> Result[Unit, String]
 
-pub async fn uninstall_hijack() -> Result[Unit, String]
+pub async fn uninstall_reroute() -> Result[Unit, String]
 
 // Errors
 

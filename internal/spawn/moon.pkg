@@ -1,17 +1,17 @@
 import {
   "moonbitlang/async/process",
   "moonbitlang/async/io",
-  "vectie/hij/internal/errno",
+  "vectie/moonstat/internal/errno",
   "moonbitlang/async/aqueue",
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/json",
   "moonbitlang/core/test",
-  "vectie/hij/clock",
+  "vectie/moonstat/clock",
 }
 
 import {
-  "vectie/hij/internal/mock",
+  "vectie/moonstat/internal/mock",
 } for "test"
 
 options(
