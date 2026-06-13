@@ -233,17 +233,28 @@ fn matches_vertex_ai_publisher_model_path(path : String) -> Bool {
 
 ///|
 fn merge_queries(base_query : String?, endpoint_query : String?) -> String? {
-  match (base_query, endpoint_query) {
-    (None, None) => None
-    (Some(base), None) => Some(base)
-    (None, Some(endpoint)) => Some(endpoint)
-    (Some(base), Some(endpoint)) =>
-      if base.is_empty() {
-        Some(endpoint)
-      } else if endpoint.is_empty() {
-        Some(base)
-      } else {
-        Some("\{base}&\{endpoint}")
+  let parts : Array[String] = []
+  match base_query {
+    Some(query) =>
+      for part in query.split("&") {
+        if !part.is_empty() {
+          parts.push(part.to_owned())
+        }
       }
+    None => ()
+  }
+  match endpoint_query {
+    Some(query) =>
+      for part in query.split("&") {
+        if !part.is_empty() {
+          parts.push(part.to_owned())
+        }
+      }
+    None => ()
+  }
+  if parts.is_empty() {
+    None
+  } else {
+    Some(parts.join("&"))
   }
 }

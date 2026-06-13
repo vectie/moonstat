@@ -213,6 +213,29 @@ test "gemini url merges base and endpoint queries" {
 }
 
 ///|
+test "gemini url drops empty query fragments like ccs" {
+  assert_eq(
+    build_gemini_native_url(
+      "https://generativelanguage.googleapis.com/v1beta?", "/v1beta/models/gemini-2.5-pro:generateContent?",
+    ),
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
+  )
+  assert_eq(
+    build_gemini_native_url(
+      "https://generativelanguage.googleapis.com/v1beta?key=abc&&", "/v1beta/models/gemini-2.5-pro:generateContent?&alt=sse",
+    ),
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=abc&alt=sse",
+  )
+  assert_eq(
+    resolve_gemini_native_url(
+      "https://relay.example/custom/generate-content?", "/v1beta/models/gemini-2.5-pro:generateContent?",
+      true,
+    ),
+    "https://relay.example/custom/generate-content",
+  )
+}
+
+///|
 test "gemini model id normalization matches ccs" {
   assert_eq(
     normalize_gemini_model_id("models/gemini-2.5-pro"),
