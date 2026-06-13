@@ -3351,12 +3351,21 @@ fn parse_claude_compatible_non_stream_body(
 
 ///|
 fn body_looks_like_sse(body : String) -> Bool {
-  let trimmed = body.trim()
+  let trimmed = strip_utf8_bom(body).trim()
   trimmed.has_prefix("data:") ||
   trimmed.has_prefix("event:") ||
   trimmed.has_prefix("id:") ||
   trimmed.has_prefix("retry:") ||
   trimmed.has_prefix(":")
+}
+
+///|
+fn strip_utf8_bom(body : String) -> String {
+  if body.has_prefix("\u{feff}") {
+    body["\u{feff}".length():].to_owned()
+  } else {
+    body
+  }
 }
 
 ///|
@@ -3490,7 +3499,7 @@ priv struct OpenAIChatSseState {
   mut finish_reason : String?
   mut usage : Json?
   mut saw_choice : Bool
-  mut saw_done : Bool
+  mut error_seen : Bool
   tool_calls : Map[Int, OpenAIChatSseToolCall]
 }
 
@@ -3504,7 +3513,7 @@ fn OpenAIChatSseState::new() -> OpenAIChatSseState {
     finish_reason: None,
     usage: None,
     saw_choice: false,
-    saw_done: false,
+    error_seen: false,
     tool_calls: Map([], capacity=0),
   }
 }
@@ -3513,7 +3522,7 @@ fn OpenAIChatSseState::new() -> OpenAIChatSseState {
 fn chat_sse_to_response_value(body : String) -> Json? {
   let state = OpenAIChatSseState::new()
   let mut buffer = ""
-  let normalized = body
+  let normalized = strip_utf8_bom(body)
     .replace_all(old="\r\n", new="\n")
     .replace_all(old="\r", new="\n")
   for line_view in normalized.split("\n") {
@@ -3528,7 +3537,7 @@ fn chat_sse_to_response_value(body : String) -> Json? {
     }
   }
   process_chat_sse_block(buffer, false, state)
-  if !state.saw_choice && !state.saw_done {
+  if state.error_seen || !state.saw_choice {
     return None
   }
   Some(state.to_chat_completion_json())
@@ -3561,7 +3570,6 @@ fn process_chat_sse_block(
   }
   let data = data_lines.join("\n")
   if data.trim() == "[DONE]" {
-    state.saw_done = true
     return
   }
   let parsed = @json.parse(data) catch {
@@ -3569,6 +3577,25 @@ fn process_chat_sse_block(
   }
   guard parsed is Object(obj) else { return }
   if event_name.to_lower() == "error" {
+    state.error_seen = true
+    return
+  }
+  match obj.get("error") {
+    Some(Object(error_obj)) =>
+      match json_string_from_map(error_obj, "message") {
+        Some(message) if !message.is_empty() => {
+          state.error_seen = true
+          return
+        }
+        _ => ()
+      }
+    Some(String(message)) if !message.is_empty() => {
+      state.error_seen = true
+      return
+    }
+    _ => ()
+  }
+  if state.error_seen {
     return
   }
   state.push_chat_sse_chunk(obj)

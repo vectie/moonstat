@@ -1391,6 +1391,13 @@ test "ccs responses sse parser collects output items" {
 }
 
 ///|
+test "ccs sse body sniffing accepts bom and indented fields" {
+  assert_true(body_looks_like_sse("\u{feff}\n  data: {}\n\n"))
+  assert_true(body_looks_like_sse(": PROCESSING\n\ndata: {}\n\n"))
+  assert_false(body_looks_like_sse("<html><body>blocked</body></html>"))
+}
+
+///|
 test "ccs chat sse parser aggregates text and usage" {
   let sse =
     #|data: {"id":"chatcmpl_1","model":"gpt-4o","choices":[{"index":0,"delta":{"content":"Hel"},"finish_reason":null}]}
@@ -1451,6 +1458,31 @@ test "ccs chat sse parser ignores truncated trailing block after done" {
   guard choices[0] is Object(choice) else { fail("expected choice") }
   guard choice["message"] is Object(message) else { fail("expected message") }
   assert_eq(message["content"], Json::string("done"))
+}
+
+///|
+test "ccs chat sse parser rejects stream without choices" {
+  let sse =
+    #|: keepalive
+    #|
+    #|data: [DONE]
+    #|
+  assert_true(
+    parse_claude_compatible_non_stream_body("openai_chat", sse) is None,
+  )
+}
+
+///|
+test "ccs chat sse parser rejects event error" {
+  let sse =
+    #|data: {"id":"chatcmpl_ok","model":"gpt-4o","choices":[{"index":0,"delta":{"content":"done"},"finish_reason":"stop"}]}
+    #|
+    #|event: error
+    #|data: {"error":{"message":"quota exceeded"}}
+    #|
+  assert_true(
+    parse_claude_compatible_non_stream_body("openai_chat", sse) is None,
+  )
 }
 
 ///|
