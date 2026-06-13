@@ -1873,18 +1873,88 @@ fn provider_base_is_full_endpoint(base_url : String) -> Bool {
 }
 
 ///|
-fn claude_transform_endpoint(api_format : String, is_stream : Bool) -> String {
-  match api_format {
+fn claude_transform_endpoint(
+  api_format : String,
+  is_stream : Bool,
+  request_path? : StringView = "/v1/messages",
+) -> String {
+  let query = claude_transform_passthrough_query(
+    request_path, api_format, is_stream,
+  )
+  let target = match api_format {
     "openai_responses" => "/v1/responses"
     "openai_chat" => "/v1/chat/completions"
     "gemini_native" =>
       if is_stream {
-        "/v1beta/models/__MODEL__:streamGenerateContent?alt=sse"
+        "/v1beta/models/__MODEL__:streamGenerateContent"
       } else {
         "/v1beta/models/__MODEL__:generateContent"
       }
     _ => "/v1/messages"
   }
+  match query {
+    Some(query) if !query.is_empty() => "\{target}?\{query}"
+    _ => target
+  }
+}
+
+///|
+fn claude_transform_passthrough_query(
+  request_path : StringView,
+  api_format : String,
+  is_stream : Bool,
+) -> String? {
+  match request_path.find("?") {
+    Some(index) => {
+      let path = request_path[:index]
+      let query = request_path[index + 1:]
+      let stripped = if path == "/v1/messages" || path == "/claude/v1/messages" {
+        strip_claude_beta_query(query)
+      } else {
+        Some(query.to_owned())
+      }
+      gemini_stream_query_extra(api_format, is_stream, stripped)
+    }
+    None => gemini_stream_query_extra(api_format, is_stream, None)
+  }
+}
+
+///|
+fn strip_claude_beta_query(query : StringView) -> String? {
+  let parts : Array[String] = []
+  for pair in query.split("&") {
+    if !pair.is_empty() && !pair.has_prefix("beta=") {
+      parts.push(pair.to_owned())
+    }
+  }
+  if parts.is_empty() {
+    None
+  } else {
+    Some(parts.join("&"))
+  }
+}
+
+///|
+fn gemini_stream_query_extra(
+  api_format : String,
+  is_stream : Bool,
+  query : String?,
+) -> String? {
+  if api_format != "gemini_native" || !is_stream {
+    return query
+  }
+  let parts : Array[String] = []
+  match query {
+    Some(query) =>
+      for pair in query.split("&") {
+        if !pair.is_empty() && !pair.has_prefix("alt=") {
+          parts.push(pair.to_owned())
+        }
+      }
+    None => ()
+  }
+  parts.push("alt=sse")
+  Some(parts.join("&"))
 }
 
 ///|
@@ -3511,6 +3581,7 @@ async fn Gateway::handle_messages(
               anthropic_request,
               json,
               model,
+              r.path.to_owned(),
               active_provider,
               app_type,
               self.selected_provider_chain(app_type),
@@ -3524,6 +3595,7 @@ async fn Gateway::handle_messages(
               anthropic_request,
               json,
               model,
+              r.path.to_owned(),
               active_provider,
               app_type,
               self.selected_provider_chain(app_type),
@@ -3575,6 +3647,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
   request : AnthropicRequest,
   request_json : Json,
   upstream_model : String,
+  request_path : String,
   provider : ProviderRouteTarget,
   app_type : String,
   providers : Array[ProviderRouteTarget],
@@ -3588,10 +3661,11 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
     claude_request_json_for_upstream(request_json, upstream_model),
     provider=Some(provider),
   )
-  let endpoint = claude_transform_endpoint(api_format, false).replace_all(
-    old="__MODEL__",
-    new=normalize_gemini_model_id(upstream_model),
-  )
+  let endpoint = claude_transform_endpoint(
+    api_format,
+    false,
+    request_path=request_path[:],
+  ).replace_all(old="__MODEL__", new=normalize_gemini_model_id(upstream_model))
   let outbound = self.claude_provider_outbound_body(
     provider, upstream_body, api_format, session_id,
   )
@@ -3613,6 +3687,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
             request,
             request_json,
             self.upstream_claude_model(request.model, Some(provider)),
+            request_path,
             Some(provider),
             app_type,
             providers,
@@ -3734,6 +3809,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
               request,
               request_json,
               self.upstream_claude_model(request.model, Some(provider)),
+              request_path,
               Some(provider),
               app_type,
               providers,
@@ -4564,6 +4640,7 @@ async fn Gateway::handle_non_streaming_request(
   request : AnthropicRequest,
   request_json : Json,
   model : String,
+  request_path : String,
   active_provider : ProviderRouteTarget?,
   app_type : String,
   providers : Array[ProviderRouteTarget],
@@ -4575,8 +4652,8 @@ async fn Gateway::handle_non_streaming_request(
   match active_provider {
     Some(provider) if provider.can_use_claude_compatible_upstream() => {
       self.forward_non_streaming_claude_compatible_request(
-        request, request_json, model, provider, app_type, providers, attempted_provider_ids,
-        anthropic_beta, session_id, w,
+        request, request_json, model, request_path, provider, app_type, providers,
+        attempted_provider_ids, anthropic_beta, session_id, w,
       )
       return
     }
@@ -4610,8 +4687,8 @@ async fn Gateway::handle_non_streaming_request(
           self.credentials = Some(new_creds)
           self.logger.info("Credentials refreshed, retrying request")
           self.handle_non_streaming_request(
-            request, request_json, model, active_provider, app_type, providers, attempted_provider_ids,
-            anthropic_beta, session_id, w,
+            request, request_json, model, request_path, active_provider, app_type,
+            providers, attempted_provider_ids, anthropic_beta, session_id, w,
           )
           return
         }
@@ -4657,6 +4734,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   request : AnthropicRequest,
   request_json : Json,
   upstream_model : String,
+  request_path : String,
   provider : ProviderRouteTarget,
   app_type : String,
   providers : Array[ProviderRouteTarget],
@@ -4670,10 +4748,11 @@ async fn Gateway::forward_streaming_claude_compatible_request(
     claude_stream_request_json_for_upstream(request_json, upstream_model),
     provider=Some(provider),
   )
-  let endpoint = claude_transform_endpoint(api_format, true).replace_all(
-    old="__MODEL__",
-    new=normalize_gemini_model_id(upstream_model),
-  )
+  let endpoint = claude_transform_endpoint(
+    api_format,
+    true,
+    request_path=request_path[:],
+  ).replace_all(old="__MODEL__", new=normalize_gemini_model_id(upstream_model))
   let outbound = self.claude_provider_outbound_body(
     provider, upstream_body, api_format, session_id,
   )
@@ -4743,6 +4822,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
               request,
               request_json,
               self.upstream_claude_model(request.model, Some(provider)),
+              request_path,
               Some(provider),
               app_type,
               providers,
@@ -4811,6 +4891,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
               request,
               request_json,
               self.upstream_claude_model(request.model, Some(provider)),
+              request_path,
               Some(provider),
               app_type,
               providers,
@@ -4846,6 +4927,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
           request,
           request_json,
           self.upstream_claude_model(request.model, Some(provider)),
+          request_path,
           Some(provider),
           app_type,
           providers,
@@ -6606,6 +6688,7 @@ async fn Gateway::handle_streaming_request(
   request : AnthropicRequest,
   request_json : Json,
   model : String,
+  request_path : String,
   active_provider : ProviderRouteTarget?,
   app_type : String,
   providers : Array[ProviderRouteTarget],
@@ -6617,8 +6700,8 @@ async fn Gateway::handle_streaming_request(
   match active_provider {
     Some(provider) if provider.can_use_claude_compatible_upstream() => {
       self.forward_streaming_claude_compatible_request(
-        request, request_json, model, provider, app_type, providers, attempted_provider_ids,
-        anthropic_beta, session_id, w,
+        request, request_json, model, request_path, provider, app_type, providers,
+        attempted_provider_ids, anthropic_beta, session_id, w,
       )
       return
     }
@@ -6652,8 +6735,8 @@ async fn Gateway::handle_streaming_request(
           self.credentials = Some(new_creds)
           self.logger.info("Credentials refreshed, retrying request")
           self.handle_streaming_request(
-            request, request_json, model, active_provider, app_type, providers, attempted_provider_ids,
-            anthropic_beta, session_id, w,
+            request, request_json, model, request_path, active_provider, app_type,
+            providers, attempted_provider_ids, anthropic_beta, session_id, w,
           )
           return
         }

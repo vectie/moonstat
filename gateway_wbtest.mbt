@@ -1490,6 +1490,42 @@ test "claude compatible provider api format follows ccs endpoints" {
 }
 
 ///|
+test "claude compatible provider endpoints preserve ccs query semantics" {
+  assert_eq(
+    claude_transform_endpoint(
+      "openai_chat",
+      false,
+      request_path="/v1/messages?beta=true&conversation=abc",
+    ),
+    "/v1/chat/completions?conversation=abc",
+  )
+  assert_eq(
+    claude_transform_endpoint(
+      "openai_responses",
+      false,
+      request_path="/claude/v1/messages?conversation=abc&beta=true",
+    ),
+    "/v1/responses?conversation=abc",
+  )
+  assert_eq(
+    claude_transform_endpoint(
+      "anthropic",
+      false,
+      request_path="/v1/messages?beta=true",
+    ),
+    "/v1/messages",
+  )
+  assert_eq(
+    claude_transform_endpoint(
+      "gemini_native",
+      true,
+      request_path="/v1/messages?alt=json&beta=true&key=abc",
+    ),
+    "/v1beta/models/__MODEL__:streamGenerateContent?key=abc&alt=sse",
+  )
+}
+
+///|
 test "codex compatible provider detects chat completions bridge" {
   let format_provider = ProviderRouteTarget::new(
     app_type="codex",
