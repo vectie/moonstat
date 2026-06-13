@@ -1372,6 +1372,125 @@ test "gemini native stream keeps parallel no id tool calls distinct" {
 }
 
 ///|
+test "gemini native stream shadow turn stores accumulated text signature" {
+  let state = GeminiNativeAnthropicStreamState::new()
+  let first = @json.parse(
+    (
+      #|{
+      #|  "responseId": "resp_gem_text_shadow",
+      #|  "modelVersion": "gemini-2.5-pro",
+      #|  "candidates": [
+      #|    { "content": { "parts": [ { "text": "Hel" } ] } }
+      #|  ]
+      #|}
+    ),
+  )
+  let second = @json.parse(
+    (
+      #|{
+      #|  "responseId": "resp_gem_text_shadow",
+      #|  "modelVersion": "gemini-2.5-pro",
+      #|  "candidates": [
+      #|    {
+      #|      "finishReason": "STOP",
+      #|      "content": {
+      #|        "parts": [
+      #|          { "text": "Hello" },
+      #|          { "text": "", "thoughtSignature": "sig-text" }
+      #|        ]
+      #|      }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(first)
+  let _ = state.push_chunk(second)
+  let _ = state.finish()
+  guard state.shadow_turn() is Some(turn) else { fail("expected shadow turn") }
+  guard turn.assistant_content is Object(content) else {
+    fail("expected content")
+  }
+  guard content["parts"] is Array(parts) else { fail("expected parts") }
+  guard parts[0] is Object(text_part) else { fail("expected text part") }
+  assert_eq(text_part["text"], Json::string("Hello"))
+  assert_eq(text_part["thoughtSignature"], Json::string("sig-text"))
+}
+
+///|
+test "gemini native stream shadow turn preserves tool signature" {
+  let state = GeminiNativeAnthropicStreamState::new()
+  let first = @json.parse(
+    (
+      #|{
+      #|  "responseId": "resp_gem_tool_shadow",
+      #|  "modelVersion": "gemini-2.5-pro",
+      #|  "candidates": [
+      #|    {
+      #|      "content": {
+      #|        "parts": [
+      #|          {
+      #|            "functionCall": {
+      #|              "id": "call_1",
+      #|              "name": "lookup",
+      #|              "args": { "city": "Tokyo" }
+      #|            },
+      #|            "thoughtSignature": "sig-tool"
+      #|          }
+      #|        ]
+      #|      }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let second = @json.parse(
+    (
+      #|{
+      #|  "responseId": "resp_gem_tool_shadow",
+      #|  "modelVersion": "gemini-2.5-pro",
+      #|  "candidates": [
+      #|    {
+      #|      "finishReason": "STOP",
+      #|      "content": {
+      #|        "parts": [
+      #|          {
+      #|            "functionCall": {
+      #|              "id": "call_1",
+      #|              "name": "lookup",
+      #|              "args": { "city": "Tokyo", "units": "c" }
+      #|            }
+      #|          }
+      #|        ]
+      #|      }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let _ = state.push_chunk(first)
+  let _ = state.push_chunk(second)
+  let _ = state.finish()
+  guard state.shadow_turn() is Some(turn) else { fail("expected shadow turn") }
+  guard turn.assistant_content is Object(content) else {
+    fail("expected content")
+  }
+  guard content["parts"] is Array(parts) else { fail("expected parts") }
+  guard parts[0] is Object(tool_part) else { fail("expected tool part") }
+  guard tool_part["functionCall"] is Object(function_call) else {
+    fail("expected function call")
+  }
+  assert_eq(function_call["id"], Json::string("call_1"))
+  assert_eq(function_call["name"], Json::string("lookup"))
+  guard function_call["args"] is Object(args) else { fail("expected args") }
+  assert_eq(args["city"], Json::string("Tokyo"))
+  assert_eq(args["units"], Json::string("c"))
+  assert_eq(tool_part["thoughtSignature"], Json::string("sig-tool"))
+  assert_eq(turn.tool_calls.length(), 1)
+  assert_eq(turn.tool_calls[0].thought_signature, Some("sig-tool"))
+}
+
+///|
 test "gemini native stream prompt feedback becomes refusal" {
   let state = GeminiNativeAnthropicStreamState::new()
   let events = state.push_chunk(

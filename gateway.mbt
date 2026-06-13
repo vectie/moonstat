@@ -3496,7 +3496,13 @@ async fn Gateway::forward_streaming_claude_compatible_request(
       record_provider=false,
     )
   } else if api_format == "gemini_native" {
-    self.forward_gemini_native_sse_as_anthropic(client, stream_events, w)
+    self.forward_gemini_native_sse_as_anthropic(
+      client,
+      stream_events,
+      provider.provider_id,
+      session_id,
+      w,
+    )
     self.record_success_stream_usage(
       token_usage_from_gemini_stream_chunks(stream_events),
       0,
@@ -3605,9 +3611,10 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
   self : Gateway,
   reader : &@io.Reader,
   events : Array[Json],
+  provider_id : String,
+  session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let _ = self
   let state = GeminiNativeAnthropicStreamState::new()
   let mut finished = false
   while reader.read_until("\n") is Some(line) {
@@ -3637,6 +3644,11 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
       w.flush()
     }
   }
+  match (session_id, state.shadow_turn()) {
+    (Some(session_id), Some(turn)) =>
+      self.gemini_shadow.record_assistant_turn(provider_id, session_id, turn)
+    _ => ()
+  }
 }
 
 ///|
@@ -3660,6 +3672,7 @@ priv struct GeminiNativeAnthropicToolSnapshot {
   mut id : String?
   mut name : String
   mut args : Json
+  mut thought_signature : String?
 }
 
 ///|
@@ -3675,6 +3688,7 @@ priv struct GeminiNativeAnthropicStreamState {
   mut latest_usage : Json?
   mut latest_finish_reason : String?
   mut blocked_text : String?
+  mut text_thought_signature : String?
   mut finished : Bool
 }
 
@@ -3692,6 +3706,7 @@ fn GeminiNativeAnthropicStreamState::new() -> GeminiNativeAnthropicStreamState {
     latest_usage: None,
     latest_finish_reason: None,
     blocked_text: None,
+    text_thought_signature: None,
     finished: false,
   }
 }
@@ -3730,6 +3745,7 @@ fn GeminiNativeAnthropicStreamState::push_chunk(
   guard candidate.get("content") is Some(Object(content)) else { return events }
   guard content.get("parts") is Some(Array(parts)) else { return events }
   self.merge_tool_snapshots_from_parts(parts)
+  self.merge_text_thought_signature_from_parts(parts)
   let visible_text = gemini_visible_text_from_parts(parts)
   if !visible_text.is_empty() {
     let is_cumulative = visible_text.has_prefix(self.accumulated_text)
@@ -3859,7 +3875,37 @@ fn GeminiNativeAnthropicStreamState::merge_tool_snapshots_from_parts(
       snapshot.name,
     )
     snapshot.args = function_call.get("args").unwrap_or(Json::object({}))
+    match gemini_part_thought_signature(part_obj) {
+      Some(signature) => snapshot.thought_signature = Some(signature)
+      None => ()
+    }
     position += 1
+  }
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::merge_text_thought_signature_from_parts(
+  self : GeminiNativeAnthropicStreamState,
+  parts : Array[Json],
+) -> Unit {
+  for part in parts {
+    guard part is Object(part_obj) else { continue }
+    if part_obj.get("functionCall") is Some(_) {
+      continue
+    }
+    guard part_obj.get("text") is Some(_) else { continue }
+    match gemini_part_thought_signature(part_obj) {
+      Some(signature) => self.text_thought_signature = Some(signature)
+      None => ()
+    }
+  }
+}
+
+///|
+fn gemini_part_thought_signature(part_obj : Map[String, Json]) -> String? {
+  match json_string_from_map(part_obj, "thoughtSignature") {
+    Some(signature) => Some(signature)
+    None => json_string_from_map(part_obj, "thought_signature")
   }
 }
 
@@ -3887,7 +3933,12 @@ fn GeminiNativeAnthropicStreamState::tool_snapshot_for_position(
     return snapshot
   }
   while self.tool_snapshots.length() <= position {
-    self.tool_snapshots.push({ id: None, name: "", args: Json::object({}) })
+    self.tool_snapshots.push({
+      id: None,
+      name: "",
+      args: Json::object({}),
+      thought_signature: None,
+    })
   }
   self.tool_snapshots[position]
 }
@@ -3919,6 +3970,67 @@ fn GeminiNativeAnthropicStreamState::emit_tool_snapshots(
     )
     events.push(anthropic_content_block_stop_event(index))
   }
+}
+
+///|
+fn GeminiNativeAnthropicStreamState::shadow_turn(
+  self : GeminiNativeAnthropicStreamState,
+) -> GeminiAssistantTurn? {
+  let parts : Array[Json] = []
+  let shadow_text = if self.accumulated_text.is_empty() {
+    self.blocked_text
+  } else {
+    Some(self.accumulated_text)
+  }
+  match (shadow_text, self.text_thought_signature) {
+    (Some(text), Some(signature)) =>
+      parts.push(
+        Json::object({
+          "text": Json::string(text),
+          "thoughtSignature": Json::string(signature),
+        }),
+      )
+    (Some(text), None) =>
+      parts.push(Json::object({ "text": Json::string(text) }))
+    (None, Some(signature)) =>
+      parts.push(
+        Json::object({
+          "text": Json::string(""),
+          "thoughtSignature": Json::string(signature),
+        }),
+      )
+    (None, None) => ()
+  }
+  let tool_calls : Array[GeminiToolCallMeta] = []
+  for snapshot in self.tool_snapshots {
+    if snapshot.name.is_empty() && snapshot.args == Json::object({}) {
+      continue
+    }
+    let function_call = Json::object({
+      "id": Json::string(snapshot.id.unwrap_or("")),
+      "name": Json::string(snapshot.name),
+      "args": snapshot.args,
+    })
+    let part : Map[String, Json] = { "functionCall": function_call }
+    match snapshot.thought_signature {
+      Some(signature) => part["thoughtSignature"] = Json::string(signature)
+      None => ()
+    }
+    parts.push(Json::object(part))
+    tool_calls.push({
+      id: snapshot.id,
+      name: snapshot.name,
+      args: snapshot.args,
+      thought_signature: snapshot.thought_signature,
+    })
+  }
+  if parts.is_empty() {
+    return None
+  }
+  Some({
+    assistant_content: Json::object({ "parts": Json::array(parts) }),
+    tool_calls,
+  })
 }
 
 ///|
