@@ -6,11 +6,12 @@ pub fn transform_claude_request_for_api_format(
   explicit_prompt_cache_key? : String? = None,
   is_codex_oauth? : Bool = false,
   codex_fast_mode? : Bool = true,
+  gemini_shadow_turns? : Array[GeminiAssistantTurn] = [],
 ) -> Json {
   match api_format {
     "openai_chat" =>
       anthropic_json_to_openai_chat(body, explicit_prompt_cache_key)
-    "gemini_native" => anthropic_json_to_gemini(body)
+    "gemini_native" => anthropic_json_to_gemini(body, gemini_shadow_turns)
     "openai_responses" => {
       let cache_key = match explicit_prompt_cache_key {
         Some(_) => explicit_prompt_cache_key
@@ -25,14 +26,132 @@ pub fn transform_claude_request_for_api_format(
 }
 
 ///|
-fn anthropic_json_to_gemini(body : Json) -> Json {
+pub struct GeminiToolCallMeta {
+  id : String?
+  name : String
+  args : Json
+  thought_signature : String?
+}
+
+///|
+pub struct GeminiAssistantTurn {
+  assistant_content : Json
+  tool_calls : Array[GeminiToolCallMeta]
+}
+
+///|
+pub struct GeminiShadowStore {
+  max_sessions : Int
+  max_turns_per_session : Int
+  sessions : Map[String, Array[GeminiAssistantTurn]]
+  session_order : Array[String]
+}
+
+///|
+fn GeminiShadowStore::with_limits(
+  max_sessions : Int,
+  max_turns_per_session : Int,
+) -> GeminiShadowStore {
+  {
+    max_sessions: if max_sessions < 1 {
+      1
+    } else {
+      max_sessions
+    },
+    max_turns_per_session: if max_turns_per_session < 1 {
+      1
+    } else {
+      max_turns_per_session
+    },
+    sessions: Map([], capacity=0),
+    session_order: [],
+  }
+}
+
+///|
+fn GeminiShadowStore::new() -> GeminiShadowStore {
+  GeminiShadowStore::with_limits(200, 64)
+}
+
+///|
+fn GeminiShadowStore::session_turns(
+  self : GeminiShadowStore,
+  provider_id : String,
+  session_id : String?,
+) -> Array[GeminiAssistantTurn] {
+  guard session_id is Some(session_id) else { return [] }
+  self.sessions.get(gemini_shadow_key(provider_id, session_id)).unwrap_or([])
+}
+
+///|
+fn GeminiShadowStore::record_assistant_turn(
+  self : GeminiShadowStore,
+  provider_id : String,
+  session_id : String,
+  turn : GeminiAssistantTurn,
+) -> Unit {
+  let key = gemini_shadow_key(provider_id, session_id)
+  let turns = self.sessions.get(key).unwrap_or([])
+  turns.push(turn)
+  while turns.length() > self.max_turns_per_session {
+    ignore(turns.remove(0))
+  }
+  self.sessions[key] = turns
+  gemini_shadow_touch_session(self.session_order, key)
+  while self.sessions.keys().count() > self.max_sessions &&
+        !self.session_order.is_empty() {
+    let evicted = self.session_order[0]
+    ignore(self.session_order.remove(0))
+    self.sessions.remove(evicted)
+  }
+}
+
+///|
+fn GeminiShadowStore::record_gemini_response(
+  self : GeminiShadowStore,
+  provider_id : String,
+  session_id : String?,
+  body : Json,
+) -> Unit {
+  guard session_id is Some(session_id) else { return }
+  guard extract_gemini_shadow_turn_from_response(body) is Some(turn) else {
+    return
+  }
+  self.record_assistant_turn(provider_id, session_id, turn)
+}
+
+///|
+fn gemini_shadow_key(provider_id : String, session_id : String) -> String {
+  "\{provider_id}\u{001f}\{session_id}"
+}
+
+///|
+fn gemini_shadow_touch_session(order : Array[String], key : String) -> Unit {
+  let mut index = 0
+  while index < order.length() {
+    if order[index] == key {
+      ignore(order.remove(index))
+    } else {
+      index += 1
+    }
+  }
+  order.push(key)
+}
+
+///|
+fn anthropic_json_to_gemini(
+  body : Json,
+  shadow_turns : Array[GeminiAssistantTurn],
+) -> Json {
   guard body is Object(obj) else { return body }
   let result : Map[String, Json] = {}
   let system_instruction = anthropic_gemini_system_instruction(obj)
   if system_instruction is Some(instruction) {
     result["systemInstruction"] = instruction
   }
-  result["contents"] = Json::array(anthropic_messages_to_gemini_contents(obj))
+  result["contents"] = Json::array(
+    anthropic_messages_to_gemini_contents(obj, shadow_turns),
+  )
   append_gemini_generation_config(obj, result)
   append_gemini_tools(obj, result)
   append_gemini_tool_choice(obj, result)
@@ -100,24 +219,99 @@ fn append_gemini_texts_from_content(
 ///|
 fn anthropic_messages_to_gemini_contents(
   obj : Map[String, Json],
+  shadow_turns : Array[GeminiAssistantTurn],
 ) -> Array[Json] {
   let contents : Array[Json] = []
-  let tool_names_by_id : Map[String, String] = {}
+  let tool_names_by_id = build_tool_name_map_from_shadow_turns(shadow_turns)
+  let thought_signature_by_id = build_thought_signature_map_from_shadow_turns(
+    shadow_turns,
+  )
   guard obj.get("messages") is Some(Array(source_messages)) else {
     return contents
   }
+  for message in source_messages {
+    guard message is Object(message_obj) else { continue }
+    if json_string_from_map(message_obj, "role") == Some("assistant") {
+      seed_tool_names_from_assistant_message(message_obj, tool_names_by_id)
+    }
+  }
+  let total_assistant_messages = count_assistant_messages(source_messages)
+  let effective_shadow_turns = latest_gemini_shadow_turns(
+    shadow_turns, total_assistant_messages,
+  )
+  let shadow_start_index = total_assistant_messages -
+    effective_shadow_turns.length()
+  let used_shadow_indices : Map[Int, Bool] = Map([], capacity=0)
+  let mut assistant_seen_index = 0
   for message in source_messages {
     guard message is Object(message_obj) else { continue }
     let role = json_string_from_map(message_obj, "role").unwrap_or("user")
     if role == "system" {
       continue
     }
-    let parts = anthropic_content_to_gemini_parts(
-      message_obj.get("content"),
-      tool_names_by_id,
-    )
+    let parts = if role == "assistant" {
+      let positional_shadow_index = if assistant_seen_index >=
+        shadow_start_index {
+        let index = assistant_seen_index - shadow_start_index
+        if index < effective_shadow_turns.length() &&
+          used_shadow_indices.get(index) is None {
+          Some(index)
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+      let tool_use_match_index = find_matching_shadow_turn_for_assistant_message(
+        message_obj.get("content"),
+        effective_shadow_turns,
+        used_shadow_indices,
+      )
+      assistant_seen_index += 1
+      let shadow_index = match tool_use_match_index {
+        Some(index) => Some(index)
+        None => positional_shadow_index
+      }
+      match shadow_index {
+        Some(index) => {
+          used_shadow_indices[index] = true
+          let shadow_turn = effective_shadow_turns[index]
+          merge_tool_names_from_shadow(shadow_turn, tool_names_by_id)
+          merge_thought_signatures_from_shadow(
+            shadow_turn, thought_signature_by_id,
+          )
+          match shadow_parts_for_replay(shadow_turn.assistant_content) {
+            Some(parts) => parts
+            None =>
+              anthropic_content_to_gemini_parts(
+                message_obj.get("content"),
+                role,
+                tool_names_by_id,
+                thought_signature_by_id,
+              )
+          }
+        }
+        None =>
+          anthropic_content_to_gemini_parts(
+            message_obj.get("content"),
+            role,
+            tool_names_by_id,
+            thought_signature_by_id,
+          )
+      }
+    } else {
+      anthropic_content_to_gemini_parts(
+        message_obj.get("content"),
+        role,
+        tool_names_by_id,
+        thought_signature_by_id,
+      )
+    }
     if parts.is_empty() {
       continue
+    }
+    if role == "assistant" {
+      merge_tool_names_from_parts(parts, tool_names_by_id)
     }
     contents.push(
       Json::object({
@@ -132,7 +326,9 @@ fn anthropic_messages_to_gemini_contents(
 ///|
 fn anthropic_content_to_gemini_parts(
   content : Json?,
+  role : String,
   tool_names_by_id : Map[String, String],
+  thought_signature_by_id : Map[String, String],
 ) -> Array[Json] {
   let parts : Array[Json] = []
   match content {
@@ -140,7 +336,9 @@ fn anthropic_content_to_gemini_parts(
       parts.push(Json::object({ "text": Json::string(text) }))
     Some(Array(blocks)) =>
       for block in blocks {
-        append_anthropic_block_as_gemini_part(block, parts, tool_names_by_id)
+        append_anthropic_block_as_gemini_part(
+          block, role, parts, tool_names_by_id, thought_signature_by_id,
+        )
       }
     Some(json) =>
       parts.push(Json::object({ "text": Json::string(json.stringify()) }))
@@ -152,8 +350,10 @@ fn anthropic_content_to_gemini_parts(
 ///|
 fn append_anthropic_block_as_gemini_part(
   block : Json,
+  role : String,
   parts : Array[Json],
   tool_names_by_id : Map[String, String],
+  thought_signature_by_id : Map[String, String],
 ) -> Unit {
   guard block is Object(block_obj) else { return }
   match json_string_from_map(block_obj, "type") {
@@ -181,6 +381,7 @@ fn append_anthropic_block_as_gemini_part(
         )
       }
     Some("tool_use") => {
+      guard role == "assistant" else { return }
       let id = json_string_from_map(block_obj, "id").unwrap_or("")
       let name = json_string_from_map(block_obj, "name").unwrap_or("")
       if !id.is_empty() && !name.is_empty() {
@@ -193,7 +394,15 @@ fn append_anthropic_block_as_gemini_part(
       if !id.is_empty() && !is_gemini_synthesized_tool_call_id(id) {
         function_call["id"] = Json::string(id)
       }
-      parts.push(Json::object({ "functionCall": Json::object(function_call) }))
+      let part : Map[String, Json] = {
+        "functionCall": Json::object(function_call),
+      }
+      match thought_signature_by_id.get(id) {
+        Some(signature) if !signature.is_empty() =>
+          part["thoughtSignature"] = Json::string(signature)
+        _ => ()
+      }
+      parts.push(Json::object(part))
     }
     Some("tool_result") => {
       let function_response : Map[String, Json] = {
@@ -239,6 +448,333 @@ fn gemini_tool_result_name(
         None => "tool_result"
       }
   }
+}
+
+///|
+fn count_assistant_messages(messages : Array[Json]) -> Int {
+  let mut count = 0
+  for message in messages {
+    guard message is Object(message_obj) else { continue }
+    if json_string_from_map(message_obj, "role") == Some("assistant") {
+      count += 1
+    }
+  }
+  count
+}
+
+///|
+fn latest_gemini_shadow_turns(
+  shadow_turns : Array[GeminiAssistantTurn],
+  total_assistant_messages : Int,
+) -> Array[GeminiAssistantTurn] {
+  if total_assistant_messages <= 0 {
+    return []
+  }
+  let start = if shadow_turns.length() > total_assistant_messages {
+    shadow_turns.length() - total_assistant_messages
+  } else {
+    0
+  }
+  let effective : Array[GeminiAssistantTurn] = []
+  for index in start..<shadow_turns.length() {
+    effective.push(shadow_turns[index])
+  }
+  effective
+}
+
+///|
+fn seed_tool_names_from_assistant_message(
+  message_obj : Map[String, Json],
+  tool_names_by_id : Map[String, String],
+) -> Unit {
+  guard message_obj.get("content") is Some(Array(blocks)) else { return }
+  for block in blocks {
+    guard block is Object(block_obj) else { continue }
+    guard json_string_from_map(block_obj, "type") == Some("tool_use") else {
+      continue
+    }
+    let id = json_string_from_map(block_obj, "id").unwrap_or("")
+    let name = json_string_from_map(block_obj, "name").unwrap_or("")
+    if !id.is_empty() && !name.is_empty() && tool_names_by_id.get(id) is None {
+      tool_names_by_id[id] = name
+    }
+  }
+}
+
+///|
+fn build_tool_name_map_from_shadow_turns(
+  shadow_turns : Array[GeminiAssistantTurn],
+) -> Map[String, String] {
+  let tool_names_by_id : Map[String, String] = Map([], capacity=0)
+  for turn in shadow_turns {
+    merge_tool_names_from_shadow(turn, tool_names_by_id)
+  }
+  tool_names_by_id
+}
+
+///|
+fn merge_tool_names_from_shadow(
+  turn : GeminiAssistantTurn,
+  tool_names_by_id : Map[String, String],
+) -> Unit {
+  for tool_call in turn.tool_calls {
+    match tool_call.id {
+      Some(id) if !id.is_empty() && !tool_call.name.is_empty() =>
+        tool_names_by_id[id] = tool_call.name
+      _ => ()
+    }
+  }
+  match shadow_parts_for_replay(turn.assistant_content) {
+    Some(parts) => merge_tool_names_from_parts(parts, tool_names_by_id)
+    None => ()
+  }
+}
+
+///|
+fn merge_tool_names_from_parts(
+  parts : Array[Json],
+  tool_names_by_id : Map[String, String],
+) -> Unit {
+  for part in parts {
+    guard part is Object(part_obj) else { continue }
+    guard part_obj.get("functionCall") is Some(Object(function_call)) else {
+      continue
+    }
+    let id = json_string_from_map(function_call, "id").unwrap_or("")
+    let name = json_string_from_map(function_call, "name").unwrap_or("")
+    if !id.is_empty() && !name.is_empty() {
+      tool_names_by_id[id] = name
+    }
+  }
+}
+
+///|
+fn build_thought_signature_map_from_shadow_turns(
+  shadow_turns : Array[GeminiAssistantTurn],
+) -> Map[String, String] {
+  let thought_signature_by_id : Map[String, String] = Map([], capacity=0)
+  for turn in shadow_turns {
+    merge_thought_signatures_from_shadow(turn, thought_signature_by_id)
+  }
+  thought_signature_by_id
+}
+
+///|
+fn merge_thought_signatures_from_shadow(
+  turn : GeminiAssistantTurn,
+  thought_signature_by_id : Map[String, String],
+) -> Unit {
+  for tool_call in turn.tool_calls {
+    match (tool_call.id, tool_call.thought_signature) {
+      (Some(id), Some(signature)) if !id.is_empty() && !signature.is_empty() =>
+        thought_signature_by_id[id] = signature
+      _ => ()
+    }
+  }
+}
+
+///|
+fn find_matching_shadow_turn_for_assistant_message(
+  content : Json?,
+  shadow_turns : Array[GeminiAssistantTurn],
+  used_shadow_indices : Map[Int, Bool],
+) -> Int? {
+  let (tool_use_ids, tool_use_names) = extract_assistant_tool_use_keys(content)
+  if tool_use_ids.is_empty() && tool_use_names.is_empty() {
+    return None
+  }
+  if !tool_use_ids.is_empty() {
+    let mut index = 0
+    for turn in shadow_turns {
+      if used_shadow_indices.get(index) is None &&
+        shadow_turn_matches_tool_ids(turn, tool_use_ids) {
+        return Some(index)
+      }
+      index += 1
+    }
+  }
+  let mut index = 0
+  for turn in shadow_turns {
+    if used_shadow_indices.get(index) is None &&
+      shadow_turn_matches_tool_names(turn, tool_use_names) {
+      return Some(index)
+    }
+    index += 1
+  }
+  None
+}
+
+///|
+fn extract_assistant_tool_use_keys(
+  content : Json?,
+) -> (Array[String], Array[String]) {
+  let ids : Array[String] = []
+  let names : Array[String] = []
+  guard content is Some(Array(blocks)) else { return (ids, names) }
+  for block in blocks {
+    guard block is Object(block_obj) else { continue }
+    guard json_string_from_map(block_obj, "type") == Some("tool_use") else {
+      continue
+    }
+    match json_string_from_map(block_obj, "id") {
+      Some(id) if !id.is_empty() && !ids.contains(id) => ids.push(id)
+      _ => ()
+    }
+    match json_string_from_map(block_obj, "name") {
+      Some(name) if !name.is_empty() => {
+        if !names.contains(name) {
+          names.push(name)
+        }
+        let normalized = normalize_gemini_tool_name(name)
+        if !normalized.is_empty() && !names.contains(normalized) {
+          names.push(normalized)
+        }
+      }
+      _ => ()
+    }
+  }
+  (ids, names)
+}
+
+///|
+fn shadow_turn_matches_tool_ids(
+  turn : GeminiAssistantTurn,
+  tool_use_ids : Array[String],
+) -> Bool {
+  turn.tool_calls.any(fn(tool_call) {
+    match tool_call.id {
+      Some(id) => tool_use_ids.contains(id)
+      None => false
+    }
+  })
+}
+
+///|
+fn shadow_turn_matches_tool_names(
+  turn : GeminiAssistantTurn,
+  tool_use_names : Array[String],
+) -> Bool {
+  turn.tool_calls.any(fn(tool_call) {
+    tool_use_names.contains(tool_call.name) ||
+    tool_use_names.contains(normalize_gemini_tool_name(tool_call.name))
+  })
+}
+
+///|
+fn normalize_gemini_tool_name(name : String) -> String {
+  let parts = name.split(":").collect()
+  match parts.last() {
+    Some(part) => part.to_owned()
+    None => name
+  }
+}
+
+///|
+fn shadow_parts_for_replay(content : Json) -> Array[Json]? {
+  let source_parts = match content {
+    Object(obj) =>
+      match obj.get("parts") {
+        Some(Array(parts)) => Some(parts)
+        _ => None
+      }
+    Array(parts) => Some(parts)
+    _ => None
+  }
+  guard source_parts is Some(source_parts) else { return None }
+  let parts : Array[Json] = []
+  for part in source_parts {
+    parts.push(shadow_part_for_replay(part))
+  }
+  Some(parts)
+}
+
+///|
+fn shadow_part_for_replay(part : Json) -> Json {
+  guard part is Object(part_obj) else { return part }
+  let replay_part = part_obj.copy()
+  if replay_part.get("functionCall") is Some(Object(function_call)) {
+    let replay_function_call = function_call.copy()
+    let drop_id = match json_string_from_map(replay_function_call, "id") {
+      Some(id) => id.is_empty() || is_gemini_synthesized_tool_call_id(id)
+      None => true
+    }
+    if drop_id {
+      replay_function_call.remove("id")
+    }
+    replay_part["functionCall"] = Json::object(replay_function_call)
+  }
+  Json::object(replay_part)
+}
+
+///|
+fn extract_gemini_shadow_turn_from_response(
+  body : Json,
+) -> GeminiAssistantTurn? {
+  guard body is Object(obj) else { return None }
+  guard obj.get("candidates") is Some(Array(candidates)) &&
+    candidates.get(0) is Some(Object(candidate)) &&
+    candidate.get("content") is Some(Object(content)) &&
+    content.get("parts") is Some(Array(parts)) else {
+    return None
+  }
+  let normalized_parts = normalize_gemini_shadow_parts(parts)
+  if normalized_parts.is_empty() {
+    return None
+  }
+  let assistant_content = Json::object({
+    "parts": Json::array(normalized_parts),
+  })
+  Some({
+    assistant_content,
+    tool_calls: extract_gemini_tool_call_meta(normalized_parts),
+  })
+}
+
+///|
+fn normalize_gemini_shadow_parts(parts : Array[Json]) -> Array[Json] {
+  let normalized : Array[Json] = []
+  let mut tool_position = 0
+  for part in parts {
+    guard part is Object(part_obj) else { continue }
+    let normalized_part = part_obj.copy()
+    if part_obj.get("functionCall") is Some(Object(function_call)) {
+      let normalized_function_call = function_call.copy()
+      let id = match json_string_from_map(normalized_function_call, "id") {
+        Some(id) if !id.is_empty() => id
+        _ => generate_gemini_shadow_synth_tool_call_id(tool_position)
+      }
+      normalized_function_call["id"] = Json::string(id)
+      normalized_part["functionCall"] = Json::object(normalized_function_call)
+      tool_position += 1
+    }
+    normalized.push(Json::object(normalized_part))
+  }
+  normalized
+}
+
+///|
+fn extract_gemini_tool_call_meta(
+  parts : Array[Json],
+) -> Array[GeminiToolCallMeta] {
+  let tool_calls : Array[GeminiToolCallMeta] = []
+  for part in parts {
+    guard part is Object(part_obj) else { continue }
+    guard part_obj.get("functionCall") is Some(Object(function_call)) else {
+      continue
+    }
+    tool_calls.push({
+      id: json_string_from_map(function_call, "id"),
+      name: json_string_from_map(function_call, "name").unwrap_or(""),
+      args: function_call.get("args").unwrap_or(Json::object({})),
+      thought_signature: json_string_from_map(part_obj, "thoughtSignature"),
+    })
+  }
+  tool_calls
+}
+
+///|
+fn generate_gemini_shadow_synth_tool_call_id(position : Int) -> String {
+  "gemini_synth_\{position}"
 }
 
 ///|

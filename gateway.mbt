@@ -6,6 +6,7 @@ pub struct Gateway {
   mut credentials : @codex.Credentials?
   stats : TrafficStats
   provider_router : ProviderRouter
+  gemini_shadow : GeminiShadowStore
   pricing_overrides : Map[String, ModelPricing]
   pricing_deleted_model_ids : Map[String, Bool]
   logger : @pino.Logger
@@ -26,6 +27,7 @@ pub fn Gateway::new(
     credentials: None,
     stats: TrafficStats::new(),
     provider_router: moonstat_default_provider_router(),
+    gemini_shadow: GeminiShadowStore::new(),
     pricing_overrides: Map([], capacity=0),
     pricing_deleted_model_ids: Map([], capacity=0),
     logger,
@@ -2931,6 +2933,10 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
       explicit_prompt_cache_key=provider.prompt_cache_key,
       is_codex_oauth=provider.provider_type == Some("codex_oauth"),
       codex_fast_mode=provider.codex_fast_mode,
+      gemini_shadow_turns=self.gemini_shadow.session_turns(
+        provider.provider_id,
+        session_id,
+      ),
     )
   } else {
     upstream_body
@@ -2985,6 +2991,13 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
           parsed, api_format,
         ).unwrap_or(TokenUsage::empty())
         self.record_success_usage(usage, response_body.length())
+        if api_format == "gemini_native" {
+          self.gemini_shadow.record_gemini_response(
+            provider.provider_id,
+            session_id,
+            parsed,
+          )
+        }
         let anthropic_response = claude_compatible_response_to_anthropic(
           parsed,
           api_format,
@@ -3411,6 +3424,10 @@ async fn Gateway::forward_streaming_claude_compatible_request(
       explicit_prompt_cache_key=provider.prompt_cache_key,
       is_codex_oauth=provider.provider_type == Some("codex_oauth"),
       codex_fast_mode=provider.codex_fast_mode,
+      gemini_shadow_turns=self.gemini_shadow.session_turns(
+        provider.provider_id,
+        session_id,
+      ),
     )
   } else {
     upstream_body

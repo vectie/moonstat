@@ -353,3 +353,289 @@ test "ccs gemini native transform strips synthesized tool ids" {
   assert_true(function_response.get("id") is None)
   assert_eq(function_response["name"], Json::string("lookup"))
 }
+
+///|
+test "ccs gemini native shadow replay preserves thought signature by id" {
+  let shadow_turns = [
+    {
+      assistant_content: Json::object({
+        "parts": Json::array([
+          Json::object({
+            "functionCall": Json::object({
+              "id": Json::string("call_1"),
+              "name": Json::string("Bash"),
+              "args": Json::object({ "command": Json::string("ls -R") }),
+            }),
+            "thoughtSignature": Json::string("sig-tool-1"),
+          }),
+        ]),
+      }),
+      tool_calls: [
+        {
+          id: Some("call_1"),
+          name: "Bash",
+          args: Json::object({ "command": Json::string("ls -R") }),
+          thought_signature: Some("sig-tool-1"),
+        },
+      ],
+    },
+  ]
+  let body = Json::object({
+    "messages": Json::array([
+      Json::object({
+        "role": Json::string("assistant"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_use"),
+            "id": Json::string("call_1"),
+            "name": Json::string("default_api:Bash"),
+            "input": Json::object({ "command": Json::string("ls -R") }),
+          }),
+        ]),
+      }),
+      Json::object({
+        "role": Json::string("user"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_result"),
+            "tool_use_id": Json::string("call_1"),
+            "content": Json::string("ok"),
+          }),
+        ]),
+      }),
+    ]),
+  })
+  let transformed = transform_claude_request_for_api_format(
+    body,
+    "gemini_native",
+    gemini_shadow_turns=shadow_turns,
+  )
+  guard transformed is Object(obj) else { fail("expected object") }
+  guard obj["contents"] is Array(contents) else { fail("expected contents") }
+  guard contents[0] is Object(model_message) else {
+    fail("expected model message")
+  }
+  guard model_message["parts"] is Array(model_parts) else {
+    fail("expected model parts")
+  }
+  guard model_parts[0] is Object(model_part) else {
+    fail("expected model part")
+  }
+  guard model_part["functionCall"] is Object(function_call) else {
+    fail("expected functionCall")
+  }
+  assert_eq(function_call["id"], Json::string("call_1"))
+  assert_eq(function_call["name"], Json::string("Bash"))
+  assert_eq(model_part["thoughtSignature"], Json::string("sig-tool-1"))
+  guard contents[1] is Object(user_message) else {
+    fail("expected user message")
+  }
+  guard user_message["parts"] is Array(user_parts) else {
+    fail("expected user parts")
+  }
+  guard user_parts[0] is Object(user_part) else { fail("expected user part") }
+  guard user_part["functionResponse"] is Object(function_response) else {
+    fail("expected functionResponse")
+  }
+  assert_eq(function_response["name"], Json::string("Bash"))
+}
+
+///|
+test "ccs gemini native shadow replay prefers exact id over name collision" {
+  let shadow_turns = [
+    {
+      assistant_content: Json::object({
+        "parts": Json::array([
+          Json::object({
+            "functionCall": Json::object({
+              "id": Json::string("call_a"),
+              "name": Json::string("server_a:search"),
+              "args": Json::object({ "q": Json::string("alpha") }),
+            }),
+            "thoughtSignature": Json::string("sig-a"),
+          }),
+        ]),
+      }),
+      tool_calls: [
+        {
+          id: Some("call_a"),
+          name: "server_a:search",
+          args: Json::object({ "q": Json::string("alpha") }),
+          thought_signature: Some("sig-a"),
+        },
+      ],
+    },
+    {
+      assistant_content: Json::object({
+        "parts": Json::array([
+          Json::object({
+            "functionCall": Json::object({
+              "id": Json::string("call_b"),
+              "name": Json::string("server_b:search"),
+              "args": Json::object({ "q": Json::string("beta") }),
+            }),
+            "thoughtSignature": Json::string("sig-b"),
+          }),
+        ]),
+      }),
+      tool_calls: [
+        {
+          id: Some("call_b"),
+          name: "server_b:search",
+          args: Json::object({ "q": Json::string("beta") }),
+          thought_signature: Some("sig-b"),
+        },
+      ],
+    },
+  ]
+  let body = Json::object({
+    "messages": Json::array([
+      Json::object({
+        "role": Json::string("assistant"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_use"),
+            "id": Json::string("call_b"),
+            "name": Json::string("server_b:search"),
+            "input": Json::object({ "q": Json::string("beta") }),
+          }),
+        ]),
+      }),
+      Json::object({
+        "role": Json::string("assistant"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_use"),
+            "id": Json::string("call_a"),
+            "name": Json::string("server_a:search"),
+            "input": Json::object({ "q": Json::string("alpha") }),
+          }),
+        ]),
+      }),
+    ]),
+  })
+  let transformed = transform_claude_request_for_api_format(
+    body,
+    "gemini_native",
+    gemini_shadow_turns=shadow_turns,
+  )
+  guard transformed is Object(obj) else { fail("expected object") }
+  guard obj["contents"] is Array(contents) else { fail("expected contents") }
+  guard contents[0] is Object(first_message) else {
+    fail("expected first message")
+  }
+  guard first_message["parts"] is Array(first_parts) else {
+    fail("expected first parts")
+  }
+  guard first_parts[0] is Object(first_part) else {
+    fail("expected first part")
+  }
+  guard first_part["functionCall"] is Object(first_call) else {
+    fail("expected first functionCall")
+  }
+  assert_eq(first_call["name"], Json::string("server_b:search"))
+  assert_eq(first_part["thoughtSignature"], Json::string("sig-b"))
+  guard contents[1] is Object(second_message) else {
+    fail("expected second message")
+  }
+  guard second_message["parts"] is Array(second_parts) else {
+    fail("expected second parts")
+  }
+  guard second_parts[0] is Object(second_part) else {
+    fail("expected second part")
+  }
+  guard second_part["functionCall"] is Object(second_call) else {
+    fail("expected second functionCall")
+  }
+  assert_eq(second_call["name"], Json::string("server_a:search"))
+  assert_eq(second_part["thoughtSignature"], Json::string("sig-a"))
+}
+
+///|
+test "ccs gemini native shadow store records synthetic ids and replays without leaking them" {
+  let store = GeminiShadowStore::with_limits(8, 4)
+  store.record_gemini_response(
+    "provider-a",
+    Some("session-1"),
+    Json::object({
+      "candidates": Json::array([
+        Json::object({
+          "content": Json::object({
+            "parts": Json::array([
+              Json::object({
+                "functionCall": Json::object({
+                  "name": Json::string("lookup"),
+                  "args": Json::object({ "q": Json::string("moon") }),
+                }),
+                "thoughtSignature": Json::string("sig-lookup"),
+              }),
+            ]),
+          }),
+        }),
+      ]),
+    }),
+  )
+  let turns = store.session_turns("provider-a", Some("session-1"))
+  assert_eq(turns.length(), 1)
+  assert_eq(turns[0].tool_calls.length(), 1)
+  assert_eq(turns[0].tool_calls[0].id, Some("gemini_synth_0"))
+  let body = Json::object({
+    "messages": Json::array([
+      Json::object({
+        "role": Json::string("assistant"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_use"),
+            "id": Json::string("gemini_synth_0"),
+            "name": Json::string("lookup"),
+            "input": Json::object({ "q": Json::string("moon") }),
+          }),
+        ]),
+      }),
+      Json::object({
+        "role": Json::string("user"),
+        "content": Json::array([
+          Json::object({
+            "type": Json::string("tool_result"),
+            "tool_use_id": Json::string("gemini_synth_0"),
+            "content": Json::string("found"),
+          }),
+        ]),
+      }),
+    ]),
+  })
+  let transformed = transform_claude_request_for_api_format(
+    body,
+    "gemini_native",
+    gemini_shadow_turns=turns,
+  )
+  guard transformed is Object(obj) else { fail("expected object") }
+  guard obj["contents"] is Array(contents) else { fail("expected contents") }
+  guard contents[0] is Object(model_message) else {
+    fail("expected model message")
+  }
+  guard model_message["parts"] is Array(model_parts) else {
+    fail("expected model parts")
+  }
+  guard model_parts[0] is Object(model_part) else {
+    fail("expected model part")
+  }
+  guard model_part["functionCall"] is Object(function_call) else {
+    fail("expected functionCall")
+  }
+  assert_true(function_call.get("id") is None)
+  assert_eq(function_call["name"], Json::string("lookup"))
+  assert_eq(model_part["thoughtSignature"], Json::string("sig-lookup"))
+  guard contents[1] is Object(user_message) else {
+    fail("expected user message")
+  }
+  guard user_message["parts"] is Array(user_parts) else {
+    fail("expected user parts")
+  }
+  guard user_parts[0] is Object(user_part) else { fail("expected user part") }
+  guard user_part["functionResponse"] is Object(function_response) else {
+    fail("expected functionResponse")
+  }
+  assert_true(function_response.get("id") is None)
+  assert_eq(function_response["name"], Json::string("lookup"))
+}
