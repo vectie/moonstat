@@ -128,7 +128,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_models(w)
   })
   router.add_handler(@httpx.Method::Get, "/claude-desktop/v1/models", (_, w) => {
-    self.handle_models(w)
+    self.handle_claude_desktop_models(w)
   })
   router.add_handler(@httpx.Method::Post, "/login", (r, w) => {
     self.handle_login(r, w)
@@ -770,6 +770,43 @@ async fn Gateway::handle_models(
   }
   w.write(response.to_json().stringify())
   w.flush()
+}
+
+///|
+async fn Gateway::handle_claude_desktop_models(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.stats.set_active_target("claude-desktop", "codex-oauth", "Codex OAuth")
+  w.header().set("Content-Type", "application/json")
+  w.write_header(@status.Ok)
+  w.write(claude_desktop_model_list_json().stringify())
+  w.flush()
+}
+
+///|
+fn claude_desktop_model_list_json() -> Json {
+  let data = [
+    claude_desktop_model_json("claude-sonnet-4-6"),
+    claude_desktop_model_json("claude-opus-4-8"),
+    claude_desktop_model_json("claude-haiku-4-5"),
+  ]
+  {
+    "data": Json::array(data),
+    "has_more": Json::boolean(false),
+    "first_id": Json::string("claude-sonnet-4-6"),
+    "last_id": Json::string("claude-haiku-4-5"),
+  }.to_json()
+}
+
+///|
+fn claude_desktop_model_json(id : String) -> Json {
+  {
+    "type": Json::string("model"),
+    "id": Json::string(id),
+    "created_at": Json::string("2024-01-01T00:00:00Z"),
+    "supports1m": Json::boolean(true),
+  }.to_json()
 }
 
 ///|
