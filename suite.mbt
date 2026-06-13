@@ -22,6 +22,12 @@ pub fn moonstat_suite_manifest_json(
       moonstat_claude_desktop_base_url(host, port),
     ),
     "default_model": Json::string(model),
+    "status_file": Json::string(default_moonstat_suite_status_path()),
+    "capabilities": Json::array(
+      moonstat_suite_capabilities().map(fn(capability) {
+        Json::string(capability)
+      }),
+    ),
     "health_url": Json::string("\{moonstat_base_url(host, port)}/health"),
     "status_url": Json::string("\{moonstat_base_url(host, port)}/status"),
     "stats_url": Json::string("\{moonstat_base_url(host, port)}/stats"),
@@ -88,34 +94,8 @@ pub fn moonstat_suite_manifest_json(
         "moondesk", "operator-shell", "Read the suite status file and display gateway health, model catalog, and traffic counters.",
       ),
     ]),
-    "cli": Json::object({
-      "start": Json::string("moonstat start --port \{port}"),
-      "health": Json::string("moonstat health"),
-      "status": Json::string("moonstat status"),
-      "stats": Json::string("moonstat stats"),
-      "usage_logs": Json::string("moonstat usage logs"),
-      "usage_summary": Json::string("moonstat usage summary"),
-      "usage_apps": Json::string("moonstat usage apps"),
-      "usage_trends": Json::string("moonstat usage trends"),
-      "usage_limits": Json::string(
-        "moonstat usage limits --provider-id <provider_id> --app-type <app_type>",
-      ),
-      "usage_providers": Json::string("moonstat usage providers"),
-      "usage_models": Json::string("moonstat usage models"),
-      "usage_sources": Json::string("moonstat usage sources"),
-      "usage_sync": Json::string("moonstat usage sync"),
-      "usage_pricing": Json::string("moonstat usage pricing"),
-      "usage_detail": Json::string(
-        "moonstat usage detail --request-id <request_id>",
-      ),
-      "codex_install": Json::string(
-        "moonstat codex install --port \{port} --model \{model}",
-      ),
-      "claude_desktop_install": Json::string(
-        "moonstat claude-desktop install --port \{port}",
-      ),
-      "suite_status": Json::string("moonstat suite status"),
-    }),
+    "commands": moonstat_suite_commands_json(port, model),
+    "cli": moonstat_suite_commands_json(port, model),
   }.to_json()
 }
 
@@ -129,8 +109,15 @@ pub fn moonstat_suite_status_json(
     "contract": Json::string("moon.suite.status.v1"),
     "service": Json::string("moonstat"),
     "status": Json::string("configured"),
+    "ready": Json::boolean(true),
     "manifest": moonstat_suite_manifest_json(host~, port~, model~),
     "status_path": Json::string(default_moonstat_suite_status_path()),
+    "capabilities": Json::array(
+      moonstat_suite_capabilities().map(fn(capability) {
+        Json::string(capability)
+      }),
+    ),
+    "commands": moonstat_suite_commands_json(port, model),
     "health_url": Json::string("\{moonstat_base_url(host, port)}/health"),
     "status_url": Json::string("\{moonstat_base_url(host, port)}/status"),
     "stats_url": Json::string("\{moonstat_base_url(host, port)}/stats"),
@@ -249,6 +236,49 @@ fn suite_app_json(id : String, role : String, usage : String) -> Json {
 }
 
 ///|
+fn moonstat_suite_capabilities() -> Array[String] {
+  [
+    "openai-compatible-proxy", "anthropic-compatible-proxy", "claude-desktop-gateway",
+    "gemini-compatible-proxy", "ccs-usage-statistics", "session-usage-sync", "provider-model-catalog",
+    "suite-discovery", "codex-config-install",
+  ]
+}
+
+///|
+fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
+  Json::object({
+    "start": Json::string("moonstat start --port \{port}"),
+    "health": Json::string("moonstat health"),
+    "status": Json::string("moonstat status"),
+    "stats": Json::string("moonstat stats"),
+    "usage_logs": Json::string("moonstat usage logs"),
+    "usage_summary": Json::string("moonstat usage summary"),
+    "usage_apps": Json::string("moonstat usage apps"),
+    "usage_trends": Json::string("moonstat usage trends"),
+    "usage_limits": Json::string(
+      "moonstat usage limits --provider-id <provider_id> --app-type <app_type>",
+    ),
+    "usage_providers": Json::string("moonstat usage providers"),
+    "usage_models": Json::string("moonstat usage models"),
+    "usage_sources": Json::string("moonstat usage sources"),
+    "usage_sync": Json::string("moonstat usage sync"),
+    "usage_pricing": Json::string("moonstat usage pricing"),
+    "usage_detail": Json::string(
+      "moonstat usage detail --request-id <request_id>",
+    ),
+    "codex_install": Json::string(
+      "moonstat codex install --port \{port} --model \{model}",
+    ),
+    "claude_desktop_install": Json::string(
+      "moonstat claude-desktop install --port \{port}",
+    ),
+    "suite_manifest": Json::string("moonstat suite manifest"),
+    "suite_status": Json::string("moonstat suite status"),
+    "suite_write_status": Json::string("moonstat suite write-status"),
+  })
+}
+
+///|
 fn moonstat_suite_routes() -> Array[String] {
   [
     "GET /participant/register", "GET /health", "GET /status", "GET /stats", "GET /usage/logs",
@@ -261,7 +291,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "POST /v1/v1/responses", "POST /codex/v1/responses", "POST /responses/compact",
     "POST /v1/responses/compact", "POST /v1/v1/responses/compact", "POST /codex/v1/responses/compact",
     "POST /chat/completions", "POST /v1/chat/completions", "POST /v1/v1/chat/completions",
-    "POST /codex/v1/chat/completions", "POST /login", "GET|POST /v1beta/*path", "GET|POST /gemini/v1beta/*path",
-    "GET|POST /gemini/v1/*path",
+    "POST /codex/v1/chat/completions", "POST /login", "ANY /v1beta/*path", "ANY /gemini/v1beta/*path",
+    "ANY /gemini/v1/*path",
   ]
 }

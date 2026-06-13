@@ -55,8 +55,10 @@ moon run cmd/main -- suite write-status
 ```
 
 `suite manifest` and `suite status` print JSON contracts for MoonClaw,
-MoonBook, Moontown, Moondesk, or any other local probe. `suite write-status`
-writes the same status contract to `~/.moonstat/suite-status.json` by default.
+MoonBook, Moontown, Moondesk, or any other local probe. They expose the
+gateway URLs, status file, capabilities, and command map needed by suite
+launchers. `suite write-status` writes the same status contract to
+`~/.moonstat/suite-status.json` by default.
 
 ## Proxy Surface
 
@@ -96,9 +98,9 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /v1/chat/completions`
 - `POST /v1/v1/chat/completions`
 - `POST /codex/v1/chat/completions`
-- `GET|POST /v1beta/*path`
-- `GET|POST /gemini/v1beta/*path`
-- `GET|POST /gemini/v1/*path`
+- `ANY /v1beta/*path`
+- `ANY /gemini/v1beta/*path`
+- `ANY /gemini/v1/*path`
 
 `/status` and `/stats` include ccs-style request counts, success/failure
 counts, active connections, token totals, cache token totals, last request time,
