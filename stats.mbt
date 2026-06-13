@@ -739,7 +739,7 @@ fn TrafficStats::usage_logs_paginated_json(
   self : TrafficStats,
   filters : RequestLogFilters,
   page? : Int = 0,
-  page_size? : Int = 100,
+  page_size? : Int = 20,
   pricing_overrides? : Array[ModelPricing] = [],
   deleted_model_ids? : Map[String, Bool] = Map([], capacity=0),
 ) -> Json {

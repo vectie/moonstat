@@ -2638,7 +2638,7 @@ async fn Gateway::handle_usage_logs(
       filters,
       page=usage_query_int(r.path, "page").unwrap_or(0),
       page_size=usage_query_int_any(r.path, "page_size", "pageSize").unwrap_or(
-        100,
+        20,
       ),
       pricing_overrides~,
       deleted_model_ids=self.pricing_deleted_model_ids,

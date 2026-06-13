@@ -438,6 +438,35 @@ test "usage logs paginated json matches ccs filters and ordering" {
 }
 
 ///|
+test "usage logs paginated json defaults to ccs page size" {
+  let stats = TrafficStats::new()
+  for i in 0..<25 {
+    stats.record_request_log(
+      RequestLog::new(
+        request_id="req-\{i}",
+        provider_id="codex-oauth",
+        provider_name=Some("Codex OAuth"),
+        app_type="codex",
+        model="gpt-5",
+        usage=TokenUsage::new(input_tokens=1, output_tokens=1),
+        status_code=200,
+        created_at=i,
+        data_source="proxy",
+      ),
+    )
+  }
+  guard stats.usage_logs_paginated_json(RequestLogFilters::new())
+    is Object(page) else {
+    fail("expected page object")
+  }
+  assert_eq(page["total"], Json::number(25.0))
+  assert_eq(page["page"], Json::number(0.0))
+  assert_eq(page["pageSize"], Json::number(20.0))
+  guard page["data"] is Array(rows) else { fail("expected page rows") }
+  assert_eq(rows.length(), 20)
+}
+
+///|
 test "usage logs provider name filter matches ccs joined provider name semantics" {
   let stats = TrafficStats::new()
   stats.record_request_log(
