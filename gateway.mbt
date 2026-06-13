@@ -1111,12 +1111,22 @@ async fn Gateway::handle_usage_sync_session(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let projects_dir = usage_query_value_any(
+  let claude_projects_dir = usage_query_value_any(
     r.path,
     "projects_dir",
     "projectsDir",
   ).unwrap_or(default_claude_projects_dir())
-  let result = self.stats.sync_claude_session_logs(projects_dir~)
+  let codex_dir = usage_query_value_any(r.path, "codex_dir", "codexDir").unwrap_or(
+    default_codex_config_dir(),
+  )
+  let gemini_dir = usage_query_value_any(r.path, "gemini_dir", "geminiDir").unwrap_or(
+    default_gemini_dir(),
+  )
+  let result = self.stats.sync_session_logs(
+    claude_projects_dir~,
+    codex_dir~,
+    gemini_dir~,
+  )
   write_usage_json(w, result.to_json())
 }
 
