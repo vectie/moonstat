@@ -1014,7 +1014,7 @@ fn UsageSummaryAccumulator::to_json(self : UsageSummaryAccumulator) -> Json {
 fn ProviderStatsAccumulator::new(log : RequestLog) -> ProviderStatsAccumulator {
   {
     provider_id: log.provider_id,
-    provider_name: log.provider_name.unwrap_or(log.provider_id),
+    provider_name: request_log_provider_name(log),
     request_count: 0,
     success_count: 0,
     total_tokens: 0,

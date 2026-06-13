@@ -927,6 +927,40 @@ test "usage aggregates deduplicate ccs session imports against proxy logs" {
 }
 
 ///|
+test "provider stats use ccs session provider fallback names" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="codex_session:session-1:0",
+      provider_id="_codex_session",
+      app_type="codex",
+      model="gpt-5",
+      usage=TokenUsage::new(
+        input_tokens=100,
+        output_tokens=10,
+        cache_read_tokens=40,
+      ),
+      total_cost_usd="0.000100",
+      status_code=200,
+      latency_ms=30,
+      created_at=1000,
+      data_source="codex_session",
+    ),
+  )
+  json_inspect(stats.provider_stats_json(), content=[
+    {
+      "providerId": "_codex_session",
+      "providerName": "Codex (Session)",
+      "requestCount": 1,
+      "totalTokens": 70,
+      "totalCost": "0.000100",
+      "successRate": 100,
+      "avgLatencyMs": 30,
+    },
+  ])
+}
+
+///|
 test "usage trends use ccs hourly buckets for short ranges" {
   let stats = TrafficStats::new()
   stats.record_request_log(
