@@ -125,6 +125,15 @@ pub fn default_gemini_dir() -> String {
 
 ///|
 pub fn default_opencode_dir() -> String {
+  default_opencode_data_dir()
+}
+
+///|
+pub fn default_opencode_data_dir() -> String {
+  match getenv_non_empty("XDG_DATA_HOME") {
+    Some(xdg_data) => return @pathx.join(xdg_data, "opencode")
+    None => ()
+  }
   let home = @os.home() catch { _ => "" }
   if home.is_empty() {
     ".local/share/opencode"
@@ -139,11 +148,25 @@ pub fn default_opencode_export_path() -> String {
 }
 
 ///|
+pub fn default_opencode_db_path() -> String {
+  match getenv_non_empty("OPENCODE_DB") {
+    Some(path) =>
+      if @pathx.is_absolute(path) {
+        path
+      } else {
+        @pathx.join(default_opencode_data_dir(), path)
+      }
+    None => @pathx.join(default_opencode_data_dir(), "opencode.db")
+  }
+}
+
+///|
 pub async fn TrafficStats::sync_session_logs(
   self : TrafficStats,
   claude_projects_dir? : String = default_claude_projects_dir(),
   codex_dir? : String = default_codex_config_dir(),
   gemini_dir? : String = default_gemini_dir(),
+  opencode_db_path? : String = default_opencode_db_path(),
   opencode_export_path? : String = default_opencode_export_path(),
 ) -> SessionSyncResult {
   let result = self.sync_claude_session_logs(projects_dir=claude_projects_dir)
@@ -157,6 +180,13 @@ pub async fn TrafficStats::sync_session_logs(
   result.skipped += gemini_result.skipped
   result.files_scanned += gemini_result.files_scanned
   result.errors.append(gemini_result.errors)
+  let opencode_db_result = self.sync_opencode_session_database(
+    db_path=opencode_db_path,
+  )
+  result.imported += opencode_db_result.imported
+  result.skipped += opencode_db_result.skipped
+  result.files_scanned += opencode_db_result.files_scanned
+  result.errors.append(opencode_db_result.errors)
   let opencode_result = self.sync_opencode_session_export(
     export_path=opencode_export_path,
   )
@@ -187,6 +217,177 @@ pub fn TrafficStats::ingest_opencode_message_json(
     return result
   }
   self.ingest_opencode_message_object(session_id~, message_id~, root, result)
+  result
+}
+
+///|
+pub async fn TrafficStats::sync_opencode_session_database(
+  self : TrafficStats,
+  db_path? : String = default_opencode_db_path(),
+) -> SessionSyncResult {
+  let result = SessionSyncResult::new()
+  if !@fsx.exists_as_file(db_path) {
+    return result
+  }
+  result.files_scanned = 1
+  try {
+    let modified = opencode_database_modified(db_path)
+    let existing_state = self.session_sync_state.get(db_path)
+    if existing_state is Some(state) && modified <= state.last_modified {
+      return result
+    }
+    let process = @spawn.spawn(
+      "sqlite3",
+      ["-readonly", "-json", db_path, OPENCODE_SQLITE_USAGE_QUERY],
+      timeout=10000,
+    )
+    if process.status != 0 {
+      result.errors.push(
+        "OpenCode SQLite query failed \{db_path}: \{process.stderr.trim()}",
+      )
+      return result
+    }
+    self.ingest_opencode_database_rows_json(
+      db_path~,
+      content=process.stdout,
+      last_modified=modified,
+    )
+  } catch {
+    error => {
+      result.errors.push("OpenCode SQLite sync failed \{db_path}: \{error}")
+      result
+    }
+  }
+}
+
+///|
+const OPENCODE_SQLITE_USAGE_QUERY : String =
+  #|WITH session_watermark AS (
+  #|  SELECT
+  #|    s.id AS session_id,
+  #|    MAX(s.time_updated, COALESCE(MAX(m.time_updated), s.time_updated)) AS sync_watermark
+  #|  FROM session s
+  #|  LEFT JOIN message m ON m.session_id = s.id
+  #|  GROUP BY s.id
+  #|)
+  #|SELECT
+  #|  sw.session_id AS session_id,
+  #|  sw.sync_watermark AS sync_watermark,
+  #|  m.id AS message_id,
+  #|  m.data AS data
+  #|FROM session_watermark sw
+  #|LEFT JOIN message m ON m.session_id = sw.session_id
+  #|ORDER BY sw.sync_watermark, m.time_created;
+
+///|
+fn TrafficStats::ingest_opencode_database_rows_json(
+  self : TrafficStats,
+  db_path~ : String,
+  content~ : String,
+  last_modified~ : Int64,
+) -> SessionSyncResult {
+  let result = SessionSyncResult::new()
+  result.files_scanned = 1
+  let existing_state = self.session_sync_state.get(db_path)
+  if existing_state is Some(state) && last_modified <= state.last_modified {
+    return result
+  }
+  let parsed = @json.parse(content) catch {
+    error => {
+      result.errors.push("OpenCode SQLite JSON parse failed: \{error}")
+      return result
+    }
+  }
+  guard parsed is Array(rows) else {
+    result.errors.push("OpenCode SQLite JSON output was not an array")
+    return result
+  }
+  let seen_sessions : Array[String] = []
+  let session_watermarks : Map[String, Int64] = Map([], capacity=0)
+  let session_incomplete : Map[String, Bool] = Map([], capacity=0)
+  let session_errors : Map[String, Bool] = Map([], capacity=0)
+  let mut has_sync_errors = false
+  for row_json in rows {
+    guard row_json is Object(row) else { continue }
+    guard session_map_string(row, "session_id") is Some(session_id) else {
+      continue
+    }
+    let watermark = json_int64_or_zero(row, "sync_watermark")
+    if !session_watermarks.contains(session_id) {
+      seen_sessions.push(session_id)
+      session_watermarks.set(session_id, watermark)
+    } else if watermark > session_watermarks.get(session_id).unwrap_or(0L) {
+      session_watermarks.set(session_id, watermark)
+    }
+    let sync_key = "\{db_path}:\{session_id}"
+    match self.session_sync_state.get(sync_key) {
+      Some(state) if watermark <= state.last_modified => continue
+      _ => ()
+    }
+    guard session_map_string(row, "message_id") is Some(message_id) else {
+      continue
+    }
+    guard session_map_string(row, "data") is Some(data_text) else { continue }
+    let data_json = @json.parse(data_text) catch {
+      error => {
+        result.errors.push(
+          "OpenCode DB message parse failed \{session_id}/\{message_id}: \{error}",
+        )
+        session_errors.set(session_id, true)
+        has_sync_errors = true
+        continue
+      }
+    }
+    guard data_json is Object(data_obj) else { continue }
+    if opencode_message_has_incomplete_usage(data_obj) {
+      session_incomplete.set(session_id, true)
+      continue
+    }
+    match parse_opencode_message_data(data_obj, require_completed=true) {
+      Some(message) => {
+        let request_id = "opencode_session:\{session_id}:\{message_id}"
+        let output_tokens = message.output_tokens + message.reasoning_tokens
+        let usage = TokenUsage::new(
+          input_tokens=message.input_tokens,
+          output_tokens~,
+          cache_read_tokens=message.cache_read_tokens,
+          cache_creation_tokens=message.cache_write_tokens,
+          model=Some(message.model_id),
+        )
+        if self.should_skip_session_insert(
+            request_id,
+            app_type="opencode",
+            model=message.model_id,
+            usage~,
+            created_at=opencode_timestamp_seconds(message.timestamp_ms),
+          ) {
+          result.skipped += 1
+        } else {
+          self.record_opencode_session_usage(request_id, message, session_id)
+          result.imported += 1
+        }
+      }
+      None => ()
+    }
+  }
+  for session_id in seen_sessions {
+    if session_errors.get(session_id).unwrap_or(false) ||
+      session_incomplete.get(session_id).unwrap_or(false) {
+      continue
+    }
+    let sync_key = "\{db_path}:\{session_id}"
+    let watermark = session_watermarks.get(session_id).unwrap_or(0L)
+    self.session_sync_state.set(
+      sync_key,
+      SessionFileSyncState::new(last_modified=watermark, last_line_offset=0),
+    )
+  }
+  if !has_sync_errors {
+    self.session_sync_state.set(
+      db_path,
+      SessionFileSyncState::new(last_modified~, last_line_offset=0),
+    )
+  }
   result
 }
 
@@ -1005,6 +1206,13 @@ fn parse_opencode_message_data(
 }
 
 ///|
+fn opencode_message_has_incomplete_usage(root : Map[String, Json]) -> Bool {
+  session_map_string(root, "role") == Some("assistant") &&
+  root.get("tokens") is Some(Object(_)) &&
+  !(root.get("time") is Some(Object(time)) && time.get("completed") is Some(_))
+}
+
+///|
 fn TrafficStats::ingest_opencode_message_object(
   self : TrafficStats,
   session_id~ : String,
@@ -1430,6 +1638,39 @@ fn session_map_string(obj : Map[String, Json], key : String) -> String? {
   match obj.get(key) {
     Some(String(value)) => Some(value)
     _ => None
+  }
+}
+
+///|
+fn getenv_non_empty(key : String) -> String? {
+  let value = try @os.getenv(key) catch {
+    _ => None
+  } noraise {
+    value => value
+  }
+  match value {
+    Some(value) if !value.is_empty() => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn json_int64_or_zero(obj : Map[String, Json], key : String) -> Int64 {
+  match obj.get(key) {
+    Some(Number(n, ..)) => n.trunc().to_int64()
+    _ => 0L
+  }
+}
+
+///|
+fn opencode_database_modified(db_path : String) -> Int64 raise {
+  let db_modified = @fsx.stat(db_path).mtime()
+  let wal_path = "\{db_path}-wal"
+  let wal_modified = @fsx.stat(wal_path).mtime() catch { _ => 0L }
+  if wal_modified > db_modified {
+    wal_modified
+  } else {
+    db_modified
   }
 }
 

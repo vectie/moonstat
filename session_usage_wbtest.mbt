@@ -355,6 +355,79 @@ test "opencode export jsonl import stores offsets and supports string data" {
 }
 
 ///|
+test "opencode database rows import uses ccs session watermarks" {
+  let stats = TrafficStats::new()
+  let db_path = "/tmp/opencode/opencode.db"
+  let first_rows =
+    #|[
+    #|  {
+    #|    "session_id": "open-db",
+    #|    "sync_watermark": 200,
+    #|    "message_id": "m1",
+    #|    "data": "{\"role\":\"assistant\",\"cost\":0.0023113,\"tokens\":{\"input\":10,\"output\":2,\"reasoning\":3,\"cache\":{\"read\":5,\"write\":7}},\"modelID\":\"open-model\",\"time\":{\"created\":1779755333700,\"completed\":1779755334700}}"
+    #|  },
+    #|  {
+    #|    "session_id": "open-db",
+    #|    "sync_watermark": 200,
+    #|    "message_id": "m2",
+    #|    "data": "{\"role\":\"assistant\",\"tokens\":{\"input\":4,\"output\":1},\"modelID\":\"open-model\",\"time\":{\"created\":1779755335700}}"
+    #|  }
+    #|]
+  let first = stats.ingest_opencode_database_rows_json(
+    db_path~,
+    content=first_rows,
+    last_modified=10L,
+  )
+  assert_eq(first.imported, 1)
+  assert_eq(first.skipped, 0)
+  assert_eq(stats.request_logs.length(), 1)
+  assert_eq(stats.request_logs[0].request_id, "opencode_session:open-db:m1")
+  assert_eq(stats.request_logs[0].output_tokens, 5)
+  assert_eq(stats.request_logs[0].cache_read_tokens, 5)
+  assert_eq(stats.request_logs[0].cache_creation_tokens, 7)
+  assert_eq(stats.request_logs[0].total_cost_usd, "0.0023113")
+  assert_true(stats.session_sync_state.get(db_path) is Some(_))
+  assert_true(stats.session_sync_state.get("\{db_path}:open-db") is None)
+
+  let unchanged = stats.ingest_opencode_database_rows_json(
+    db_path~,
+    content=first_rows,
+    last_modified=10L,
+  )
+  assert_eq(unchanged.imported, 0)
+  assert_eq(unchanged.skipped, 0)
+
+  let completed_rows =
+    #|[
+    #|  {
+    #|    "session_id": "open-db",
+    #|    "sync_watermark": 300,
+    #|    "message_id": "m1",
+    #|    "data": "{\"role\":\"assistant\",\"tokens\":{\"input\":10,\"output\":2,\"reasoning\":3,\"cache\":{\"read\":5,\"write\":7}},\"modelID\":\"open-model\",\"time\":{\"created\":1779755333700,\"completed\":1779755334700}}"
+    #|  },
+    #|  {
+    #|    "session_id": "open-db",
+    #|    "sync_watermark": 300,
+    #|    "message_id": "m2",
+    #|    "data": "{\"role\":\"assistant\",\"tokens\":{\"input\":4,\"output\":1},\"modelID\":\"open-model\",\"time\":{\"created\":1779755335700,\"completed\":1779755336700}}"
+    #|  }
+    #|]
+  let completed = stats.ingest_opencode_database_rows_json(
+    db_path~,
+    content=completed_rows,
+    last_modified=11L,
+  )
+  assert_eq(completed.imported, 1)
+  assert_eq(completed.skipped, 1)
+  assert_eq(stats.request_logs.length(), 2)
+  assert_eq(stats.request_logs[1].request_id, "opencode_session:open-db:m2")
+  guard stats.session_sync_state.get("\{db_path}:open-db") is Some(state) else {
+    fail("expected per-session sync state")
+  }
+  assert_eq(state.last_modified, 300L)
+}
+
+///|
 test "session imports skip matching proxy log fingerprints" {
   let stats = TrafficStats::new()
   stats.record_request_log(

@@ -49,6 +49,10 @@ test "suite manifest publishes moonstat service contract" {
     obj["usage_opencode_export_file"],
     Json::string(default_opencode_export_path()),
   )
+  assert_eq(
+    obj["usage_opencode_db_file"],
+    Json::string(default_opencode_db_path()),
+  )
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
   assert_true(routes.contains(Json::string("GET /stats")))
   assert_true(routes.contains(Json::string("GET /usage/logs")))
@@ -116,6 +120,10 @@ async test "suite status writes discovery file" {
     assert_eq(
       obj["usage_opencode_export_file"],
       Json::string(default_opencode_export_path()),
+    )
+    assert_eq(
+      obj["usage_opencode_db_file"],
+      Json::string(default_opencode_db_path()),
     )
     guard obj["manifest"] is Object(manifest) else {
       fail("expected manifest object")

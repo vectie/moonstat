@@ -13,6 +13,7 @@ import {
   "vectie/moonstat/internal/os",
   "vectie/moonstat/internal/pathx",
   "vectie/moonstat/internal/pino",
+  "vectie/moonstat/internal/spawn",
   "vectie/moonstat/internal/uuid",
   "vectie/moonstat/oauth/codex",
 }

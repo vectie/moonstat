@@ -28,6 +28,10 @@ pub fn default_moonstat_stats_dir() -> String
 
 pub fn default_moonstat_suite_status_path() -> String
 
+pub fn default_opencode_data_dir() -> String
+
+pub fn default_opencode_db_path() -> String
+
 pub fn default_opencode_dir() -> String
 
 pub fn default_opencode_export_path() -> String
@@ -342,8 +346,9 @@ pub fn TrafficStats::status_json(Self, String, Int, Int) -> Json
 pub async fn TrafficStats::sync_claude_session_logs(Self, projects_dir? : String) -> SessionSyncResult
 pub async fn TrafficStats::sync_codex_session_logs(Self, codex_dir? : String) -> SessionSyncResult
 pub async fn TrafficStats::sync_gemini_session_logs(Self, gemini_dir? : String) -> SessionSyncResult
+pub async fn TrafficStats::sync_opencode_session_database(Self, db_path? : String) -> SessionSyncResult
 pub async fn TrafficStats::sync_opencode_session_export(Self, export_path? : String) -> SessionSyncResult
-pub async fn TrafficStats::sync_session_logs(Self, claude_projects_dir? : String, codex_dir? : String, gemini_dir? : String, opencode_export_path? : String) -> SessionSyncResult
+pub async fn TrafficStats::sync_session_logs(Self, claude_projects_dir? : String, codex_dir? : String, gemini_dir? : String, opencode_db_path? : String, opencode_export_path? : String) -> SessionSyncResult
 pub fn TrafficStats::to_json(Self) -> Json
 pub fn TrafficStats::usage_data_sources_json(Self) -> Json
 pub fn TrafficStats::usage_logs_json(Self, limit? : Int) -> Json

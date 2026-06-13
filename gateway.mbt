@@ -1162,10 +1162,16 @@ async fn Gateway::handle_usage_sync_session(
     "opencode_export_path",
     "opencodeExportPath",
   ).unwrap_or(default_opencode_export_path())
+  let opencode_db_path = usage_query_value_any(
+    r.path,
+    "opencode_db_path",
+    "opencodeDbPath",
+  ).unwrap_or(default_opencode_db_path())
   let result = self.stats.sync_session_logs(
     claude_projects_dir~,
     codex_dir~,
     gemini_dir~,
+    opencode_db_path~,
     opencode_export_path~,
   )
   self.stats.save_persistent_store()

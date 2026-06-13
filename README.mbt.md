@@ -97,9 +97,10 @@ Gateway startup loads file-backed usage state from
 `~/.moonstat/proxy_request_logs.jsonl` and session sync offsets from
 `~/.moonstat/session_log_sync.jsonl`; manual `moonstat usage sync` saves both
 after importing Claude, Codex, Gemini, and OpenCode-compatible session logs.
-OpenCode sync accepts JSONL rows exported from `opencode.db` with `session_id`,
-`message_id`, and `data` fields, defaulting to
-`~/.local/share/opencode/opencode.messages.jsonl`.
+OpenCode sync reads `opencode.db` directly when `sqlite3` is available, honoring
+`OPENCODE_DB` and `XDG_DATA_HOME` like ccs. It also accepts JSONL rows exported
+from `opencode.db` with `session_id`, `message_id`, and `data` fields as a
+fallback, defaulting to `~/.local/share/opencode/opencode.messages.jsonl`.
 
 Claude Desktop gateway routes are open by default for standalone local use. Set
 `MOONSTAT_CLAUDE_DESKTOP_TOKEN` or `CLAUDE_DESKTOP_GATEWAY_TOKEN` to require
