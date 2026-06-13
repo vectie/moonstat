@@ -1,4 +1,7 @@
 ///|
+const SESSION_REQUEST_ID_PREFIX : String = "session:"
+
+///|
 pub struct TokenUsage {
   input_tokens : Int
   output_tokens : Int
@@ -38,6 +41,17 @@ pub fn TokenUsage::has_billable_tokens(self : TokenUsage) -> Bool {
   self.output_tokens > 0 ||
   self.cache_read_tokens > 0 ||
   self.cache_creation_tokens > 0
+}
+
+///|
+fn TokenUsage::dedup_request_id(
+  self : TokenUsage,
+  fallback_id : String,
+) -> String {
+  match self.message_id {
+    Some(message_id) => "\{SESSION_REQUEST_ID_PREFIX}\{message_id}"
+    None => fallback_id
+  }
 }
 
 ///|

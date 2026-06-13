@@ -204,6 +204,34 @@ test "traffic stats writes request logs from request context" {
 }
 
 ///|
+test "traffic stats uses ccs session request id for message usage" {
+  let stats = TrafficStats::new()
+  stats.record_inbound(64)
+  stats.set_active_target("claude", "anthropic", "Anthropic")
+  stats.record_request_context(
+    "claude",
+    "claude-sonnet-4-6",
+    session_id=Some("session-2"),
+    provider_type=Some("claude"),
+  )
+  stats.record_stream_mode(true)
+  stats.record_success_usage(
+    TokenUsage::new(
+      input_tokens=3,
+      output_tokens=4,
+      model=Some("claude-sonnet-4-6"),
+      message_id=Some("msg_1"),
+    ),
+    128,
+  )
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.request_id, "session:msg_1")
+  assert_eq(log.session_id, Some("session-2"))
+  assert_true(log.is_streaming)
+}
+
+///|
 test "traffic stats can price gateway requests with ccs model pricing overrides" {
   let stats = TrafficStats::new()
   stats.record_inbound(64)

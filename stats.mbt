@@ -425,7 +425,8 @@ fn TrafficStats::record_completed_request(
   pricing_overrides? : Array[ModelPricing] = [],
   deleted_model_ids? : Map[String, Bool] = Map([], capacity=0),
 ) -> Unit {
-  guard self.current_request_id is Some(request_id) else { return }
+  guard self.current_request_id is Some(fallback_request_id) else { return }
+  let request_id = usage.dedup_request_id(fallback_request_id)
   let now_ms = @async.now().to_int()
   let latency_ms = match self.current_request_started_at_ms {
     Some(started_at) => max_int(now_ms - started_at, 0)
