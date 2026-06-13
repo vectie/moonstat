@@ -1386,9 +1386,23 @@ async fn Gateway::post_claude_compatible_provider_json(
   let base_url = provider.base_url.unwrap()
   let api_key = provider.api_key.unwrap()
   let url = codex_compatible_provider_url(base_url, endpoint)
+  let headers = claude_compatible_provider_headers(api_key, api_format)
+  let result = try? @http.post(url, request, headers~)
+  match result {
+    Ok((response, data)) => Ok((response, data.text()))
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn claude_compatible_provider_headers(
+  api_key : String,
+  api_format : String,
+  accept? : String = "application/json",
+) -> Map[String, String] {
   let headers : Map[String, String] = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    "Accept": accept,
   }
   if api_format == "anthropic" {
     headers["x-api-key"] = api_key
@@ -1396,11 +1410,7 @@ async fn Gateway::post_claude_compatible_provider_json(
   } else {
     headers["Authorization"] = "Bearer \{api_key}"
   }
-  let result = try? @http.post(url, request, headers~)
-  match result {
-    Ok((response, data)) => Ok((response, data.text()))
-    Err(error) => Err(error)
-  }
+  headers
 }
 
 ///|
@@ -2804,7 +2814,7 @@ async fn Gateway::handle_messages(
           )
           if stream {
             self.handle_streaming_request(
-              anthropic_request, model, session_id, w,
+              anthropic_request, json, model, active_provider, session_id, w,
             )
           } else {
             self.handle_non_streaming_request(
@@ -3157,13 +3167,238 @@ async fn Gateway::handle_non_streaming_request(
 }
 
 ///|
-async fn Gateway::handle_streaming_request(
+async fn Gateway::forward_streaming_claude_compatible_request(
   self : Gateway,
   request : AnthropicRequest,
-  model : String,
+  request_json : Json,
+  upstream_model : String,
+  provider : ProviderRouteTarget,
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  let api_format = provider.claude_api_format()
+  if api_format == "gemini_native" {
+    self.record_upstream_error_status(0, @status.BadGateway)
+    w.header().set("Content-Type", "application/json")
+    w.write_header(@status.BadGateway)
+    w.write(
+      "{\"error\":{\"message\":\"Gemini-native Claude streaming is not implemented yet\",\"type\":\"upstream_error\"}}",
+    )
+    w.flush()
+    return
+  }
+  let upstream_body = claude_stream_request_json_for_upstream(
+    request_json, upstream_model,
+  )
+  let endpoint = claude_transform_endpoint(api_format, true)
+  let outbound = if claude_api_format_needs_transform(api_format) {
+    transform_claude_request_for_api_format(
+      upstream_body,
+      api_format,
+      session_id~,
+      explicit_prompt_cache_key=provider.prompt_cache_key,
+      is_codex_oauth=provider.provider_type == Some("codex_oauth"),
+      codex_fast_mode=provider.codex_fast_mode,
+    )
+  } else {
+    upstream_body
+  }
+  let base_url = provider.base_url.unwrap()
+  let api_key = provider.api_key.unwrap()
+  let url = codex_compatible_provider_url(base_url, endpoint)
+  let (origin, path) = split_origin_and_path(url)
+  let client = @http.Client::new(
+    origin,
+    headers=claude_compatible_provider_headers(
+      api_key,
+      api_format,
+      accept="text/event-stream",
+    ),
+  )
+  defer client.close()
+  let response = client.post(path, outbound)
+  if response.code != 200 {
+    let error_body = client.read_all().text()
+    self.record_upstream_error_status(error_body.length(), response.code)
+    w.header().set("Content-Type", "application/json")
+    w.write_header(response.code)
+    w.write(error_body)
+    w.flush()
+    return
+  }
+  w.header().set("Content-Type", "text/event-stream")
+  w.header().set("Cache-Control", "no-cache")
+  w.header().set("Connection", "keep-alive")
+  w.write_header(@status.Ok)
+  self.record_provider_result(true)
+  let stream_events : Array[Json] = []
+  if api_format == "openai_chat" {
+    self.forward_openai_chat_sse_as_anthropic(client, stream_events, w)
+    self.record_success_stream_usage(
+      token_usage_from_openai_stream_events(stream_events),
+      0,
+      record_provider=false,
+    )
+  } else if api_format == "openai_responses" {
+    let reader = CodexStreamReader::new(client, request.model)
+    while reader.read() is Some(event) {
+      w.write("event: \{event.event_type}\n")
+      w.write("data: \{event.data}\n\n")
+      w.flush()
+    }
+    self.record_success_stream_usage(
+      token_usage_from_codex_stream_events_auto(reader.events),
+      0,
+      record_provider=false,
+    )
+  } else {
+    self.forward_anthropic_sse_passthrough(client, stream_events, w)
+    self.record_success_stream_usage(
+      token_usage_from_claude_stream_events(stream_events),
+      0,
+      record_provider=false,
+    )
+  }
+  if api_format != "anthropic" {
+    w.write("event: message_stop\ndata: {}\n\n")
+  }
+  w.flush()
+}
+
+///|
+fn claude_stream_request_json_for_upstream(
+  body : Json,
+  upstream_model : String,
+) -> Json {
+  let result = claude_request_json_for_upstream(body, upstream_model)
+  guard result is Object(obj) else { return result }
+  obj["stream"] = Json::boolean(true)
+  Json::object(obj)
+}
+
+///|
+async fn Gateway::forward_openai_chat_sse_as_anthropic(
+  self : Gateway,
+  reader : &@io.Reader,
+  events : Array[Json],
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let _ = self
+  while reader.read_until("\n") is Some(line) {
+    guard line is [.. "data: ", .. rest] else { continue }
+    let data = rest.trim().to_owned()
+    if data == "[DONE]" {
+      break
+    }
+    let parsed = @json.parse(data) catch { _ => continue }
+    events.push(parsed)
+    for event in openai_chat_stream_chunk_to_anthropic_events(parsed) {
+      w.write("event: \{event.event_type}\n")
+      w.write("data: \{event.data}\n\n")
+      w.flush()
+    }
+  }
+}
+
+///|
+async fn Gateway::forward_anthropic_sse_passthrough(
+  self : Gateway,
+  reader : &@io.Reader,
+  events : Array[Json],
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let _ = self
+  while reader.read_until("\n") is Some(line) {
+    if line is [.. "data: ", .. rest] {
+      let data = rest.trim().to_owned()
+      let parsed = @json.parse(data) catch { _ => Json::null() }
+      if parsed != Json::null() {
+        events.push(parsed)
+      }
+    }
+    w.write(line)
+    w.write("\n")
+    w.flush()
+  }
+}
+
+///|
+fn openai_chat_stream_chunk_to_anthropic_events(
+  chunk : Json,
+) -> Array[StreamEvent] {
+  let events : Array[StreamEvent] = []
+  guard chunk is Object(obj) else { return events }
+  guard obj.get("choices") is Some(Array(choices)) else { return events }
+  for choice in choices {
+    guard choice is Object(choice_obj) else { continue }
+    if choice_obj.get("delta") is Some(Object(delta)) {
+      match json_string_from_map(delta, "content") {
+        Some(text) if !text.is_empty() =>
+          events.push(anthropic_text_delta_stream_event(text))
+        _ => ()
+      }
+      match json_string_from_map(delta, "refusal") {
+        Some(text) if !text.is_empty() =>
+          events.push(anthropic_text_delta_stream_event(text))
+        _ => ()
+      }
+    }
+    match choice_obj.get("finish_reason") {
+      Some(String(reason)) =>
+        events.push(anthropic_message_delta_stream_event(reason))
+      _ => ()
+    }
+  }
+  events
+}
+
+///|
+fn anthropic_text_delta_stream_event(text : String) -> StreamEvent {
+  {
+    event_type: "content_block_delta",
+    data: Json::object({
+      "type": Json::string("content_block_delta"),
+      "index": Json::number(0.0),
+      "delta": Json::object({
+        "type": Json::string("text_delta"),
+        "text": Json::string(text),
+      }),
+    }).stringify(),
+  }
+}
+
+///|
+fn anthropic_message_delta_stream_event(reason : String) -> StreamEvent {
+  let stop_reason = if reason == "tool_calls" { "tool_use" } else { "end_turn" }
+  {
+    event_type: "message_delta",
+    data: Json::object({
+      "type": Json::string("message_delta"),
+      "delta": Json::object({ "stop_reason": Json::string(stop_reason) }),
+      "usage": Json::object({ "output_tokens": Json::number(0.0) }),
+    }).stringify(),
+  }
+}
+
+///|
+async fn Gateway::handle_streaming_request(
+  self : Gateway,
+  request : AnthropicRequest,
+  request_json : Json,
+  model : String,
+  active_provider : ProviderRouteTarget?,
+  session_id : String?,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  match active_provider {
+    Some(provider) if provider.can_use_claude_compatible_upstream() => {
+      self.forward_streaming_claude_compatible_request(
+        request, request_json, model, provider, session_id, w,
+      )
+      return
+    }
+    _ => ()
+  }
   guard self.credentials is Some(creds) else {
     self.record_unauthorized()
     w.header().set("Content-Type", "application/json")
@@ -3191,7 +3426,9 @@ async fn Gateway::handle_streaming_request(
         Ok(new_creds) => {
           self.credentials = Some(new_creds)
           self.logger.info("Credentials refreshed, retrying request")
-          self.handle_streaming_request(request, model, session_id, w)
+          self.handle_streaming_request(
+            request, request_json, model, active_provider, session_id, w,
+          )
           return
         }
         Err(_) => ()

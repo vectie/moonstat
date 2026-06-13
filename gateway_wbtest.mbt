@@ -971,6 +971,26 @@ test "claude upstream request json rewrites mapped model" {
 }
 
 ///|
+test "claude stream upstream request forces stream true" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-sonnet-4-6",
+      #|  "max_tokens": 128,
+      #|  "stream": false,
+      #|  "messages": [
+      #|    { "role": "user", "content": "hello" }
+      #|  ]
+      #|}
+    ),
+  )
+  let upstream = claude_stream_request_json_for_upstream(body, "gpt-5.4")
+  guard upstream is Object(obj) else { fail("expected object") }
+  assert_eq(obj["model"], Json::string("gpt-5.4"))
+  assert_eq(obj["stream"], Json::boolean(true))
+}
+
+///|
 test "openai chat completion converts to anthropic response" {
   let body = @json.parse(
     (
@@ -1016,6 +1036,52 @@ test "openai chat completion converts to anthropic response" {
   assert_eq(response.content[1].type_, "tool_use")
   assert_eq(response.content[1].name, Some("lookup"))
   assert_eq(response.content[1].id, Some("call_1"))
+}
+
+///|
+test "openai chat stream chunk converts to anthropic events" {
+  let chunk = @json.parse(
+    (
+      #|{
+      #|  "id": "chatcmpl_1",
+      #|  "choices": [
+      #|    {
+      #|      "index": 0,
+      #|      "delta": { "content": "hi" },
+      #|      "finish_reason": null
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let events = openai_chat_stream_chunk_to_anthropic_events(chunk)
+  assert_eq(events.length(), 1)
+  assert_eq(events[0].event_type, "content_block_delta")
+  let event_data = @json.parse(events[0].data)
+  guard event_data is Object(obj) else { fail("expected object") }
+  guard obj["delta"] is Object(delta) else { fail("expected delta") }
+  assert_eq(delta["text"], Json::string("hi"))
+
+  let done = @json.parse(
+    (
+      #|{
+      #|  "choices": [
+      #|    {
+      #|      "index": 0,
+      #|      "delta": {},
+      #|      "finish_reason": "tool_calls"
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+  let done_events = openai_chat_stream_chunk_to_anthropic_events(done)
+  assert_eq(done_events.length(), 1)
+  assert_eq(done_events[0].event_type, "message_delta")
+  let done_data = @json.parse(done_events[0].data)
+  guard done_data is Object(done_obj) else { fail("expected object") }
+  guard done_obj["delta"] is Object(done_delta) else { fail("expected delta") }
+  assert_eq(done_delta["stop_reason"], Json::string("tool_use"))
 }
 
 ///|
