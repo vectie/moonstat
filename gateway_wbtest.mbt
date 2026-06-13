@@ -619,7 +619,11 @@ test "gateway uses ccs model mapping for upstream claude model" {
   )
   assert_eq(
     gateway.upstream_claude_model("claude-sonnet-4-6", Some(unmapped)),
-    "gpt-default",
+    "claude-sonnet-4-6",
+  )
+  assert_eq(
+    gateway.upstream_claude_model("deepseek-v4-pro [1M]", Some(unmapped)),
+    "deepseek-v4-pro",
   )
 }
 
