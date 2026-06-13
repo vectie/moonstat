@@ -634,26 +634,55 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/proxy/provider-health", (r, w) => {
     self.handle_proxy_provider_health(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_provider_health", (r, w) => {
+    self.handle_proxy_provider_health(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/proxy/circuit-breaker-config", (_, w) => {
+    self.handle_proxy_circuit_breaker_config(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_circuit_breaker_config", (_, w) => {
     self.handle_proxy_circuit_breaker_config(w)
   })
   router.add_handler(@httpx.Method::Post, "/proxy/circuit-breaker-config", (
     r,
     w,
   ) => self.handle_proxy_update_circuit_breaker_config(r, w))
+  router.add_handler(@httpx.Method::Post, "/update_circuit_breaker_config", (
+    r,
+    w,
+  ) => self.handle_proxy_update_circuit_breaker_config(r, w))
   router.add_handler(@httpx.Method::Get, "/proxy/circuit-breaker-stats", (r, w) => {
+    self.handle_proxy_circuit_breaker_stats(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_circuit_breaker_stats", (r, w) => {
     self.handle_proxy_circuit_breaker_stats(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/proxy/reset-circuit-breaker", (r, w) => {
     self.handle_proxy_reset_circuit_breaker(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/reset_circuit_breaker", (r, w) => {
+    self.handle_proxy_reset_circuit_breaker(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/proxy/failover-queue", (r, w) => {
+    self.handle_proxy_failover_queue(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_failover_queue", (r, w) => {
     self.handle_proxy_failover_queue(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/proxy/failover-queue", (r, w) => {
     self.handle_proxy_add_failover_queue(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/add_to_failover_queue", (r, w) => {
+    self.handle_proxy_add_failover_queue(r, w)
+  })
   router.add_handler(@httpx.Method::Delete, "/proxy/failover-queue", (r, w) => {
+    self.handle_proxy_remove_failover_queue(r, w)
+  })
+  router.add_handler(@httpx.Method::Delete, "/remove_from_failover_queue", (
+    r,
+    w,
+  ) => self.handle_proxy_remove_failover_queue(r, w))
+  router.add_handler(@httpx.Method::Post, "/remove_from_failover_queue", (r, w) => {
     self.handle_proxy_remove_failover_queue(r, w)
   })
   router.add_handler(
@@ -661,10 +690,21 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     "/proxy/available-failover-providers",
     (r, w) => self.handle_proxy_available_failover_providers(r, w),
   )
+  router.add_handler(
+    @httpx.Method::Get,
+    "/get_available_providers_for_failover",
+    (r, w) => self.handle_proxy_available_failover_providers(r, w),
+  )
   router.add_handler(@httpx.Method::Get, "/proxy/auto-failover-enabled", (r, w) => {
     self.handle_proxy_auto_failover_enabled(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_auto_failover_enabled", (r, w) => {
+    self.handle_proxy_auto_failover_enabled(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/proxy/auto-failover-enabled", (r, w) => {
+    self.handle_proxy_set_auto_failover_enabled(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_auto_failover_enabled", (r, w) => {
     self.handle_proxy_set_auto_failover_enabled(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/takeover-status", (_, w) => {
