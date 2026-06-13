@@ -68,7 +68,11 @@ pub fn token_usage_from_claude_stream_events(Array[Json]) -> TokenUsage?
 
 pub fn token_usage_from_codex_response(Json) -> TokenUsage?
 
+pub fn token_usage_from_codex_response_adjusted(Json) -> TokenUsage?
+
 pub fn token_usage_from_codex_response_auto(Json) -> TokenUsage?
+
+pub fn token_usage_from_codex_stream_events(Array[Json]) -> TokenUsage?
 
 pub fn token_usage_from_codex_stream_events_auto(Array[Json]) -> TokenUsage?
 
@@ -79,6 +83,8 @@ pub fn token_usage_from_gemini_stream_chunks(Array[Json]) -> TokenUsage?
 pub fn token_usage_from_openai_response(Json) -> TokenUsage?
 
 pub fn token_usage_from_openai_stream_events(Array[Json]) -> TokenUsage?
+
+pub fn token_usage_from_openrouter_response(Json) -> TokenUsage?
 
 pub fn transform_claude_request_for_api_format(Json, String, session_id? : String?, explicit_prompt_cache_key? : String?, is_codex_oauth? : Bool, codex_fast_mode? : Bool, gemini_shadow_turns? : Array[GeminiAssistantTurn]) -> Json
 

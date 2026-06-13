@@ -68,6 +68,78 @@ test "openai usage maps prompt and completion tokens" {
 }
 
 ///|
+test "openrouter usage has ccs named openai format parser" {
+  let body =
+    #|{
+    #|  "usage": {
+    #|    "prompt_tokens": 100,
+    #|    "completion_tokens": 50
+    #|  }
+    #|}
+  let usage = token_usage_from_openrouter_response(parse_json_for_test(body)).unwrap()
+  assert_eq(usage.input_tokens, 100)
+  assert_eq(usage.output_tokens, 50)
+  assert_eq(usage.cache_read_tokens, 0)
+  assert_eq(usage.cache_creation_tokens, 0)
+}
+
+///|
+test "codex adjusted usage subtracts cached tokens from details like ccs" {
+  let body =
+    #|{
+    #|  "model": "gpt-5",
+    #|  "usage": {
+    #|    "input_tokens": 1000,
+    #|    "output_tokens": 500,
+    #|    "input_tokens_details": { "cached_tokens": 300 }
+    #|  }
+    #|}
+  let usage = token_usage_from_codex_response_adjusted(
+    parse_json_for_test(body),
+  ).unwrap()
+  assert_eq(usage.input_tokens, 700)
+  assert_eq(usage.output_tokens, 500)
+  assert_eq(usage.cache_read_tokens, 300)
+  assert_eq(usage.model, Some("gpt-5"))
+}
+
+///|
+test "codex adjusted usage prefers cache_read_input_tokens like ccs" {
+  let body =
+    #|{
+    #|  "usage": {
+    #|    "input_tokens": 1000,
+    #|    "output_tokens": 500,
+    #|    "cache_read_input_tokens": 200
+    #|  }
+    #|}
+  let usage = token_usage_from_codex_response_adjusted(
+    parse_json_for_test(body),
+  ).unwrap()
+  assert_eq(usage.input_tokens, 800)
+  assert_eq(usage.output_tokens, 500)
+  assert_eq(usage.cache_read_tokens, 200)
+}
+
+///|
+test "codex adjusted usage saturates when cache exceeds input like ccs" {
+  let body =
+    #|{
+    #|  "usage": {
+    #|    "input_tokens": 100,
+    #|    "output_tokens": 50,
+    #|    "input_tokens_details": { "cached_tokens": 200 }
+    #|  }
+    #|}
+  let usage = token_usage_from_codex_response_adjusted(
+    parse_json_for_test(body),
+  ).unwrap()
+  assert_eq(usage.input_tokens, 0)
+  assert_eq(usage.output_tokens, 50)
+  assert_eq(usage.cache_read_tokens, 200)
+}
+
+///|
 test "anthropic usage input clamps when cache exceeds input" {
   let usage = TokenUsage::new(
     input_tokens=100,
@@ -207,6 +279,32 @@ test "codex stream auto parses response completed usage" {
   ]
   let usage = token_usage_from_codex_stream_events_auto(events).unwrap()
   assert_eq(usage.input_tokens, 10)
+  assert_eq(usage.output_tokens, 2)
+  assert_eq(usage.cache_read_tokens, 4)
+  assert_eq(usage.model, Some("gpt-5"))
+}
+
+///|
+test "codex stream adjusted parser returns ccs adjusted input" {
+  let events = [
+    parse_json_for_test(
+      (
+        #|{
+        #|  "type": "response.completed",
+        #|  "response": {
+        #|    "model": "gpt-5",
+        #|    "usage": {
+        #|      "input_tokens": 10,
+        #|      "output_tokens": 2,
+        #|      "input_tokens_details": { "cached_tokens": 4 }
+        #|    }
+        #|  }
+        #|}
+      ),
+    ),
+  ]
+  let usage = token_usage_from_codex_stream_events(events).unwrap()
+  assert_eq(usage.input_tokens, 6)
   assert_eq(usage.output_tokens, 2)
   assert_eq(usage.cache_read_tokens, 4)
   assert_eq(usage.model, Some("gpt-5"))

@@ -116,6 +116,23 @@ pub fn token_usage_from_codex_response(body : Json) -> TokenUsage? {
 }
 
 ///|
+pub fn token_usage_from_codex_response_adjusted(body : Json) -> TokenUsage? {
+  guard token_usage_from_codex_response(body) is Some(usage) else {
+    return None
+  }
+  Some(
+    TokenUsage::new(
+      input_tokens=max_int(usage.input_tokens - usage.cache_read_tokens, 0),
+      output_tokens=usage.output_tokens,
+      cache_read_tokens=usage.cache_read_tokens,
+      cache_creation_tokens=usage.cache_creation_tokens,
+      model=usage.model,
+      message_id=usage.message_id,
+    ),
+  )
+}
+
+///|
 pub fn token_usage_from_openai_response(body : Json) -> TokenUsage? {
   guard body is Object(obj) else { return None }
   guard obj.get("usage") is Some(Object(usage)) else { return None }
@@ -136,6 +153,11 @@ pub fn token_usage_from_openai_response(body : Json) -> TokenUsage? {
       model=json_string(obj, "model"),
     ),
   )
+}
+
+///|
+pub fn token_usage_from_openrouter_response(body : Json) -> TokenUsage? {
+  token_usage_from_openai_response(body)
 }
 
 ///|
@@ -249,6 +271,23 @@ pub fn token_usage_from_claude_stream_events(
   } else {
     None
   }
+}
+
+///|
+pub fn token_usage_from_codex_stream_events(
+  events : Array[Json],
+) -> TokenUsage? {
+  for event in events {
+    guard event is Object(obj) else { continue }
+    if json_string(obj, "type") == Some("response.completed") {
+      match obj.get("response") {
+        Some(response) =>
+          return token_usage_from_codex_response_adjusted(response)
+        None => ()
+      }
+    }
+  }
+  None
 }
 
 ///|
