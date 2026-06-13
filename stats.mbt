@@ -1051,11 +1051,11 @@ fn ProviderStatsAccumulator::success_rate(
 ///|
 fn ProviderStatsAccumulator::avg_latency_ms(
   self : ProviderStatsAccumulator,
-) -> Double {
+) -> Int {
   if self.request_count == 0 {
-    0.0
+    0
   } else {
-    self.total_latency_ms.to_double() / self.request_count.to_double()
+    self.total_latency_ms / self.request_count
   }
 }
 
@@ -1068,7 +1068,7 @@ fn ProviderStatsAccumulator::to_json(self : ProviderStatsAccumulator) -> Json {
     "totalTokens": Json::number(self.total_tokens.to_double()),
     "totalCost": Json::string(format_nano_usd_fixed_6(self.total_cost_nano)),
     "successRate": Json::number(self.success_rate()),
-    "avgLatencyMs": Json::number(self.avg_latency_ms()),
+    "avgLatencyMs": Json::number(self.avg_latency_ms().to_double()),
   }.to_json()
 }
 

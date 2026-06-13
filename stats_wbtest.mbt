@@ -700,6 +700,44 @@ test "usage aggregate lists match ccs route payloads" {
 }
 
 ///|
+test "provider stats average latency truncates like ccs" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-a",
+      provider_id="codex-oauth",
+      provider_name=Some("Codex OAuth"),
+      app_type="codex",
+      model="gpt-5",
+      usage=TokenUsage::new(input_tokens=1, output_tokens=1),
+      total_cost_usd="0.000001",
+      status_code=200,
+      latency_ms=30,
+      data_source="proxy",
+    ),
+  )
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="req-b",
+      provider_id="codex-oauth",
+      provider_name=Some("Codex OAuth"),
+      app_type="codex",
+      model="gpt-5",
+      usage=TokenUsage::new(input_tokens=1, output_tokens=1),
+      total_cost_usd="0.000001",
+      status_code=200,
+      latency_ms=31,
+      data_source="proxy",
+    ),
+  )
+  guard stats.provider_stats_json() is Array(rows) else {
+    fail("expected provider stats")
+  }
+  guard rows[0] is Object(row) else { fail("expected row") }
+  assert_eq(row["avgLatencyMs"], Json::number(30.0))
+}
+
+///|
 test "usage aggregate filters match ccs date and app semantics" {
   let stats = TrafficStats::new()
   stats.record_request_log(
