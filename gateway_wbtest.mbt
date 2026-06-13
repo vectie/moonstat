@@ -991,6 +991,52 @@ test "claude stream upstream request forces stream true" {
 }
 
 ///|
+test "ccs upstream body filter removes private fields" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "z": 1,
+      #|  "_internal": "drop",
+      #|  "tools": [
+      #|    {
+      #|      "name": "lookup",
+      #|      "parameters": {
+      #|        "type": "object",
+      #|        "properties": {
+      #|          "_id": {
+      #|            "_private_note": "drop",
+      #|            "type": "string"
+      #|          },
+      #|          "b": { "type": "number" },
+      #|          "a": { "type": "string" }
+      #|        }
+      #|      }
+      #|    }
+      #|  ],
+      #|  "a": 2
+      #|}
+    ),
+  )
+  let prepared = prepare_upstream_request_body(body)
+  guard prepared is Object(obj) else { fail("expected object") }
+  assert_true(obj.get("_internal") is None)
+  guard obj["tools"] is Array(tools) else { fail("expected tools") }
+  guard tools[0] is Object(tool) else { fail("expected tool") }
+  guard tool["parameters"] is Object(parameters) else {
+    fail("expected parameters")
+  }
+  guard parameters["properties"] is Object(properties) else {
+    fail("expected properties")
+  }
+  assert_true(properties.get("_id") is Some(_))
+  guard properties["_id"] is Object(id_property) else {
+    fail("expected _id property")
+  }
+  assert_true(id_property.get("_private_note") is None)
+  assert_eq(id_property["type"], Json::string("string"))
+}
+
+///|
 test "openai chat completion converts to anthropic response" {
   let body = @json.parse(
     (

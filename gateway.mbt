@@ -2918,8 +2918,8 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let api_format = provider.claude_api_format()
-  let upstream_body = claude_request_json_for_upstream(
-    request_json, upstream_model,
+  let upstream_body = prepare_upstream_request_body(
+    claude_request_json_for_upstream(request_json, upstream_model),
   )
   let endpoint = claude_transform_endpoint(api_format, false).replace_all(
     old="__MODEL__",
@@ -3409,8 +3409,8 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let api_format = provider.claude_api_format()
-  let upstream_body = claude_stream_request_json_for_upstream(
-    request_json, upstream_model,
+  let upstream_body = prepare_upstream_request_body(
+    claude_stream_request_json_for_upstream(request_json, upstream_model),
   )
   let endpoint = claude_transform_endpoint(api_format, true).replace_all(
     old="__MODEL__",
@@ -3543,6 +3543,48 @@ fn claude_stream_request_json_for_upstream(
   guard result is Object(obj) else { return result }
   obj["stream"] = Json::boolean(true)
   Json::object(obj)
+}
+
+///|
+fn prepare_upstream_request_body(body : Json) -> Json {
+  filter_private_params_for_upstream(body, None)
+}
+
+///|
+fn filter_private_params_for_upstream(
+  body : Json,
+  parent_key : String?,
+) -> Json {
+  match body {
+    Object(obj) => {
+      let schema_name_map = parent_key is Some(key) &&
+        matches_schema_name_map(key)
+      let result : Map[String, Json] = {}
+      for key, value in obj {
+        if key.has_prefix("_") && !schema_name_map {
+          continue
+        }
+        result[key] = filter_private_params_for_upstream(value, Some(key))
+      }
+      Json::object(result)
+    }
+    Array(items) => {
+      let result : Array[Json] = []
+      for item in items {
+        result.push(filter_private_params_for_upstream(item, parent_key))
+      }
+      Json::array(result)
+    }
+    _ => body
+  }
+}
+
+///|
+fn matches_schema_name_map(key : String) -> Bool {
+  key == "properties" ||
+  key == "patternProperties" ||
+  key == "definitions" ||
+  key == "$defs"
 }
 
 ///|
