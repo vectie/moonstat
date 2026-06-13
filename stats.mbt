@@ -148,6 +148,7 @@ pub struct TrafficStats {
   mut failover_count : Int
   active_targets : Map[String, ActiveTarget]
   provider_limits : Map[String, ProviderLimitConfig]
+  session_sync_state : Map[String, SessionFileSyncState]
   mut last_request_at : String?
   mut last_error : String?
   request_logs : Array[RequestLog]
@@ -191,6 +192,7 @@ pub fn TrafficStats::new() -> TrafficStats {
     failover_count: 0,
     active_targets: Map([], capacity=0),
     provider_limits: Map([], capacity=0),
+    session_sync_state: Map([], capacity=0),
     last_request_at: None,
     last_error: None,
     request_logs: [],

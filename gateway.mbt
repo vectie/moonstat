@@ -145,6 +145,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/usage/data-sources", (_, w) => {
     self.handle_usage_data_sources(w)
   })
+  router.add_handler(@httpx.Method::Post, "/usage/sync-session", (r, w) => {
+    self.handle_usage_sync_session(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/usage/model-pricing", (_, w) => {
     self.handle_usage_model_pricing(w)
   })
@@ -1100,6 +1103,21 @@ async fn Gateway::handle_usage_data_sources(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   write_usage_json(w, self.stats.usage_data_sources_json())
+}
+
+///|
+async fn Gateway::handle_usage_sync_session(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let projects_dir = usage_query_value_any(
+    r.path,
+    "projects_dir",
+    "projectsDir",
+  ).unwrap_or(default_claude_projects_dir())
+  let result = self.stats.sync_claude_session_logs(projects_dir~)
+  write_usage_json(w, result.to_json())
 }
 
 ///|

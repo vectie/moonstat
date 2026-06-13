@@ -25,6 +25,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["usage", "apps", ..] => check_usage_endpoint(arr, "/usage/summary/by-app")
     ["usage", "trends", ..] => check_usage_trends(arr)
     ["usage", "limits", ..] => check_usage_limits(arr)
+    ["usage", "sync", ..] => sync_session_usage(arr)
     ["usage", "providers", ..] =>
       check_usage_endpoint(arr, "/usage/provider-stats")
     ["usage", "models", ..] => check_usage_endpoint(arr, "/usage/model-stats")
@@ -78,6 +79,7 @@ fn print_help() -> Unit {
   println("  usage apps       Show ccs-style usage summary by app")
   println("  usage trends     Show ccs-style hourly/daily usage trends")
   println("  usage limits     Show ccs-style provider limit status")
+  println("  usage sync       Sync ccs-style Claude session logs")
   println("  usage providers  Show ccs-style provider statistics")
   println("  usage models     Show ccs-style model statistics")
   println("  usage sources    Show ccs-style data source breakdown")
@@ -119,6 +121,7 @@ fn print_help() -> Unit {
   println("  moonstat usage summary         # Show aggregate token/cost usage")
   println("  moonstat usage trends --start-date 0 --end-date 86400")
   println("  moonstat usage limits --provider-id codex-oauth --app-type codex")
+  println("  moonstat usage sync --projects-dir ~/.claude/projects")
   println("  moonstat usage detail --request-id req_x")
   println("  moonstat uninstall             # Remove hosts reroute")
 }
@@ -205,6 +208,26 @@ async fn check_usage_limits(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn sync_session_usage(args : Array[String]) -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
+  let path = usage_sync_path(args)
+  try {
+    let client = @http.Client::new(url, headers={})
+    defer client.close()
+    let response = client.post(path, "{}")
+    let body = client.read_all().text()
+    if response.code == 200 {
+      println(body)
+    } else {
+      logger.error("Usage sync failed: \{response.code} \{body}")
+    }
+  } catch {
+    err => logger.error("Usage sync failed: \{err}")
+  }
+}
+
+///|
 fn usage_trends_path(args : Array[String]) -> String {
   let query : Array[String] = []
   match parse_string_arg(args, "--start-date") {
@@ -249,6 +272,14 @@ fn usage_limits_path(args : Array[String]) -> String {
     "/usage/provider-limits"
   } else {
     "/usage/provider-limits?\{query.join("&")}"
+  }
+}
+
+///|
+fn usage_sync_path(args : Array[String]) -> String {
+  match parse_string_arg(args, "--projects-dir") {
+    Some(value) => "/usage/sync-session?projects_dir=\{value}"
+    None => "/usage/sync-session"
   }
 }
 

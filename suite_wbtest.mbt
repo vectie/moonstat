@@ -28,6 +28,10 @@ test "suite manifest publishes moonstat service contract" {
     obj["usage_provider_limits_url"],
     Json::string("http://127.0.0.1:15721/usage/provider-limits"),
   )
+  assert_eq(
+    obj["usage_sync_session_url"],
+    Json::string("http://127.0.0.1:15721/usage/sync-session"),
+  )
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
   assert_true(routes.contains(Json::string("GET /stats")))
   assert_true(routes.contains(Json::string("GET /usage/logs")))
@@ -38,6 +42,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /usage/provider-stats")))
   assert_true(routes.contains(Json::string("GET /usage/model-stats")))
   assert_true(routes.contains(Json::string("GET /usage/data-sources")))
+  assert_true(routes.contains(Json::string("POST /usage/sync-session")))
   assert_true(routes.contains(Json::string("GET /usage/model-pricing")))
   assert_true(
     routes.contains(Json::string("GET /usage/request-detail/{request_id}")),
@@ -74,6 +79,10 @@ async test "suite status writes discovery file" {
     assert_eq(
       obj["usage_provider_limits_url"],
       Json::string("http://127.0.0.1:17000/usage/provider-limits"),
+    )
+    assert_eq(
+      obj["usage_sync_session_url"],
+      Json::string("http://127.0.0.1:17000/usage/sync-session"),
     )
     guard obj["manifest"] is Object(manifest) else {
       fail("expected manifest object")
