@@ -17,6 +17,16 @@ fn trim_start_slashes(input : String) -> String {
 }
 
 ///|
+pub fn normalize_gemini_model_id(model : String) -> String {
+  let trimmed = if model.has_prefix("/") { model[1:].to_owned() } else { model }
+  if trimmed.has_prefix("models/") {
+    trimmed["models/".length():].to_owned()
+  } else {
+    trimmed
+  }
+}
+
+///|
 fn resolve_gemini_native_url(
   base_url : String,
   endpoint : String,
