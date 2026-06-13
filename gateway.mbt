@@ -195,7 +195,10 @@ async fn Gateway::handle_codex_responses(
       let stream = json_bool_field(json, "stream").unwrap_or(false)
       self.stats.record_stream_mode(stream)
       let request = normalize_codex_oauth_request(json)
-      let endpoint = codex_backend_responses_endpoint(compact)
+      let endpoint = codex_backend_responses_endpoint(
+        compact,
+        request_path=r.path,
+      )
       if stream {
         self.forward_streaming_codex_response(request, endpoint, w)
       } else {
@@ -587,11 +590,26 @@ async fn Gateway::forward_streaming_codex_response(
 }
 
 ///|
-fn codex_backend_responses_endpoint(compact : Bool) -> String {
-  if compact {
+fn codex_backend_responses_endpoint(
+  compact : Bool,
+  request_path? : StringView = "",
+) -> String {
+  let base = if compact {
     "/backend-api/codex/responses/compact"
   } else {
     "/backend-api/codex/responses"
+  }
+  endpoint_with_request_query(base, request_path)
+}
+
+///|
+fn endpoint_with_request_query(
+  endpoint : String,
+  request_path : StringView,
+) -> String {
+  match request_path.find("?") {
+    Some(index) => "\{endpoint}?\{request_path[index + 1:]}"
+    None => endpoint
   }
 }
 

@@ -38,3 +38,21 @@ test "codex compact responses keep compact backend endpoint" {
     "/backend-api/codex/responses/compact",
   )
 }
+
+///|
+test "codex responses endpoints preserve request query" {
+  assert_eq(
+    codex_backend_responses_endpoint(
+      false,
+      request_path="/v1/responses?beta=true&conversation=abc",
+    ),
+    "/backend-api/codex/responses?beta=true&conversation=abc",
+  )
+  assert_eq(
+    codex_backend_responses_endpoint(
+      true,
+      request_path="/codex/v1/responses/compact?beta=true",
+    ),
+    "/backend-api/codex/responses/compact?beta=true",
+  )
+}
