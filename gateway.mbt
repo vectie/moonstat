@@ -195,14 +195,17 @@ async fn Gateway::handle_codex_responses(
       let stream = json_bool_field(json, "stream").unwrap_or(false)
       self.stats.record_stream_mode(stream)
       let request = normalize_codex_oauth_request(json)
+      let session_id = extract_client_session_id(r.headers, json, "codex")
       let endpoint = codex_backend_responses_endpoint(
         compact,
         request_path=r.path,
       )
       if stream {
-        self.forward_streaming_codex_response(request, endpoint, w)
+        self.forward_streaming_codex_response(request, endpoint, session_id, w)
       } else {
-        self.forward_non_streaming_codex_response(request, endpoint, w)
+        self.forward_non_streaming_codex_response(
+          request, endpoint, session_id, w,
+        )
       }
     }
   }
@@ -234,6 +237,7 @@ async fn Gateway::handle_chat_completions(
       let response_model = openai_chat_model(json).unwrap_or(self.model)
       let stream = json_bool_field(json, "stream").unwrap_or(false)
       self.stats.record_stream_mode(stream)
+      let session_id = extract_client_session_id(r.headers, json, "openai")
       let request = openai_chat_to_codex_response_request(json, self.model)
       guard request is Some(codex_request) else {
         self.stats.record_bad_request()
@@ -246,10 +250,12 @@ async fn Gateway::handle_chat_completions(
         return
       }
       if stream {
-        self.forward_streaming_chat_completion(codex_request, response_model, w)
+        self.forward_streaming_chat_completion(
+          codex_request, response_model, session_id, w,
+        )
       } else {
         self.forward_non_streaming_chat_completion(
-          codex_request, response_model, w,
+          codex_request, response_model, session_id, w,
         )
       }
     }
@@ -392,6 +398,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
   self : Gateway,
   request : Json,
   response_model : String,
+  session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
@@ -404,7 +411,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
     w.flush()
     return
   }
-  let client = self.codex_client(creds, accept="application/json")
+  let client = self.codex_client(creds, accept="application/json", session_id~)
   defer client.close()
   let response = client.post("/backend-api/codex/responses", request)
   let response_body = client.read_all().text()
@@ -447,6 +454,7 @@ async fn Gateway::forward_streaming_chat_completion(
   self : Gateway,
   request : Json,
   response_model : String,
+  session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
@@ -459,7 +467,7 @@ async fn Gateway::forward_streaming_chat_completion(
     w.flush()
     return
   }
-  let client = self.codex_client(creds, accept="text/event-stream")
+  let client = self.codex_client(creds, accept="text/event-stream", session_id~)
   defer client.close()
   let response = client.post("/backend-api/codex/responses", request)
   if response.code != 200 {
@@ -508,6 +516,7 @@ async fn Gateway::forward_non_streaming_codex_response(
   self : Gateway,
   request : Json,
   endpoint : String,
+  session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
@@ -520,7 +529,7 @@ async fn Gateway::forward_non_streaming_codex_response(
     w.flush()
     return
   }
-  let client = self.codex_client(creds, accept="application/json")
+  let client = self.codex_client(creds, accept="application/json", session_id~)
   defer client.close()
   let response = client.post(endpoint, request)
   let response_body = client.read_all().text()
@@ -550,6 +559,7 @@ async fn Gateway::forward_streaming_codex_response(
   self : Gateway,
   request : Json,
   endpoint : String,
+  session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
@@ -562,7 +572,7 @@ async fn Gateway::forward_streaming_codex_response(
     w.flush()
     return
   }
-  let client = self.codex_client(creds, accept="text/event-stream")
+  let client = self.codex_client(creds, accept="text/event-stream", session_id~)
   defer client.close()
   let response = client.post(endpoint, request)
   if response.code != 200 {
@@ -618,16 +628,132 @@ async fn Gateway::codex_client(
   self : Gateway,
   creds : @codex.Credentials,
   accept~ : String,
+  session_id? : String? = None,
 ) -> @http.Client {
   let _ = self
-  @http.Client::new("https://chatgpt.com", headers={
+  @http.Client::new(
+    "https://chatgpt.com",
+    headers=codex_oauth_headers(creds, accept, session_id),
+  )
+}
+
+///|
+fn codex_oauth_headers(
+  creds : @codex.Credentials,
+  accept : String,
+  session_id : String?,
+) -> Map[String, String] {
+  let headers : Map[String, String] = {
     "Authorization": "Bearer \{creds.accessToken}",
     "ChatGPT-Account-ID": creds.accountId,
     "Content-Type": "application/json",
     "Accept": accept,
     "originator": "moonstat_gateway",
     "User-Agent": "moonstat/1.0.0",
-  })
+  }
+  match session_id {
+    Some(id) => {
+      headers["session_id"] = id
+      headers["x-client-request-id"] = id
+      headers["x-codex-window-id"] = id
+    }
+    None => ()
+  }
+  headers
+}
+
+///|
+fn extract_client_session_id(
+  headers : Map[String, String],
+  body : Json,
+  client_format : String,
+) -> String? {
+  if client_format == "claude" {
+    match extract_claude_session_id(headers, body) {
+      Some(id) => return Some(id)
+      None => ()
+    }
+  }
+  if client_format == "codex" || client_format == "openai" {
+    match extract_codex_session_id(headers, body) {
+      Some(id) => return Some(id)
+      None => ()
+    }
+  }
+  extract_session_from_metadata(body)
+}
+
+///|
+fn extract_claude_session_id(
+  headers : Map[String, String],
+  body : Json,
+) -> String? {
+  for name in ["x-claude-code-session-id", "claude-code-session-id"] {
+    match headers.get(name) {
+      Some(value) if !value.is_empty() => return Some(value)
+      _ => ()
+    }
+  }
+  extract_session_from_metadata(body)
+}
+
+///|
+fn extract_codex_session_id(
+  headers : Map[String, String],
+  body : Json,
+) -> String? {
+  for name in ["session_id", "x-session-id"] {
+    match headers.get(name) {
+      Some(value) if value.length() > 20 => return Some("codex_\{value}")
+      _ => ()
+    }
+  }
+  match json_metadata_string(body, "session_id") {
+    Some(value) if value.length() > 10 => Some("codex_\{value}")
+    _ => None
+  }
+}
+
+///|
+fn extract_session_from_metadata(body : Json) -> String? {
+  match json_metadata_string(body, "user_id") {
+    Some(user_id) =>
+      match parse_session_from_user_id(user_id) {
+        Some(id) => return Some(id)
+        None => ()
+      }
+    None => ()
+  }
+  match json_metadata_string(body, "session_id") {
+    Some(id) if !id.is_empty() => Some(id)
+    _ => None
+  }
+}
+
+///|
+fn json_metadata_string(body : Json, key : String) -> String? {
+  guard body is Object(obj) else { return None }
+  guard obj.get("metadata") is Some(Object(metadata)) else { return None }
+  match metadata.get(key) {
+    Some(String(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn parse_session_from_user_id(user_id : String) -> String? {
+  match user_id.find("_session_") {
+    Some(index) => {
+      let start = index + "_session_".length()
+      let session_id = user_id[start:]
+      if session_id.is_empty() {
+        None
+      } else {
+        Some(session_id.to_owned())
+      }
+    }
+    None => None
+  }
 }
 
 ///|
@@ -1065,6 +1191,7 @@ async fn Gateway::handle_messages(
       return
     }
     Ok(json) => {
+      let session_id = extract_client_session_id(r.headers, json, "claude")
       let anthropic_request_result : Result[AnthropicRequest, Error] = try? @json.from_json(
         json,
       )
@@ -1089,9 +1216,13 @@ async fn Gateway::handle_messages(
           let stream = anthropic_request.stream.unwrap_or(false)
           self.stats.record_stream_mode(stream)
           if stream {
-            self.handle_streaming_request(anthropic_request, model, w)
+            self.handle_streaming_request(
+              anthropic_request, model, session_id, w,
+            )
           } else {
-            self.handle_non_streaming_request(anthropic_request, model, w)
+            self.handle_non_streaming_request(
+              anthropic_request, model, session_id, w,
+            )
           }
         }
       }
@@ -1104,6 +1235,7 @@ async fn Gateway::handle_non_streaming_request(
   self : Gateway,
   request : AnthropicRequest,
   model : String,
+  session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
@@ -1117,14 +1249,10 @@ async fn Gateway::handle_non_streaming_request(
   let codex_input = convert_anthropic_to_codex(request, model)
   let codex_request = build_codex_request(codex_input, model, false)
   self.logger.debug("Sending request to Codex API")
-  let client = @http.Client::new("https://chatgpt.com", headers={
-    "Authorization": "Bearer \{creds.accessToken}",
-    "ChatGPT-Account-ID": creds.accountId,
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "originator": "moonstat_gateway",
-    "User-Agent": "moonstat/1.0.0",
-  })
+  let client = @http.Client::new(
+    "https://chatgpt.com",
+    headers=codex_oauth_headers(creds, "application/json", session_id),
+  )
   defer client.close()
   let response = client.post("/backend-api/codex/responses", codex_request)
   if response.code != 200 {
@@ -1137,7 +1265,7 @@ async fn Gateway::handle_non_streaming_request(
         Ok(new_creds) => {
           self.credentials = Some(new_creds)
           self.logger.info("Credentials refreshed, retrying request")
-          self.handle_non_streaming_request(request, model, w)
+          self.handle_non_streaming_request(request, model, session_id, w)
           return
         }
         Err(_) => ()
@@ -1180,6 +1308,7 @@ async fn Gateway::handle_streaming_request(
   self : Gateway,
   request : AnthropicRequest,
   model : String,
+  session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   guard self.credentials is Some(creds) else {
@@ -1193,14 +1322,10 @@ async fn Gateway::handle_streaming_request(
   let codex_input = convert_anthropic_to_codex(request, model)
   let codex_request = build_codex_request(codex_input, model, true)
   self.logger.debug("Sending streaming request to Codex API")
-  let client = @http.Client::new("https://chatgpt.com", headers={
-    "Authorization": "Bearer \{creds.accessToken}",
-    "ChatGPT-Account-ID": creds.accountId,
-    "Content-Type": "application/json",
-    "Accept": "text/event-stream",
-    "originator": "moonstat_gateway",
-    "User-Agent": "moonstat/1.0.0",
-  })
+  let client = @http.Client::new(
+    "https://chatgpt.com",
+    headers=codex_oauth_headers(creds, "text/event-stream", session_id),
+  )
   defer client.close()
   let response = client.post("/backend-api/codex/responses", codex_request)
   if response.code != 200 {
@@ -1213,7 +1338,7 @@ async fn Gateway::handle_streaming_request(
         Ok(new_creds) => {
           self.credentials = Some(new_creds)
           self.logger.info("Credentials refreshed, retrying request")
-          self.handle_streaming_request(request, model, w)
+          self.handle_streaming_request(request, model, session_id, w)
           return
         }
         Err(_) => ()

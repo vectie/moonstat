@@ -115,6 +115,90 @@ test "claude safe model id rejects ccs unsafe ids" {
 }
 
 ///|
+test "ccs session extraction uses claude metadata and headers" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-sonnet-4-6",
+      #|  "messages": [],
+      #|  "metadata": {
+      #|    "user_id": "user_jane_session_claude-session-1",
+      #|    "session_id": "metadata-session"
+      #|  }
+      #|}
+    ),
+  )
+  assert_eq(
+    extract_client_session_id({}, body, "claude"),
+    Some("claude-session-1"),
+  )
+  assert_eq(
+    extract_client_session_id(
+      { "x-claude-code-session-id": "header-session" },
+      body,
+      "claude",
+    ),
+    Some("header-session"),
+  )
+}
+
+///|
+test "ccs session extraction prefixes codex client ids" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "input": "hello",
+      #|  "metadata": {
+      #|    "session_id": "metadata-session-123456789"
+      #|  },
+      #|  "previous_response_id": "resp_should_not_be_session"
+      #|}
+    ),
+  )
+  assert_eq(
+    extract_client_session_id(
+      { "session_id": "12345678-1234-1234-1234-123456789012" },
+      body,
+      "codex",
+    ),
+    Some("codex_12345678-1234-1234-1234-123456789012"),
+  )
+  assert_eq(
+    extract_client_session_id({}, body, "codex"),
+    Some("codex_metadata-session-123456789"),
+  )
+  assert_eq(
+    extract_client_session_id(
+      {},
+      @json.parse("{\"previous_response_id\":\"resp_only\"}"),
+      "codex",
+    ),
+    None,
+  )
+}
+
+///|
+test "codex oauth headers propagate ccs session headers" {
+  let creds = @codex.Credentials::{
+    idToken: "id",
+    accessToken: "access",
+    refreshToken: "refresh",
+    accountId: "account",
+  }
+  let headers = codex_oauth_headers(
+    creds,
+    "text/event-stream",
+    Some("codex_session-1"),
+  )
+  assert_eq(headers["Authorization"], "Bearer access")
+  assert_eq(headers["ChatGPT-Account-ID"], "account")
+  assert_eq(headers["Accept"], "text/event-stream")
+  assert_eq(headers["session_id"], "codex_session-1")
+  assert_eq(headers["x-client-request-id"], "codex_session-1")
+  assert_eq(headers["x-codex-window-id"], "codex_session-1")
+}
+
+///|
 test "codex to anthropic response emits ccs cache usage buckets" {
   let body = @json.parse(
     (
