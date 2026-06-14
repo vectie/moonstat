@@ -268,6 +268,21 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `DELETE|POST /auth_remove_account?authProvider=codex_oauth&accountId=...`
 - `GET|POST /auth_set_default_account?authProvider=codex_oauth&accountId=...`
 - `GET|POST /auth_logout?authProvider=codex_oauth`
+- `GET|POST /auth_get_status?authProvider=github_copilot`
+- `GET|POST /auth_start_login?authProvider=github_copilot&githubDomain=github.com`
+- `GET|POST /auth_poll_for_account?authProvider=github_copilot&deviceCode=...`
+- `GET /copilot_get_auth_status`
+- `GET /copilot_list_accounts`
+- `GET /copilot_is_authenticated`
+- `GET|POST /copilot_start_device_flow?githubDomain=github.com`
+- `GET|POST /copilot_poll_for_auth?deviceCode=...`
+- `GET|POST /copilot_poll_for_account?deviceCode=...`
+- `DELETE|POST /copilot_remove_account?accountId=...`
+- `GET|POST /copilot_set_default_account?accountId=...`
+- `GET|POST /copilot_logout`
+- `GET /copilot_get_token?accountId=...`
+- `GET /copilot_get_models?accountId=...`
+- `GET /copilot_get_usage?accountId=...`
 - `POST /testUsageScript?providerId=codex-oauth&app=codex`
 - `POST /stream_check_provider?appType=codex&providerId=codex-oauth`
 - `POST /stream_check_all_providers?appType=codex&proxyTargetsOnly=true`
@@ -285,7 +300,14 @@ Moonstat currently exposes the ccs-compatible local routes below:
   `GET|POST /auth_start_login`, `GET|POST /auth_poll_for_account`,
   `GET|POST /auth_list_accounts`, `GET|POST /auth_get_status`,
   `DELETE|POST /auth_remove_account`, `GET|POST /auth_set_default_account`,
-  `GET|POST /auth_logout`, and `POST /testUsageScript`.
+  `GET|POST /auth_logout`, `GET|POST /copilot_start_device_flow`,
+  `GET|POST /copilot_poll_for_auth`,
+  `GET|POST /copilot_poll_for_account`, `GET /copilot_list_accounts`,
+  `GET /copilot_get_auth_status`, `GET /copilot_is_authenticated`,
+  `GET|POST /copilot_logout`, `DELETE|POST /copilot_remove_account`,
+  `GET|POST /copilot_set_default_account`, `GET /copilot_get_token`,
+  `GET /copilot_get_models`, `GET /copilot_get_usage`, and
+  `POST /testUsageScript`.
   Stream check command aliases `stream_check_provider`,
   `stream_check_all_providers`, `get_stream_check_config`, and
   `save_stream_check_config` expose the ccs camelCase config/result JSON
@@ -428,7 +450,11 @@ model-list command against `chatgpt.com/backend-api/codex/models`, returning the
 same fetched model array shape as provider model fetch. The `auth_*` endpoints
 mirror CCS managed auth for `codex_oauth`: status/list expose the local
 Moonstat Codex account, start/poll use OpenAI's device-code flow, and
-remove/logout clear `~/.moonstat/codex-credentials.json`. `/get_coding_plan_quota`
+remove/logout clear `~/.moonstat/codex-credentials.json`. For
+`github_copilot`, the same `auth_*` surface delegates to the CCS-style Copilot
+device-code flow and `~/.moonstat/copilot-credentials.json`; the dedicated
+`copilot_*` endpoints mirror CCS Copilot account, token, model, and usage
+commands against GitHub/Copilot APIs. `/get_coding_plan_quota`
 mirrors the CCS coding-plan quota command for Kimi, Zhipu CN/EN, MiniMax CN/EN,
 and ZenMux-compatible quota URLs, returning the same `SubscriptionQuota` tier
 names and fields.

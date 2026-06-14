@@ -28,6 +28,28 @@ pub fn ccs_proxy_error_message(CcsProxyError) -> String
 
 pub fn convert_anthropic_to_codex(AnthropicRequest, String) -> CodexInput
 
+pub async fn copilot_get_auth_status() -> Json
+
+pub async fn copilot_get_models(String?) -> Result[Json, String]
+
+pub async fn copilot_get_token(String?) -> Result[Json, String]
+
+pub async fn copilot_get_usage(String?) -> Result[Json, String]
+
+pub async fn copilot_is_authenticated() -> Bool
+
+pub async fn copilot_list_accounts() -> Json
+
+pub async fn copilot_logout() -> Json
+
+pub async fn copilot_poll_for_account(String, String?) -> Result[Json?, String]
+
+pub async fn copilot_remove_account(String) -> Result[Json, String]
+
+pub async fn copilot_set_default_account(String) -> Result[Json, String]
+
+pub async fn copilot_start_device_flow(String?) -> Result[Json, String]
+
 pub let credential_statuses : Array[CredentialStatus]
 
 pub fn default_claude_projects_dir() -> String
@@ -66,13 +88,13 @@ pub async fn managed_auth_list_accounts(String) -> Result[Json, String]
 
 pub async fn managed_auth_logout(String) -> Result[Json, String]
 
-pub async fn managed_auth_poll_for_account(String, String, String) -> Result[Json?, String]
+pub async fn managed_auth_poll_for_account(String, String, String?, github_domain? : String?) -> Result[Json?, String]
 
 pub async fn managed_auth_remove_account(String, String) -> Result[Json, String]
 
 pub async fn managed_auth_set_default_account(String, String) -> Result[Json, String]
 
-pub async fn managed_auth_start_login(String) -> Result[@codex.DeviceCodeFlow, String]
+pub async fn managed_auth_start_login(String, github_domain? : String?) -> Result[Json, String]
 
 pub fn managed_auth_status_json(String, @codex.Credentials?, migration_error? : String) -> Json
 
@@ -298,6 +320,10 @@ pub struct CodexTool {
   parameters : Json
 }
 pub impl ToJson for CodexTool
+
+type CopilotCredentials derive(ToJson, @json.FromJson)
+
+type CopilotDeviceCodeResponse derive(ToJson)
 
 pub struct CostBreakdown {
   input_cost_usd : String

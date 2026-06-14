@@ -553,6 +553,56 @@ test "top level ccs stream check command names build command alias paths" {
 }
 
 ///|
+test "top level ccs copilot command names build auth paths" {
+  assert_eq(
+    copilot_github_domain_path(
+      [
+        "moonstat", "copilot_start_device_flow", "--githubDomain", "https://ghe.example.com",
+      ],
+      "/copilot_start_device_flow",
+    ),
+    "/copilot_start_device_flow?githubDomain=https%3A%2F%2Fghe.example.com",
+  )
+  assert_eq(
+    copilot_device_path(
+      [
+        "moonstat", "copilot_poll_for_account", "--deviceCode", "dev 1", "--github-domain",
+        "ghe.example.com",
+      ],
+      "/copilot_poll_for_account",
+    ),
+    Some(
+      "/copilot_poll_for_account?deviceCode=dev%201&githubDomain=ghe.example.com",
+    ),
+  )
+  assert_eq(
+    copilot_account_path(
+      [
+        "moonstat", "copilot_remove_account", "--accountId", "ghe.example.com:42",
+      ],
+      "/copilot_remove_account",
+    ),
+    Some("/copilot_remove_account?accountId=ghe.example.com%3A42"),
+  )
+  assert_eq(
+    copilot_account_optional_path(
+      [
+        "moonstat", "copilot_get_models_for_account", "--account-id", "ghe.example.com:42",
+      ],
+      "/copilot_get_models_for_account",
+    ),
+    "/copilot_get_models_for_account?accountId=ghe.example.com%3A42",
+  )
+  assert_eq(
+    auth_provider_path(
+      ["moonstat", "auth_get_status", "--authProvider", "github_copilot"],
+      "/auth_get_status",
+    ),
+    "/auth_get_status?authProvider=github_copilot",
+  )
+}
+
+///|
 test "top level ccs config command names build config paths" {
   assert_eq(
     config_app_path(

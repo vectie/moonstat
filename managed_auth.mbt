@@ -91,7 +91,7 @@ pub async fn managed_auth_get_status(provider : String) -> Result[Json, String] 
     return Err(managed_auth_provider_error(provider))
   }
   if provider == AUTH_PROVIDER_GITHUB_COPILOT {
-    return Ok(managed_auth_status_json(provider, None))
+    return Ok(copilot_get_auth_status())
   }
   Ok(managed_auth_status_json(provider, managed_auth_codex_credentials()))
 }
@@ -104,7 +104,7 @@ pub async fn managed_auth_list_accounts(
     return Err(managed_auth_provider_error(provider))
   }
   if provider == AUTH_PROVIDER_GITHUB_COPILOT {
-    return Ok(Json::array([]))
+    return Ok(copilot_list_accounts())
   }
   match managed_auth_codex_credentials() {
     Some(credentials) =>
@@ -122,8 +122,8 @@ pub async fn managed_auth_logout(provider : String) -> Result[Json, String] {
   if !managed_auth_provider_supported(provider) {
     return Err(managed_auth_provider_error(provider))
   }
-  if provider != AUTH_PROVIDER_CODEX_OAUTH {
-    return Err("Unsupported auth provider for logout: \{provider}")
+  if provider == AUTH_PROVIDER_GITHUB_COPILOT {
+    return Ok(copilot_logout())
   }
   @codex.delete_credentials()
   Ok(Json::null())
@@ -137,8 +137,8 @@ pub async fn managed_auth_remove_account(
   if !managed_auth_provider_supported(provider) {
     return Err(managed_auth_provider_error(provider))
   }
-  if provider != AUTH_PROVIDER_CODEX_OAUTH {
-    return Err("Unsupported auth provider for account removal: \{provider}")
+  if provider == AUTH_PROVIDER_GITHUB_COPILOT {
+    return copilot_remove_account(account_id)
   }
   match managed_auth_codex_credentials() {
     Some(credentials) if credentials.accountId == account_id => {
@@ -158,8 +158,8 @@ pub async fn managed_auth_set_default_account(
   if !managed_auth_provider_supported(provider) {
     return Err(managed_auth_provider_error(provider))
   }
-  if provider != AUTH_PROVIDER_CODEX_OAUTH {
-    return Err("Unsupported auth provider for default account: \{provider}")
+  if provider == AUTH_PROVIDER_GITHUB_COPILOT {
+    return copilot_set_default_account(account_id)
   }
   match managed_auth_codex_credentials() {
     Some(credentials) if credentials.accountId == account_id => Ok(Json::null())
@@ -171,14 +171,15 @@ pub async fn managed_auth_set_default_account(
 ///|
 pub async fn managed_auth_start_login(
   provider : String,
-) -> Result[@codex.DeviceCodeFlow, String] {
+  github_domain? : String? = None,
+) -> Result[Json, String] {
   if !managed_auth_provider_supported(provider) {
     return Err(managed_auth_provider_error(provider))
   }
-  if provider != AUTH_PROVIDER_CODEX_OAUTH {
-    return Err("Unsupported auth provider for device login: \{provider}")
+  if provider == AUTH_PROVIDER_GITHUB_COPILOT {
+    return copilot_start_device_flow(github_domain)
   }
-  Ok(@codex.start_device_flow()) catch {
+  Ok(@codex.start_device_flow().to_json()) catch {
     error => Err("\{error}")
   }
 }
@@ -187,14 +188,16 @@ pub async fn managed_auth_start_login(
 pub async fn managed_auth_poll_for_account(
   provider : String,
   device_code : String,
-  user_code : String,
+  user_code : String?,
+  github_domain? : String? = None,
 ) -> Result[Json?, String] {
   if !managed_auth_provider_supported(provider) {
     return Err(managed_auth_provider_error(provider))
   }
-  if provider != AUTH_PROVIDER_CODEX_OAUTH {
-    return Err("Unsupported auth provider for device login: \{provider}")
+  if provider == AUTH_PROVIDER_GITHUB_COPILOT {
+    return copilot_poll_for_account(device_code, github_domain)
   }
+  guard user_code is Some(user_code) else { return Err("missing_user_code") }
   try {
     match @codex.poll_device_flow(device_code, user_code) {
       Some(credentials) =>

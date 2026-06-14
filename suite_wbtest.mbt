@@ -92,6 +92,29 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("POST /auth_start_login")))
   assert_true(routes.contains(Json::string("POST /auth_poll_for_account")))
   assert_true(routes.contains(Json::string("POST /auth_logout")))
+  assert_true(routes.contains(Json::string("GET /copilot_get_auth_status")))
+  assert_true(routes.contains(Json::string("GET /copilot_list_accounts")))
+  assert_true(routes.contains(Json::string("GET /copilot_is_authenticated")))
+  assert_true(routes.contains(Json::string("POST /copilot_start_device_flow")))
+  assert_true(routes.contains(Json::string("POST /copilot_poll_for_auth")))
+  assert_true(routes.contains(Json::string("POST /copilot_poll_for_account")))
+  assert_true(routes.contains(Json::string("POST /copilot_logout")))
+  assert_true(routes.contains(Json::string("DELETE /copilot_remove_account")))
+  assert_true(
+    routes.contains(Json::string("POST /copilot_set_default_account")),
+  )
+  assert_true(routes.contains(Json::string("GET /copilot_get_token")))
+  assert_true(
+    routes.contains(Json::string("GET /copilot_get_token_for_account")),
+  )
+  assert_true(routes.contains(Json::string("GET /copilot_get_models")))
+  assert_true(
+    routes.contains(Json::string("GET /copilot_get_models_for_account")),
+  )
+  assert_true(routes.contains(Json::string("GET /copilot_get_usage")))
+  assert_true(
+    routes.contains(Json::string("GET /copilot_get_usage_for_account")),
+  )
   assert_true(routes.contains(Json::string("POST /v1/messages")))
   assert_true(routes.contains(Json::string("POST /login")))
   assert_true(routes.contains(Json::string("ANY /v1beta/*path")))
@@ -230,6 +253,10 @@ async test "suite status writes discovery file" {
     assert_eq(
       commands["codex_install"],
       Json::string("moonstat codex install --port 17000 --model gpt-5"),
+    )
+    assert_eq(
+      commands["copilot_auth_status"],
+      Json::string("moonstat copilot status"),
     )
     guard obj["manifest"] is Object(manifest) else {
       fail("expected manifest object")

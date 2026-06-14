@@ -1366,6 +1366,72 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/auth_logout", (r, w) => {
     self.handle_auth_logout(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/copilot_start_device_flow", (r, w) => {
+    self.handle_copilot_start_device_flow(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/copilot_start_device_flow", (r, w) => {
+    self.handle_copilot_start_device_flow(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_poll_for_auth", (r, w) => {
+    self.handle_copilot_poll_for_auth(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/copilot_poll_for_auth", (r, w) => {
+    self.handle_copilot_poll_for_auth(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_poll_for_account", (r, w) => {
+    self.handle_copilot_poll_for_account(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/copilot_poll_for_account", (r, w) => {
+    self.handle_copilot_poll_for_account(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_list_accounts", (_, w) => {
+    self.handle_copilot_list_accounts(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_get_auth_status", (_, w) => {
+    self.handle_copilot_get_auth_status(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_is_authenticated", (_, w) => {
+    self.handle_copilot_is_authenticated(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/copilot_logout", (_, w) => {
+    self.handle_copilot_logout(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_logout", (_, w) => {
+    self.handle_copilot_logout(w)
+  })
+  router.add_handler(@httpx.Method::Delete, "/copilot_remove_account", (r, w) => {
+    self.handle_copilot_remove_account(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/copilot_remove_account", (r, w) => {
+    self.handle_copilot_remove_account(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_set_default_account", (r, w) => {
+    self.handle_copilot_set_default_account(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/copilot_set_default_account", (r, w) => {
+    self.handle_copilot_set_default_account(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_get_token", (r, w) => {
+    self.handle_copilot_get_token(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_get_token_for_account", (
+    r,
+    w,
+  ) => self.handle_copilot_get_token(r, w))
+  router.add_handler(@httpx.Method::Get, "/copilot_get_models", (r, w) => {
+    self.handle_copilot_get_models(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_get_models_for_account", (
+    r,
+    w,
+  ) => self.handle_copilot_get_models(r, w))
+  router.add_handler(@httpx.Method::Get, "/copilot_get_usage", (r, w) => {
+    self.handle_copilot_get_usage(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copilot_get_usage_for_account", (
+    r,
+    w,
+  ) => self.handle_copilot_get_usage(r, w))
   router.add_handler(@httpx.Method::Get, "/models", (_, w) => {
     self.handle_models(w)
   })
@@ -7199,10 +7265,18 @@ async fn Gateway::handle_auth_start_login(
 ) -> Unit {
   let body = proxy_json_body(r)
   let provider = managed_auth_provider_request(r.path, body)
-  match managed_auth_start_login(provider) {
+  match
+    managed_auth_start_login(
+      provider,
+      github_domain=copilot_github_domain_request(r.path, body),
+    ) {
     Ok(flow) => {
-      self.auth_device_user_codes[flow.device_code] = flow.user_code
-      write_usage_json(w, flow.to_json())
+      if flow is Object(obj) &&
+        json_string_from_map(obj, "device_code") is Some(device_code) &&
+        json_string_from_map(obj, "user_code") is Some(user_code) {
+        self.auth_device_user_codes[device_code] = user_code
+      }
+      write_usage_json(w, flow)
     }
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -7228,11 +7302,17 @@ async fn Gateway::handle_auth_poll_for_account(
     Some(value) => Some(value)
     None => self.auth_device_user_codes.get(device_code)
   }
-  guard user_code is Some(user_code) else {
+  if provider != AUTH_PROVIDER_GITHUB_COPILOT && user_code is None {
     write_usage_bad_request(w, "missing_user_code")
     return
   }
-  match managed_auth_poll_for_account(provider, device_code, user_code) {
+  match
+    managed_auth_poll_for_account(
+      provider,
+      device_code,
+      user_code,
+      github_domain=copilot_github_domain_request(r.path, body),
+    ) {
     Ok(Some(account)) => {
       self.auth_device_user_codes.remove(device_code)
       try @codex.load_credentials() catch {
@@ -7332,6 +7412,192 @@ async fn Gateway::handle_auth_logout(
       self.credentials = None
       write_usage_json(w, result)
     }
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+fn copilot_github_domain_request(path : StringView, body : Json?) -> String? {
+  proxy_string_request(path, body, ["githubDomain", "github_domain", "domain"])
+}
+
+///|
+fn copilot_account_id_request(path : StringView, body : Json?) -> String? {
+  proxy_string_request(path, body, ["accountId", "account_id", "id"])
+}
+
+///|
+async fn Gateway::handle_copilot_start_device_flow(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  match copilot_start_device_flow(copilot_github_domain_request(r.path, body)) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_copilot_poll_for_account(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["deviceCode", "device_code"])
+    is Some(device_code) else {
+    write_usage_bad_request(w, "missing_device_code")
+    return
+  }
+  match
+    copilot_poll_for_account(
+      device_code,
+      copilot_github_domain_request(r.path, body),
+    ) {
+    Ok(Some(account)) => write_usage_json(w, account)
+    Ok(None) => write_usage_json(w, Json::null())
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_copilot_poll_for_auth(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["deviceCode", "device_code"])
+    is Some(device_code) else {
+    write_usage_bad_request(w, "missing_device_code")
+    return
+  }
+  match
+    copilot_poll_for_account(
+      device_code,
+      copilot_github_domain_request(r.path, body),
+    ) {
+    Ok(Some(_)) => write_usage_json(w, Json::boolean(true))
+    Ok(None) => write_usage_json(w, Json::boolean(false))
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_copilot_list_accounts(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, copilot_list_accounts())
+}
+
+///|
+async fn Gateway::handle_copilot_get_auth_status(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, copilot_get_auth_status())
+}
+
+///|
+async fn Gateway::handle_copilot_is_authenticated(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::boolean(copilot_is_authenticated()))
+}
+
+///|
+async fn Gateway::handle_copilot_logout(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, copilot_logout())
+}
+
+///|
+async fn Gateway::handle_copilot_remove_account(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard copilot_account_id_request(r.path, body) is Some(account_id) else {
+    write_usage_bad_request(w, "missing_account_id")
+    return
+  }
+  match copilot_remove_account(account_id) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_copilot_set_default_account(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard copilot_account_id_request(r.path, body) is Some(account_id) else {
+    write_usage_bad_request(w, "missing_account_id")
+    return
+  }
+  match copilot_set_default_account(account_id) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_copilot_get_token(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  match copilot_get_token(copilot_account_id_request(r.path, body)) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_copilot_get_models(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  match copilot_get_models(copilot_account_id_request(r.path, body)) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_copilot_get_usage(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  match copilot_get_usage(copilot_account_id_request(r.path, body)) {
+    Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
 }

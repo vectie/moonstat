@@ -330,6 +330,10 @@ fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
     "codex_install": Json::string(
       "moonstat codex install --port \{port} --model \{model}",
     ),
+    "copilot_auth_status": Json::string("moonstat copilot status"),
+    "copilot_start_device_flow": Json::string(
+      "moonstat copilot start-device-flow",
+    ),
     "claude_desktop_install": Json::string(
       "moonstat claude-desktop install --port \{port}",
     ),
@@ -354,7 +358,12 @@ fn moonstat_suite_routes() -> Array[String] {
     "POST /chat/completions", "POST /v1/chat/completions", "POST /v1/v1/chat/completions",
     "POST /codex/v1/chat/completions", "POST /login", "GET /auth_get_status", "GET /auth_list_accounts",
     "POST /auth_start_login", "POST /auth_poll_for_account", "POST /auth_remove_account",
-    "POST /auth_set_default_account", "POST /auth_logout", "ANY /v1beta/*path", "ANY /gemini/v1beta/*path",
-    "ANY /gemini/v1/*path",
+    "POST /auth_set_default_account", "POST /auth_logout", "GET /copilot_get_auth_status",
+    "GET /copilot_list_accounts", "GET /copilot_is_authenticated", "POST /copilot_start_device_flow",
+    "POST /copilot_poll_for_auth", "POST /copilot_poll_for_account", "POST /copilot_logout",
+    "DELETE /copilot_remove_account", "POST /copilot_set_default_account", "GET /copilot_get_token",
+    "GET /copilot_get_token_for_account", "GET /copilot_get_models", "GET /copilot_get_models_for_account",
+    "GET /copilot_get_usage", "GET /copilot_get_usage_for_account", "ANY /v1beta/*path",
+    "ANY /gemini/v1beta/*path", "ANY /gemini/v1/*path",
   ]
 }

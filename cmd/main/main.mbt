@@ -15,6 +15,37 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["auth", "default", ..] | ["auth", "set-default-account", ..] =>
       auth_set_default_account(arr)
     ["auth", "logout", ..] => auth_logout(arr)
+    ["copilot", "start-device-flow", ..] => copilot_start_device_flow(arr)
+    ["copilot", "poll", ..] | ["copilot", "poll-for-account", ..] =>
+      copilot_poll_for_account(arr)
+    ["copilot", "poll-for-auth", ..] => copilot_poll_for_auth(arr)
+    ["copilot", "list", ..] | ["copilot", "list-accounts", ..] =>
+      check_usage_endpoint(arr, "/copilot_list_accounts")
+    ["copilot", "auth-status", ..] | ["copilot", "status", ..] =>
+      check_usage_endpoint(arr, "/copilot_get_auth_status")
+    ["copilot", "is-authenticated", ..] =>
+      check_usage_endpoint(arr, "/copilot_is_authenticated")
+    ["copilot", "logout", ..] =>
+      check_json_post_endpoint(arr, "/copilot_logout", "Copilot")
+    ["copilot", "remove", ..] | ["copilot", "remove-account", ..] =>
+      copilot_account_post(arr, "/copilot_remove_account")
+    ["copilot", "default", ..] | ["copilot", "set-default-account", ..] =>
+      copilot_account_post(arr, "/copilot_set_default_account")
+    ["copilot", "token", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_token"),
+      )
+    ["copilot", "models", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_models"),
+      )
+    ["copilot", "usage", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_usage"),
+      )
     ["install", ..] => install_reroute(arr)
     ["uninstall"] | ["remove"] => uninstall_reroute()
     ["claude-desktop", "install", ..] => install_claude_desktop(arr)
@@ -38,6 +69,57 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["auth_set_default_account", ..] | ["auth-set-default-account", ..] =>
       auth_set_default_account(arr)
     ["auth_logout", ..] | ["auth-logout", ..] => auth_logout(arr)
+    ["copilot_start_device_flow", ..] | ["copilot-start-device-flow", ..] =>
+      copilot_start_device_flow(arr)
+    ["copilot_poll_for_auth", ..] | ["copilot-poll-for-auth", ..] =>
+      copilot_poll_for_auth(arr)
+    ["copilot_poll_for_account", ..] | ["copilot-poll-for-account", ..] =>
+      copilot_poll_for_account(arr)
+    ["copilot_list_accounts", ..] | ["copilot-list-accounts", ..] =>
+      check_usage_endpoint(arr, "/copilot_list_accounts")
+    ["copilot_get_auth_status", ..] | ["copilot-get-auth-status", ..] =>
+      check_usage_endpoint(arr, "/copilot_get_auth_status")
+    ["copilot_is_authenticated", ..] | ["copilot-is-authenticated", ..] =>
+      check_usage_endpoint(arr, "/copilot_is_authenticated")
+    ["copilot_logout", ..] | ["copilot-logout", ..] =>
+      check_json_post_endpoint(arr, "/copilot_logout", "Copilot")
+    ["copilot_remove_account", ..] | ["copilot-remove-account", ..] =>
+      copilot_account_post(arr, "/copilot_remove_account")
+    ["copilot_set_default_account", ..] | ["copilot-set-default-account", ..] =>
+      copilot_account_post(arr, "/copilot_set_default_account")
+    ["copilot_get_token", ..] | ["copilot-get-token", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_token"),
+      )
+    ["copilot_get_token_for_account", ..]
+    | ["copilot-get-token-for-account", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_token_for_account"),
+      )
+    ["copilot_get_models", ..] | ["copilot-get-models", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_models"),
+      )
+    ["copilot_get_models_for_account", ..]
+    | ["copilot-get-models-for-account", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_models_for_account"),
+      )
+    ["copilot_get_usage", ..] | ["copilot-get-usage", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_usage"),
+      )
+    ["copilot_get_usage_for_account", ..]
+    | ["copilot-get-usage-for-account", ..] =>
+      check_usage_endpoint(
+        arr,
+        copilot_account_optional_path(arr, "/copilot_get_usage_for_account"),
+      )
     ["stream-check", "provider", ..]
     | ["stream-check", "stream-check-provider", ..] =>
       stream_check_provider(arr)
@@ -1098,6 +1180,45 @@ async fn auth_logout(args : Array[String]) -> Unit {
     auth_provider_path(args, "/auth_logout"),
     "Auth",
   )
+}
+
+///|
+async fn copilot_start_device_flow(args : Array[String]) -> Unit {
+  check_json_post_endpoint(
+    args,
+    copilot_github_domain_path(args, "/copilot_start_device_flow"),
+    "Copilot",
+  )
+}
+
+///|
+async fn copilot_poll_for_auth(args : Array[String]) -> Unit {
+  guard copilot_device_path(args, "/copilot_poll_for_auth") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required Copilot arg: --device-code")
+    return
+  }
+  check_json_post_endpoint(args, path, "Copilot")
+}
+
+///|
+async fn copilot_poll_for_account(args : Array[String]) -> Unit {
+  guard copilot_device_path(args, "/copilot_poll_for_account") is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required Copilot arg: --device-code")
+    return
+  }
+  check_json_post_endpoint(args, path, "Copilot")
+}
+
+///|
+async fn copilot_account_post(args : Array[String], path : String) -> Unit {
+  guard copilot_account_path(args, path) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required Copilot arg: --account-id")
+    return
+  }
+  check_json_post_endpoint(args, path, "Copilot")
 }
 
 ///|
@@ -3210,6 +3331,50 @@ fn auth_poll_path(args : Array[String]) -> String? {
     None => ()
   }
   Some(cli_path_with_query("/auth_poll_for_account", query))
+}
+
+///|
+fn copilot_github_domain_path(args : Array[String], path : String) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--github-domain", "--githubDomain") {
+    Some(value) => query.push(cli_query_pair("githubDomain", value))
+    None => ()
+  }
+  cli_path_with_query(path, query)
+}
+
+///|
+fn copilot_device_path(args : Array[String], path : String) -> String? {
+  guard parse_string_arg_any(args, "--device-code", "--deviceCode")
+    is Some(device_code) else {
+    return None
+  }
+  let query : Array[String] = [cli_query_pair("deviceCode", device_code)]
+  match parse_string_arg_any(args, "--github-domain", "--githubDomain") {
+    Some(value) => query.push(cli_query_pair("githubDomain", value))
+    None => ()
+  }
+  Some(cli_path_with_query(path, query))
+}
+
+///|
+fn copilot_account_path(args : Array[String], path : String) -> String? {
+  guard parse_string_arg_any(args, "--account-id", "--accountId")
+    is Some(account_id) else {
+    return None
+  }
+  let query : Array[String] = [cli_query_pair("accountId", account_id)]
+  Some(cli_path_with_query(path, query))
+}
+
+///|
+fn copilot_account_optional_path(args : Array[String], path : String) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--account-id", "--accountId") {
+    Some(value) => query.push(cli_query_pair("accountId", value))
+    None => ()
+  }
+  cli_path_with_query(path, query)
 }
 
 ///|
