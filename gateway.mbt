@@ -511,16 +511,12 @@ async fn Gateway::record_success_usage(
   response_bytes : Int,
 ) -> Unit {
   self.record_provider_result(true)
-  if usage.has_billable_tokens() {
-    self.stats.record_success_usage_with_pricing(
-      usage,
-      response_bytes,
-      self.pricing_override_rows(),
-      self.pricing_deleted_model_ids,
-    )
-  } else {
-    self.stats.record_success_without_request_log(response_bytes)
-  }
+  self.stats.record_success_usage_with_pricing(
+    usage,
+    response_bytes,
+    self.pricing_override_rows(),
+    self.pricing_deleted_model_ids,
+  )
   self.stats.save_persistent_store()
 }
 
@@ -534,16 +530,12 @@ async fn Gateway::record_success_stream_usage(
   if record_provider {
     self.record_provider_result(true)
   }
-  match usage {
-    Some(usage) if usage.has_billable_tokens() =>
-      self.stats.record_success_usage_with_pricing(
-        usage,
-        response_bytes,
-        self.pricing_override_rows(),
-        self.pricing_deleted_model_ids,
-      )
-    _ => self.stats.record_success_without_request_log(response_bytes)
-  }
+  self.stats.record_success_usage_with_pricing(
+    usage.unwrap_or(TokenUsage::empty()),
+    response_bytes,
+    self.pricing_override_rows(),
+    self.pricing_deleted_model_ids,
+  )
   self.stats.save_persistent_store()
 }
 

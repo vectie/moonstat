@@ -2255,7 +2255,7 @@ async test "gateway records billable ccs stream usage once" {
 }
 
 ///|
-async test "gateway skips all zero ccs stream usage request log" {
+async test "gateway records all zero ccs stream usage request log" {
   let gateway = Gateway::new(port=0)
   gateway.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
@@ -2268,11 +2268,18 @@ async test "gateway skips all zero ccs stream usage request log" {
   gateway.record_success_stream_usage(Some(TokenUsage::empty()), 42)
   assert_eq(gateway.stats.successful_responses, 1)
   assert_eq(gateway.stats.response_bytes, 42)
-  assert_eq(gateway.stats.request_logs.length(), 0)
+  assert_eq(gateway.stats.request_logs.length(), 1)
+  let log = gateway.stats.request_logs[0]
+  assert_true(log.is_streaming)
+  assert_eq(log.model, "gpt-5")
+  assert_eq(log.input_tokens, 0)
+  assert_eq(log.output_tokens, 0)
+  assert_eq(log.total_cost_usd, "0")
+  assert_eq(log.status_code, 200)
 }
 
 ///|
-async test "gateway skips all zero ccs nonstream usage request log" {
+async test "gateway records all zero ccs nonstream usage request log" {
   let gateway = Gateway::new(port=0)
   gateway.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
@@ -2285,7 +2292,14 @@ async test "gateway skips all zero ccs nonstream usage request log" {
   gateway.record_success_usage(TokenUsage::empty(), 42)
   assert_eq(gateway.stats.successful_responses, 1)
   assert_eq(gateway.stats.response_bytes, 42)
-  assert_eq(gateway.stats.request_logs.length(), 0)
+  assert_eq(gateway.stats.request_logs.length(), 1)
+  let log = gateway.stats.request_logs[0]
+  assert_false(log.is_streaming)
+  assert_eq(log.model, "gpt-5")
+  assert_eq(log.input_tokens, 0)
+  assert_eq(log.output_tokens, 0)
+  assert_eq(log.total_cost_usd, "0")
+  assert_eq(log.status_code, 200)
   guard gateway.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
@@ -2391,6 +2405,9 @@ async test "gateway streaming success records provider health before request com
   gateway.record_success_stream_usage(None, 24, record_provider=false)
   assert_true(gateway.stats.successful_responses == 1)
   assert_true(gateway.stats.response_bytes == 24)
+  assert_true(gateway.stats.request_logs.length() == 1)
+  assert_true(gateway.stats.request_logs[0].is_streaming)
+  assert_true(gateway.stats.request_logs[0].model == "gpt-5")
   assert_true(gateway.stats.current_request_id is None)
   guard gateway.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
