@@ -13415,7 +13415,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
         if api_format == "openai_responses" {
           ignore(self.codex_chat_history.record_response(parsed))
         }
-        self.record_success_usage(usage, response_body.length())
+        self.record_success_usage(usage, final_response_body.length())
         if api_format == "gemini_native" {
           self.gemini_shadow.record_gemini_response(
             provider.provider_id,
