@@ -8450,36 +8450,56 @@ async fn Gateway::handle_proxy_app_config(
 ///|
 fn Gateway::proxy_app_config_json(self : Gateway, app_type : String) -> Json {
   let circuit = self.provider_router.circuit_config
+  let enabled = self.proxy_app_enabled_for_app(app_type)
+  let auto_failover_enabled = self.provider_router.auto_failover_enabled_for_app(
+    app_type,
+  )
+  let max_retries = self.provider_router.max_retries_for_app(app_type)
+  let streaming_first_byte_timeout = self.proxy_streaming_first_byte_timeout
+    .get(app_type)
+    .unwrap_or(60)
+  let streaming_idle_timeout = self.proxy_streaming_idle_timeout
+    .get(app_type)
+    .unwrap_or(120)
+  let non_streaming_timeout = self.proxy_non_streaming_timeout
+    .get(app_type)
+    .unwrap_or(600)
   {
     "appType": Json::string(app_type),
-    "enabled": Json::boolean(self.proxy_app_enabled_for_app(app_type)),
-    "autoFailoverEnabled": Json::boolean(
-      self.provider_router.auto_failover_enabled_for_app(app_type),
-    ),
-    "maxRetries": Json::number(
-      self.provider_router.max_retries_for_app(app_type).to_double(),
-    ),
+    "app_type": Json::string(app_type),
+    "enabled": Json::boolean(enabled),
+    "autoFailoverEnabled": Json::boolean(auto_failover_enabled),
+    "auto_failover_enabled": Json::boolean(auto_failover_enabled),
+    "maxRetries": Json::number(max_retries.to_double()),
+    "max_retries": Json::number(max_retries.to_double()),
     "streamingFirstByteTimeout": Json::number(
-      self.proxy_streaming_first_byte_timeout
-      .get(app_type)
-      .unwrap_or(60)
-      .to_double(),
+      streaming_first_byte_timeout.to_double(),
     ),
-    "streamingIdleTimeout": Json::number(
-      self.proxy_streaming_idle_timeout.get(app_type).unwrap_or(120).to_double(),
+    "streaming_first_byte_timeout": Json::number(
+      streaming_first_byte_timeout.to_double(),
     ),
-    "nonStreamingTimeout": Json::number(
-      self.proxy_non_streaming_timeout.get(app_type).unwrap_or(600).to_double(),
-    ),
+    "streamingIdleTimeout": Json::number(streaming_idle_timeout.to_double()),
+    "streaming_idle_timeout": Json::number(streaming_idle_timeout.to_double()),
+    "nonStreamingTimeout": Json::number(non_streaming_timeout.to_double()),
+    "non_streaming_timeout": Json::number(non_streaming_timeout.to_double()),
     "circuitFailureThreshold": Json::number(
+      circuit.failure_threshold.to_double(),
+    ),
+    "circuit_failure_threshold": Json::number(
       circuit.failure_threshold.to_double(),
     ),
     "circuitSuccessThreshold": Json::number(
       circuit.success_threshold.to_double(),
     ),
+    "circuit_success_threshold": Json::number(
+      circuit.success_threshold.to_double(),
+    ),
     "circuitTimeoutSeconds": Json::number(circuit.timeout_seconds.to_double()),
+    "circuit_timeout_seconds": Json::number(circuit.timeout_seconds.to_double()),
     "circuitErrorRateThreshold": Json::number(circuit.error_rate_threshold),
+    "circuit_error_rate_threshold": Json::number(circuit.error_rate_threshold),
     "circuitMinRequests": Json::number(circuit.min_requests.to_double()),
+    "circuit_min_requests": Json::number(circuit.min_requests.to_double()),
   }.to_json()
 }
 
