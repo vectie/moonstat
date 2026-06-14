@@ -1,1 +1,18 @@
-./_build/native/debug/build/cmd/main/main.exe
+#!/usr/bin/env sh
+set -eu
+
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+if [ "${MOON_BIN:-}" != "" ]; then
+  moon_bin=$MOON_BIN
+elif command -v moon >/dev/null 2>&1; then
+  moon_bin=moon
+elif [ "${HOME:-}" != "" ] && [ -x "$HOME/.moon/bin/moon" ]; then
+  moon_bin=$HOME/.moon/bin/moon
+else
+  echo "moonstat: moon executable not found; set MOON_BIN or install MoonBit" >&2
+  exit 127
+fi
+
+cd "$ROOT_DIR"
+exec "$moon_bin" run cmd/main -- "$@"
