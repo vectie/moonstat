@@ -3838,6 +3838,72 @@ test "ccs chat sse parser merges tool call argument fragments" {
 }
 
 ///|
+test "ccs chat sse parser preserves object form tool arguments" {
+  let sse =
+    #|data: {"id":"chatcmpl_obj_args","model":"gpt-4o","choices":[{"index":0,"message":{"role":"assistant","tool_calls":[{"id":"call_1","type":"function","function":{"name":"lookup","arguments":{"q":"moon","limit":2}}}]},"finish_reason":"tool_calls"}]}
+    #|
+  guard parse_claude_compatible_non_stream_body_with_diagnostics(
+      "openai_chat",
+      sse,
+      {},
+    )
+    is Ok(parsed) else {
+    fail("expected parsed chat")
+  }
+  guard parsed is Object(obj) else { fail("expected object") }
+  guard obj["choices"] is Array(choices) else { fail("expected choices") }
+  guard choices[0] is Object(choice) else { fail("expected choice") }
+  guard choice["message"] is Object(message) else { fail("expected message") }
+  guard message["tool_calls"] is Array(tool_calls) else {
+    fail("expected tool calls")
+  }
+  guard tool_calls[0] is Object(call) else { fail("expected call") }
+  guard call["function"] is Object(function) else { fail("expected function") }
+  guard function["arguments"] is String(arguments) else {
+    fail("expected serialized arguments")
+  }
+  let parsed_arguments = @json.parse(arguments) catch {
+    _ => fail("expected json arguments")
+  }
+  guard parsed_arguments is Object(args) else { fail("expected args object") }
+  assert_eq(args["q"], Json::string("moon"))
+  assert_eq(args["limit"], Json::number(2.0))
+}
+
+///|
+test "ccs chat sse parser maps legacy function call snapshots" {
+  let sse =
+    #|data: {"id":"chatcmpl_legacy_fn","model":"gpt-4o","choices":[{"index":0,"message":{"role":"assistant","content":null,"function_call":{"name":"lookup","arguments":"{\"q\":\"moon\"}"}},"finish_reason":"function_call"}]}
+    #|
+  guard parse_claude_compatible_non_stream_body_with_diagnostics(
+      "openai_chat",
+      sse,
+      {},
+    )
+    is Ok(parsed) else {
+    fail("expected parsed chat")
+  }
+  guard parsed is Object(obj) else { fail("expected object") }
+  guard obj["choices"] is Array(choices) else { fail("expected choices") }
+  guard choices[0] is Object(choice) else { fail("expected choice") }
+  guard choice["message"] is Object(message) else { fail("expected message") }
+  guard message["tool_calls"] is Array(tool_calls) else {
+    fail("expected tool calls")
+  }
+  guard tool_calls[0] is Object(call) else { fail("expected call") }
+  assert_eq(call["id"], Json::string("tool_call_0"))
+  guard call["function"] is Object(function) else { fail("expected function") }
+  assert_eq(function["name"], Json::string("lookup"))
+  assert_eq(function["arguments"], Json::string("{\"q\":\"moon\"}"))
+  let response = openai_chat_completion_to_anthropic(
+    parsed, "claude-sonnet-4-6",
+  )
+  assert_eq(response.stop_reason, Some("tool_use"))
+  assert_eq(response.content.length(), 1)
+  assert_eq(response.content[0].name, Some("lookup"))
+}
+
+///|
 test "ccs chat sse parser ignores truncated trailing block after done" {
   let sse =
     #|data: {"id":"chatcmpl_ok","model":"gpt-4o","choices":[{"index":0,"delta":{"content":"done"},"finish_reason":"stop"}]}

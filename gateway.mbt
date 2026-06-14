@@ -14051,6 +14051,11 @@ fn OpenAIChatSseState::push_chat_sse_message(
     }
     _ => ()
   }
+  match message.get("function_call") {
+    Some(Object(function_call)) =>
+      self.push_chat_sse_legacy_function_call(function_call)
+    _ => ()
+  }
 }
 
 ///|
@@ -14073,6 +14078,11 @@ fn OpenAIChatSseState::push_chat_sse_delta(
           self.push_chat_sse_tool_call(json_int_or_zero(call, "index"), call)
         }
       }
+    _ => ()
+  }
+  match delta.get("function_call") {
+    Some(Object(function_call)) =>
+      self.push_chat_sse_legacy_function_call(function_call)
     _ => ()
   }
 }
@@ -14101,12 +14111,37 @@ fn OpenAIChatSseState::push_chat_sse_tool_call(
         Some(name) if !name.is_empty() => state.name = name
         _ => ()
       }
-      match json_string_from_map(function, "arguments") {
-        Some(arguments) => state.arguments = state.arguments + arguments
+      match function.get("arguments") {
+        Some(arguments_json) =>
+          match json_tool_arguments_fragment(arguments_json) {
+            Some(arguments) => state.arguments = state.arguments + arguments
+            None => ()
+          }
         None => ()
       }
     }
     _ => ()
+  }
+}
+
+///|
+fn OpenAIChatSseState::push_chat_sse_legacy_function_call(
+  self : OpenAIChatSseState,
+  function_call : Map[String, Json],
+) -> Unit {
+  let call : Map[String, Json] = {
+    "type": Json::string("function"),
+    "function": Json::object(function_call),
+  }
+  self.push_chat_sse_tool_call(0, call)
+}
+
+///|
+fn json_tool_arguments_fragment(value : Json) -> String? {
+  match value {
+    String(text) => Some(text)
+    Null => None
+    _ => Some(value.stringify())
   }
 }
 
