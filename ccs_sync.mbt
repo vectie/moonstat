@@ -54,6 +54,11 @@ fn ccs_webdav_default_timeout_ms() -> Int {
 }
 
 ///|
+fn ccs_webdav_transfer_timeout_ms() -> Int {
+  300000
+}
+
+///|
 priv struct CcsSyncManifestInfo {
   format : String
   version : Int
@@ -62,6 +67,28 @@ priv struct CcsSyncManifestInfo {
   created_at : String
   snapshot_id : String
   artifacts : Array[String]
+  artifact_meta : Map[String, CcsSyncArtifactMeta]
+}
+
+///|
+priv struct CcsSyncArtifactMeta {
+  sha256 : String
+  size : Int
+}
+
+///|
+priv struct CcsLocalSyncSnapshot {
+  db_sql : Bytes
+  skills_zip : Bytes
+  manifest_bytes : Bytes
+  manifest_hash : String
+}
+
+///|
+priv struct CcsWebDavRemoteSnapshot {
+  layout : String
+  manifest : CcsSyncManifestInfo
+  manifest_bytes : Bytes
 }
 
 ///|
@@ -447,6 +474,93 @@ fn ccs_sync_remote_file_path(
 }
 
 ///|
+fn ccs_sync_sha256_hex(bytes : Bytes) -> String {
+  let digest = @crypto.sha256(bytes)
+  let builder = StringBuilder::new()
+  for i in 0..<digest.length() {
+    let value = digest[i].to_int()
+    builder.write_char(ccs_sync_hex_digit(value / 16))
+    builder.write_char(ccs_sync_hex_digit(value % 16))
+  }
+  builder.to_string()
+}
+
+///|
+fn ccs_sync_hex_digit(value : Int) -> Char {
+  if value < 10 {
+    ('0'.to_int() + value).unsafe_to_char()
+  } else {
+    ('a'.to_int() + value - 10).unsafe_to_char()
+  }
+}
+
+///|
+fn ccs_sync_snapshot_id(artifacts : Map[String, CcsSyncArtifactMeta]) -> String {
+  let keys = artifacts.keys().collect()
+  keys.sort()
+  let parts : Array[String] = []
+  for key in keys {
+    guard artifacts.get(key) is Some(meta) else { continue }
+    parts.push("\{key}:\{meta.sha256}")
+  }
+  ccs_sync_sha256_hex(@encoding/utf8.encode(parts.join("|")))
+}
+
+///|
+fn ccs_sync_device_name() -> String {
+  let configured = @os.getenv("CC_SWITCH_DEVICE_NAME") catch { _ => None }
+  match configured {
+    Some(value) if !value.trim().is_empty() => value.trim().to_owned()
+    _ => {
+      let hostname = @os.gethostname() catch { _ => "" }
+      match hostname {
+        "" => "Unknown Device"
+        value => value.trim().to_owned()
+      }
+    }
+  }
+}
+
+///|
+fn ccs_sync_artifact_meta(bytes : Bytes) -> CcsSyncArtifactMeta {
+  CcsSyncArtifactMeta::{
+    sha256: ccs_sync_sha256_hex(bytes),
+    size: bytes.length(),
+  }
+}
+
+///|
+fn ccs_sync_artifact_meta_json(meta : CcsSyncArtifactMeta) -> Json {
+  {
+    "sha256": Json::string(meta.sha256),
+    "size": Json::number(meta.size.to_double()),
+  }.to_json()
+}
+
+///|
+fn ccs_sync_manifest_json(
+  artifacts : Map[String, CcsSyncArtifactMeta],
+  snapshot_id : String,
+) -> Json {
+  let artifact_json : Map[String, Json] = {}
+  let keys = artifacts.keys().collect()
+  keys.sort()
+  for key in keys {
+    guard artifacts.get(key) is Some(meta) else { continue }
+    artifact_json[key] = ccs_sync_artifact_meta_json(meta)
+  }
+  {
+    "format": Json::string(ccs_sync_protocol_format()),
+    "version": Json::number(ccs_sync_protocol_version().to_double()),
+    "dbCompatVersion": Json::number(ccs_sync_db_compat_version().to_double()),
+    "deviceName": Json::string(ccs_sync_device_name()),
+    "createdAt": Json::string(@os.unix_seconds().to_string()),
+    "artifacts": Json::object(artifact_json),
+    "snapshotId": Json::string(snapshot_id),
+  }.to_json()
+}
+
+///|
 fn ccs_webdav_encode_path_segment(segment : String) -> String {
   let bytes = @encoding/utf8.encode(segment)
   let builder = StringBuilder::new()
@@ -627,6 +741,73 @@ fn ccs_webdav_curl_status_request(
 }
 
 ///|
+fn ccs_webdav_curl_put_request(
+  settings : Json,
+  url : String,
+  file_path : String,
+  content_type : String,
+) -> Result[CcsWebDavCurlRequest, String] {
+  guard settings is Object(obj) else {
+    return Err("WebDAV sync is not configured.")
+  }
+  let args : Array[String] = [
+    "-sS",
+    "-L",
+    "-o",
+    "/dev/null",
+    "-w",
+    "%{http_code}",
+    "--max-time",
+    (ccs_webdav_transfer_timeout_ms() / 1000).to_string(),
+    "-X",
+    "PUT",
+    "-H",
+    "Content-Type: \{content_type}",
+    "--upload-file",
+    file_path,
+  ]
+  let username = json_string_from_map(obj, "username").unwrap_or("")
+  if !username.is_empty() {
+    args.push("-u")
+    args.push(
+      "\{username}:\{json_string_from_map(obj, "password").unwrap_or("")}",
+    )
+  }
+  args.push(url)
+  Ok(CcsWebDavCurlRequest::{ program: "curl", args })
+}
+
+///|
+fn ccs_webdav_curl_get_request(
+  settings : Json,
+  url : String,
+  output_path : String,
+) -> Result[CcsWebDavCurlRequest, String] {
+  guard settings is Object(obj) else {
+    return Err("WebDAV sync is not configured.")
+  }
+  let args : Array[String] = [
+    "-sS",
+    "-L",
+    "-o",
+    output_path,
+    "-w",
+    "%{http_code}",
+    "--max-time",
+    (ccs_webdav_transfer_timeout_ms() / 1000).to_string(),
+  ]
+  let username = json_string_from_map(obj, "username").unwrap_or("")
+  if !username.is_empty() {
+    args.push("-u")
+    args.push(
+      "\{username}:\{json_string_from_map(obj, "password").unwrap_or("")}",
+    )
+  }
+  args.push(url)
+  Ok(CcsWebDavCurlRequest::{ program: "curl", args })
+}
+
+///|
 async fn ccs_webdav_run_status_request(
   request : CcsWebDavCurlRequest,
   operation : String,
@@ -671,6 +852,11 @@ fn ccs_webdav_status_ok_for_mkcol(status : Int) -> Bool {
 ///|
 fn ccs_webdav_status_needs_propfind_verify(status : Int) -> Bool {
   status == 405 || status == 409 || (status >= 300 && status <= 399)
+}
+
+///|
+fn ccs_webdav_status_ok_for_transfer(status : Int) -> Bool {
+  status >= 200 && status <= 299
 }
 
 ///|
@@ -751,6 +937,208 @@ async fn ccs_webdav_sync_test_connection_json(
 }
 
 ///|
+async fn Gateway::ccs_sync_build_local_snapshot(
+  self : Gateway,
+) -> CcsLocalSyncSnapshot {
+  let db_sql = @encoding/utf8.encode(
+    self.ccs_export_snapshot_json().stringify(indent=2) + "\n",
+  )
+  let skills_zip = @encoding/utf8.encode(
+    ccs_skill_state_load().stringify(indent=2) + "\n",
+  )
+  let artifacts : Map[String, CcsSyncArtifactMeta] = {}
+  artifacts[ccs_sync_remote_db_sql()] = ccs_sync_artifact_meta(db_sql)
+  artifacts[ccs_sync_remote_skills_zip()] = ccs_sync_artifact_meta(skills_zip)
+  let snapshot_id = ccs_sync_snapshot_id(artifacts)
+  let manifest_bytes = @encoding/utf8.encode(
+    ccs_sync_manifest_json(artifacts, snapshot_id).stringify(indent=2) + "\n",
+  )
+  CcsLocalSyncSnapshot::{
+    db_sql,
+    skills_zip,
+    manifest_bytes,
+    manifest_hash: ccs_sync_sha256_hex(manifest_bytes),
+  }
+}
+
+///|
+fn ccs_sync_success_status_json(manifest_hash : String) -> Json {
+  {
+    "lastSyncAt": Json::number(@os.unix_seconds().to_double()),
+    "lastError": Json::null(),
+    "lastErrorSource": Json::null(),
+    "lastLocalManifestHash": Json::string(manifest_hash),
+    "lastRemoteManifestHash": Json::string(manifest_hash),
+    "lastRemoteEtag": Json::null(),
+  }.to_json()
+}
+
+///|
+fn ccs_sync_settings_with_status(settings : Json, status : Json) -> Json {
+  guard settings is Object(obj) else { return settings }
+  obj["status"] = status
+  Json::object(obj)
+}
+
+///|
+fn Gateway::ccs_persist_webdav_sync_success(
+  self : Gateway,
+  settings : Json,
+  manifest_hash : String,
+) -> Unit {
+  let next = ccs_sync_settings_with_status(
+    settings,
+    ccs_sync_success_status_json(manifest_hash),
+  )
+  self.app_settings = ccs_app_settings_with_sync(
+    self.app_settings,
+    "webdavSync",
+    next,
+  )
+}
+
+///|
+async fn ccs_webdav_put_file(
+  settings : Json,
+  url : String,
+  file_path : String,
+  content_type : String,
+  artifact_name : String,
+) -> Result[Unit, String] {
+  let request = match
+    ccs_webdav_curl_put_request(settings, url, file_path, content_type) {
+    Ok(request) => request
+    Err(error) => return Err(error)
+  }
+  let status = match ccs_webdav_run_status_request(request, "PUT") {
+    Ok(status) => status
+    Err(error) => return Err(error)
+  }
+  if ccs_webdav_status_ok_for_transfer(status) {
+    Ok(())
+  } else {
+    Err("WebDAV PUT \{artifact_name} failed: HTTP \{status}")
+  }
+}
+
+///|
+async fn ccs_webdav_get_file(
+  settings : Json,
+  url : String,
+  output_path : String,
+  artifact_name : String,
+) -> Result[Int, String] {
+  let request = match ccs_webdav_curl_get_request(settings, url, output_path) {
+    Ok(request) => request
+    Err(error) => return Err(error)
+  }
+  let status = match ccs_webdav_run_status_request(request, "GET") {
+    Ok(status) => status
+    Err(error) => return Err(error)
+  }
+  if status == 404 || ccs_webdav_status_ok_for_transfer(status) {
+    Ok(status)
+  } else {
+    Err("WebDAV GET \{artifact_name} failed: HTTP \{status}")
+  }
+}
+
+///|
+async fn Gateway::ccs_webdav_sync_upload_json(
+  self : Gateway,
+  settings : Json,
+) -> Result[Json, String] {
+  match ccs_webdav_sync_test_connection_json(settings) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let snapshot = self.ccs_sync_build_local_snapshot()
+  match
+    @fsx.with_temporary_directory("moonstat-webdav-upload-XXXXXX", async fn(
+      tmp_dir,
+    ) {
+      let db_path = @pathx.join(tmp_dir, ccs_sync_remote_db_sql())
+      let skills_path = @pathx.join(tmp_dir, ccs_sync_remote_skills_zip())
+      let manifest_path = @pathx.join(tmp_dir, ccs_sync_remote_manifest())
+      @fsx.write_bytes_to_file(db_path, snapshot.db_sql) catch {
+        error => return Err("Failed to stage db.sql: \{error}")
+      }
+      @fsx.write_bytes_to_file(skills_path, snapshot.skills_zip) catch {
+        error => return Err("Failed to stage skills.zip: \{error}")
+      }
+      @fsx.write_bytes_to_file(manifest_path, snapshot.manifest_bytes) catch {
+        error => return Err("Failed to stage manifest.json: \{error}")
+      }
+      let db_url = match
+        ccs_webdav_remote_file_url(
+          settings,
+          "current",
+          ccs_sync_remote_db_sql(),
+        ) {
+        Ok(url) => url
+        Err(error) => return Err(error)
+      }
+      match
+        ccs_webdav_put_file(
+          settings,
+          db_url,
+          db_path,
+          "application/sql",
+          ccs_sync_remote_db_sql(),
+        ) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      let skills_url = match
+        ccs_webdav_remote_file_url(
+          settings,
+          "current",
+          ccs_sync_remote_skills_zip(),
+        ) {
+        Ok(url) => url
+        Err(error) => return Err(error)
+      }
+      match
+        ccs_webdav_put_file(
+          settings,
+          skills_url,
+          skills_path,
+          "application/zip",
+          ccs_sync_remote_skills_zip(),
+        ) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      let manifest_url = match
+        ccs_webdav_remote_file_url(
+          settings,
+          "current",
+          ccs_sync_remote_manifest(),
+        ) {
+        Ok(url) => url
+        Err(error) => return Err(error)
+      }
+      match
+        ccs_webdav_put_file(
+          settings,
+          manifest_url,
+          manifest_path,
+          "application/json",
+          ccs_sync_remote_manifest(),
+        ) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      Ok(())
+    }) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  self.ccs_persist_webdav_sync_success(settings, snapshot.manifest_hash)
+  Ok({ "status": Json::string("uploaded") }.to_json())
+}
+
+///|
 fn ccs_webdav_remote_info_from_body(
   body : String,
   layout : String,
@@ -818,6 +1206,219 @@ async fn ccs_webdav_sync_fetch_remote_info_json(
 }
 
 ///|
+async fn ccs_webdav_fetch_manifest_snapshot(
+  settings : Json,
+  layout : String,
+) -> Result[CcsWebDavRemoteSnapshot, String]? {
+  guard settings is Object(obj) else {
+    return Some(Err("WebDAV sync is not configured."))
+  }
+  let username = json_string_from_map(obj, "username").unwrap_or("")
+  let password = json_string_from_map(obj, "password").unwrap_or("")
+  let manifest_url = match
+    ccs_webdav_remote_file_url(settings, layout, ccs_sync_remote_manifest()) {
+    Ok(url) => url
+    Err(error) => return Some(Err(error))
+  }
+  let response = match ccs_webdav_get_text(manifest_url, username, password) {
+    Ok(response) => response
+    Err(error) => return Some(Err(error))
+  }
+  if response.code == 404 {
+    return None
+  }
+  if !(response.code >= 200 && response.code <= 299) {
+    return Some(Err("WebDAV GET failed: HTTP \{response.code}"))
+  }
+  let manifest_json = @json.parse(response.body) catch {
+    _ => return Some(Err("Remote manifest is not valid JSON."))
+  }
+  let manifest = match ccs_sync_manifest_info_from_json(manifest_json) {
+    Ok(manifest) => manifest
+    Err(error) => return Some(Err(error))
+  }
+  Some(
+    Ok(CcsWebDavRemoteSnapshot::{
+      layout,
+      manifest,
+      manifest_bytes: @encoding/utf8.encode(response.body),
+    }),
+  )
+}
+
+///|
+async fn ccs_webdav_find_remote_snapshot(
+  settings : Json,
+) -> Result[CcsWebDavRemoteSnapshot, String]? {
+  match ccs_webdav_fetch_manifest_snapshot(settings, "current") {
+    Some(Ok(snapshot)) => return Some(Ok(snapshot))
+    Some(Err(error)) => return Some(Err(error))
+    None => ()
+  }
+  match ccs_webdav_fetch_manifest_snapshot(settings, "legacy") {
+    Some(Ok(snapshot)) => Some(Ok(snapshot))
+    Some(Err(error)) => Some(Err(error))
+    None => None
+  }
+}
+
+///|
+fn ccs_sync_validate_artifact(
+  bytes : Bytes,
+  artifact_name : String,
+  manifest : CcsSyncManifestInfo,
+) -> Result[Unit, String] {
+  guard manifest.artifact_meta.get(artifact_name) is Some(meta) else {
+    return Err("Manifest missing artifact: \{artifact_name}")
+  }
+  if bytes.length() != meta.size {
+    return Err(
+      "Artifact \{artifact_name} size mismatch (expected: \{meta.size}, got: \{bytes.length()})",
+    )
+  }
+  let actual_hash = ccs_sync_sha256_hex(bytes)
+  if actual_hash != meta.sha256 {
+    return Err("Artifact \{artifact_name} SHA256 verification failed")
+  }
+  Ok(())
+}
+
+///|
+async fn ccs_webdav_download_artifact(
+  settings : Json,
+  layout : String,
+  artifact_name : String,
+  output_path : String,
+) -> Result[Bytes, String] {
+  let url = match ccs_webdav_remote_file_url(settings, layout, artifact_name) {
+    Ok(url) => url
+    Err(error) => return Err(error)
+  }
+  let status = match
+    ccs_webdav_get_file(settings, url, output_path, artifact_name) {
+    Ok(status) => status
+    Err(error) => return Err(error)
+  }
+  if status == 404 {
+    return Err("Remote artifact file missing: \{artifact_name}")
+  }
+  let content = @fs.read_file(output_path).text() catch {
+    error => return Err("Failed to read downloaded \{artifact_name}: \{error}")
+  }
+  Ok(@encoding/utf8.encode(content))
+}
+
+///|
+async fn Gateway::ccs_apply_webdav_snapshot(
+  self : Gateway,
+  db_sql : Bytes,
+  skills_zip : Bytes,
+) -> Result[Unit, String] {
+  let db_text = @encoding/utf8.decode(db_sql) catch {
+    _ => return Err("Downloaded db.sql is not valid UTF-8.")
+  }
+  let snapshot = @json.parse(db_text) catch {
+    error =>
+      return Err("Downloaded db.sql is not valid Moonstat JSON: \{error}")
+  }
+  let skills_text = @encoding/utf8.decode(skills_zip) catch {
+    _ => return Err("Downloaded skills.zip is not valid UTF-8.")
+  }
+  let skills = @json.parse(skills_text) catch {
+    error =>
+      return Err("Downloaded skills.zip is not valid Moonstat JSON: \{error}")
+  }
+  ignore(ccs_skill_state_save(skills))
+  self.ccs_apply_import_snapshot(snapshot)
+  Ok(())
+}
+
+///|
+async fn Gateway::ccs_webdav_sync_download_json(
+  self : Gateway,
+  settings : Json,
+) -> Result[Json, String] {
+  let remote = match ccs_webdav_find_remote_snapshot(settings) {
+    Some(Ok(remote)) => remote
+    Some(Err(error)) => return Err(error)
+    None => return Err("No downloadable sync data found on the remote.")
+  }
+  match ccs_sync_validate_manifest_compat(remote.manifest, remote.layout) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let manifest_hash = ccs_sync_sha256_hex(remote.manifest_bytes)
+  match
+    @fsx.with_temporary_directory("moonstat-webdav-download-XXXXXX", async fn(
+      tmp_dir,
+    ) {
+      let db_path = @pathx.join(tmp_dir, ccs_sync_remote_db_sql())
+      let skills_path = @pathx.join(tmp_dir, ccs_sync_remote_skills_zip())
+      let db_sql = match
+        ccs_webdav_download_artifact(
+          settings,
+          remote.layout,
+          ccs_sync_remote_db_sql(),
+          db_path,
+        ) {
+        Ok(bytes) => bytes
+        Err(error) => return Err(error)
+      }
+      match
+        ccs_sync_validate_artifact(
+          db_sql,
+          ccs_sync_remote_db_sql(),
+          remote.manifest,
+        ) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      let skills_zip = match
+        ccs_webdav_download_artifact(
+          settings,
+          remote.layout,
+          ccs_sync_remote_skills_zip(),
+          skills_path,
+        ) {
+        Ok(bytes) => bytes
+        Err(error) => return Err(error)
+      }
+      match
+        ccs_sync_validate_artifact(
+          skills_zip,
+          ccs_sync_remote_skills_zip(),
+          remote.manifest,
+        ) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      self.ccs_apply_webdav_snapshot(db_sql, skills_zip)
+    }) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  self.ccs_persist_webdav_sync_success(settings, manifest_hash)
+  guard settings is Object(obj) else {
+    return Ok({ "status": Json::string("downloaded") }.to_json())
+  }
+  let remote_root = json_string_from_map(obj, "remoteRoot").unwrap_or(
+    ccs_sync_default_remote_root(),
+  )
+  let profile = json_string_from_map(obj, "profile").unwrap_or(
+    ccs_sync_default_profile(),
+  )
+  Ok(
+    {
+      "status": Json::string("downloaded"),
+      "sourceLayout": Json::string(remote.layout),
+      "sourcePath": Json::string(
+        ccs_sync_remote_dir_display(remote_root, profile, remote.layout),
+      ),
+    }.to_json(),
+  )
+}
+
+///|
 fn ccs_sync_effective_db_compat_version(
   manifest : CcsSyncManifestInfo,
   layout : String,
@@ -863,6 +1464,19 @@ fn ccs_sync_manifest_info_from_json(
   }
   let artifacts = artifact_map.keys().collect()
   artifacts.sort()
+  let artifact_meta : Map[String, CcsSyncArtifactMeta] = {}
+  for name in artifacts {
+    guard artifact_map.get(name) is Some(Object(meta_obj)) else {
+      return Err("Remote manifest artifact \{name} is not a JSON object.")
+    }
+    guard json_string_from_map(meta_obj, "sha256") is Some(sha256) else {
+      return Err("Remote manifest artifact \{name} is missing sha256.")
+    }
+    guard proxy_json_int(meta_obj, "size") is Some(size) else {
+      return Err("Remote manifest artifact \{name} is missing size.")
+    }
+    artifact_meta[name] = CcsSyncArtifactMeta::{ sha256, size }
+  }
   Ok(CcsSyncManifestInfo::{
     format,
     version,
@@ -871,6 +1485,7 @@ fn ccs_sync_manifest_info_from_json(
     created_at,
     snapshot_id,
     artifacts,
+    artifact_meta,
   })
 }
 

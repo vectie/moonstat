@@ -239,6 +239,21 @@ test "ccs webdav connection command matches ccs methods" {
     "-sS", "-L", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "30", "-X",
     "PROPFIND", "-H", "Depth: 0", "-u", "alice:secret", "https://dav.example.com/root",
   ])
+  let put = ccs_webdav_curl_put_request(
+    settings, "https://dav.example.com/root/db.sql", "/tmp/db.sql", "application/sql",
+  ).unwrap()
+  assert_eq(put.args, [
+    "-sS", "-L", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "300", "-X",
+    "PUT", "-H", "Content-Type: application/sql", "--upload-file", "/tmp/db.sql",
+    "-u", "alice:secret", "https://dav.example.com/root/db.sql",
+  ])
+  let get = ccs_webdav_curl_get_request(
+    settings, "https://dav.example.com/root/db.sql", "/tmp/out.sql",
+  ).unwrap()
+  assert_eq(get.args, [
+    "-sS", "-L", "-o", "/tmp/out.sql", "-w", "%{http_code}", "--max-time", "300",
+    "-u", "alice:secret", "https://dav.example.com/root/db.sql",
+  ])
 }
 
 ///|
@@ -250,6 +265,24 @@ test "ccs webdav status classes match ccs connection behavior" {
   assert_true(ccs_webdav_status_needs_propfind_verify(409))
   assert_true(ccs_webdav_status_needs_propfind_verify(302))
   assert_true(!ccs_webdav_status_needs_propfind_verify(500))
+  assert_true(ccs_webdav_status_ok_for_transfer(200))
+  assert_true(ccs_webdav_status_ok_for_transfer(201))
+  assert_true(!ccs_webdav_status_ok_for_transfer(404))
+}
+
+///|
+test "ccs sync sha256 and snapshot id match sync protocol" {
+  assert_eq(
+    ccs_sync_sha256_hex(@encoding/utf8.encode("hello")),
+    "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+  )
+  let artifacts : Map[String, CcsSyncArtifactMeta] = {}
+  artifacts["skills.zip"] = CcsSyncArtifactMeta::{ sha256: "def", size: 2 }
+  artifacts["db.sql"] = CcsSyncArtifactMeta::{ sha256: "abc", size: 1 }
+  assert_eq(
+    ccs_sync_snapshot_id(artifacts),
+    ccs_sync_sha256_hex(@encoding/utf8.encode("db.sql:abc|skills.zip:def")),
+  )
 }
 
 ///|
@@ -276,7 +309,9 @@ test "ccs sync manifest compatibility follows current and legacy db versions" {
       "deviceName": Json::string("Old Mac"),
       "createdAt": Json::string("2026-02-12T00:00:00Z"),
       "snapshotId": Json::string("snap-legacy"),
-      "artifacts": { "db.sql": Json::object({}) }.to_json(),
+      "artifacts": {
+        "db.sql": { "sha256": Json::string("abc"), "size": Json::number(1) }.to_json(),
+      }.to_json(),
     }.to_json(),
   ).unwrap()
   assert_eq(
@@ -296,7 +331,9 @@ test "ccs sync manifest compatibility follows current and legacy db versions" {
       "deviceName": Json::string("Future Mac"),
       "createdAt": Json::string("2026-02-12T00:00:00Z"),
       "snapshotId": Json::string("snap-newer"),
-      "artifacts": { "db.sql": Json::object({}) }.to_json(),
+      "artifacts": {
+        "db.sql": { "sha256": Json::string("abc"), "size": Json::number(1) }.to_json(),
+      }.to_json(),
     }.to_json(),
   ).unwrap()
   assert_true(
@@ -327,8 +364,8 @@ test "ccs webdav remote info maps manifest body" {
     #|  "createdAt": "2026-02-12T00:00:00Z",
     #|  "snapshotId": "snap-1",
     #|  "artifacts": {
-    #|    "skills.zip": {},
-    #|    "db.sql": {}
+    #|    "skills.zip": { "sha256": "def", "size": 2 },
+    #|    "db.sql": { "sha256": "abc", "size": 1 }
     #|  }
     #|}
   guard ccs_webdav_remote_info_from_body(body, "current", settings)
@@ -356,8 +393,8 @@ test "ccs sync remote info response mirrors ccs fetch remote info shape" {
       "createdAt": Json::string("2026-02-12T00:00:00Z"),
       "snapshotId": Json::string("snap-1"),
       "artifacts": {
-        "skills.zip": Json::object({}),
-        "db.sql": Json::object({}),
+        "skills.zip": { "sha256": Json::string("def"), "size": Json::number(2) }.to_json(),
+        "db.sql": { "sha256": Json::string("abc"), "size": Json::number(1) }.to_json(),
       }.to_json(),
     }.to_json(),
   ).unwrap()

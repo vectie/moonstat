@@ -5326,13 +5326,23 @@ async fn Gateway::handle_webdav_sync_operation(
   w : @httpx.ResponseWriter,
   operation : String,
 ) -> Unit {
-  ignore(operation)
   match ccs_webdav_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      write_usage_bad_request(
-        w, "WebDAV sync transport is not implemented in moonstat yet.",
-      )
+      match ccs_app_webdav_sync_json(self.app_settings) {
+        None => write_usage_bad_request(w, "WebDAV sync is not configured.")
+        Some(settings) => {
+          let result = match operation {
+            "upload" => self.ccs_webdav_sync_upload_json(settings)
+            "download" => self.ccs_webdav_sync_download_json(settings)
+            _ => Err("Unsupported WebDAV sync operation: \{operation}")
+          }
+          match result {
+            Ok(json) => write_usage_json(w, json)
+            Err(error) => write_usage_bad_request(w, error)
+          }
+        }
+      }
   }
 }
 
