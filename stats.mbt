@@ -518,7 +518,11 @@ fn TrafficStats::record_completed_request(
   }
   let model = match usage.model {
     Some(model) if !model.is_empty() => model
-    _ => self.current_request_model.unwrap_or("unknown")
+    _ =>
+      match self.current_request_outbound_model {
+        Some(outbound_model) if !outbound_model.is_empty() => outbound_model
+        _ => self.current_request_model.unwrap_or("unknown")
+      }
   }
   let request_model = match self.current_request_model {
     Some(request_model) => Some(request_model)

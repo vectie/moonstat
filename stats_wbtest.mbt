@@ -263,6 +263,27 @@ test "traffic stats request pricing uses ccs outbound model context" {
 }
 
 ///|
+test "traffic stats empty usage falls back to ccs outbound model context" {
+  let stats = TrafficStats::new()
+  stats.record_inbound(64)
+  stats.set_active_target("claude", "router", "Router")
+  stats.record_request_context(
+    "claude",
+    "client-alias",
+    outbound_model=Some("gpt-5"),
+  )
+  stats.record_success_usage(TokenUsage::empty(), 128)
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.model, "gpt-5")
+  assert_eq(log.request_model, Some("client-alias"))
+  assert_eq(log.pricing_model, Some("gpt-5"))
+  assert_eq(log.input_tokens, 0)
+  assert_eq(log.output_tokens, 0)
+  assert_eq(log.total_cost_usd, "0")
+}
+
+///|
 test "traffic stats can price gateway requests with ccs model pricing overrides" {
   let stats = TrafficStats::new()
   stats.record_inbound(64)
