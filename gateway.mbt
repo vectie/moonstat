@@ -5068,6 +5068,118 @@ fn ccs_mcp_config_text(servers : Map[String, Json]) -> String? {
 }
 
 ///|
+fn ccs_mcp_valid_server_spec(spec : Json) -> Bool {
+  guard spec is Object(obj) else { return false }
+  let typ = json_string_from_map_any(obj, ["type"]).unwrap_or("stdio")
+  match typ {
+    "stdio" =>
+      json_string_from_map_any(obj, ["command"]).unwrap_or("").trim() != ""
+    "http" | "sse" =>
+      json_string_from_map_any(obj, ["url"]).unwrap_or("").trim() != ""
+    _ => false
+  }
+}
+
+///|
+fn ccs_mcp_import_spec_for_app(app : String, spec : Json) -> Json {
+  let normalized = ccs_normalize_app_type(app)
+  if normalized != "gemini" {
+    return spec
+  }
+  match spec {
+    Object(obj) => {
+      let next = obj
+      match next.get("httpUrl") {
+        Some(http_url) => {
+          next.remove("httpUrl")
+          next["url"] = http_url
+          next["type"] = Json::string("http")
+        }
+        None => ()
+      }
+      if next.get("type") is None {
+        if next.get("command") is Some(_) {
+          next["type"] = Json::string("stdio")
+        } else if next.get("url") is Some(_) {
+          next["type"] = Json::string("sse")
+        }
+      }
+      Json::object(next)
+    }
+    _ => spec
+  }
+}
+
+///|
+fn ccs_import_mcp_servers_map(
+  servers : Map[String, Json],
+  app : String,
+  mcp_servers : Map[String, Json],
+) -> Int {
+  let mut changed = 0
+  for id in mcp_servers.keys() {
+    guard mcp_servers.get(id) is Some(spec) else { continue }
+    let import_spec = ccs_mcp_import_spec_for_app(app, spec)
+    if !ccs_mcp_valid_server_spec(import_spec) {
+      continue
+    }
+    match servers.get(id) {
+      Some(existing) =>
+        if !ccs_mcp_app_enabled(existing, app) {
+          servers[id] = ccs_mcp_server_with_app(existing, app, true)
+          changed += 1
+        }
+      None => {
+        servers[id] = ccs_mcp_server_from_spec(id, import_spec, app)
+        changed += 1
+      }
+    }
+  }
+  changed
+}
+
+///|
+fn ccs_import_mcp_from_root_json(
+  servers : Map[String, Json],
+  app : String,
+  root : Json,
+) -> Int {
+  guard root is Object(obj) else { return 0 }
+  guard obj.get("mcpServers") is Some(Object(mcp_servers)) else { return 0 }
+  ccs_import_mcp_servers_map(servers, app, mcp_servers)
+}
+
+///|
+async fn ccs_import_mcp_from_file(
+  servers : Map[String, Json],
+  app : String,
+  file_path : String,
+) -> Int {
+  if !(@fsx.exists_as_file(file_path) catch { _ => false }) {
+    return 0
+  }
+  let content = @fsx.read_file(file_path) catch { _ => return 0 }
+  let root = @json.parse(content) catch { _ => return 0 }
+  ccs_import_mcp_from_root_json(servers, app, root)
+}
+
+///|
+async fn ccs_import_mcp_from_apps_count(servers : Map[String, Json]) -> Int {
+  let mut total = 0
+  total += ccs_import_mcp_from_file(
+    servers,
+    "claude",
+    @pathx.join(ccs_home_dir(), ".claude.json"),
+  )
+  total += ccs_import_mcp_from_file(
+    servers,
+    "gemini",
+    @pathx.join(ccs_config_dir("gemini"), "settings.json"),
+  )
+  total
+}
+
+///|
 fn ccs_validate_mcp_command_name(command : String) -> Bool {
   let trimmed = command.trim()
   !trimmed.is_empty() &&
@@ -6963,8 +7075,8 @@ async fn Gateway::handle_import_mcp_from_apps(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  ignore(self)
-  write_usage_json(w, Json::number(0.0))
+  let imported = ccs_import_mcp_from_apps_count(self.mcp_servers)
+  write_usage_json(w, Json::number(imported.to_double()))
 }
 
 ///|

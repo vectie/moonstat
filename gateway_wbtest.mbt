@@ -5563,6 +5563,51 @@ test "ccs mcp request parser accepts encoded server JSON" {
 }
 
 ///|
+test "ccs mcp import helpers merge app configs" {
+  let servers : Map[String, Json] = {}
+  let claude_root = {
+    "mcpServers": {
+      "filesystem": { "command": Json::string("npx") }.to_json(),
+      "bad": { "type": Json::string("stdio") }.to_json(),
+    }.to_json(),
+  }.to_json()
+  assert_eq(ccs_import_mcp_from_root_json(servers, "claude", claude_root), 1)
+  guard servers.get("filesystem") is Some(filesystem) else {
+    fail("expected imported filesystem server")
+  }
+  assert_true(ccs_mcp_app_enabled(filesystem, "claude"))
+  assert_false(ccs_mcp_app_enabled(filesystem, "codex"))
+  assert_true(servers.get("bad") is None)
+  assert_eq(ccs_import_mcp_from_root_json(servers, "codex", claude_root), 1)
+  guard servers.get("filesystem") is Some(updated) else {
+    fail("expected updated filesystem server")
+  }
+  assert_true(ccs_mcp_app_enabled(updated, "claude"))
+  assert_true(ccs_mcp_app_enabled(updated, "codex"))
+  assert_eq(ccs_import_mcp_from_root_json(servers, "codex", claude_root), 0)
+}
+
+///|
+test "ccs mcp import normalizes gemini httpUrl specs" {
+  let servers : Map[String, Json] = {}
+  let gemini_root = {
+    "mcpServers": {
+      "web": { "httpUrl": Json::string("https://mcp.example") }.to_json(),
+    }.to_json(),
+  }.to_json()
+  assert_eq(ccs_import_mcp_from_root_json(servers, "gemini", gemini_root), 1)
+  guard servers.get("web") is Some(Object(web)) else {
+    fail("expected imported web server")
+  }
+  assert_true(ccs_mcp_app_enabled(Json::object(web), "gemini"))
+  guard web["server"] is Object(spec) else {
+    fail("expected normalized server spec")
+  }
+  assert_eq(spec["url"], Json::string("https://mcp.example"))
+  assert_eq(spec["type"], Json::string("http"))
+}
+
+///|
 test "ccs prompt helpers keep app-scoped prompt records" {
   guard ccs_prompt_from_request(
       "/upsert_prompt?app=codex&id=review&name=Review&content=Check%20this&description=Code%20review",
