@@ -3025,6 +3025,40 @@ test "ccs session extraction uses claude metadata and headers" {
 }
 
 ///|
+test "ccs session context generates log id without upstream session" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-sonnet-4-6",
+      #|  "messages": []
+      #|}
+    ),
+  )
+  let session = extract_client_session_context({}, body, "claude")
+  assert_false(session.client_provided)
+  assert_eq(session.upstream_session_id(), None)
+  assert_eq(session.session_id.length(), 36)
+  ignore(@uuid.parse(session.session_id))
+}
+
+///|
+test "ccs session context keeps client session for upstream" {
+  let body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-sonnet-4-6",
+      #|  "messages": [],
+      #|  "metadata": { "session_id": "metadata-session" }
+      #|}
+    ),
+  )
+  let session = extract_client_session_context({}, body, "claude")
+  assert_true(session.client_provided)
+  assert_eq(session.session_id, "metadata-session")
+  assert_eq(session.upstream_session_id(), Some("metadata-session"))
+}
+
+///|
 test "ccs client format detects proxy path shapes" {
   assert_true(ccs_client_format_from_path("/v1/messages") == Claude)
   assert_true(ccs_client_format_from_path("/api/v1/messages") == Claude)

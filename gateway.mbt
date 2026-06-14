@@ -2045,21 +2045,28 @@ async fn Gateway::handle_codex_responses(
         r.path.to_owned(),
         Some(json),
       ).to_string()
-      let session_id = extract_client_session_id(r.headers, json, client_format)
+      let session = extract_client_session_context(
+        r.headers,
+        json,
+        client_format,
+      )
+      let upstream_session_id = session.upstream_session_id()
       self.stats.record_request_context(
         "codex",
         json_string_field(json, "model").unwrap_or(self.model),
-        session_id~,
+        session_id=Some(session.session_id),
       )
       let endpoint = codex_backend_responses_endpoint(
         compact,
         request_path=r.path,
       )
       if stream {
-        self.forward_streaming_codex_response(request, endpoint, session_id, w)
+        self.forward_streaming_codex_response(
+          request, endpoint, upstream_session_id, w,
+        )
       } else {
         self.forward_non_streaming_codex_response(
-          request, endpoint, session_id, w,
+          request, endpoint, upstream_session_id, w,
         )
       }
     }
@@ -2097,8 +2104,17 @@ async fn Gateway::handle_chat_completions(
         r.path.to_owned(),
         Some(json),
       ).to_string()
-      let session_id = extract_client_session_id(r.headers, json, client_format)
-      self.stats.record_request_context("codex", response_model, session_id~)
+      let session = extract_client_session_context(
+        r.headers,
+        json,
+        client_format,
+      )
+      let upstream_session_id = session.upstream_session_id()
+      self.stats.record_request_context(
+        "codex",
+        response_model,
+        session_id=Some(session.session_id),
+      )
       let request = openai_chat_to_codex_response_request(json, self.model)
       guard request is Some(codex_request) else {
         self.record_bad_request()
@@ -2112,11 +2128,11 @@ async fn Gateway::handle_chat_completions(
       }
       if stream {
         self.forward_streaming_chat_completion(
-          codex_request, response_model, session_id, w,
+          codex_request, response_model, upstream_session_id, w,
         )
       } else {
         self.forward_non_streaming_chat_completion(
-          codex_request, response_model, session_id, w,
+          codex_request, response_model, upstream_session_id, w,
         )
       }
     }
@@ -3842,6 +3858,39 @@ fn ccs_client_format_for_request(
     Some(body) => ccs_client_format_from_body(body)
     None => Unknown
   }
+}
+
+///|
+priv struct CcsClientSession {
+  session_id : String
+  client_provided : Bool
+}
+
+///|
+fn CcsClientSession::upstream_session_id(self : CcsClientSession) -> String? {
+  if self.client_provided {
+    Some(self.session_id)
+  } else {
+    None
+  }
+}
+
+///|
+fn extract_client_session_context(
+  headers : Map[String, String],
+  body : Json,
+  client_format : String,
+) -> CcsClientSession {
+  match extract_client_session_id(headers, body, client_format) {
+    Some(session_id) => { session_id, client_provided: true }
+    None => { session_id: generate_ccs_session_id(), client_provided: false }
+  }
+}
+
+///|
+fn generate_ccs_session_id() -> String {
+  let gen = @uuid.generator(@random.Rand::new())
+  gen.v4().to_string()
 }
 
 ///|
@@ -15450,7 +15499,12 @@ async fn Gateway::handle_messages(
         r.path.to_owned(),
         Some(json),
       ).to_string()
-      let session_id = extract_client_session_id(r.headers, json, client_format)
+      let session = extract_client_session_context(
+        r.headers,
+        json,
+        client_format,
+      )
+      let upstream_session_id = session.upstream_session_id()
       let anthropic_beta = r.headers.get("anthropic-beta")
       let anthropic_request_result : Result[AnthropicRequest, Error] = try? @json.from_json(
         json,
@@ -15483,7 +15537,7 @@ async fn Gateway::handle_messages(
             app_type,
             anthropic_request.model,
             outbound_model=Some(model),
-            session_id~,
+            session_id=Some(session.session_id),
           )
           if stream {
             self.handle_streaming_request(
@@ -15496,7 +15550,7 @@ async fn Gateway::handle_messages(
               self.selected_provider_chain(app_type),
               [],
               anthropic_beta,
-              session_id,
+              upstream_session_id,
               w,
             )
           } else {
@@ -15510,7 +15564,7 @@ async fn Gateway::handle_messages(
               self.selected_provider_chain(app_type),
               [],
               anthropic_beta,
-              session_id,
+              upstream_session_id,
               w,
             )
           }
