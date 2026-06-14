@@ -1521,6 +1521,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/open_hermes_web_ui", (r, w) => {
     self.handle_open_hermes_web_ui(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/open_hermes_web_ui", (r, w) => {
+    self.handle_open_hermes_web_ui(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/launch_hermes_dashboard", (_, w) => {
     self.handle_launch_hermes_dashboard(w)
   })
@@ -10149,8 +10152,9 @@ async fn Gateway::handle_open_hermes_web_ui(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
+  let body = proxy_json_body(r)
   let port = hermes_web_port_from_request(r.path)
-  let path = usage_query_value(r.path, "path").unwrap_or("/")
+  let path = proxy_string_request(r.path, body, ["path"]).unwrap_or("/")
   if !hermes_web_ui_is_live(port) {
     write_usage_bad_request(w, HERMES_WEB_OFFLINE_ERROR)
     return

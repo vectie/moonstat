@@ -547,7 +547,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET /get_openclaw_tools", "POST /set_openclaw_tools", "GET /get_hermes_live_provider_ids",
     "POST /import_hermes_providers_from_live", "GET /get_hermes_live_provider", "GET /get_hermes_model_config",
     "GET /get_hermes_memory", "POST /set_hermes_memory", "GET /get_hermes_memory_limits",
-    "POST /set_hermes_memory_enabled", "GET /open_hermes_web_ui", "POST /launch_hermes_dashboard",
+    "POST /set_hermes_memory_enabled", "GET|POST /open_hermes_web_ui", "POST /launch_hermes_dashboard",
     "GET /get_universal_providers", "GET /get_universal_provider", "POST /upsert_universal_provider",
     "POST|DELETE /delete_universal_provider", "POST /sync_universal_provider", "GET|POST /test_api_endpoints",
     "POST /update_providers_sort_order", "GET /get_custom_endpoints", "POST /add_custom_endpoint",

@@ -1725,6 +1725,14 @@ test "suite config helpers mirror ccs openclaw hermes shapes" {
     None,
   )
   assert_eq(hermes_web_port_from_request("/open_hermes_web_ui?port=9120"), 9120)
+  assert_eq(
+    proxy_string_request(
+      "/open_hermes_web_ui",
+      Some({ "path": Json::string("/config") }.to_json()),
+      ["path"],
+    ),
+    Some("/config"),
+  )
   assert_eq(hermes_web_ui_path(""), "/")
   assert_eq(hermes_web_ui_path("settings/models"), "/settings/models")
   assert_eq(hermes_web_ui_path("/settings/models"), "/settings/models")
