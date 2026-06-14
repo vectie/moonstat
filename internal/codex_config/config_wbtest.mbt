@@ -163,3 +163,58 @@ async test "codex config active catalog follows ccs stale guard" {
     assert_true(active_model_catalog_json_at(tmpdir) is None)
   })
 }
+
+///|
+test "codex model catalog uses ccs modelCatalog models and context" {
+  let catalog = codex_model_catalog_json_from_settings(
+    {
+      "modelCatalog": {
+        "models": [
+          {
+            "model": "deepseek-v4-flash",
+            "displayName": "DeepSeek V4 Flash",
+            "contextWindow": "64000",
+          },
+          { "model": "kimi-k2", "display_name": "Kimi K2" },
+          { "model": "deepseek-v4-flash", "displayName": "Duplicate" },
+          { "displayName": "Missing Model" },
+        ],
+      },
+    },
+    "model_context_window = 128000\n",
+    "gpt-5",
+  )
+  guard catalog is Object(obj) else { fail("expected catalog object") }
+  guard obj["models"] is Array(models) else { fail("expected models") }
+  assert_eq(models.length(), 2)
+  guard models[0] is Object(first) else { fail("expected first model") }
+  assert_eq(first["slug"], Json::string("deepseek-v4-flash"))
+  assert_eq(first["display_name"], Json::string("DeepSeek V4 Flash"))
+  assert_eq(first["description"], Json::string("DeepSeek V4 Flash"))
+  assert_eq(first["context_window"], Json::number(64000.0))
+  assert_eq(first["max_context_window"], Json::number(64000.0))
+  assert_eq(first["priority"], Json::number(1000.0))
+  assert_eq(first["additional_speed_tiers"], Json::array([]))
+  assert_true(first["availability_nux"] is Null)
+  assert_true(first["model_messages"] is Object(_))
+  guard models[1] is Object(second) else { fail("expected second model") }
+  assert_eq(second["slug"], Json::string("kimi-k2"))
+  assert_eq(second["display_name"], Json::string("Kimi K2"))
+  assert_eq(second["context_window"], Json::number(128000.0))
+  assert_eq(second["priority"], Json::number(1001.0))
+}
+
+///|
+test "codex model catalog falls back to standalone model without ccs catalog" {
+  let catalog = codex_model_catalog_json_from_settings(
+    { "modelCatalog": { "models": [] } },
+    "model_context_window = 64000\n",
+    "gpt-5",
+  )
+  guard catalog is Object(obj) else { fail("expected catalog object") }
+  guard obj["models"] is Array(models) else { fail("expected models") }
+  assert_eq(models.length(), 1)
+  guard models[0] is Object(model) else { fail("expected model") }
+  assert_eq(model["slug"], Json::string("gpt-5"))
+  assert_eq(model["context_window"], Json::number(128000.0))
+}

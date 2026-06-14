@@ -59,7 +59,7 @@ async fn install_proxy_config_at(
     @fsx.make_directory(@pathx.dirname(path), recursive=true, exists_ok=true)
     overwrite_config_file(
       catalog_path,
-      codex_model_catalog_json(model).stringify(),
+      codex_model_catalog_json_from_settings(Json::object({}), existing, model).stringify(),
     )
     overwrite_config_file(path, content)
     Ok({ config_path: path, model_catalog_path: catalog_path, base_url, model })
@@ -212,16 +212,157 @@ fn codex_model_catalog_json(model : String) -> Json {
 }
 
 ///|
-fn codex_model_catalog_entry_json(model : String) -> Json {
+priv struct CodexCatalogModelSpec {
+  model : String
+  display_name : String
+  context_window : Int
+}
+
+///|
+fn codex_model_catalog_json_from_settings(
+  settings : Json,
+  config_text : String,
+  fallback_model : String,
+) -> Json {
+  let specs = codex_catalog_model_specs(settings, config_text)
+  if specs.is_empty() {
+    return codex_model_catalog_json(fallback_model)
+  }
+  let entries : Array[Json] = []
+  let mut priority = 0
+  for spec in specs {
+    entries.push(
+      codex_model_catalog_entry_json(
+        spec.model,
+        display_name=spec.display_name,
+        description=spec.display_name,
+        context_window=spec.context_window,
+        priority~,
+      ),
+    )
+    priority += 1
+  }
+  { "models": Json::array(entries) }.to_json()
+}
+
+///|
+fn codex_catalog_model_specs(
+  settings : Json,
+  config_text : String,
+) -> Array[CodexCatalogModelSpec] {
+  guard settings is Object(settings_obj) else { return [] }
+  guard settings_obj.get("modelCatalog") is Some(Object(catalog)) else {
+    return []
+  }
+  guard catalog.get("models") is Some(Array(models)) else { return [] }
+  let default_context_window = codex_top_level_model_context_window(config_text).unwrap_or(
+    128000,
+  )
+  let specs : Array[CodexCatalogModelSpec] = []
+  let seen : Array[String] = []
+  for model_config in models {
+    guard model_config is Object(obj) else { continue }
+    guard json_trimmed_string(obj, "model") is Some(model) else { continue }
+    if seen.contains(model) {
+      continue
+    }
+    seen.push(model)
+    let display_name = match json_trimmed_string(obj, "displayName") {
+      Some(value) => value
+      None =>
+        match json_trimmed_string(obj, "display_name") {
+          Some(value) => value
+          None => model
+        }
+    }
+    let context_window = match
+      codex_positive_int_from_json(obj.get("contextWindow")) {
+      Some(value) => value
+      None =>
+        match codex_positive_int_from_json(obj.get("context_window")) {
+          Some(value) => value
+          None => default_context_window
+        }
+    }
+    specs.push({ model, display_name, context_window })
+  }
+  specs
+}
+
+///|
+fn codex_top_level_model_context_window(config_text : String) -> Int? {
+  for raw_line in config_text.split("\n") {
+    let line = raw_line.trim()
+    if !line.has_prefix("model_context_window") {
+      continue
+    }
+    let rest = line["model_context_window".length():].trim()
+    if !rest.has_prefix("=") {
+      continue
+    }
+    match codex_positive_int_from_string(rest[1:].trim()) {
+      Some(value) => return Some(value)
+      None => ()
+    }
+  }
+  None
+}
+
+///|
+fn codex_positive_int_from_json(value : Json?) -> Int? {
+  match value {
+    Some(Number(n, ..)) =>
+      if n > 0.0 && n.trunc() == n {
+        Some(n.to_int())
+      } else {
+        None
+      }
+    Some(String(value)) => codex_positive_int_from_string(value.trim())
+    _ => None
+  }
+}
+
+///|
+fn codex_positive_int_from_string(value : StringView) -> Int? {
+  try @string.parse_int(value.to_owned(), base=10) catch {
+    _ => None
+  } noraise {
+    parsed => if parsed > 0 { Some(parsed) } else { None }
+  }
+}
+
+///|
+fn json_trimmed_string(obj : Map[String, Json], key : String) -> String? {
+  match obj.get(key) {
+    Some(String(value)) => {
+      let trimmed = value.trim().to_owned()
+      if trimmed.is_empty() {
+        None
+      } else {
+        Some(trimmed)
+      }
+    }
+    _ => None
+  }
+}
+
+///|
+fn codex_model_catalog_entry_json(
+  model : String,
+  display_name? : String = model,
+  description? : String = "Moonstat local proxy model",
+  context_window? : Int = 128000,
+  priority? : Int = 0,
+) -> Json {
   {
     "slug": Json::string(model),
-    "display_name": Json::string(model),
-    "description": Json::string("Moonstat local proxy model"),
+    "display_name": Json::string(display_name),
+    "description": Json::string(description),
     "visibility": Json::string("list"),
     "supported_in_api": Json::boolean(true),
-    "priority": Json::number(1000.0),
-    "context_window": Json::number(128000.0),
-    "max_context_window": Json::number(128000.0),
+    "priority": Json::number((1000 + priority).to_double()),
+    "context_window": Json::number(context_window.to_double()),
+    "max_context_window": Json::number(context_window.to_double()),
     "additional_speed_tiers": Json::array([]),
     "service_tiers": Json::array([]),
     "availability_nux": Json::null(),
