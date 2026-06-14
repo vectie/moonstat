@@ -90,6 +90,24 @@ async test "write meta restores previous applied profile and preserves fields" {
 }
 
 ///|
+async test "write meta recovers non object meta file like ccs" {
+  @fsx.with_temporary_directory("moonstat-claude-meta-shape-XXXXXX", tmpdir => {
+    let meta_path = @pathx.join(tmpdir, "_meta.json")
+    @fsx.write_to_file(meta_path, "[]")
+
+    write_meta(meta_path, Some(PROFILE_ID))
+
+    let meta = read_json_or_empty(meta_path)
+    json_inspect(meta, content={
+      "appliedId": "00000000-0000-4000-8000-000000157210",
+      "entries": [
+        { "id": "00000000-0000-4000-8000-000000157210", "name": "Moonstat" },
+      ],
+    })
+  })
+}
+
+///|
 async test "install proxy profile rolls back when profile write fails" {
   @fsx.with_temporary_directory("moonstat-claude-install-XXXXXX", tmpdir => {
     let normal_config_path = @pathx.join(
@@ -144,6 +162,64 @@ async test "install proxy profile rolls back when profile write fails" {
       "threep": true,
     })
     assert_false(@fsx.exists_as_file(paths.profile_path) catch { _ => false })
+  })
+}
+
+///|
+async test "uninstall proxy profile rolls back when meta write fails" {
+  @fsx.with_temporary_directory("moonstat-claude-uninstall-XXXXXX", tmpdir => {
+    let normal_config_path = @pathx.join(
+      @pathx.join(tmpdir, "Claude"),
+      CONFIG_FILE,
+    )
+    let threep_config_path = @pathx.join(
+      @pathx.join(tmpdir, "Claude-3p"),
+      CONFIG_FILE,
+    )
+    let config_library_path = @pathx.join(
+      @pathx.join(tmpdir, "Claude-3p"),
+      CONFIG_LIBRARY_DIR,
+    )
+    let blocked_meta_dir = @pathx.join(tmpdir, "blocked-meta")
+    let paths = ClaudeDesktopPaths::{
+      normal_config_path,
+      threep_config_path,
+      config_library_path,
+      profile_path: @pathx.join(config_library_path, PROFILE_ID + ".json"),
+      meta_path: @pathx.join(blocked_meta_dir, "_meta.json"),
+    }
+    write_json_file(
+      paths.normal_config_path,
+      Json::object({
+        "deploymentMode": Json::string("3p"),
+        "normal": Json::boolean(true),
+      }),
+    )
+    write_json_file(
+      paths.threep_config_path,
+      Json::object({
+        "deploymentMode": Json::string("3p"),
+        "threep": Json::boolean(true),
+      }),
+    )
+    write_json_file(
+      paths.profile_path,
+      gateway_profile_json("http://127.0.0.1:15721/claude-desktop", "ccs-token"),
+    )
+    @fsx.write_to_file(blocked_meta_dir, "not a directory")
+
+    let result = uninstall_proxy_profile_at_paths(paths)
+
+    assert_true(result is Err(_))
+    json_inspect(read_json_or_empty(paths.normal_config_path), content={
+      "deploymentMode": "3p",
+      "normal": true,
+    })
+    json_inspect(read_json_or_empty(paths.threep_config_path), content={
+      "deploymentMode": "3p",
+      "threep": true,
+    })
+    assert_true(@fsx.exists_as_file(paths.profile_path) catch { _ => false })
   })
 }
 

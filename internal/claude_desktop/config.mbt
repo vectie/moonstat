@@ -147,7 +147,19 @@ async fn install_proxy_profile_at_paths(
 
 ///|
 pub async fn uninstall_proxy_profile() -> Result[Unit, String] {
-  let paths = claude_desktop_paths()
+  uninstall_proxy_profile_at_paths(claude_desktop_paths())
+}
+
+///|
+async fn uninstall_proxy_profile_at_paths(
+  paths : ClaudeDesktopPaths,
+) -> Result[Unit, String] {
+  let snapshots = snapshot_files([
+    paths.normal_config_path,
+    paths.threep_config_path,
+    paths.profile_path,
+    paths.meta_path,
+  ])
   try {
     write_deployment_mode(paths.normal_config_path, "1p")
     write_deployment_mode(paths.threep_config_path, "1p")
@@ -158,7 +170,10 @@ pub async fn uninstall_proxy_profile() -> Result[Unit, String] {
     write_meta(paths.meta_path, None)
     Ok(())
   } catch {
-    err => Err("failed to uninstall Claude Desktop profile: \{err}")
+    err => {
+      restore_file_snapshots(snapshots)
+      Err("failed to uninstall Claude Desktop profile: \{err}")
+    }
   }
 }
 
