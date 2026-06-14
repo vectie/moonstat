@@ -9674,8 +9674,7 @@ async fn Gateway::handle_scan_openclaw_config_health(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  ignore(self)
-  write_usage_json(w, Json::array([]))
+  write_usage_json(w, self.openclaw_config_health_json())
 }
 
 ///|
@@ -11656,6 +11655,110 @@ fn suite_write_outcome_json() -> Json {
 ///|
 fn openclaw_default_tools_json() -> Json {
   { "allow": Json::array([]), "deny": Json::array([]) }.to_json()
+}
+
+///|
+fn Gateway::openclaw_config_health_json(self : Gateway) -> Json {
+  let defaults = self.openclaw_agents_defaults.unwrap_or(Json::object({}))
+  let config = {
+    "tools": self.openclaw_tools,
+    "agents": { "defaults": defaults }.to_json(),
+    "env": self.openclaw_env,
+  }.to_json()
+  openclaw_config_health_from_json(config)
+}
+
+///|
+fn openclaw_config_health_from_json(config : Json) -> Json {
+  let warnings : Array[Json] = []
+  match openclaw_nested_json(config, ["tools", "profile"]) {
+    Some(String(profile)) =>
+      if !openclaw_tools_profile_is_supported(profile) {
+        warnings.push(
+          openclaw_health_warning_json(
+            "invalid_tools_profile",
+            "tools.profile uses unsupported value '\{profile}'.",
+            Some("tools.profile"),
+          ),
+        )
+      }
+    _ => ()
+  }
+  match openclaw_nested_json(config, ["agents", "defaults", "timeout"]) {
+    Some(_) =>
+      warnings.push(
+        openclaw_health_warning_json(
+          "legacy_agents_timeout",
+          "agents.defaults.timeout is deprecated; use agents.defaults.timeoutSeconds.",
+          Some("agents.defaults.timeout"),
+        ),
+      )
+    None => ()
+  }
+  match openclaw_nested_json(config, ["env", "vars"]) {
+    Some(Object(_)) | None => ()
+    Some(_) =>
+      warnings.push(
+        openclaw_health_warning_json(
+          "stringified_env_vars",
+          "env.vars should be an object. The current value looks stringified or malformed.",
+          Some("env.vars"),
+        ),
+      )
+  }
+  match openclaw_nested_json(config, ["env", "shellEnv"]) {
+    Some(Object(_)) | None => ()
+    Some(_) =>
+      warnings.push(
+        openclaw_health_warning_json(
+          "stringified_env_shell_env",
+          "env.shellEnv should be an object. The current value looks stringified or malformed.",
+          Some("env.shellEnv"),
+        ),
+      )
+  }
+  Json::array(warnings)
+}
+
+///|
+fn openclaw_tools_profile_is_supported(profile : String) -> Bool {
+  profile == "minimal" ||
+  profile == "coding" ||
+  profile == "messaging" ||
+  profile == "full"
+}
+
+///|
+fn openclaw_health_warning_json(
+  code : String,
+  message : String,
+  path : String?,
+) -> Json {
+  let warning : Map[String, Json] = {
+    "code": Json::string(code),
+    "message": Json::string(message),
+  }
+  match path {
+    Some(path) => warning["path"] = Json::string(path)
+    None => ()
+  }
+  Json::object(warning)
+}
+
+///|
+fn openclaw_nested_json(config : Json, keys : Array[String]) -> Json? {
+  let mut current = config
+  for key in keys {
+    match current {
+      Object(obj) =>
+        match obj.get(key) {
+          Some(value) => current = value
+          None => return None
+        }
+      _ => return None
+    }
+  }
+  Some(current)
 }
 
 ///|

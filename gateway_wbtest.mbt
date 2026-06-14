@@ -795,6 +795,58 @@ test "suite config helpers mirror ccs openclaw hermes shapes" {
 }
 
 ///|
+test "openclaw health scanner mirrors ccs warning rules" {
+  let config = {
+    "tools": { "profile": Json::string("dangerous") }.to_json(),
+    "agents": {
+      "defaults": {
+        "timeout": Json::number(30.0),
+        "timeoutSeconds": Json::number(30.0),
+      }.to_json(),
+    }.to_json(),
+    "env": {
+      "vars": Json::string("{\"OPENAI_API_KEY\":\"sk\"}"),
+      "shellEnv": Json::array([]),
+    }.to_json(),
+  }.to_json()
+  json_inspect(openclaw_config_health_from_json(config), content=[
+    {
+      "code": "invalid_tools_profile",
+      "message": "tools.profile uses unsupported value 'dangerous'.",
+      "path": "tools.profile",
+    },
+    {
+      "code": "legacy_agents_timeout",
+      "message": "agents.defaults.timeout is deprecated; use agents.defaults.timeoutSeconds.",
+      "path": "agents.defaults.timeout",
+    },
+    {
+      "code": "stringified_env_vars",
+      "message": "env.vars should be an object. The current value looks stringified or malformed.",
+      "path": "env.vars",
+    },
+    {
+      "code": "stringified_env_shell_env",
+      "message": "env.shellEnv should be an object. The current value looks stringified or malformed.",
+      "path": "env.shellEnv",
+    },
+  ])
+}
+
+///|
+test "openclaw health scanner accepts supported profiles and object env" {
+  let config = {
+    "tools": { "profile": Json::string("coding") }.to_json(),
+    "agents": { "defaults": { "timeoutSeconds": Json::number(30.0) }.to_json() }.to_json(),
+    "env": {
+      "vars": { "OPENAI_API_KEY": Json::string("sk") }.to_json(),
+      "shellEnv": { "PATH": Json::string("/usr/bin") }.to_json(),
+    }.to_json(),
+  }.to_json()
+  assert_eq(openclaw_config_health_from_json(config), Json::array([]))
+}
+
+///|
 test "proxy app config alias matches ccs app config shape" {
   let gateway = Gateway::new(port=17005, host="127.0.0.6", model="gpt-5")
   guard gateway.proxy_app_config_json("claude") is Object(config) else {
