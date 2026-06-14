@@ -453,6 +453,30 @@ test "provider target keeps ccs custom user agent metadata" {
 }
 
 ///|
+test "official provider ignores ccs custom user agent metadata" {
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("official-ua-provider"),
+            "name": Json::string("Official UA Provider"),
+            "category": Json::string("official"),
+            "customUserAgent": Json::string("claude-cli/2.1.161"),
+            "meta": { "customUserAgent": Json::string("codex_cli_rs/0.99") }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "codex",
+    )
+    is Some(provider) else {
+    fail("expected provider target")
+  }
+  assert_eq(provider.provider_type, Some("official"))
+  assert_true(provider_custom_user_agent(provider) is None)
+}
+
+///|
 test "ccs custom user agent parser rejects empty and multiline values" {
   assert_eq(
     parse_custom_user_agent(Some("  CodexBot/1.0  ")),

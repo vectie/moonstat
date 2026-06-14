@@ -3250,6 +3250,9 @@ fn codex_compatible_provider_headers(
 
 ///|
 fn provider_custom_user_agent(provider : ProviderRouteTarget) -> String? {
+  if provider.provider_type == Some("official") {
+    return None
+  }
   guard provider.settings_config is Some(Object(obj)) else { return None }
   match
     parse_custom_user_agent(
