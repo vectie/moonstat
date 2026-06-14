@@ -1721,6 +1721,91 @@ test "ccs managed account guard is scoped to managed upstreams" {
 }
 
 ///|
+test "ccs claude takeover keeps codex oauth auth token placeholder" {
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="codex",
+    provider_name="Codex",
+    provider_type=Some("codex_oauth"),
+    settings_config=Some(
+      Json::object({
+        "env": Json::object({
+          "ANTHROPIC_BASE_URL": Json::string(
+            "https://chatgpt.com/backend-api/codex",
+          ),
+          "ANTHROPIC_MODEL": Json::string("gpt-5"),
+        }),
+      }),
+    ),
+  )
+  guard ccs_claude_takeover_settings_config_json(
+      provider, "http://127.0.0.1:15721",
+    )
+    is Object(config) else {
+    fail("expected takeover config")
+  }
+  guard config["env"] is Object(env) else { fail("expected env") }
+  assert_eq(env["ANTHROPIC_BASE_URL"], Json::string("http://127.0.0.1:15721"))
+  assert_eq(env["ANTHROPIC_API_KEY"], Json::string("PROXY_MANAGED"))
+  assert_eq(env["ANTHROPIC_AUTH_TOKEN"], Json::string("PROXY_MANAGED"))
+  assert_true(env.get("ANTHROPIC_MODEL") is None)
+}
+
+///|
+test "ccs claude takeover keeps url-only codex auth token placeholder" {
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="codex-url-only",
+    provider_name="Codex URL Only",
+    settings_config=Some(
+      Json::object({
+        "env": Json::object({
+          "ANTHROPIC_BASE_URL": Json::string(
+            "https://chatgpt.com/backend-api/codex",
+          ),
+        }),
+      }),
+    ),
+  )
+  guard ccs_claude_takeover_settings_config_json(
+      provider, "http://127.0.0.1:15721",
+    )
+    is Object(config) else {
+    fail("expected takeover config")
+  }
+  guard config["env"] is Object(env) else { fail("expected env") }
+  assert_eq(env["ANTHROPIC_API_KEY"], Json::string("PROXY_MANAGED"))
+  assert_eq(env["ANTHROPIC_AUTH_TOKEN"], Json::string("PROXY_MANAGED"))
+}
+
+///|
+test "ccs claude takeover removes stale copilot auth token placeholder" {
+  let provider = ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="copilot",
+    provider_name="GitHub Copilot",
+    provider_type=Some("github_copilot"),
+    settings_config=Some(
+      Json::object({
+        "env": Json::object({
+          "ANTHROPIC_BASE_URL": Json::string("https://api.githubcopilot.com"),
+          "ANTHROPIC_AUTH_TOKEN": Json::string("stale-token"),
+        }),
+      }),
+    ),
+  )
+  guard ccs_claude_takeover_settings_config_json(
+      provider, "http://127.0.0.1:15721",
+    )
+    is Object(config) else {
+    fail("expected takeover config")
+  }
+  guard config["env"] is Object(env) else { fail("expected env") }
+  assert_eq(env["ANTHROPIC_API_KEY"], Json::string("PROXY_MANAGED"))
+  assert_true(env.get("ANTHROPIC_AUTH_TOKEN") is None)
+}
+
+///|
 test "codex to anthropic response emits ccs cache usage buckets" {
   let body = @json.parse(
     (

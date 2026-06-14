@@ -3188,6 +3188,118 @@ fn ccs_is_managed_account_upstream_url(url : String) -> Bool {
 }
 
 ///|
+fn ccs_is_github_copilot_upstream_url(url : String) -> Bool {
+  let (origin, _) = split_origin_and_path(url)
+  let host = extract_host(origin).to_lower()
+  host == "githubcopilot.com" || host.has_suffix(".githubcopilot.com")
+}
+
+///|
+fn ccs_provider_managed_auth_url(provider : ProviderRouteTarget) -> String? {
+  match provider.base_url {
+    Some(url) if !url.trim().is_empty() => return Some(url)
+    _ => ()
+  }
+  guard provider.settings_config is Some(Object(settings)) else { return None }
+  match
+    json_string_from_map_any(settings, [
+      "baseUrl", "base_url", "apiBaseUrl", "api_base_url",
+    ]) {
+    Some(url) if !url.trim().is_empty() => return Some(url)
+    _ => ()
+  }
+  match settings.get("env") {
+    Some(Object(env)) =>
+      json_string_from_map_any(env, ["ANTHROPIC_BASE_URL", "OPENAI_BASE_URL"])
+    _ => None
+  }
+}
+
+///|
+fn ccs_provider_is_github_copilot(provider : ProviderRouteTarget) -> Bool {
+  if provider.provider_type == Some(AUTH_PROVIDER_GITHUB_COPILOT) {
+    return true
+  }
+  match ccs_provider_managed_auth_url(provider) {
+    Some(url) => ccs_is_github_copilot_upstream_url(url)
+    None => false
+  }
+}
+
+///|
+fn ccs_provider_uses_managed_account_auth(
+  provider : ProviderRouteTarget,
+) -> Bool {
+  if provider.provider_type == Some(AUTH_PROVIDER_CODEX_OAUTH) ||
+    provider.provider_type == Some(AUTH_PROVIDER_GITHUB_COPILOT) {
+    return true
+  }
+  match ccs_provider_managed_auth_url(provider) {
+    Some(url) => ccs_is_managed_account_upstream_url(url)
+    None => false
+  }
+}
+
+///|
+fn ccs_claude_takeover_settings_config_json(
+  provider : ProviderRouteTarget,
+  proxy_url : String,
+) -> Json {
+  let root : Map[String, Json] = {}
+  match provider.settings_config {
+    Some(Object(settings)) =>
+      for key in settings.keys() {
+        guard settings.get(key) is Some(value) else { continue }
+        root[key] = value
+      }
+    _ => ()
+  }
+  let env : Map[String, Json] = {}
+  match root.get("env") {
+    Some(Object(raw_env)) =>
+      for key in raw_env.keys() {
+        guard raw_env.get(key) is Some(value) else { continue }
+        env[key] = value
+      }
+    _ => ()
+  }
+  env["ANTHROPIC_BASE_URL"] = Json::string(proxy_url)
+  for
+    key in [
+      "ANTHROPIC_MODEL", "ANTHROPIC_REASONING_MODEL", "ANTHROPIC_SMALL_FAST_MODEL",
+      "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME", "ANTHROPIC_DEFAULT_OPUS_MODEL",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME",
+    ] {
+    env.remove(key)
+  }
+  let token_keys = [
+    "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "OPENAI_API_KEY",
+  ]
+  if ccs_provider_uses_managed_account_auth(provider) {
+    for key in token_keys {
+      env.remove(key)
+    }
+    env["ANTHROPIC_API_KEY"] = Json::string(CCS_PROXY_MANAGED_PLACEHOLDER)
+    if !ccs_provider_is_github_copilot(provider) {
+      env["ANTHROPIC_AUTH_TOKEN"] = Json::string(CCS_PROXY_MANAGED_PLACEHOLDER)
+    }
+  } else {
+    let mut replaced_any = false
+    for key in token_keys {
+      if env.contains(key) {
+        env[key] = Json::string(CCS_PROXY_MANAGED_PLACEHOLDER)
+        replaced_any = true
+      }
+    }
+    if !replaced_any {
+      env["ANTHROPIC_AUTH_TOKEN"] = Json::string(CCS_PROXY_MANAGED_PLACEHOLDER)
+    }
+  }
+  root["env"] = Json::object(env)
+  Json::object(root)
+}
+
+///|
 fn ccs_headers_contain_proxy_managed_placeholder(
   headers : Map[String, String],
 ) -> Bool {
@@ -8771,7 +8883,14 @@ async fn Gateway::handle_proxy_switch_provider(
     provider.provider_id,
     provider.provider_name,
   )
-  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+  let response : Map[String, Json] = { "ok": Json::boolean(true) }
+  if app_type == "claude" || app_type == "claude-desktop" {
+    response["takeoverSettingsConfig"] = ccs_claude_takeover_settings_config_json(
+      provider,
+      "http://\{self.proxy_listen_address}:\{self.proxy_listen_port}",
+    )
+  }
+  write_usage_json(w, Json::object(response))
 }
 
 ///|
