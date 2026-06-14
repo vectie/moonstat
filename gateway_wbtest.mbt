@@ -5608,6 +5608,72 @@ test "ccs mcp import normalizes gemini httpUrl specs" {
 }
 
 ///|
+test "ccs mcp import parses codex official toml servers" {
+  let servers : Map[String, Json] = {}
+  let content =
+    #|[mcp_servers.filesystem]
+    #|command = "npx"
+    #|args = ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/project"]
+    #|cwd = "/tmp"
+    #|
+    #|[mcp_servers.filesystem.env]
+    #|TOKEN = "secret"
+    #|
+    #|[mcp_servers.bad]
+    #|type = "stdio"
+  assert_eq(ccs_import_mcp_from_codex_toml_text(servers, content), 1)
+  guard servers.get("filesystem") is Some(Object(server)) else {
+    fail("expected imported filesystem server")
+  }
+  assert_true(ccs_mcp_app_enabled(Json::object(server), "codex"))
+  guard server["server"] is Object(spec) else { fail("expected server spec") }
+  assert_eq(spec["type"], Json::string("stdio"))
+  assert_eq(spec["command"], Json::string("npx"))
+  guard spec["args"] is Array(args) else { fail("expected args") }
+  assert_eq(args.length(), 3)
+  assert_eq(args[1], Json::string("@modelcontextprotocol/server-filesystem"))
+  guard spec["env"] is Object(env) else { fail("expected env") }
+  assert_eq(env["TOKEN"], Json::string("secret"))
+  assert_true(servers.get("bad") is None)
+  assert_eq(ccs_import_mcp_from_codex_toml_text(servers, content), 0)
+}
+
+///|
+test "ccs mcp import parses codex legacy toml servers" {
+  let servers : Map[String, Json] = {}
+  let content =
+    #|[mcp.servers.web]
+    #|type = "http"
+    #|url = "https://mcp.example"
+    #|
+    #|[mcp.servers.web.http_headers]
+    #|Authorization = "Bearer token"
+    #|
+    #|[mcp.servers.sse]
+    #|type = "sse"
+    #|url = "https://sse.example"
+    #|description = "legacy server"
+  assert_eq(ccs_import_mcp_from_codex_toml_text(servers, content), 2)
+  guard servers.get("web") is Some(Object(web)) else {
+    fail("expected imported web server")
+  }
+  guard web["server"] is Object(web_spec) else {
+    fail("expected web server spec")
+  }
+  assert_eq(web_spec["type"], Json::string("http"))
+  guard web_spec["headers"] is Object(headers) else { fail("expected headers") }
+  assert_eq(headers["Authorization"], Json::string("Bearer token"))
+  guard servers.get("sse") is Some(Object(sse)) else {
+    fail("expected imported sse server")
+  }
+  guard sse["server"] is Object(sse_spec) else {
+    fail("expected sse server spec")
+  }
+  assert_eq(sse_spec["type"], Json::string("sse"))
+  assert_eq(sse_spec["description"], Json::string("legacy server"))
+}
+
+///|
 test "ccs prompt helpers keep app-scoped prompt records" {
   guard ccs_prompt_from_request(
       "/upsert_prompt?app=codex&id=review&name=Review&content=Check%20this&description=Code%20review",

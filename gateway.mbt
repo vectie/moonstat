@@ -5150,6 +5150,311 @@ fn ccs_import_mcp_from_root_json(
 }
 
 ///|
+fn ccs_import_mcp_from_codex_toml_text(
+  servers : Map[String, Json],
+  content : String,
+) -> Int {
+  let raw_specs : Map[String, Json] = {}
+  let mut current_id : String? = None
+  let mut current_table = ""
+  for line_view in content.split("\n") {
+    let line = ccs_toml_strip_comment(line_view.to_owned()).trim().to_owned()
+    if line.is_empty() {
+      continue
+    }
+    if line.has_prefix("[") && line.has_suffix("]") {
+      let section = line[1:line.length() - 1].trim().to_owned()
+      match ccs_codex_mcp_section(section) {
+        Some((id, table)) => {
+          current_id = Some(id)
+          current_table = table
+          if raw_specs.get(id) is None {
+            raw_specs[id] = Json::object({})
+          }
+        }
+        None => {
+          current_id = None
+          current_table = ""
+        }
+      }
+      continue
+    }
+    guard current_id is Some(id) else { continue }
+    guard ccs_toml_assignment(line) is Some((key, raw_value)) else { continue }
+    let spec = ccs_codex_raw_mcp_spec(raw_specs, id)
+    if current_table.is_empty() {
+      match ccs_toml_value(raw_value) {
+        Some(value) => spec[key] = value
+        None => ()
+      }
+    } else {
+      let nested_key = if current_table == "http_headers" {
+        "headers"
+      } else {
+        current_table
+      }
+      let nested = match spec.get(nested_key) {
+        Some(Object(obj)) => obj
+        _ => {
+          let obj : Map[String, Json] = {}
+          spec[nested_key] = Json::object(obj)
+          obj
+        }
+      }
+      match ccs_toml_value(raw_value) {
+        Some(String(value)) => nested[key] = Json::string(value)
+        _ => ()
+      }
+    }
+    raw_specs[id] = Json::object(spec)
+  }
+  let normalized : Map[String, Json] = {}
+  for id in raw_specs.keys() {
+    guard raw_specs.get(id) is Some(raw_spec) else { continue }
+    normalized[id] = ccs_codex_mcp_unified_spec(raw_spec)
+  }
+  ccs_import_mcp_servers_map(servers, "codex", normalized)
+}
+
+///|
+fn ccs_codex_raw_mcp_spec(
+  specs : Map[String, Json],
+  id : String,
+) -> Map[String, Json] {
+  match specs.get(id) {
+    Some(Object(obj)) => obj
+    _ => {
+      let obj : Map[String, Json] = {}
+      specs[id] = Json::object(obj)
+      obj
+    }
+  }
+}
+
+///|
+fn ccs_codex_mcp_section(section : String) -> (String, String)? {
+  let rest = if section.has_prefix("mcp_servers.") {
+    section["mcp_servers.".length():].to_owned()
+  } else if section.has_prefix("mcp.servers.") {
+    section["mcp.servers.".length():].to_owned()
+  } else {
+    return None
+  }
+  let parts = rest.split(".").collect()
+  if parts.length() == 0 {
+    return None
+  }
+  let id = parts[0].trim().to_owned()
+  if id.is_empty() {
+    return None
+  }
+  let table = if parts.length() > 1 { parts[1].trim().to_owned() } else { "" }
+  match table {
+    "" | "env" | "http_headers" | "headers" => Some((id, table))
+    _ => None
+  }
+}
+
+///|
+fn ccs_codex_mcp_unified_spec(raw_spec : Json) -> Json {
+  guard raw_spec is Object(raw) else { return Json::object({}) }
+  let typ = json_string_from_map_any(raw, ["type"]).unwrap_or("stdio")
+  let spec : Map[String, Json] = { "type": Json::string(typ) }
+  match typ {
+    "stdio" => {
+      match raw.get("command") {
+        Some(String(command)) => spec["command"] = Json::string(command)
+        _ => ()
+      }
+      match raw.get("args") {
+        Some(Array(args)) => spec["args"] = Json::array(args)
+        _ => ()
+      }
+      match raw.get("cwd") {
+        Some(String(cwd)) if !cwd.trim().is_empty() =>
+          spec["cwd"] = Json::string(cwd)
+        _ => ()
+      }
+      match raw.get("env") {
+        Some(Object(env)) => spec["env"] = Json::object(env)
+        _ => ()
+      }
+    }
+    "http" | "sse" => {
+      match raw.get("url") {
+        Some(String(url)) => spec["url"] = Json::string(url)
+        _ => ()
+      }
+      match raw.get("http_headers") {
+        Some(Object(headers)) => spec["headers"] = Json::object(headers)
+        _ =>
+          match raw.get("headers") {
+            Some(Object(headers)) => spec["headers"] = Json::object(headers)
+            _ => ()
+          }
+      }
+    }
+    _ => ()
+  }
+  for key in raw.keys() {
+    if ccs_codex_mcp_core_field(typ, key) {
+      continue
+    }
+    guard raw.get(key) is Some(value) else { continue }
+    spec[key] = value
+  }
+  Json::object(spec)
+}
+
+///|
+fn ccs_codex_mcp_core_field(typ : String, key : String) -> Bool {
+  match typ {
+    "stdio" =>
+      key == "type" ||
+      key == "command" ||
+      key == "args" ||
+      key == "env" ||
+      key == "cwd"
+    "http" | "sse" =>
+      key == "type" || key == "url" || key == "http_headers" || key == "headers"
+    _ => key == "type"
+  }
+}
+
+///|
+fn ccs_toml_strip_comment(line : String) -> String {
+  let mut in_quote = false
+  let mut quote = 0
+  let mut escaped = false
+  for i in 0..<line.length() {
+    let ch = line[i]
+    if in_quote {
+      if escaped {
+        escaped = false
+      } else if ch == '\\' {
+        escaped = true
+      } else if ch.to_int() == quote {
+        in_quote = false
+      }
+    } else if ch == '"' || ch == '\'' {
+      in_quote = true
+      quote = ch.to_int()
+    } else if ch == '#' {
+      return line[:i].to_owned()
+    }
+  }
+  line
+}
+
+///|
+fn ccs_toml_assignment(line : String) -> (String, String)? {
+  guard line.find("=") is Some(index) else { return None }
+  let key = line[:index].trim().to_owned()
+  let value = line[index + 1:].trim().to_owned()
+  if key.is_empty() {
+    None
+  } else {
+    Some((key, value))
+  }
+}
+
+///|
+fn ccs_toml_value(raw : String) -> Json? {
+  let value = raw.trim().to_owned()
+  if value.is_empty() {
+    return None
+  }
+  if value.has_prefix("[") && value.has_suffix("]") {
+    let items : Array[Json] = []
+    for item in ccs_toml_split_csv(value[1:value.length() - 1].to_owned()) {
+      match ccs_toml_value(item) {
+        Some(String(text)) => items.push(Json::string(text))
+        Some(true) => items.push(Json::boolean(true))
+        Some(false) => items.push(Json::boolean(false))
+        Some(Number(number, ..)) => items.push(Json::number(number))
+        _ => ()
+      }
+    }
+    return Some(Json::array(items))
+  }
+  if value.has_prefix("{") && value.has_suffix("}") {
+    let obj : Map[String, Json] = {}
+    for item in ccs_toml_split_csv(value[1:value.length() - 1].to_owned()) {
+      match ccs_toml_assignment(item) {
+        Some((key, nested_raw)) =>
+          match ccs_toml_value(nested_raw) {
+            Some(String(text)) => obj[key] = Json::string(text)
+            _ => ()
+          }
+        None => ()
+      }
+    }
+    return Some(Json::object(obj))
+  }
+  if (value.has_prefix("\"") && value.has_suffix("\"")) ||
+    (value.has_prefix("'") && value.has_suffix("'")) {
+    return Some(Json::string(value[1:value.length() - 1].to_owned()))
+  }
+  match value {
+    "true" => Some(Json::boolean(true))
+    "false" => Some(Json::boolean(false))
+    _ =>
+      try @string.parse_int(value, base=10) catch {
+        _ => Some(Json::string(value))
+      } noraise {
+        parsed => Some(Json::number(parsed.to_double()))
+      }
+  }
+}
+
+///|
+fn ccs_toml_split_csv(text : String) -> Array[String] {
+  let parts : Array[String] = []
+  let mut start = 0
+  let mut in_quote = false
+  let mut quote = 0
+  let mut escaped = false
+  for i in 0..<text.length() {
+    let ch = text[i]
+    if in_quote {
+      if escaped {
+        escaped = false
+      } else if ch == '\\' {
+        escaped = true
+      } else if ch.to_int() == quote {
+        in_quote = false
+      }
+    } else if ch == '"' || ch == '\'' {
+      in_quote = true
+      quote = ch.to_int()
+    } else if ch == ',' {
+      let item = text[start:i].trim().to_owned()
+      if !item.is_empty() {
+        parts.push(item)
+      }
+      start = i + 1
+    }
+  }
+  let tail = text[start:].trim().to_owned()
+  if !tail.is_empty() {
+    parts.push(tail)
+  }
+  parts
+}
+
+///|
+async fn ccs_import_mcp_from_codex_file(
+  servers : Map[String, Json],
+  file_path : String,
+) -> Int {
+  if !(@fsx.exists_as_file(file_path) catch { _ => false }) {
+    return 0
+  }
+  let content = @fsx.read_file(file_path) catch { _ => return 0 }
+  ccs_import_mcp_from_codex_toml_text(servers, content)
+}
+
+///|
 async fn ccs_import_mcp_from_file(
   servers : Map[String, Json],
   app : String,
@@ -5170,6 +5475,10 @@ async fn ccs_import_mcp_from_apps_count(servers : Map[String, Json]) -> Int {
     servers,
     "claude",
     @pathx.join(ccs_home_dir(), ".claude.json"),
+  )
+  total += ccs_import_mcp_from_codex_file(
+    servers,
+    ccs_config_file_path("codex"),
   )
   total += ccs_import_mcp_from_file(
     servers,
