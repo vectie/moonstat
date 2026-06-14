@@ -363,7 +363,12 @@ fn moonstat_suite_routes() -> Array[String] {
     "POST /copilot_poll_for_auth", "POST /copilot_poll_for_account", "POST /copilot_logout",
     "DELETE /copilot_remove_account", "POST /copilot_set_default_account", "GET /copilot_get_token",
     "GET /copilot_get_token_for_account", "GET /copilot_get_models", "GET /copilot_get_models_for_account",
-    "GET /copilot_get_usage", "GET /copilot_get_usage_for_account", "ANY /v1beta/*path",
+    "GET /copilot_get_usage", "GET /copilot_get_usage_for_account", "GET|POST /open_external",
+    "GET|POST /copy_text_to_clipboard", "GET|POST /check_for_updates", "GET /is_portable_mode",
+    "GET /get_init_error", "GET /get_migration_result", "GET /get_skills_migration_result",
+    "GET|POST /get_tool_versions", "GET|POST /set_window_theme", "GET|POST /enter_lightweight_mode",
+    "GET|POST /exit_lightweight_mode", "GET /is_lightweight_mode", "GET|POST /save_file_dialog",
+    "GET|POST /open_file_dialog", "GET|POST /open_zip_file_dialog", "ANY /v1beta/*path",
     "ANY /gemini/v1beta/*path", "ANY /gemini/v1/*path",
   ]
 }

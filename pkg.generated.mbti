@@ -321,10 +321,6 @@ pub struct CodexTool {
 }
 pub impl ToJson for CodexTool
 
-type CopilotCredentials derive(ToJson, @json.FromJson)
-
-type CopilotDeviceCodeResponse derive(ToJson)
-
 pub struct CostBreakdown {
   input_cost_usd : String
   output_cost_usd : String
@@ -386,6 +382,8 @@ pub struct Gateway {
   prompts : Map[String, Json]
   auth_device_user_codes : Map[String, String]
   mut app_settings : Json
+  mut lightweight_mode : Bool
+  mut window_theme : String
   mut app_config_dir_override : String?
   mut auto_launch_enabled : Bool
   mut rectifier_config_json : Json

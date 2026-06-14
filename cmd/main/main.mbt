@@ -362,6 +362,36 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, config_app_path(arr, "/open_config_folder"))
     ["pick_directory", ..] | ["pick-directory", ..] =>
       check_usage_endpoint(arr, pick_directory_path(arr))
+    ["open_external", ..] | ["open-external", ..] =>
+      check_usage_endpoint(arr, open_external_path(arr))
+    ["copy_text_to_clipboard", ..] | ["copy-text-to-clipboard", ..] =>
+      check_usage_endpoint(arr, copy_text_to_clipboard_path(arr))
+    ["check_for_updates", ..] | ["check-for-updates", ..] =>
+      check_json_post_endpoint(arr, "/check_for_updates", "App shell")
+    ["is_portable_mode", ..] | ["is-portable-mode", ..] =>
+      check_usage_endpoint(arr, "/is_portable_mode")
+    ["get_init_error", ..] | ["get-init-error", ..] =>
+      check_usage_endpoint(arr, "/get_init_error")
+    ["get_migration_result", ..] | ["get-migration-result", ..] =>
+      check_usage_endpoint(arr, "/get_migration_result")
+    ["get_skills_migration_result", ..] | ["get-skills-migration-result", ..] =>
+      check_usage_endpoint(arr, "/get_skills_migration_result")
+    ["get_tool_versions", ..] | ["get-tool-versions", ..] =>
+      check_usage_endpoint(arr, tool_versions_path(arr))
+    ["set_window_theme", ..] | ["set-window-theme", ..] =>
+      check_usage_endpoint(arr, window_theme_path(arr))
+    ["enter_lightweight_mode", ..] | ["enter-lightweight-mode", ..] =>
+      check_json_post_endpoint(arr, "/enter_lightweight_mode", "App shell")
+    ["exit_lightweight_mode", ..] | ["exit-lightweight-mode", ..] =>
+      check_json_post_endpoint(arr, "/exit_lightweight_mode", "App shell")
+    ["is_lightweight_mode", ..] | ["is-lightweight-mode", ..] =>
+      check_usage_endpoint(arr, "/is_lightweight_mode")
+    ["save_file_dialog", ..] | ["save-file-dialog", ..] =>
+      check_usage_endpoint(arr, save_file_dialog_path(arr))
+    ["open_file_dialog", ..] | ["open-file-dialog", ..] =>
+      check_usage_endpoint(arr, "/open_file_dialog")
+    ["open_zip_file_dialog", ..] | ["open-zip-file-dialog", ..] =>
+      check_usage_endpoint(arr, "/open_zip_file_dialog")
     ["get_app_config_path", ..] | ["get-app-config-path", ..] =>
       check_usage_endpoint(arr, "/get_app_config_path")
     ["open_app_config_folder", ..] | ["open-app-config-folder", ..] =>
@@ -2373,6 +2403,46 @@ fn pick_directory_path(args : Array[String]) -> String {
     None => ()
   }
   cli_path_with_query("/pick_directory", query)
+}
+
+///|
+fn open_external_path(args : Array[String]) -> String {
+  match parse_string_arg(args, "--url") {
+    Some(url) => "/open_external?\{cli_query_pair("url", url)}"
+    None => "/open_external"
+  }
+}
+
+///|
+fn copy_text_to_clipboard_path(args : Array[String]) -> String {
+  match parse_string_arg(args, "--text") {
+    Some(text) => "/copy_text_to_clipboard?\{cli_query_pair("text", text)}"
+    None => "/copy_text_to_clipboard"
+  }
+}
+
+///|
+fn tool_versions_path(args : Array[String]) -> String {
+  match parse_string_arg(args, "--tools") {
+    Some(tools) => "/get_tool_versions?\{cli_query_pair("tools", tools)}"
+    None => "/get_tool_versions"
+  }
+}
+
+///|
+fn window_theme_path(args : Array[String]) -> String {
+  match parse_string_arg(args, "--theme") {
+    Some(theme) => "/set_window_theme?\{cli_query_pair("theme", theme)}"
+    None => "/set_window_theme"
+  }
+}
+
+///|
+fn save_file_dialog_path(args : Array[String]) -> String {
+  match parse_string_arg_any(args, "--default-name", "--defaultName") {
+    Some(name) => "/save_file_dialog?\{cli_query_pair("defaultName", name)}"
+    None => "/save_file_dialog"
+  }
 }
 
 ///|

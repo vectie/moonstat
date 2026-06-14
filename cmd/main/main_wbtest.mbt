@@ -969,3 +969,33 @@ test "top level ccs coding plan command builds quota path" {
     coding_plan_quota_path(["moonstat", "usage", "coding-plan"]) is None,
   )
 }
+
+///|
+test "top level ccs app shell commands build paths" {
+  assert_eq(
+    open_external_path(["moonstat", "open_external", "--url", "github.com/a b"]),
+    "/open_external?url=github.com%2Fa%20b",
+  )
+  assert_eq(
+    copy_text_to_clipboard_path([
+      "moonstat", "copy_text_to_clipboard", "--text", "hello world",
+    ]),
+    "/copy_text_to_clipboard?text=hello%20world",
+  )
+  assert_eq(
+    tool_versions_path([
+      "moonstat", "get_tool_versions", "--tools", "codex,claude",
+    ]),
+    "/get_tool_versions?tools=codex%2Cclaude",
+  )
+  assert_eq(
+    window_theme_path(["moonstat", "set_window_theme", "--theme", "dark"]),
+    "/set_window_theme?theme=dark",
+  )
+  assert_eq(
+    save_file_dialog_path([
+      "moonstat", "save_file_dialog", "--default-name", "config.json",
+    ]),
+    "/save_file_dialog?defaultName=config.json",
+  )
+}

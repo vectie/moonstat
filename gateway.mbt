@@ -36,6 +36,8 @@ pub struct Gateway {
   prompts : Map[String, Json]
   auth_device_user_codes : Map[String, String]
   mut app_settings : Json
+  mut lightweight_mode : Bool
+  mut window_theme : String
   mut app_config_dir_override : String?
   mut auto_launch_enabled : Bool
   mut rectifier_config_json : Json
@@ -94,6 +96,8 @@ pub fn Gateway::new(
     prompts: Map([], capacity=16),
     auth_device_user_codes: Map([], capacity=8),
     app_settings: ccs_default_app_settings_json(),
+    lightweight_mode: false,
+    window_theme: "system",
     app_config_dir_override: None,
     auto_launch_enabled: false,
     rectifier_config_json: ccs_default_rectifier_config_json(),
@@ -646,6 +650,81 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   })
   router.add_handler(@httpx.Method::Get, "/pick_directory", (r, w) => {
     self.handle_pick_directory(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/open_external", (r, w) => {
+    self.handle_open_external(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/open_external", (r, w) => {
+    self.handle_open_external(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/copy_text_to_clipboard", (r, w) => {
+    self.handle_copy_text_to_clipboard(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/copy_text_to_clipboard", (r, w) => {
+    self.handle_copy_text_to_clipboard(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/check_for_updates", (_, w) => {
+    self.handle_check_for_updates(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/check_for_updates", (_, w) => {
+    self.handle_check_for_updates(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/is_portable_mode", (_, w) => {
+    self.handle_is_portable_mode(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_init_error", (_, w) => {
+    self.handle_get_init_error(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_migration_result", (_, w) => {
+    self.handle_get_migration_result(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_skills_migration_result", (_, w) => {
+    self.handle_get_skills_migration_result(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_tool_versions", (r, w) => {
+    self.handle_get_tool_versions(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_tool_versions", (r, w) => {
+    self.handle_get_tool_versions(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/set_window_theme", (r, w) => {
+    self.handle_set_window_theme(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/set_window_theme", (r, w) => {
+    self.handle_set_window_theme(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/enter_lightweight_mode", (_, w) => {
+    self.handle_enter_lightweight_mode(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/enter_lightweight_mode", (_, w) => {
+    self.handle_enter_lightweight_mode(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/exit_lightweight_mode", (_, w) => {
+    self.handle_exit_lightweight_mode(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/exit_lightweight_mode", (_, w) => {
+    self.handle_exit_lightweight_mode(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/is_lightweight_mode", (_, w) => {
+    self.handle_is_lightweight_mode(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/save_file_dialog", (r, w) => {
+    self.handle_save_file_dialog(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/save_file_dialog", (r, w) => {
+    self.handle_save_file_dialog(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/open_file_dialog", (_, w) => {
+    self.handle_open_file_dialog(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/open_file_dialog", (_, w) => {
+    self.handle_open_file_dialog(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/open_zip_file_dialog", (_, w) => {
+    self.handle_open_zip_file_dialog(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/open_zip_file_dialog", (_, w) => {
+    self.handle_open_zip_file_dialog(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_app_config_path", (_, w) => {
     self.handle_get_app_config_path(w)
@@ -4544,6 +4623,159 @@ async fn Gateway::handle_pick_directory(
       None => Json::null()
     },
   )
+}
+
+///|
+async fn Gateway::handle_open_external(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  let raw_url = proxy_string_request(r.path, body, ["url"]).unwrap_or(
+    ccs_update_url(),
+  )
+  ignore(ccs_normalize_external_url(raw_url))
+  write_usage_json(w, Json::boolean(true))
+}
+
+///|
+async fn Gateway::handle_copy_text_to_clipboard(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  ignore(proxy_string_request(r.path, body, ["text"]).unwrap_or(""))
+  write_usage_json(w, Json::boolean(true))
+}
+
+///|
+async fn Gateway::handle_check_for_updates(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::boolean(true))
+}
+
+///|
+async fn Gateway::handle_is_portable_mode(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, Json::boolean(ccs_portable_mode()))
+}
+
+///|
+async fn Gateway::handle_get_init_error(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_init_error_json())
+}
+
+///|
+async fn Gateway::handle_get_migration_result(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_migration_result_json())
+}
+
+///|
+async fn Gateway::handle_get_skills_migration_result(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_skills_migration_result_json())
+}
+
+///|
+async fn Gateway::handle_get_tool_versions(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  let tools = proxy_string_request(r.path, body, ["tools"])
+  write_usage_json(w, ccs_get_tool_versions_json(tools))
+}
+
+///|
+async fn Gateway::handle_set_window_theme(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  self.window_theme = proxy_string_request(r.path, body, ["theme"]).unwrap_or(
+    "system",
+  )
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_enter_lightweight_mode(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.lightweight_mode = true
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_exit_lightweight_mode(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.lightweight_mode = false
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn Gateway::handle_is_lightweight_mode(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, Json::boolean(self.lightweight_mode))
+}
+
+///|
+async fn Gateway::handle_save_file_dialog(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  ignore(proxy_string_request(r.path, body, ["defaultName", "default_name"]))
+  write_usage_json(w, ccs_dialog_result_json())
+}
+
+///|
+async fn Gateway::handle_open_file_dialog(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_dialog_result_json())
+}
+
+///|
+async fn Gateway::handle_open_zip_file_dialog(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_dialog_result_json())
 }
 
 ///|
