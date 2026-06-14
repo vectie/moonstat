@@ -794,6 +794,38 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/s3_sync_fetch_remote_info", (_, w) => {
     self.handle_s3_sync_fetch_remote_info(w)
   })
+  router.add_handler(@httpx.Method::Get, "/read_omo_local_file", (_, w) => {
+    self.handle_read_omo_local_file(w, slim=false)
+  })
+  router.add_handler(@httpx.Method::Post, "/read_omo_local_file", (_, w) => {
+    self.handle_read_omo_local_file(w, slim=false)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_current_omo_provider_id", (_, w) => {
+    self.handle_get_current_omo_provider_id(w, slim=false)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_current_omo_provider_id", (_, w) => {
+    self.handle_get_current_omo_provider_id(w, slim=false)
+  })
+  router.add_handler(@httpx.Method::Post, "/disable_current_omo", (_, w) => {
+    self.handle_disable_current_omo(w, slim=false)
+  })
+  router.add_handler(@httpx.Method::Get, "/read_omo_slim_local_file", (_, w) => {
+    self.handle_read_omo_local_file(w, slim=true)
+  })
+  router.add_handler(@httpx.Method::Post, "/read_omo_slim_local_file", (_, w) => {
+    self.handle_read_omo_local_file(w, slim=true)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_current_omo_slim_provider_id", (
+    _,
+    w,
+  ) => self.handle_get_current_omo_provider_id(w, slim=true))
+  router.add_handler(@httpx.Method::Post, "/get_current_omo_slim_provider_id", (
+    _,
+    w,
+  ) => self.handle_get_current_omo_provider_id(w, slim=true))
+  router.add_handler(@httpx.Method::Post, "/disable_current_omo_slim", (_, w) => {
+    self.handle_disable_current_omo(w, slim=true)
+  })
   router.add_handler(@httpx.Method::Post, "/open_file_dialog", (_, w) => {
     self.handle_open_file_dialog(w)
   })
@@ -5330,6 +5362,43 @@ async fn Gateway::handle_s3_sync_fetch_remote_info(
       write_usage_bad_request(
         w, "S3 sync transport is not implemented in moonstat yet.",
       )
+  }
+}
+
+///|
+async fn Gateway::handle_read_omo_local_file(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  slim~ : Bool,
+) -> Unit {
+  ignore(self)
+  let (data, error) = ccs_read_omo_local_file_json(slim)
+  match data {
+    Some(data) => write_usage_json(w, data)
+    None =>
+      write_usage_bad_request(w, error.unwrap_or("OMO 配置文件不存在"))
+  }
+}
+
+///|
+async fn Gateway::handle_get_current_omo_provider_id(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  slim~ : Bool,
+) -> Unit {
+  write_usage_json(w, Json::string(self.current_omo_provider_id(slim)))
+}
+
+///|
+async fn Gateway::handle_disable_current_omo(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  slim~ : Bool,
+) -> Unit {
+  self.clear_current_omo_provider(slim)
+  match ccs_delete_omo_config_files(slim) {
+    Some(error) => write_usage_bad_request(w, error)
+    None => write_usage_json(w, Json::null())
   }
 }
 

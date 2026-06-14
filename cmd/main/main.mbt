@@ -505,6 +505,19 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       )
     ["s3_sync_fetch_remote_info", ..] | ["s3-sync-fetch-remote-info", ..] =>
       check_usage_endpoint(arr, "/s3_sync_fetch_remote_info")
+    ["read_omo_local_file", ..] | ["read-omo-local-file", ..] =>
+      check_usage_endpoint(arr, "/read_omo_local_file")
+    ["get_current_omo_provider_id", ..] | ["get-current-omo-provider-id", ..] =>
+      check_usage_endpoint(arr, "/get_current_omo_provider_id")
+    ["disable_current_omo", ..] | ["disable-current-omo", ..] =>
+      check_json_post_endpoint(arr, "/disable_current_omo", "OMO")
+    ["read_omo_slim_local_file", ..] | ["read-omo-slim-local-file", ..] =>
+      check_usage_endpoint(arr, "/read_omo_slim_local_file")
+    ["get_current_omo_slim_provider_id", ..]
+    | ["get-current-omo-slim-provider-id", ..] =>
+      check_usage_endpoint(arr, "/get_current_omo_slim_provider_id")
+    ["disable_current_omo_slim", ..] | ["disable-current-omo-slim", ..] =>
+      check_json_post_endpoint(arr, "/disable_current_omo_slim", "OMO")
     ["open_file_dialog", ..] | ["open-file-dialog", ..] =>
       check_usage_endpoint(arr, "/open_file_dialog")
     ["open_zip_file_dialog", ..] | ["open-zip-file-dialog", ..] =>

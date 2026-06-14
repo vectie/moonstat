@@ -146,6 +146,18 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("POST /s3_sync_download")))
   assert_true(routes.contains(Json::string("POST /s3_sync_save_settings")))
   assert_true(routes.contains(Json::string("GET /s3_sync_fetch_remote_info")))
+  assert_true(routes.contains(Json::string("GET|POST /read_omo_local_file")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /get_current_omo_provider_id")),
+  )
+  assert_true(routes.contains(Json::string("POST /disable_current_omo")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /read_omo_slim_local_file")),
+  )
+  assert_true(
+    routes.contains(Json::string("GET|POST /get_current_omo_slim_provider_id")),
+  )
+  assert_true(routes.contains(Json::string("POST /disable_current_omo_slim")))
   assert_true(routes.contains(Json::string("GET /get_installed_skills")))
   assert_true(routes.contains(Json::string("GET /get_skill_backups")))
   assert_true(routes.contains(Json::string("POST /install_skill_unified")))
