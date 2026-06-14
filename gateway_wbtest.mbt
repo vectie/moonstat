@@ -3025,6 +3025,77 @@ test "ccs session extraction uses claude metadata and headers" {
 }
 
 ///|
+test "ccs client format detects proxy path shapes" {
+  assert_true(ccs_client_format_from_path("/v1/messages") == Claude)
+  assert_true(ccs_client_format_from_path("/api/v1/messages") == Claude)
+  assert_true(ccs_client_format_from_path("/v1/responses") == Codex)
+  assert_true(ccs_client_format_from_path("/v1/chat/completions") == OpenAI)
+  assert_true(
+    ccs_client_format_from_path("/v1internal/models/gemini-pro:generateContent") ==
+    GeminiCli,
+  )
+  assert_true(
+    ccs_client_format_from_path("/v1beta/models/gemini-pro:generateContent") ==
+    Gemini,
+  )
+  assert_true(
+    ccs_client_format_from_path("/custom/models/gemini:generateContent") ==
+    Gemini,
+  )
+  assert_true(ccs_client_format_from_path("/unknown") == Unknown)
+  assert_eq(GeminiCli.to_string(), "gemini_cli")
+}
+
+///|
+test "ccs client format falls back to body shape" {
+  let claude_body = @json.parse(
+    (
+      #|{
+      #|  "model": "claude-sonnet-4-6",
+      #|  "messages": [{ "role": "user", "content": "hi" }],
+      #|  "max_tokens": 1024
+      #|}
+    ),
+  )
+  assert_true(ccs_client_format_from_body(claude_body) == Claude)
+  assert_true(
+    ccs_client_format_for_request("/unknown", Some(claude_body)) == Claude,
+  )
+
+  let openai_body = @json.parse(
+    (
+      #|{
+      #|  "model": "gpt-5",
+      #|  "messages": [{ "role": "user", "content": "hi" }]
+      #|}
+    ),
+  )
+  assert_true(ccs_client_format_from_body(openai_body) == OpenAI)
+
+  let codex_body = @json.parse(
+    (
+      #|{
+      #|  "input": "Write a function"
+      #|}
+    ),
+  )
+  assert_true(ccs_client_format_from_body(codex_body) == Codex)
+
+  let gemini_body = @json.parse(
+    (
+      #|{
+      #|  "contents": [{ "parts": [{ "text": "hi" }] }]
+      #|}
+    ),
+  )
+  assert_true(ccs_client_format_from_body(gemini_body) == Gemini)
+  assert_true(
+    ccs_client_format_for_request("/v1/responses", Some(gemini_body)) == Codex,
+  )
+  assert_true(ccs_client_format_for_request("/unknown", None) == Unknown)
+}
+
+///|
 test "ccs session extraction prefixes codex client ids" {
   let body = @json.parse(
     (

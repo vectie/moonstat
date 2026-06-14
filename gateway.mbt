@@ -2041,7 +2041,11 @@ async fn Gateway::handle_codex_responses(
       let stream = json_bool_field(json, "stream").unwrap_or(false)
       self.stats.record_stream_mode(stream)
       let request = normalize_codex_oauth_request(json)
-      let session_id = extract_client_session_id(r.headers, json, "codex")
+      let client_format = ccs_client_format_for_request(
+        r.path.to_owned(),
+        Some(json),
+      ).to_string()
+      let session_id = extract_client_session_id(r.headers, json, client_format)
       self.stats.record_request_context(
         "codex",
         json_string_field(json, "model").unwrap_or(self.model),
@@ -2089,7 +2093,11 @@ async fn Gateway::handle_chat_completions(
       let response_model = openai_chat_model(json).unwrap_or(self.model)
       let stream = json_bool_field(json, "stream").unwrap_or(false)
       self.stats.record_stream_mode(stream)
-      let session_id = extract_client_session_id(r.headers, json, "openai")
+      let client_format = ccs_client_format_for_request(
+        r.path.to_owned(),
+        Some(json),
+      ).to_string()
+      let session_id = extract_client_session_id(r.headers, json, client_format)
       self.stats.record_request_context("codex", response_model, session_id~)
       let request = openai_chat_to_codex_response_request(json, self.model)
       guard request is Some(codex_request) else {
@@ -3756,6 +3764,84 @@ fn codex_oauth_headers(
     None => ()
   }
   headers
+}
+
+///|
+priv enum CcsClientFormat {
+  Claude
+  Codex
+  OpenAI
+  Gemini
+  GeminiCli
+  Unknown
+} derive(Eq)
+
+///|
+fn CcsClientFormat::to_string(self : CcsClientFormat) -> String {
+  match self {
+    Claude => "claude"
+    Codex => "codex"
+    OpenAI => "openai"
+    Gemini => "gemini"
+    GeminiCli => "gemini_cli"
+    Unknown => "unknown"
+  }
+}
+
+///|
+fn ccs_client_format_from_path(path : String) -> CcsClientFormat {
+  if path.contains("/v1/messages") {
+    Claude
+  } else if path.contains("/v1/responses") {
+    Codex
+  } else if path.contains("/v1/chat/completions") {
+    OpenAI
+  } else if path.contains("/v1internal/") && path.contains("generateContent") {
+    GeminiCli
+  } else if (path.contains("/v1beta/") || path.contains("/v1/")) &&
+    path.contains("generateContent") {
+    Gemini
+  } else if path.contains("generateContent") {
+    Gemini
+  } else {
+    Unknown
+  }
+}
+
+///|
+fn ccs_client_format_from_body(body : Json) -> CcsClientFormat {
+  guard body is Object(obj) else { return Unknown }
+  if obj.get("messages") is Some(_) &&
+    obj.get("model") is Some(_) &&
+    obj.get("response_format") is None &&
+    obj.get("contents") is None {
+    if obj.get("max_tokens") is Some(_) {
+      return Claude
+    }
+    return OpenAI
+  }
+  if obj.get("input") is Some(_) {
+    return Codex
+  }
+  if obj.get("contents") is Some(_) {
+    return Gemini
+  }
+  Unknown
+}
+
+///|
+fn ccs_client_format_for_request(
+  path : String,
+  body : Json?,
+) -> CcsClientFormat {
+  let format = ccs_client_format_from_path(path)
+  if format != Unknown {
+    return format
+  }
+  match body {
+    Some(body) => ccs_client_format_from_body(body)
+    None => Unknown
+  }
 }
 
 ///|
@@ -15360,7 +15446,11 @@ async fn Gateway::handle_messages(
       return
     }
     Ok(json) => {
-      let session_id = extract_client_session_id(r.headers, json, "claude")
+      let client_format = ccs_client_format_for_request(
+        r.path.to_owned(),
+        Some(json),
+      ).to_string()
+      let session_id = extract_client_session_id(r.headers, json, client_format)
       let anthropic_beta = r.headers.get("anthropic-beta")
       let anthropic_request_result : Result[AnthropicRequest, Error] = try? @json.from_json(
         json,
