@@ -3331,7 +3331,7 @@ fn claude_compatible_provider_headers(
     "Accept": accept,
   }
   if provider_type == Some("gemini_cli") {
-    headers["Authorization"] = "Bearer \{api_key}"
+    headers["Authorization"] = "Bearer \{gemini_cli_bearer_token(api_key)}"
     headers["x-goog-api-client"] = "GeminiCLI/1.0"
   } else if provider_type == Some("openrouter") ||
     provider_type == Some("claude_auth") {
@@ -3355,6 +3355,22 @@ fn claude_compatible_provider_headers(
     None => ()
   }
   headers
+}
+
+///|
+fn gemini_cli_bearer_token(api_key : String) -> String {
+  let trimmed = api_key.trim()
+  if trimmed.has_prefix("{") {
+    let parsed = @json.parse(trimmed.to_owned()) catch { _ => Json::null() }
+    if parsed is Object(obj) {
+      match json_string_from_map(obj, "access_token") {
+        Some(token) if !token.trim().is_empty() =>
+          return token.trim().to_owned()
+        _ => ()
+      }
+    }
+  }
+  trimmed.to_owned()
 }
 
 ///|

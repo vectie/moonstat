@@ -6932,6 +6932,21 @@ test "claude compatible provider headers honor ccs inferred provider type auth" 
   assert_eq(gemini_oauth["Authorization"], "Bearer ya29.access-token")
   assert_eq(gemini_oauth["x-goog-api-client"], "GeminiCLI/1.0")
   assert_true(gemini_oauth.get("x-goog-api-key") is None)
+  let gemini_oauth_json = claude_compatible_provider_headers(
+    "{\"access_token\":\"ya29.valid\",\"refresh_token\":\"rt\"}",
+    "gemini_native",
+    provider_type=Some("gemini_cli"),
+  )
+  assert_eq(gemini_oauth_json["Authorization"], "Bearer ya29.valid")
+  let gemini_oauth_trimmed = claude_compatible_provider_headers(
+    "\nya29.raw-token-value\n",
+    "gemini_native",
+    provider_type=Some("gemini_cli"),
+  )
+  assert_eq(
+    gemini_oauth_trimmed["Authorization"],
+    "Bearer ya29.raw-token-value",
+  )
 }
 
 ///|
