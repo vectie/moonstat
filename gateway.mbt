@@ -9151,6 +9151,7 @@ async fn Gateway::handle_add_provider(
     "addToLive", "add_to_live",
   ]).unwrap_or(true)
   let provider_id = target.provider_id
+  self.sync_provider_limits_from_target(target)
   self.provider_router.upsert_provider(target)
   if add_to_live || self.provider_router.current_provider_id(app_type) is None {
     self.provider_router.set_current_provider(app_type, provider_id)
@@ -9185,6 +9186,7 @@ async fn Gateway::handle_update_provider(
     ignore(self.provider_router.delete_provider(app_type, original_id))
   }
   let provider_id = target.provider_id
+  self.sync_provider_limits_from_target(target)
   self.provider_router.upsert_provider(target)
   if was_current {
     self.provider_router.set_current_provider(app_type, provider_id)
@@ -10434,6 +10436,17 @@ async fn Gateway::handle_usage_provider_limits(
   let monthly_limit_usd = usage_string_from_request(r.path, body, [
     "monthly_limit_usd", "monthlyLimitUsd",
   ])
+  let provider_limits = self.provider_limit_config_for_provider(
+    provider_id, app_type,
+  )
+  let daily_limit_usd = usage_limit_override_or_provider_limit(
+    daily_limit_usd,
+    provider_limits.map(fn(config) { config.daily_limit_usd }),
+  )
+  let monthly_limit_usd = usage_limit_override_or_provider_limit(
+    monthly_limit_usd,
+    provider_limits.map(fn(config) { config.monthly_limit_usd }),
+  )
   write_usage_json(
     w,
     self.stats.provider_limit_status_json(
@@ -12071,6 +12084,86 @@ fn provider_settings_codex_fast_mode(settings : Json?) -> Bool? {
 }
 
 ///|
+fn Gateway::provider_limit_config_for_provider(
+  self : Gateway,
+  provider_id : String,
+  app_type : String,
+) -> ProviderLimitConfig? {
+  guard self.provider_router.provider_by_id(app_type, provider_id)
+    is Some(provider) else {
+    return None
+  }
+  provider_limit_config_from_settings(provider.settings_config)
+}
+
+///|
+fn Gateway::sync_provider_limits_from_target(
+  self : Gateway,
+  target : ProviderRouteTarget,
+) -> Unit {
+  guard provider_limit_config_from_settings(target.settings_config)
+    is Some(config) else {
+    return
+  }
+  self.stats.set_provider_limits(
+    target.provider_id,
+    target.app_type,
+    daily_limit_usd=config.daily_limit_usd,
+    monthly_limit_usd=config.monthly_limit_usd,
+  )
+}
+
+///|
+fn provider_limit_config_from_settings(
+  settings : Json?,
+) -> ProviderLimitConfig? {
+  guard settings is Some(Object(obj)) else { return None }
+  let daily = provider_limit_string_from_settings(obj, [
+    "limitDailyUsd", "limit_daily_usd",
+  ])
+  let monthly = provider_limit_string_from_settings(obj, [
+    "limitMonthlyUsd", "limit_monthly_usd",
+  ])
+  if daily is None && monthly is None {
+    None
+  } else {
+    Some(
+      ProviderLimitConfig::new(daily_limit_usd=daily, monthly_limit_usd=monthly),
+    )
+  }
+}
+
+///|
+fn provider_limit_string_from_settings(
+  obj : Map[String, Json],
+  keys : Array[String],
+) -> String? {
+  match json_non_empty_string_from_map_any(obj, keys) {
+    Some(value) => return Some(value)
+    None => ()
+  }
+  match obj.get("meta") {
+    Some(Object(meta)) => json_non_empty_string_from_map_any(meta, keys)
+    _ => None
+  }
+}
+
+///|
+fn usage_limit_override_or_provider_limit(
+  explicit_limit : String?,
+  provider_limit : String??,
+) -> String? {
+  match explicit_limit {
+    Some(value) => Some(value)
+    None =>
+      match provider_limit {
+        Some(Some(value)) => Some(value)
+        _ => None
+      }
+  }
+}
+
+///|
 fn json_non_empty_string_from_map_any(
   obj : Map[String, Json],
   keys : Array[String],
@@ -12150,7 +12243,8 @@ fn provider_copy_inline_metadata_fields(
     key in [
       "customUserAgent", "custom_user_agent", "userAgent", "user_agent", "apiFormat",
       "api_format", "promptCacheKey", "prompt_cache_key", "codexFastMode", "codex_fast_mode",
-      "githubAccountId", "github_account_id",
+      "githubAccountId", "github_account_id", "limitDailyUsd", "limit_daily_usd",
+      "limitMonthlyUsd", "limit_monthly_usd",
     ] {
     match obj.get(key) {
       Some(value) => settings[key] = value

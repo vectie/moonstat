@@ -608,6 +608,82 @@ test "provider target parses ccs claude desktop route metadata" {
 }
 
 ///|
+test "provider target preserves ccs provider limit metadata" {
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("limited-provider"),
+            "name": Json::string("Limited Provider"),
+            "limitDailyUsd": Json::string("0.10"),
+            "meta": { "limitMonthlyUsd": Json::string("3.5") }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "codex",
+    )
+    is Some(provider) else {
+    fail("expected limited provider")
+  }
+  guard provider_limit_config_from_settings(provider.settings_config)
+    is Some(limits) else {
+    fail("expected provider limits")
+  }
+  assert_eq(limits.daily_limit_usd, Some("0.10"))
+  assert_eq(limits.monthly_limit_usd, Some("3.5"))
+}
+
+///|
+test "gateway syncs ccs provider limit metadata into usage limits" {
+  let gateway = Gateway::new(port=0)
+  let provider = ProviderRouteTarget::new(
+    app_type="codex",
+    provider_id="limited-provider",
+    provider_name="Limited Provider",
+    settings_config=Some(
+      {
+        "meta": {
+          "limitDailyUsd": Json::string("0.10"),
+          "limitMonthlyUsd": Json::string("0.30"),
+        }.to_json(),
+      }.to_json(),
+    ),
+  )
+  gateway.provider_router.upsert_provider(provider)
+  gateway.sync_provider_limits_from_target(provider)
+  let now = TREND_DAY_SECONDS * 10
+  gateway.stats.record_request_log(
+    RequestLog::new(
+      request_id="req-provider-limit",
+      provider_id="limited-provider",
+      app_type="codex",
+      model="gpt-5",
+      usage=TokenUsage::new(input_tokens=1, output_tokens=1),
+      total_cost_usd="0.100000",
+      status_code=200,
+      created_at=now,
+    ),
+  )
+  json_inspect(
+    gateway.stats.provider_limit_status_json(
+      "limited-provider",
+      "codex",
+      now_ts=Some(now),
+    ),
+    content={
+      "providerId": "limited-provider",
+      "dailyUsage": "0.100000",
+      "dailyLimit": "0.10",
+      "dailyExceeded": true,
+      "monthlyUsage": "0.100000",
+      "monthlyLimit": "0.30",
+      "monthlyExceeded": false,
+    },
+  )
+}
+
+///|
 test "provider target resolves ccs app settings credentials" {
   guard provider_target_from_request(
       "/add_provider",
