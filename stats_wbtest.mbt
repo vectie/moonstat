@@ -302,6 +302,7 @@ test "traffic stats leaves ccs error pricing model empty" {
   stats.record_upstream_error_status(25, 502)
   assert_eq(stats.request_logs.length(), 1)
   let log = stats.request_logs[0]
+  assert_eq(log.model, "client-alias")
   assert_eq(log.request_model, Some("client-alias"))
   assert_eq(log.pricing_model, Some(""))
   assert_eq(log.status_code, 502)
@@ -310,6 +311,8 @@ test "traffic stats leaves ccs error pricing model empty" {
   guard log.to_ccs_request_log_detail_json() is Object(obj) else {
     fail("expected request detail object")
   }
+  assert_eq(obj["model"], Json::string("client-alias"))
+  assert_eq(obj["requestModel"], Json::string("client-alias"))
   assert_eq(obj["pricingModel"], Json::string(""))
 }
 

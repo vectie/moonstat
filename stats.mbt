@@ -542,6 +542,11 @@ fn TrafficStats::record_completed_request(
     Some(request_model) => Some(request_model)
     None => Some(model)
   }
+  let logged_model = if error_message is Some(_) {
+    request_model.unwrap_or(model)
+  } else {
+    model
+  }
   let app_type = self.current_request_app_type.unwrap_or("unknown")
   let pricing_model = match self.current_request_pricing_model_source {
     "request" =>
@@ -572,7 +577,7 @@ fn TrafficStats::record_completed_request(
       provider_id=self.current_provider_id.unwrap_or("unknown"),
       provider_name=self.current_provider,
       app_type~,
-      model~,
+      model=logged_model,
       request_model~,
       pricing_model=Some(
         if error_message is Some(_) {
