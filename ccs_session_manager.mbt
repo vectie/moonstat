@@ -295,7 +295,7 @@ fn ccs_session_terminal_from_settings(settings : Json) -> String? {
 }
 
 ///|
-fn ccs_session_terminal_launch(
+async fn ccs_session_terminal_launch(
   target : String,
   command : String,
   cwd : String?,
@@ -310,10 +310,46 @@ fn ccs_session_terminal_launch(
     "kaku" => Ok(ccs_session_wezterm_like_launch("Kaku", command, cwd))
     "alacritty" => Ok(ccs_session_alacritty_launch(command, cwd))
     "custom" => ccs_session_custom_launch(command, cwd, custom_config)
-    "warp" =>
-      Err("Warp session terminal launch is not implemented in moonstat yet.")
+    "warp" => ccs_session_warp_launch(command, cwd)
     _ => Err("Unsupported terminal target: \{target}")
   }
+}
+
+///|
+async fn ccs_session_warp_launch(
+  command : String,
+  cwd : String?,
+) -> Result[CcsSessionTerminalLaunch, String] {
+  guard cwd is Some(dir) && !dir.trim().is_empty() else {
+    return Err("Failed to resume session without cwd")
+  }
+  guard @fsx.exists(dir) else {
+    return Err(
+      "Failed to create temporary script file for launching Warp: cwd not found: \{dir}",
+    )
+  }
+  let gen = @uuid.generator(@random.Rand::new())
+  let script_path = @pathx.join(dir, ".moonstat-warp-\{gen.v4()}.sh")
+  let script = [
+    "#!/usr/bin/env sh",
+    "",
+    "rm -- \"$0\"",
+    "",
+    "exec \{command}",
+    "",
+  ].join("\n")
+  @fsx.write_to_file(script_path, script, create=0o755) catch {
+    error =>
+      return Err("Failed to write to temporary script file for Warp: \{error}")
+  }
+  Ok(CcsSessionTerminalLaunch::{
+    program: "open",
+    args: [
+      "-a",
+      "Warp",
+      "warp://action/new_tab?path=\{ccs_session_url_query_encode(script_path)}",
+    ],
+  })
 }
 
 ///|
@@ -471,6 +507,36 @@ fn ccs_session_shell_escape(value : String) -> String {
 ///|
 fn ccs_session_escape_osascript(value : String) -> String {
   value.replace_all(old="\\", new="\\\\").replace_all(old="\"", new="\\\"")
+}
+
+///|
+fn ccs_session_url_query_encode(value : String) -> String {
+  let builder = StringBuilder::new()
+  for ch in value {
+    match ch {
+      'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' =>
+        builder.write_char(ch)
+      _ => {
+        let bytes = @encoding/utf8.encode(ch.to_string())
+        for byte in bytes {
+          let hex = byte.to_int()
+          builder.write_char('%')
+          builder.write_char(ccs_session_hex_digit((hex >> 4) & 0xF))
+          builder.write_char(ccs_session_hex_digit(hex & 0xF))
+        }
+      }
+    }
+  }
+  builder.to_string()
+}
+
+///|
+fn ccs_session_hex_digit(n : Int) -> Char {
+  if n < 10 {
+    ('0'.to_int() + n).unsafe_to_char()
+  } else {
+    ('A'.to_int() + n - 10).unsafe_to_char()
+  }
 }
 
 ///|

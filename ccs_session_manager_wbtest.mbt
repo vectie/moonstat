@@ -68,7 +68,7 @@ test "ccs session terminal target follows CCS preferred terminal aliases" {
 }
 
 ///|
-test "ccs session terminal app launch quotes cwd in applescript" {
+async test "ccs session terminal app launch quotes cwd in applescript" {
   let launch = ccs_session_terminal_launch(
     "terminal",
     "claude --resume abc-123",
@@ -85,7 +85,7 @@ test "ccs session terminal app launch quotes cwd in applescript" {
 }
 
 ///|
-test "ccs session wezterm launch uses cwd argument and shell command" {
+async test "ccs session wezterm launch uses cwd argument and shell command" {
   let launch = ccs_session_terminal_launch(
     "wezterm",
     "claude --resume abc-123",
@@ -101,7 +101,7 @@ test "ccs session wezterm launch uses cwd argument and shell command" {
 }
 
 ///|
-test "ccs session custom terminal expands command and cwd" {
+async test "ccs session custom terminal expands command and cwd" {
   let launch = ccs_session_terminal_launch(
     "custom",
     "codex resume s1",
@@ -115,4 +115,29 @@ test "ccs session custom terminal expands command and cwd" {
   assert_true(
     ccs_session_terminal_launch("custom", "cmd", None, None) is Err(_),
   )
+}
+
+///|
+async test "ccs session warp launch writes self removing script and URL" {
+  @fsx.with_temporary_directory("moonstat-warp-session-XXXXXX", tmpdir => {
+    let launch = ccs_session_terminal_launch(
+      "warp",
+      "claude --resume warp-1",
+      Some(tmpdir),
+      None,
+    ).unwrap()
+    assert_eq(launch.program, "open")
+    assert_eq(launch.args[0], "-a")
+    assert_eq(launch.args[1], "Warp")
+    assert_true(launch.args[2].has_prefix("warp://action/new_tab?path="))
+    assert_true(launch.args[2].contains("%2F"))
+    let entries = @fsx.list_directory(tmpdir)
+    assert_eq(entries.length(), 1)
+    assert_true(entries[0].name.has_prefix(".moonstat-warp-"))
+    assert_true(entries[0].name.has_suffix(".sh"))
+    let script = @fsx.read_file(entries[0].path)
+    assert_true(script.contains("rm -- \"$0\""))
+    assert_true(script.contains("exec claude --resume warp-1"))
+  })
+  assert_true(ccs_session_terminal_launch("warp", "cmd", None, None) is Err(_))
 }
