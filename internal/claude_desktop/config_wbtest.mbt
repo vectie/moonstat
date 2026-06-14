@@ -90,6 +90,64 @@ async test "write meta restores previous applied profile and preserves fields" {
 }
 
 ///|
+async test "install proxy profile rolls back when profile write fails" {
+  @fsx.with_temporary_directory("moonstat-claude-install-XXXXXX", tmpdir => {
+    let normal_config_path = @pathx.join(
+      @pathx.join(tmpdir, "Claude"),
+      CONFIG_FILE,
+    )
+    let threep_config_path = @pathx.join(
+      @pathx.join(tmpdir, "Claude-3p"),
+      CONFIG_FILE,
+    )
+    let config_library_path = @pathx.join(
+      @pathx.join(tmpdir, "Claude-3p"),
+      CONFIG_LIBRARY_DIR,
+    )
+    let paths = ClaudeDesktopPaths::{
+      normal_config_path,
+      threep_config_path,
+      config_library_path,
+      profile_path: @pathx.join(config_library_path, PROFILE_ID + ".json"),
+      meta_path: @pathx.join(config_library_path, "_meta.json"),
+    }
+    write_json_file(
+      paths.normal_config_path,
+      Json::object({
+        "deploymentMode": Json::string("1p"),
+        "normal": Json::boolean(true),
+      }),
+    )
+    write_json_file(
+      paths.threep_config_path,
+      Json::object({
+        "deploymentMode": Json::string("1p"),
+        "threep": Json::boolean(true),
+      }),
+    )
+    @fsx.write_to_file(paths.config_library_path, "not a directory")
+
+    let result = install_proxy_profile_at_paths(
+      paths,
+      "127.0.0.1",
+      15721,
+      token=Some("ccs-token"),
+    )
+
+    assert_true(result is Err(_))
+    json_inspect(read_json_or_empty(paths.normal_config_path), content={
+      "deploymentMode": "1p",
+      "normal": true,
+    })
+    json_inspect(read_json_or_empty(paths.threep_config_path), content={
+      "deploymentMode": "1p",
+      "threep": true,
+    })
+    assert_false(@fsx.exists_as_file(paths.profile_path) catch { _ => false })
+  })
+}
+
+///|
 async test "remove gateway enterprise config keeps unrelated enterprise fields" {
   @fsx.with_temporary_directory("moonstat-claude-enterprise-XXXXXX", tmpdir => {
     let config_path = @pathx.join(tmpdir, "claude_desktop_config.json")

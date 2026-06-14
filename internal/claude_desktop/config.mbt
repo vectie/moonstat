@@ -66,6 +66,12 @@ priv struct ClaudeDesktopPaths {
 }
 
 ///|
+priv struct FileSnapshot {
+  path : String
+  content : String?
+}
+
+///|
 pub async fn gateway_token() -> String? {
   match gateway_token_from_env() {
     Some(token) => Some(token)
@@ -99,8 +105,23 @@ pub async fn install_proxy_profile(
   port : Int,
   token? : String? = None,
 ) -> Result[ClaudeDesktopInstall, String] {
-  let paths = claude_desktop_paths()
+  install_proxy_profile_at_paths(claude_desktop_paths(), host, port, token~)
+}
+
+///|
+async fn install_proxy_profile_at_paths(
+  paths : ClaudeDesktopPaths,
+  host : String,
+  port : Int,
+  token? : String? = None,
+) -> Result[ClaudeDesktopInstall, String] {
   let base_url = local_gateway_base_url(host, port)
+  let snapshots = snapshot_files([
+    paths.normal_config_path,
+    paths.threep_config_path,
+    paths.profile_path,
+    paths.meta_path,
+  ])
   try {
     let gateway_token = get_or_create_gateway_token(token)
     write_deployment_mode(paths.normal_config_path, "3p")
@@ -117,7 +138,10 @@ pub async fn install_proxy_profile(
       base_url,
     })
   } catch {
-    err => Err("failed to install Claude Desktop profile: \{err}")
+    err => {
+      restore_file_snapshots(snapshots)
+      Err("failed to install Claude Desktop profile: \{err}")
+    }
   }
 }
 
@@ -450,6 +474,40 @@ fn is_gateway_enterprise_config_key(key : String) -> Bool {
 async fn read_json_or_empty(path : String) -> Json {
   @json.parse(@fsx.read_file(path)) catch {
     _ => Json::object({})
+  }
+}
+
+///|
+async fn snapshot_files(paths : Array[String]) -> Array[FileSnapshot] {
+  let snapshots : Array[FileSnapshot] = []
+  for path in paths {
+    let content = if (@fsx.exists_as_file(path) catch { _ => false }) {
+      Some(@fsx.read_file(path) catch { _ => "" })
+    } else {
+      None
+    }
+    snapshots.push({ path, content })
+  }
+  snapshots
+}
+
+///|
+async fn restore_file_snapshots(snapshots : Array[FileSnapshot]) -> Unit {
+  for snapshot in snapshots {
+    match snapshot.content {
+      Some(content) => {
+        @fsx.make_directory(
+          @pathx.dirname(snapshot.path),
+          recursive=true,
+          exists_ok=true,
+        )
+        @fsx.write_to_file(snapshot.path, content)
+      }
+      None =>
+        if (@fsx.exists_as_file(snapshot.path) catch { _ => false }) {
+          @fsx.remove(snapshot.path)
+        }
+    }
   }
 }
 
