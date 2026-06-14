@@ -8836,8 +8836,7 @@ async fn Gateway::apply_proxy_app_config_request(
 ) -> String? {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
-  let app_type = match
-    proxy_string_request(r.path, config, ["app_type", "appType"]) {
+  let app_type = match proxy_app_type_from_request(r.path, config) {
     Some(app_type) if !app_type.trim().is_empty() => app_type.trim().to_owned()
     _ => return None
   }
@@ -9173,8 +9172,7 @@ async fn Gateway::handle_proxy_set_takeover_for_app(
 ) -> Unit {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
-  guard proxy_string_request(r.path, config, ["app_type", "appType"])
-    is Some(app_type) else {
+  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app_type")
     return
   }
@@ -9202,8 +9200,7 @@ async fn Gateway::handle_proxy_switch_provider(
 ) -> Unit {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
-  guard proxy_string_request(r.path, config, ["app_type", "appType"])
-    is Some(app_type) else {
+  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app_type")
     return
   }

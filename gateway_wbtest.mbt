@@ -2242,6 +2242,26 @@ test "proxy config request parsers accept ccs camelCase and query aliases" {
     ),
     Some("claude"),
   )
+  assert_eq(
+    proxy_app_type_from_request(
+      "/proxy/app-config?app=codex&enabled=true",
+      None,
+    ),
+    Some("codex"),
+  )
+  assert_eq(
+    proxy_app_type_from_request(
+      "/proxy/takeover-status",
+      Some(
+        { "app": Json::string(" gemini "), "enabled": Json::boolean(true) }.to_json(),
+      ),
+    ),
+    Some("gemini"),
+  )
+  assert_eq(
+    proxy_app_type_from_request("/switch_provider?app=codex&id=custom", None),
+    Some("codex"),
+  )
 }
 
 ///|
