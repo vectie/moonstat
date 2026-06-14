@@ -2303,7 +2303,29 @@ test "codex oauth headers propagate ccs session headers" {
   assert_eq(headers["Accept"], "text/event-stream")
   assert_eq(headers["session_id"], "codex_session-1")
   assert_eq(headers["x-client-request-id"], "codex_session-1")
-  assert_eq(headers["x-codex-window-id"], "codex_session-1")
+  assert_eq(headers["x-codex-window-id"], "codex_session-1:0")
+}
+
+///|
+test "codex oauth headers trim empty ccs session ids" {
+  let creds = @codex.Credentials::{
+    idToken: "id",
+    accessToken: "access",
+    refreshToken: "refresh",
+    accountId: "account",
+  }
+  let headers = codex_oauth_headers(
+    creds,
+    "application/json",
+    Some("  session-123  "),
+  )
+  assert_eq(headers["session_id"], "session-123")
+  assert_eq(headers["x-client-request-id"], "session-123")
+  assert_eq(headers["x-codex-window-id"], "session-123:0")
+  let empty = codex_oauth_headers(creds, "application/json", Some("   "))
+  assert_true(empty.get("session_id") is None)
+  assert_true(empty.get("x-client-request-id") is None)
+  assert_true(empty.get("x-codex-window-id") is None)
 }
 
 ///|

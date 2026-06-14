@@ -3637,9 +3637,12 @@ fn codex_oauth_headers(
   }
   match session_id {
     Some(id) => {
-      headers["session_id"] = id
-      headers["x-client-request-id"] = id
-      headers["x-codex-window-id"] = id
+      let trimmed = id.trim().to_owned()
+      if !trimmed.is_empty() {
+        headers["session_id"] = trimmed
+        headers["x-client-request-id"] = trimmed
+        headers["x-codex-window-id"] = "\{trimmed}:0"
+      }
     }
     None => ()
   }
