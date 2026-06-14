@@ -1179,6 +1179,41 @@ test "codex oauth headers propagate ccs session headers" {
 }
 
 ///|
+test "ccs managed account guard rejects copilot proxy placeholder" {
+  let result = ccs_reject_proxy_managed_placeholder_for_upstream(
+    "https://api.githubcopilot.com/chat/completions",
+    { "Authorization": "Bearer PROXY_MANAGED" },
+  )
+  assert_true(result is Err(_))
+  match result {
+    Err(message) => assert_true(message.contains("PROXY_MANAGED"))
+    _ => fail("expected managed account guard error")
+  }
+}
+
+///|
+test "ccs managed account guard rejects codex proxy placeholder" {
+  let result = ccs_reject_proxy_managed_placeholder_for_upstream(
+    "https://chatgpt.com/backend-api/codex/responses",
+    { "Authorization": "Bearer PROXY_MANAGED" },
+  )
+  assert_true(result is Err(_))
+  match result {
+    Err(message) => assert_true(message.contains("PROXY_MANAGED"))
+    _ => fail("expected managed account guard error")
+  }
+}
+
+///|
+test "ccs managed account guard is scoped to managed upstreams" {
+  let result = ccs_reject_proxy_managed_placeholder_for_upstream(
+    "https://api.example.com/v1/messages",
+    { "Authorization": "Bearer PROXY_MANAGED" },
+  )
+  assert_true(result is Ok(_))
+}
+
+///|
 test "codex to anthropic response emits ccs cache usage buckets" {
   let body = @json.parse(
     (

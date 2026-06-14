@@ -2913,20 +2913,24 @@ async fn Gateway::post_codex_compatible_provider_json(
   provider : ProviderRouteTarget,
   endpoint : String,
   request : Json,
-) -> Result[(@http.Response, String), Error] {
+) -> Result[(@http.Response, String), String] {
   let _ = self
   let base_url = provider.base_url.unwrap()
   let api_key = provider.api_key.unwrap()
   let url = codex_compatible_provider_url(base_url, endpoint)
-  let result = try? @http.post(url, request, headers={
+  let headers = {
     "Authorization": "Bearer \{api_key}",
     "Content-Type": "application/json",
     "Accept": "application/json",
-  })
-  match result {
-    Ok((response, data)) => Ok((response, data.text()))
-    Err(error) => Err(error)
   }
+  match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
+    Err(message) => return Err(message)
+    Ok(_) => ()
+  }
+  let (response, data) = @http.post(url, request, headers~) catch {
+    error => return Err("\{error}")
+  }
+  Ok((response, data.text()))
 }
 
 ///|
@@ -2935,21 +2939,26 @@ async fn Gateway::post_codex_compatible_provider_stream(
   provider : ProviderRouteTarget,
   endpoint : String,
   request : Json,
-) -> Result[(@http.Client, @http.Response), Error] {
+) -> Result[(@http.Client, @http.Response), String] {
   let _ = self
   let base_url = provider.base_url.unwrap()
   let api_key = provider.api_key.unwrap()
   let url = codex_compatible_provider_url(base_url, endpoint)
   let (origin, path) = split_origin_and_path(url)
-  let client = @http.Client::new(origin, headers={
+  let headers = {
     "Authorization": "Bearer \{api_key}",
     "Content-Type": "application/json",
     "Accept": "text/event-stream",
-  })
+  }
+  match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
+    Err(message) => return Err(message)
+    Ok(_) => ()
+  }
+  let client = @http.Client::new(origin, headers~)
   let response = client.post(path, request) catch {
     error => {
       client.close()
-      return Err(error)
+      return Err("\{error}")
     }
   }
   Ok((client, response))
@@ -2963,7 +2972,7 @@ async fn Gateway::post_claude_compatible_provider_json(
   request : Json,
   api_format : String,
   anthropic_beta : String?,
-) -> Result[(@http.Response, String), Error] {
+) -> Result[(@http.Response, String), String] {
   let _ = self
   let base_url = provider.base_url.unwrap()
   let api_key = provider.api_key.unwrap()
@@ -2978,11 +2987,52 @@ async fn Gateway::post_claude_compatible_provider_json(
     api_format,
     anthropic_beta~,
   )
-  let result = try? @http.post(url, request, headers~)
-  match result {
-    Ok((response, data)) => Ok((response, data.text()))
-    Err(error) => Err(error)
+  match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
+    Err(message) => return Err(message)
+    Ok(_) => ()
   }
+  let (response, data) = @http.post(url, request, headers~) catch {
+    error => return Err("\{error}")
+  }
+  Ok((response, data.text()))
+}
+
+///|
+const CCS_PROXY_MANAGED_PLACEHOLDER = "PROXY_MANAGED"
+
+///|
+fn ccs_reject_proxy_managed_placeholder_for_upstream(
+  url : String,
+  headers : Map[String, String],
+) -> Result[Unit, String] {
+  if !ccs_is_managed_account_upstream_url(url) ||
+    !ccs_headers_contain_proxy_managed_placeholder(headers) {
+    return Ok(())
+  }
+  Err(
+    "Managed account proxy auth was not resolved; PROXY_MANAGED must not be sent upstream",
+  )
+}
+
+///|
+fn ccs_is_managed_account_upstream_url(url : String) -> Bool {
+  let (origin, path) = split_origin_and_path(url)
+  let host = extract_host(origin).to_lower()
+  host == "githubcopilot.com" ||
+  host.has_suffix(".githubcopilot.com") ||
+  (host == "chatgpt.com" && path.has_prefix("/backend-api/codex"))
+}
+
+///|
+fn ccs_headers_contain_proxy_managed_placeholder(
+  headers : Map[String, String],
+) -> Bool {
+  for _, value in headers {
+    if value.contains(CCS_PROXY_MANAGED_PLACEHOLDER) {
+      return true
+    }
+  }
+  false
 }
 
 ///|
