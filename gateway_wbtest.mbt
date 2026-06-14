@@ -1372,6 +1372,11 @@ test "proxy lifecycle state matches ccs command aliases" {
 }
 
 ///|
+test "proxy failover unit commands return ccs null success body" {
+  assert_eq(ccs_unit_success_json(), Json::null())
+}
+
+///|
 test "proxy app config state updates ccs app fields" {
   let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
   gateway.proxy_app_enabled.set("codex", false)

@@ -8781,7 +8781,7 @@ async fn Gateway::handle_proxy_reset_circuit_breaker(
     return
   }
   self.provider_router.reset_provider_breaker(query.provider_id, query.app_type)
-  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+  write_usage_json(w, ccs_unit_success_json())
 }
 
 ///|
@@ -8824,7 +8824,7 @@ async fn Gateway::handle_proxy_add_failover_queue(
     return
   }
   self.provider_router.add_to_failover_queue(query.app_type, query.provider_id)
-  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+  write_usage_json(w, ccs_unit_success_json())
 }
 
 ///|
@@ -8841,7 +8841,7 @@ async fn Gateway::handle_proxy_remove_failover_queue(
     query.app_type,
     query.provider_id,
   )
-  write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
+  write_usage_json(w, ccs_unit_success_json())
 }
 
 ///|
@@ -8878,7 +8878,7 @@ async fn Gateway::handle_proxy_set_auto_failover_enabled(
     write_usage_bad_request(w, "auto_failover_unavailable")
     return
   }
-  write_usage_json(w, Json::boolean(enabled))
+  write_usage_json(w, ccs_unit_success_json())
 }
 
 ///|
@@ -11435,6 +11435,11 @@ async fn write_usage_json(w : @httpx.ResponseWriter, body : Json) -> Unit {
   w.write_header(@status.Ok)
   w.write(body.stringify(indent=2))
   w.flush()
+}
+
+///|
+fn ccs_unit_success_json() -> Json {
+  Json::null()
 }
 
 ///|
