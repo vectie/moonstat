@@ -938,6 +938,29 @@ fn ProviderRouter::provider_sort_index(
 }
 
 ///|
+fn ProviderRouter::ordered_failover_queue(
+  self : ProviderRouter,
+  app_type : String,
+) -> Array[String] {
+  let queue : Array[String] = []
+  for provider_id in self.failover_queues.get(app_type).unwrap_or([]) {
+    queue.push(provider_id)
+  }
+  queue.sort_by(fn(left, right) {
+    let left_index = self.provider_sort_index(app_type, left).unwrap_or(999999)
+    let right_index = self
+      .provider_sort_index(app_type, right)
+      .unwrap_or(999999)
+    if left_index != right_index {
+      left_index.compare(right_index)
+    } else {
+      left.compare(right)
+    }
+  })
+  queue
+}
+
+///|
 fn ProviderRouter::read_live_provider_settings(
   self : ProviderRouter,
   app_type : String,
@@ -1474,7 +1497,7 @@ fn ProviderRouter::failover_queue_json(
   self : ProviderRouter,
   app_type : String,
 ) -> Json {
-  let queue = self.failover_queues.get(app_type).unwrap_or([])
+  let queue = self.ordered_failover_queue(app_type)
   let rows : Array[Json] = []
   for provider_id in queue {
     guard self.provider_by_id(app_type, provider_id) is Some(provider) else {
@@ -1529,7 +1552,7 @@ fn ProviderRouter::stream_check_provider_ids(
       Some(provider_id) if !ids.contains(provider_id) => ids.push(provider_id)
       _ => ()
     }
-    for provider_id in self.failover_queues.get(app_type).unwrap_or([]) {
+    for provider_id in self.ordered_failover_queue(app_type) {
       if !ids.contains(provider_id) {
         ids.push(provider_id)
       }
@@ -1641,12 +1664,11 @@ fn ProviderRouter::reset_provider_breaker_ccs(
   guard self.current_provider_ids.get(app_type) is Some(current_id) else {
     return false
   }
-  guard failover_queue_index(self.failover_queues.get(app_type), provider_id)
-    is Some(restored_order) else {
+  let queue = self.ordered_failover_queue(app_type)
+  guard failover_queue_index(Some(queue), provider_id) is Some(restored_order) else {
     return false
   }
-  guard failover_queue_index(self.failover_queues.get(app_type), current_id)
-    is Some(current_order) else {
+  guard failover_queue_index(Some(queue), current_id) is Some(current_order) else {
     return false
   }
   if restored_order < current_order {
@@ -1864,7 +1886,7 @@ fn ProviderRouter::select_failover_queue(
   app_type : String,
   now_ms : Int,
 ) -> ProviderSelection {
-  let queue = self.failover_queues.get(app_type).unwrap_or([])
+  let queue = self.ordered_failover_queue(app_type)
   let providers : Array[ProviderRouteTarget] = []
   let mut circuit_open_count = 0
   for provider_id in queue {

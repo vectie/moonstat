@@ -4324,6 +4324,12 @@ async test "gateway nonretryable upstream errors release half open permit" {
       provider_name="Codex Alt",
     ),
   )
+  assert_true(
+    gateway.provider_router.update_providers_sort_order("codex", [
+      { id: "codex-oauth", sort_index: 0 },
+      { id: "codex-alt", sort_index: 1 },
+    ]),
+  )
   gateway.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
@@ -4440,6 +4446,12 @@ test "gateway activation skips occupied half open provider in failover chain" {
       provider_name="Codex Alt",
     ),
   )
+  assert_true(
+    gateway.provider_router.update_providers_sort_order("codex", [
+      { id: "codex-oauth", sort_index: 0 },
+      { id: "codex-alt", sort_index: 1 },
+    ]),
+  )
   gateway.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
@@ -4514,6 +4526,12 @@ test "gateway retryable upstream status activates next failover provider" {
       provider_name="Codex Alt",
     ),
   )
+  assert_true(
+    gateway.provider_router.update_providers_sort_order("codex", [
+      { id: "codex-oauth", sort_index: 0 },
+      { id: "codex-alt", sort_index: 1 },
+    ]),
+  )
   gateway.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
@@ -4581,6 +4599,12 @@ test "gateway retryable upstream status respects ccs max retries cap before perm
       provider_id="codex-alt",
       provider_name="Codex Alt",
     ),
+  )
+  assert_true(
+    gateway.provider_router.update_providers_sort_order("codex", [
+      { id: "codex-oauth", sort_index: 0 },
+      { id: "codex-alt", sort_index: 1 },
+    ]),
   )
   gateway.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
@@ -4700,6 +4724,12 @@ test "gateway nonretryable upstream status does not activate failover provider" 
       provider_id="codex-alt",
       provider_name="Codex Alt",
     ),
+  )
+  assert_true(
+    gateway.provider_router.update_providers_sort_order("codex", [
+      { id: "codex-oauth", sort_index: 0 },
+      { id: "codex-alt", sort_index: 1 },
+    ]),
   )
   gateway.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",

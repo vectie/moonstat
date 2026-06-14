@@ -104,7 +104,7 @@ test "provider router current selection ignores metadata enabled flag like ccs" 
 }
 
 ///|
-test "provider router failover enabled uses queue order ignoring current" {
+test "provider router failover enabled uses ccs sorted queue ignoring current" {
   let router = ProviderRouter::new()
   router.upsert_provider(
     ProviderRouteTarget::new(
@@ -126,8 +126,8 @@ test "provider router failover enabled uses queue order ignoring current" {
   let selected = router.select_providers("claude", now_ms=1000)
   assert_true(selected.is_ok())
   assert_eq(selected.providers.length(), 2)
-  assert_eq(selected.providers[0].provider_id, "b")
-  assert_eq(selected.providers[1].provider_id, "a")
+  assert_eq(selected.providers[0].provider_id, "a")
+  assert_eq(selected.providers[1].provider_id, "b")
 }
 
 ///|
@@ -482,8 +482,8 @@ test "provider router failover queue uses ccs stored provider sort index" {
   )
   router.set_failover_queue("codex", ["b", "a"])
   json_inspect(router.failover_queue_json("codex"), content=[
-    { "providerId": "b", "providerName": "Provider B", "sortIndex": 7 },
     { "providerId": "a", "providerName": "Provider A", "sortIndex": 3 },
+    { "providerId": "b", "providerName": "Provider B", "sortIndex": 7 },
   ])
 }
 
@@ -564,6 +564,12 @@ test "provider router ccs auto failover command switches to p1" {
     ),
   )
   router.set_current_provider("codex", "current")
+  assert_true(
+    router.update_providers_sort_order("codex", [
+      { id: "p1", sort_index: 0 },
+      { id: "current", sort_index: 1 },
+    ]),
+  )
   router.set_failover_queue("codex", ["p1", "current"])
   assert_true(router.set_auto_failover_command_ccs("codex", true))
   assert_true(router.auto_failover_enabled_for_app("codex"))
