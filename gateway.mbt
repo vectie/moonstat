@@ -8914,7 +8914,7 @@ async fn Gateway::handle_proxy_set_auto_failover_enabled(
     write_usage_bad_request(w, "auto_failover_requires_proxy_takeover")
     return
   }
-  if !self.provider_router.set_auto_failover_ccs(app_type, enabled) {
+  if !self.provider_router.set_auto_failover_command_ccs(app_type, enabled) {
     write_usage_bad_request(w, "auto_failover_unavailable")
     return
   }

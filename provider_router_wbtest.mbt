@@ -544,6 +544,48 @@ test "provider router ccs auto failover enable seeds empty queue" {
 }
 
 ///|
+test "provider router ccs auto failover command switches to p1" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="current",
+      provider_name="Current Provider",
+    ),
+  )
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="p1",
+      provider_name="P1 Provider",
+    ),
+  )
+  router.set_current_provider("codex", "current")
+  router.set_failover_queue("codex", ["p1", "current"])
+  assert_true(router.set_auto_failover_command_ccs("codex", true))
+  assert_true(router.auto_failover_enabled_for_app("codex"))
+  assert_eq(router.current_provider_id("codex"), Some("p1"))
+}
+
+///|
+test "provider router ccs auto failover command rolls back auto added official p1" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="official",
+      provider_name="Official Provider",
+      provider_type=Some("official"),
+    ),
+  )
+  router.set_current_provider("codex", "official")
+  assert_false(router.set_auto_failover_command_ccs("codex", true))
+  assert_false(router.auto_failover_enabled_for_app("codex"))
+  assert_eq(router.current_provider_id("codex"), Some("official"))
+  json_inspect(router.failover_queue_json("codex"), content=[])
+}
+
+///|
 test "provider router ccs reset switches back to recovered higher priority provider" {
   let router = ProviderRouter::new()
   router.upsert_provider(

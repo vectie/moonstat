@@ -686,6 +686,46 @@ fn ProviderRouter::set_auto_failover_ccs(
 }
 
 ///|
+fn ProviderRouter::set_auto_failover_command_ccs(
+  self : ProviderRouter,
+  app_type : String,
+  enabled : Bool,
+) -> Bool {
+  if !enabled {
+    self.auto_failover_enabled.set(app_type, false)
+    return true
+  }
+  guard self.has_configured_app(app_type) else { return false }
+  let mut auto_added_provider_id : String? = None
+  let mut queue = self.failover_queues.get(app_type).unwrap_or([])
+  if queue.is_empty() {
+    guard self.current_provider_ids.get(app_type) is Some(provider_id) else {
+      return false
+    }
+    self.add_to_failover_queue(app_type, provider_id)
+    auto_added_provider_id = Some(provider_id)
+    queue = self.failover_queues.get(app_type).unwrap_or([])
+  }
+  guard queue.length() > 0 else { return false }
+  let p1_provider_id = queue[0]
+  guard self.provider_by_id(app_type, p1_provider_id) is Some(provider) else {
+    if auto_added_provider_id is Some(provider_id) {
+      self.remove_from_failover_queue(app_type, provider_id)
+    }
+    return false
+  }
+  if provider.provider_type == Some("official") {
+    if auto_added_provider_id is Some(provider_id) {
+      self.remove_from_failover_queue(app_type, provider_id)
+    }
+    return false
+  }
+  self.current_provider_ids.set(app_type, p1_provider_id)
+  self.auto_failover_enabled.set(app_type, true)
+  true
+}
+
+///|
 pub fn ProviderRouter::set_max_retries(
   self : ProviderRouter,
   app_type : String,
