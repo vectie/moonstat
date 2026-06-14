@@ -2139,6 +2139,59 @@ test "stream check strips ccs codex effort suffix from result model" {
 }
 
 ///|
+test "stream check provider test config overrides global config like ccs" {
+  let gateway = Gateway::new(port=17019, host="127.0.0.19", model="gpt-5")
+  gateway.stream_check_config = {
+    ..gateway.stream_check_config,
+    codex_model: "global-model@low",
+    test_prompt: "global prompt",
+  }
+  gateway.provider_router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="codex-provider-test",
+      provider_name="Codex Provider Test",
+      settings_config=Some(
+        {
+          "meta": {
+            "testConfig": {
+              "enabled": Json::boolean(true),
+              "testModel": Json::string("provider-model@medium"),
+              "timeoutSecs": Json::number(12.0),
+              "maxRetries": Json::number(5.0),
+              "degradedThresholdMs": Json::number(1234.0),
+              "testPrompt": Json::string("provider prompt"),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+    ),
+  )
+  guard gateway.provider_router.provider_by_id("codex", "codex-provider-test")
+    is Some(provider) else {
+    fail("expected provider")
+  }
+  let config = stream_check_effective_config_for_provider(
+    gateway.stream_check_config,
+    provider,
+  )
+  assert_eq(config.codex_model, "provider-model@medium")
+  assert_eq(config.claude_model, "provider-model@medium")
+  assert_eq(config.gemini_model, "provider-model@medium")
+  assert_eq(config.timeout_secs, 12)
+  assert_eq(config.max_retries, 5)
+  assert_eq(config.degraded_threshold_ms, 1234)
+  assert_eq(config.test_prompt, "provider prompt")
+  guard gateway.stream_check_provider_result_json(
+      "codex", "codex-provider-test",
+    )
+    is Some(Object(result)) else {
+    fail("expected stream check result")
+  }
+  assert_eq(result["modelUsed"], Json::string("provider-model"))
+}
+
+///|
 test "stream check codex effort parser follows ccs separators" {
   assert_eq(
     stream_check_parse_model_with_effort("gpt-5.1-codex@low").0,

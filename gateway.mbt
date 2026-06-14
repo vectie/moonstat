@@ -12038,11 +12038,11 @@ fn Gateway::stream_check_provider_result_json(
     is Some(provider) else {
     return None
   }
-  ignore(provider)
-  let model = stream_check_reported_model_for_app(
+  let config = stream_check_effective_config_for_provider(
     self.stream_check_config,
-    app_type,
+    provider,
   )
+  let model = stream_check_reported_model_for_app(config, app_type)
   let configured = true
   let status = if configured { "operational" } else { "failed" }
   let message = if configured {
@@ -12063,6 +12063,65 @@ fn Gateway::stream_check_provider_result_json(
     obj["httpStatus"] = Json::number(200.0)
   }
   Some(Json::object(obj))
+}
+
+///|
+fn stream_check_effective_config_for_provider(
+  global_config : StreamCheckConfig,
+  provider : ProviderRouteTarget,
+) -> StreamCheckConfig {
+  guard provider.settings_config is Some(Object(settings)) else {
+    return global_config
+  }
+  guard settings.get("meta") is Some(Object(meta)) else { return global_config }
+  guard meta.get("testConfig") is Some(Object(test_config)) else {
+    return global_config
+  }
+  if !json_bool_from_map_any(test_config, ["enabled"]).unwrap_or(false) {
+    return global_config
+  }
+  let mut config = global_config
+  match json_string_from_map_any(test_config, ["testModel", "test_model"]) {
+    Some(model) =>
+      config = {
+        ..config,
+        claude_model: model,
+        codex_model: model,
+        gemini_model: model,
+      }
+    None => ()
+  }
+  match proxy_json_int(test_config, "timeoutSecs") {
+    Some(value) if value >= 0 => config = { ..config, timeout_secs: value }
+    _ =>
+      match proxy_json_int(test_config, "timeout_secs") {
+        Some(value) if value >= 0 => config = { ..config, timeout_secs: value }
+        _ => ()
+      }
+  }
+  match proxy_json_int(test_config, "maxRetries") {
+    Some(value) if value >= 0 => config = { ..config, max_retries: value }
+    _ =>
+      match proxy_json_int(test_config, "max_retries") {
+        Some(value) if value >= 0 => config = { ..config, max_retries: value }
+        _ => ()
+      }
+  }
+  match proxy_json_int(test_config, "degradedThresholdMs") {
+    Some(value) if value >= 0 =>
+      config = { ..config, degraded_threshold_ms: value }
+    _ =>
+      match proxy_json_int(test_config, "degraded_threshold_ms") {
+        Some(value) if value >= 0 =>
+          config = { ..config, degraded_threshold_ms: value }
+        _ => ()
+      }
+  }
+  match json_string_from_map_any(test_config, ["testPrompt", "test_prompt"]) {
+    Some(prompt) => config = { ..config, test_prompt: prompt }
+    None => ()
+  }
+  config
 }
 
 ///|
