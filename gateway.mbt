@@ -13612,6 +13612,11 @@ async fn test_usage_script_template_result(
     "templateType", "template_type",
   ]).unwrap_or("")
   match template_type {
+    "github_copilot" =>
+      match copilot_get_usage(copilot_account_id_request(path, body)) {
+        Ok(usage) => Some(ccs_copilot_usage_result_from_json(usage))
+        Err(error) => Some(UsageResult::new(false, error=Some(error)))
+      }
     "balance" => {
       guard proxy_string_request(path, body, ["baseUrl", "base_url"])
         is Some(base_url) else {
@@ -13647,6 +13652,56 @@ async fn test_usage_script_template_result(
     }
     _ => None
   }
+}
+
+///|
+fn ccs_copilot_usage_result_from_json(usage : Json) -> UsageResult {
+  guard usage is Object(obj) else {
+    return UsageResult::new(
+      false,
+      error=Some("Failed to parse Copilot usage response"),
+    )
+  }
+  guard obj.get("quota_snapshots") is Some(Object(quota_snapshots)) else {
+    return UsageResult::new(
+      false,
+      error=Some("Failed to parse Copilot usage response"),
+    )
+  }
+  guard quota_snapshots.get("premium_interactions") is Some(Object(premium)) else {
+    return UsageResult::new(
+      false,
+      error=Some("Failed to parse Copilot usage response"),
+    )
+  }
+  guard ccs_json_double_from_map(premium, "entitlement") is Some(total) else {
+    return UsageResult::new(
+      false,
+      error=Some("Failed to parse Copilot usage response"),
+    )
+  }
+  guard ccs_json_double_from_map(premium, "remaining") is Some(remaining) else {
+    return UsageResult::new(
+      false,
+      error=Some("Failed to parse Copilot usage response"),
+    )
+  }
+  UsageResult::new(
+    true,
+    data=Some([
+      UsageData::new(
+        plan_name=Some(json_string_from_map(obj, "copilot_plan").unwrap_or("")),
+        remaining=Some(remaining),
+        total=Some(total),
+        used=Some(total - remaining),
+        unit=Some("requests"),
+        is_valid=Some(true),
+        extra=Some(
+          "Reset: \{json_string_from_map(obj, "quota_reset_date").unwrap_or("")}",
+        ),
+      ),
+    ]),
+  )
 }
 
 ///|

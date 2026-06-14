@@ -149,6 +149,55 @@ test "usage script request accepts raw ccs script output" {
 }
 
 ///|
+async test "usage script github copilot template uses standalone native query" {
+  let path = "/testUsageScript?providerId=p1&app=claude&templateType=github_copilot&accountId=moonstat-missing-account"
+  guard test_usage_script_template_result(path, None) is Some(result) else {
+    fail("expected template result")
+  }
+  assert_false(result.success)
+  assert_true(result.error is Some(_))
+}
+
+///|
+test "github copilot usage conversion mirrors ccs premium row" {
+  let result = ccs_copilot_usage_result_from_json(
+    {
+      "copilot_plan": Json::string("Individual"),
+      "quota_reset_date": Json::string("2026-07-01"),
+      "quota_snapshots": {
+        "premium_interactions": {
+          "entitlement": Json::number(300.0),
+          "remaining": Json::number(125.0),
+          "percent_remaining": Json::number(41.6),
+          "unlimited": Json::boolean(false),
+        }.to_json(),
+      }.to_json(),
+    }.to_json(),
+  )
+  assert_true(result.success)
+  guard result.data is Some(rows) else { fail("expected rows") }
+  assert_eq(rows.length(), 1)
+  assert_eq(rows[0].plan_name, Some("Individual"))
+  assert_eq(rows[0].total, Some(300.0))
+  assert_eq(rows[0].remaining, Some(125.0))
+  assert_eq(rows[0].used, Some(175.0))
+  assert_eq(rows[0].unit, Some("requests"))
+  assert_eq(rows[0].is_valid, Some(true))
+  assert_eq(rows[0].extra, Some("Reset: 2026-07-01"))
+}
+
+///|
+test "github copilot usage conversion reports malformed response" {
+  assert_eq(
+    ccs_copilot_usage_result_from_json({}.to_json()).to_json(),
+    UsageResult::new(
+      false,
+      error=Some("Failed to parse Copilot usage response"),
+    ).to_json(),
+  )
+}
+
+///|
 async test "usage script balance template uses standalone ccs native query" {
   let path = "/testUsageScript?providerId=p1&app=codex&templateType=balance&baseUrl=https%3A%2F%2Fopenrouter.ai%2Fapi%2Fv1&apiKey="
   guard test_usage_script_template_result(path, None) is Some(result) else {
