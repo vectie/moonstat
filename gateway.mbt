@@ -8645,8 +8645,7 @@ async fn Gateway::handle_proxy_set_default_cost_multiplier(
 ) -> Unit {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
-  guard proxy_string_request(r.path, config, ["app_type", "appType"])
-    is Some(app_type) else {
+  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app_type")
     return
   }
@@ -8671,8 +8670,7 @@ async fn Gateway::handle_proxy_set_default_cost_multiplier_unit(
 ) -> Unit {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
-  guard proxy_string_request(r.path, config, ["app_type", "appType"])
-    is Some(app_type) else {
+  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app_type")
     return
   }
@@ -8713,8 +8711,7 @@ async fn Gateway::handle_proxy_set_pricing_model_source(
 ) -> Unit {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
-  guard proxy_string_request(r.path, config, ["app_type", "appType"])
-    is Some(app_type) else {
+  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app_type")
     return
   }
@@ -8739,8 +8736,7 @@ async fn Gateway::handle_proxy_set_pricing_model_source_unit(
 ) -> Unit {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
-  guard proxy_string_request(r.path, config, ["app_type", "appType"])
-    is Some(app_type) else {
+  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app_type")
     return
   }

@@ -2226,6 +2226,22 @@ test "proxy config request parsers accept ccs camelCase and query aliases" {
     proxy_bool_request("/proxy/takeover-status?enabled=yes", None, ["enabled"]),
     Some(true),
   )
+  assert_eq(
+    proxy_app_type_from_request(
+      "/set_default_cost_multiplier?app=codex&value=1.25",
+      None,
+    ),
+    Some("codex"),
+  )
+  assert_eq(
+    proxy_app_type_from_request(
+      "/set_pricing_model_source_test_hook",
+      Some(
+        { "app": Json::string(" claude "), "value": Json::string("request") }.to_json(),
+      ),
+    ),
+    Some("claude"),
+  )
 }
 
 ///|
