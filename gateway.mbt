@@ -8933,10 +8933,10 @@ async fn Gateway::handle_import_default_config(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  write_usage_json(
-    w,
-    ccs_import_default_config_json(self.provider_router, app_type),
-  )
+  match ccs_import_default_config_json(self.provider_router, app_type) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|

@@ -33,3 +33,63 @@ test "ccs provider terminal command quotes cwd and env values" {
   assert_true(command.contains("value with space"))
   assert_false(command.contains("BAD-KEY"))
 }
+
+///|
+test "ccs import default config accepts clean live provider settings" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="claude",
+      provider_id="clean",
+      provider_name="Clean",
+      settings_config=Some(
+        {
+          "env": Json::object({
+            "ANTHROPIC_AUTH_TOKEN": Json::string("real-token"),
+          }),
+        }.to_json(),
+      ),
+    ),
+  )
+  router.set_current_provider("claude", "clean")
+  match ccs_import_default_config_json(router, "claude") {
+    Ok(value) => assert_eq(value, Json::boolean(true))
+    Err(error) => fail("unexpected import error: \{error}")
+  }
+}
+
+///|
+test "ccs import default config rejects takeover placeholder residue" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="claude",
+      provider_id="polluted",
+      provider_name="Polluted",
+      settings_config=Some(
+        {
+          "auth": {
+            "env": Json::object({
+              "ANTHROPIC_AUTH_TOKEN": Json::string("PROXY_MANAGED"),
+            }),
+          }.to_json(),
+        }.to_json(),
+      ),
+    ),
+  )
+  router.set_current_provider("claude", "polluted")
+  assert_true(
+    ccs_settings_has_proxy_managed_placeholder(
+      {
+        "nested": Json::array([
+          Json::string("real-token"),
+          Json::object({ "token": Json::string("PROXY_MANAGED") }),
+        ]),
+      }.to_json(),
+    ),
+  )
+  match ccs_import_default_config_json(router, "claude") {
+    Err(error) => assert_eq(error, "live_taken_over")
+    Ok(_) => fail("expected live takeover guard")
+  }
+}

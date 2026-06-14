@@ -2,8 +2,37 @@
 fn ccs_import_default_config_json(
   router : ProviderRouter,
   app_type : String,
-) -> Json {
-  Json::boolean(router.import_live_providers(app_type) > 0)
+) -> Result[Json, String] {
+  let settings = router.read_live_provider_settings(app_type)
+  if ccs_settings_has_proxy_managed_placeholder(settings) {
+    return Err("live_taken_over")
+  }
+  Ok(Json::boolean(router.import_live_providers(app_type) > 0))
+}
+
+///|
+fn ccs_settings_has_proxy_managed_placeholder(settings : Json) -> Bool {
+  match settings {
+    String(value) => value == CCS_PROXY_MANAGED_PLACEHOLDER
+    Array(items) => {
+      for item in items {
+        if ccs_settings_has_proxy_managed_placeholder(item) {
+          return true
+        }
+      }
+      false
+    }
+    Object(obj) => {
+      for key in obj.keys() {
+        guard obj.get(key) is Some(value) else { continue }
+        if ccs_settings_has_proxy_managed_placeholder(value) {
+          return true
+        }
+      }
+      false
+    }
+    _ => false
+  }
 }
 
 ///|
