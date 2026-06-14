@@ -146,6 +146,11 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("POST /s3_sync_download")))
   assert_true(routes.contains(Json::string("POST /s3_sync_save_settings")))
   assert_true(routes.contains(Json::string("GET /s3_sync_fetch_remote_info")))
+  assert_true(routes.contains(Json::string("GET|POST /list_sessions")))
+  assert_true(routes.contains(Json::string("GET|POST /get_session_messages")))
+  assert_true(routes.contains(Json::string("POST /launch_session_terminal")))
+  assert_true(routes.contains(Json::string("POST /delete_session")))
+  assert_true(routes.contains(Json::string("POST /delete_sessions")))
   assert_true(routes.contains(Json::string("GET|POST /read_omo_local_file")))
   assert_true(
     routes.contains(Json::string("GET|POST /get_current_omo_provider_id")),

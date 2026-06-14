@@ -1615,6 +1615,27 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/sync_session_usage", (r, w) => {
     self.handle_usage_sync_session(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/list_sessions", (_, w) => {
+    self.handle_list_sessions(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/list_sessions", (_, w) => {
+    self.handle_list_sessions(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/get_session_messages", (r, w) => {
+    self.handle_get_session_messages(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_session_messages", (r, w) => {
+    self.handle_get_session_messages(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/launch_session_terminal", (r, w) => {
+    self.handle_launch_session_terminal(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_session", (r, w) => {
+    self.handle_delete_session(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_sessions", (r, w) => {
+    self.handle_delete_sessions(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/usage/model-pricing", (_, w) => {
     self.handle_usage_model_pricing(w)
   })
@@ -9190,6 +9211,105 @@ async fn Gateway::handle_usage_sync_session(
   )
   self.stats.save_persistent_store()
   write_usage_json(w, result.to_json())
+}
+
+///|
+async fn Gateway::handle_list_sessions(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_list_sessions_json())
+}
+
+///|
+async fn Gateway::handle_get_session_messages(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["providerId", "provider_id"])
+    is Some(provider_id) else {
+    write_usage_bad_request(w, "missing_provider_id")
+    return
+  }
+  guard proxy_string_request(r.path, body, ["sourcePath", "source_path"])
+    is Some(source_path) else {
+    write_usage_bad_request(w, "missing_source_path")
+    return
+  }
+  match ccs_get_session_messages_json(provider_id, source_path) {
+    Ok(messages) => write_usage_json(w, messages)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_launch_session_terminal(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["command"]) is Some(command) else {
+    write_usage_bad_request(w, "missing_command")
+    return
+  }
+  let cwd = proxy_string_request(r.path, body, ["cwd"])
+  let custom_config = proxy_string_request(r.path, body, [
+    "customConfig", "custom_config",
+  ])
+  match ccs_launch_session_terminal_json(command, cwd, custom_config) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_delete_session(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["providerId", "provider_id"])
+    is Some(provider_id) else {
+    write_usage_bad_request(w, "missing_provider_id")
+    return
+  }
+  guard proxy_string_request(r.path, body, ["sessionId", "session_id"])
+    is Some(session_id) else {
+    write_usage_bad_request(w, "missing_session_id")
+    return
+  }
+  guard proxy_string_request(r.path, body, ["sourcePath", "source_path"])
+    is Some(source_path) else {
+    write_usage_bad_request(w, "missing_source_path")
+    return
+  }
+  match ccs_delete_session_json(provider_id, session_id, source_path) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_delete_sessions(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard ccs_delete_session_requests_from_json(body) is Some(items) else {
+    write_usage_bad_request(w, "missing_items")
+    return
+  }
+  write_usage_json(w, ccs_delete_sessions_json(items))
 }
 
 ///|

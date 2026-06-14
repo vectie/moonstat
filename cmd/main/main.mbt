@@ -505,6 +505,20 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       )
     ["s3_sync_fetch_remote_info", ..] | ["s3-sync-fetch-remote-info", ..] =>
       check_usage_endpoint(arr, "/s3_sync_fetch_remote_info")
+    ["list_sessions", ..] | ["list-sessions", ..] =>
+      check_usage_endpoint(arr, "/list_sessions")
+    ["get_session_messages", ..] | ["get-session-messages", ..] =>
+      check_usage_endpoint(arr, session_messages_path(arr))
+    ["launch_session_terminal", ..] | ["launch-session-terminal", ..] =>
+      check_json_post_endpoint(
+        arr,
+        launch_session_terminal_path(arr),
+        "Session",
+      )
+    ["delete_session", ..] | ["delete-session", ..] =>
+      check_json_post_endpoint(arr, delete_session_path(arr), "Session")
+    ["delete_sessions", ..] | ["delete-sessions", ..] =>
+      check_json_post_endpoint(arr, "/delete_sessions", "Session")
     ["read_omo_local_file", ..] | ["read-omo-local-file", ..] =>
       check_usage_endpoint(arr, "/read_omo_local_file")
     ["get_current_omo_provider_id", ..] | ["get-current-omo-provider-id", ..] =>
@@ -1168,6 +1182,11 @@ fn print_help() -> Unit {
     "  usage sync       Sync ccs-style Claude/Codex/Gemini/OpenCode session logs",
   )
   println("  usage sync-session-usage  Alias for ccs sync_session_usage")
+  println("  list_sessions  Alias for ccs session list command")
+  println("  get_session_messages --provider-id <id> --source-path <path>")
+  println(
+    "  delete_session --provider-id <id> --session-id <id> --source-path <path>",
+  )
   println("  usage providers  Show ccs-style provider statistics")
   println("  usage get-provider-stats  Alias for ccs get_provider_stats")
   println("  usage models     Show ccs-style model statistics")
@@ -2802,6 +2821,56 @@ fn sync_settings_path(args : Array[String], base_path : String) -> String {
     None => ()
   }
   cli_path_with_query(base_path, query)
+}
+
+///|
+fn session_messages_path(args : Array[String]) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--provider-id", "--providerId") {
+    Some(value) => query.push(cli_query_pair("providerId", value))
+    None => ()
+  }
+  match parse_string_arg_any(args, "--source-path", "--sourcePath") {
+    Some(value) => query.push(cli_query_pair("sourcePath", value))
+    None => ()
+  }
+  cli_path_with_query("/get_session_messages", query)
+}
+
+///|
+fn launch_session_terminal_path(args : Array[String]) -> String {
+  let query : Array[String] = []
+  match parse_string_arg(args, "--command") {
+    Some(value) => query.push(cli_query_pair("command", value))
+    None => ()
+  }
+  match parse_string_arg(args, "--cwd") {
+    Some(value) => query.push(cli_query_pair("cwd", value))
+    None => ()
+  }
+  match parse_string_arg_any(args, "--custom-config", "--customConfig") {
+    Some(value) => query.push(cli_query_pair("customConfig", value))
+    None => ()
+  }
+  cli_path_with_query("/launch_session_terminal", query)
+}
+
+///|
+fn delete_session_path(args : Array[String]) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--provider-id", "--providerId") {
+    Some(value) => query.push(cli_query_pair("providerId", value))
+    None => ()
+  }
+  match parse_string_arg_any(args, "--session-id", "--sessionId") {
+    Some(value) => query.push(cli_query_pair("sessionId", value))
+    None => ()
+  }
+  match parse_string_arg_any(args, "--source-path", "--sourcePath") {
+    Some(value) => query.push(cli_query_pair("sourcePath", value))
+    None => ()
+  }
+  cli_path_with_query("/delete_session", query)
 }
 
 ///|
