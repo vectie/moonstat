@@ -168,6 +168,55 @@ async test "usage script balance template uses standalone ccs native query" {
 }
 
 ///|
+async test "usage script token plan template uses standalone ccs native query" {
+  let path = "/testUsageScript?providerId=p1&app=codex&templateType=token_plan&baseUrl=https%3A%2F%2Fapi.kimi.com%2Fcoding&apiKey="
+  guard test_usage_script_template_result(path, None) is Some(result) else {
+    fail("expected template result")
+  }
+  assert_eq(UsageResult::new(false).to_json(), result.to_json())
+}
+
+///|
+test "token plan quota usage conversion mirrors ccs rows" {
+  let result = ccs_token_plan_usage_result_from_quota(
+    SubscriptionQuota::new(
+      "coding_plan",
+      credential_message=Some("Pro (active)"),
+      tiers=[
+        ccs_quota_tier_json(
+          "five_hour",
+          25.0,
+          resets_at=Some("five-reset"),
+          used_value_usd=Some(1.5),
+          max_value_usd=Some(6.0),
+        ),
+        ccs_quota_tier_json("weekly_limit", 75.0, resets_at=Some("week-reset")),
+      ],
+    ),
+  )
+  assert_true(result.success)
+  guard result.data is Some(rows) else { fail("expected rows") }
+  assert_eq(rows.length(), 2)
+  assert_eq(rows[0].plan_name, Some("five_hour"))
+  assert_eq(rows[0].total, Some(100.0))
+  assert_eq(rows[0].used, Some(25.0))
+  assert_eq(rows[0].remaining, Some(75.0))
+  assert_eq(rows[0].unit, Some("%"))
+  assert_eq(rows[0].is_valid, Some(true))
+  guard rows[0].extra is Some(extra) else { fail("expected extra json") }
+  let parsed_extra = @json.parse(extra) catch { _ => Json::null() }
+  guard parsed_extra is Object(extra_obj) else { fail("expected extra object") }
+  assert_eq(extra_obj["resetsAt"], Json::string("five-reset"))
+  assert_eq(extra_obj["usedValueUsd"], Json::number(1.5))
+  assert_eq(extra_obj["maxValueUsd"], Json::number(6.0))
+  assert_eq(extra_obj["planLabel"], Json::string("ZenMux·PRO"))
+  assert_eq(
+    rows[1].extra,
+    Some({ "resetsAt": Json::string("week-reset") }.to_json().stringify()),
+  )
+}
+
+///|
 test "usage query helpers parse ccs auto failover boolean parameters" {
   assert_eq(
     usage_query_bool_any(

@@ -13622,8 +13622,110 @@ async fn test_usage_script_template_result(
       )
       Some(ccs_get_balance(base_url, api_key))
     }
+    "token_plan" => {
+      let base_url = proxy_string_request(path, body, ["baseUrl", "base_url"]).unwrap_or(
+        "",
+      )
+      let api_key = proxy_string_request(path, body, ["apiKey", "api_key"]).unwrap_or(
+        "",
+      )
+      Some(
+        ccs_token_plan_usage_result_from_quota(
+          ccs_get_coding_plan_quota(base_url, api_key),
+        ),
+      )
+    }
     _ => None
   }
+}
+
+///|
+fn ccs_token_plan_usage_result_from_quota(
+  quota : SubscriptionQuota,
+) -> UsageResult {
+  if !quota.success {
+    return UsageResult::new(false, error=quota.error)
+  }
+  let data : Array[UsageData] = []
+  let has_usd = match quota.tiers.get(0) {
+    Some(tier) => ccs_token_plan_tier_has_usd(tier)
+    None => false
+  }
+  let plan_label = ccs_token_plan_label(quota.credential_message)
+  let mut first_tier = true
+  for tier in quota.tiers {
+    guard tier is Object(obj) else { continue }
+    let used = ccs_json_double_from_map(obj, "utilization").unwrap_or(0.0)
+    data.push(
+      UsageData::new(
+        plan_name=json_string_from_map(obj, "name"),
+        remaining=Some(100.0 - used),
+        total=Some(100.0),
+        used=Some(used),
+        unit=Some("%"),
+        is_valid=Some(true),
+        extra=ccs_token_plan_usage_extra(
+          obj,
+          has_usd~,
+          first_tier~,
+          plan_label~,
+        ),
+      ),
+    )
+    first_tier = false
+  }
+  UsageResult::new(true, data=if data.is_empty() { None } else { Some(data) })
+}
+
+///|
+fn ccs_token_plan_tier_has_usd(tier : Json) -> Bool {
+  guard tier is Object(obj) else { return false }
+  obj.contains("usedValueUsd")
+}
+
+///|
+fn ccs_token_plan_label(message : String?) -> String? {
+  guard message is Some(value) else { return None }
+  for part in value.split(" ") {
+    let tier = part.trim()
+    if !tier.is_empty() {
+      return Some("ZenMux·\{tier.to_upper()}")
+    }
+  }
+  None
+}
+
+///|
+fn ccs_token_plan_usage_extra(
+  tier : Map[String, Json],
+  has_usd~ : Bool,
+  first_tier~ : Bool,
+  plan_label~ : String?,
+) -> String? {
+  if !has_usd {
+    return json_string_from_map(tier, "resetsAt")
+  }
+  let extra : Map[String, Json] = {
+    "resetsAt": match json_string_from_map(tier, "resetsAt") {
+      Some(value) => Json::string(value)
+      None => Json::null()
+    },
+  }
+  match ccs_json_double_from_map(tier, "usedValueUsd") {
+    Some(value) => extra["usedValueUsd"] = Json::number(value)
+    None => ()
+  }
+  match ccs_json_double_from_map(tier, "maxValueUsd") {
+    Some(value) => extra["maxValueUsd"] = Json::number(value)
+    None => ()
+  }
+  if first_tier {
+    match plan_label {
+      Some(label) => extra["planLabel"] = Json::string(label)
+      None => ()
+    }
+  }
+  Some(Json::object(extra).stringify())
 }
 
 ///|
