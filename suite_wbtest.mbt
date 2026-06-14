@@ -221,6 +221,15 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_true(routes.contains(Json::string("POST /switch_provider_test_hook")))
   assert_true(routes.contains(Json::string("POST /import_default_config")))
+  assert_true(routes.contains(Json::string("DELETE|POST /delete_provider")))
+  assert_true(
+    routes.contains(
+      Json::string("DELETE|POST /remove_provider_from_live_config"),
+    ),
+  )
+  assert_true(
+    routes.contains(Json::string("DELETE|POST /remove_custom_endpoint")),
+  )
   assert_true(routes.contains(Json::string("POST /open_provider_terminal")))
   assert_true(routes.contains(Json::string("GET /get_claude_config_status")))
   assert_true(routes.contains(Json::string("GET /get_config_status")))

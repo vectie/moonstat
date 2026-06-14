@@ -1341,11 +1341,18 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Delete, "/delete_provider", (r, w) => {
     self.handle_delete_provider(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/delete_provider", (r, w) => {
+    self.handle_delete_provider(r, w)
+  })
   router.add_handler(
     @httpx.Method::Delete,
     "/remove_provider_from_live_config",
     (r, w) => self.handle_remove_provider_from_live_config(r, w),
   )
+  router.add_handler(@httpx.Method::Post, "/remove_provider_from_live_config", (
+    r,
+    w,
+  ) => self.handle_remove_provider_from_live_config(r, w))
   router.add_handler(@httpx.Method::Post, "/switch_provider", (r, w) => {
     self.handle_switch_provider(r, w)
   })
@@ -1558,6 +1565,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_add_custom_endpoint(r, w)
   })
   router.add_handler(@httpx.Method::Delete, "/remove_custom_endpoint", (r, w) => {
+    self.handle_remove_custom_endpoint(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/remove_custom_endpoint", (r, w) => {
     self.handle_remove_custom_endpoint(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/update_endpoint_last_used", (r, w) => {
