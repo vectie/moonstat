@@ -370,6 +370,10 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(commands["skills_repos"], Json::string("moonstat get_skill_repos"))
   assert_eq(
+    commands["update_tray_menu"],
+    Json::string("moonstat update_tray_menu"),
+  )
+  assert_eq(
     commands["suite_write_status"],
     Json::string("moonstat suite write-status"),
   )

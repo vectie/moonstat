@@ -405,6 +405,7 @@ fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
       "moonstat install_skill_unified --directory <directory> --app <app>",
     ),
     "skills_repos": Json::string("moonstat get_skill_repos"),
+    "update_tray_menu": Json::string("moonstat update_tray_menu"),
     "suite_manifest": Json::string("moonstat suite manifest"),
     "suite_status": Json::string("moonstat suite status"),
     "suite_write_status": Json::string("moonstat suite write-status"),

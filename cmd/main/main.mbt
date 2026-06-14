@@ -404,6 +404,8 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, copy_text_to_clipboard_path(arr))
     ["check_for_updates", ..] | ["check-for-updates", ..] =>
       check_json_post_endpoint(arr, "/check_for_updates", "App shell")
+    ["update_tray_menu", ..] | ["update-tray-menu", ..] =>
+      check_json_post_endpoint(arr, "/update_tray_menu", "App shell")
     ["is_portable_mode", ..] | ["is-portable-mode", ..] =>
       check_usage_endpoint(arr, "/is_portable_mode")
     ["get_init_error", ..] | ["get-init-error", ..] =>
@@ -1080,6 +1082,7 @@ fn print_help() -> Unit {
   )
   println("  stream-check config       Alias for ccs get_stream_check_config")
   println("  stream-check config set   Alias for ccs save_stream_check_config")
+  println("  update_tray_menu          Alias for ccs update_tray_menu")
   println("  suite manifest            Print Moon suite service manifest")
   println("  suite status              Print Moon suite status contract")
   println("  suite write-status        Write ~/.moonstat/suite-status.json")

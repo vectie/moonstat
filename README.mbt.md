@@ -170,6 +170,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET|POST /open_external?url=https://github.com/farion1231/cc-switch`
 - `GET|POST /copy_text_to_clipboard?text=hello`
 - `GET|POST /check_for_updates`
+- `GET|POST /update_tray_menu`
 - `GET /is_portable_mode`
 - `GET /get_init_error`
 - `GET /get_migration_result`
