@@ -691,6 +691,33 @@ test "top level ccs config command names build config paths" {
     ),
     "/delete_db_backup?filename=renamed.db",
   )
+  assert_eq(
+    deeplink_url_path(
+      [
+        "moonstat", "parse_deeplink", "--url", "ccswitch://v1/import?resource=skill&repo=vectie/skills",
+      ],
+      "/parse_deeplink",
+    ),
+    "/parse_deeplink?url=ccswitch%3A%2F%2Fv1%2Fimport%3Fresource%3Dskill%26repo%3Dvectie%2Fskills",
+  )
+  assert_eq(
+    deeplink_request_path(
+      [
+        "moonstat", "merge_deeplink_config", "--request", "{\"resource\":\"provider\"}",
+      ],
+      "/merge_deeplink_config",
+    ),
+    "/merge_deeplink_config?request=%7B%22resource%22%3A%22provider%22%7D",
+  )
+  assert_eq(
+    deeplink_request_path(
+      [
+        "moonstat", "import_from_deeplink_unified", "--url", "ccswitch://v1/import?resource=prompt&app=codex&name=Daily&content=SGVsbG8",
+      ],
+      "/import_from_deeplink_unified",
+    ),
+    "/import_from_deeplink_unified?url=ccswitch%3A%2F%2Fv1%2Fimport%3Fresource%3Dprompt%26app%3Dcodex%26name%3DDaily%26content%3DSGVsbG8",
+  )
 }
 
 ///|

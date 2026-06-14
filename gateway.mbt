@@ -744,6 +744,25 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/delete_db_backup", (r, w) => {
     self.handle_delete_db_backup(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/parse_deeplink", (r, w) => {
+    self.handle_parse_deeplink(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/parse_deeplink", (r, w) => {
+    self.handle_parse_deeplink(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/merge_deeplink_config", (r, w) => {
+    self.handle_merge_deeplink_config(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/merge_deeplink_config", (r, w) => {
+    self.handle_merge_deeplink_config(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/import_from_deeplink", (r, w) => {
+    self.handle_import_from_deeplink(r, w, legacy=true)
+  })
+  router.add_handler(@httpx.Method::Post, "/import_from_deeplink_unified", (
+    r,
+    w,
+  ) => self.handle_import_from_deeplink(r, w, legacy=false))
   router.add_handler(@httpx.Method::Post, "/open_file_dialog", (_, w) => {
     self.handle_open_file_dialog(w)
   })
@@ -5037,6 +5056,74 @@ async fn Gateway::handle_delete_db_backup(
     return
   }
   write_usage_json(w, ccs_delete_db_backup_json(filename))
+}
+
+///|
+async fn Gateway::handle_parse_deeplink(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["url"]) is Some(url) else {
+    write_usage_bad_request(w, "missing_url")
+    return
+  }
+  match ccs_parse_deeplink_url_json(url) {
+    Some(request) => write_usage_json(w, request)
+    None => write_usage_bad_request(w, "invalid_deeplink")
+  }
+}
+
+///|
+async fn Gateway::handle_merge_deeplink_config(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard ccs_deeplink_request_payload(r.path, body) is Some(request) else {
+    write_usage_bad_request(w, "invalid_deeplink")
+    return
+  }
+  match ccs_merge_deeplink_config_json(request) {
+    Some(merged) => write_usage_json(w, merged)
+    None => write_usage_bad_request(w, "invalid_deeplink_config")
+  }
+}
+
+///|
+async fn Gateway::handle_import_from_deeplink(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+  legacy~ : Bool,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard ccs_deeplink_request_payload(r.path, body) is Some(request) else {
+    write_usage_bad_request(w, "invalid_deeplink")
+    return
+  }
+  match self.ccs_import_from_deeplink_json(request) {
+    Some(Object(obj)) =>
+      if legacy {
+        match obj.get("id") {
+          Some(String(id)) => write_usage_json(w, Json::string(id))
+          _ => write_usage_bad_request(w, "invalid_deeplink_import")
+        }
+      } else {
+        write_usage_json(w, Json::object(obj))
+      }
+    Some(result) =>
+      if legacy {
+        write_usage_bad_request(w, "invalid_deeplink_import")
+      } else {
+        write_usage_json(w, result)
+      }
+    None => write_usage_bad_request(w, "invalid_deeplink_import")
+  }
 }
 
 ///|

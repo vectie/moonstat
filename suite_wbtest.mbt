@@ -128,6 +128,12 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("POST /restore_db_backup")))
   assert_true(routes.contains(Json::string("POST /rename_db_backup")))
   assert_true(routes.contains(Json::string("DELETE|POST /delete_db_backup")))
+  assert_true(routes.contains(Json::string("GET|POST /parse_deeplink")))
+  assert_true(routes.contains(Json::string("GET|POST /merge_deeplink_config")))
+  assert_true(routes.contains(Json::string("POST /import_from_deeplink")))
+  assert_true(
+    routes.contains(Json::string("POST /import_from_deeplink_unified")),
+  )
   assert_true(routes.contains(Json::string("GET /get_installed_skills")))
   assert_true(routes.contains(Json::string("GET /get_skill_backups")))
   assert_true(routes.contains(Json::string("POST /install_skill_unified")))

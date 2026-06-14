@@ -447,6 +447,27 @@ pub async fn start(args : ArrayView[String]) -> Unit {
         db_backup_filename_path(arr, "/delete_db_backup"),
         "Import/export",
       )
+    ["parse_deeplink", ..] | ["parse-deeplink", ..] =>
+      check_usage_endpoint(arr, deeplink_url_path(arr, "/parse_deeplink"))
+    ["merge_deeplink_config", ..] | ["merge-deeplink-config", ..] =>
+      check_json_post_endpoint(
+        arr,
+        deeplink_request_path(arr, "/merge_deeplink_config"),
+        "Deeplink",
+      )
+    ["import_from_deeplink", ..] | ["import-from-deeplink", ..] =>
+      check_json_post_endpoint(
+        arr,
+        deeplink_request_path(arr, "/import_from_deeplink"),
+        "Deeplink",
+      )
+    ["import_from_deeplink_unified", ..]
+    | ["import-from-deeplink-unified", ..] =>
+      check_json_post_endpoint(
+        arr,
+        deeplink_request_path(arr, "/import_from_deeplink_unified"),
+        "Deeplink",
+      )
     ["open_file_dialog", ..] | ["open-file-dialog", ..] =>
       check_usage_endpoint(arr, "/open_file_dialog")
     ["open_zip_file_dialog", ..] | ["open-zip-file-dialog", ..] =>
@@ -2686,6 +2707,30 @@ fn db_backup_rename_path(args : Array[String]) -> String {
       }
   }
   cli_path_with_query("/rename_db_backup", query)
+}
+
+///|
+fn deeplink_url_path(args : Array[String], base_path : String) -> String {
+  let query : Array[String] = []
+  match parse_string_arg(args, "--url") {
+    Some(url) => query.push(cli_query_pair("url", url))
+    None => ()
+  }
+  cli_path_with_query(base_path, query)
+}
+
+///|
+fn deeplink_request_path(args : Array[String], base_path : String) -> String {
+  let query : Array[String] = []
+  match parse_string_arg(args, "--request") {
+    Some(request) => query.push(cli_query_pair("request", request))
+    None =>
+      match parse_string_arg(args, "--url") {
+        Some(url) => query.push(cli_query_pair("url", url))
+        None => ()
+      }
+  }
+  cli_path_with_query(base_path, query)
 }
 
 ///|
