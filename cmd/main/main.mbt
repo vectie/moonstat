@@ -715,6 +715,8 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       delete_universal_provider(arr)
     ["sync_universal_provider", ..] | ["sync-universal-provider", ..] =>
       sync_universal_provider(arr)
+    ["get_provider_presets", ..] | ["get-provider-presets", ..] =>
+      check_provider_presets(arr)
     ["test_api_endpoints", ..] | ["test-api-endpoints", ..] =>
       test_api_endpoints(arr)
     ["update_providers_sort_order", ..] | ["update-providers-sort-order", ..] =>
@@ -975,6 +977,8 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     | ["providers", "universal", "delete", ..] => delete_universal_provider(arr)
     ["provider", "universal", "sync", ..]
     | ["providers", "universal", "sync", ..] => sync_universal_provider(arr)
+    ["provider", "presets", "list", ..]
+    | ["providers", "presets", "list", ..] => check_provider_presets(arr)
     ["provider", "test-endpoints", ..] | ["providers", "test-endpoints", ..] =>
       test_api_endpoints(arr)
     ["provider", "sort-order", "set", ..]
@@ -1154,6 +1158,7 @@ fn print_help() -> Unit {
   println(
     "  provider endpoints touch   Alias for ccs update_endpoint_last_used",
   )
+  println("  provider presets list      Show ccs-style provider presets")
   println(
     "  settings get/save          Alias for ccs get_settings/save_settings",
   )
@@ -2307,6 +2312,11 @@ async fn sync_universal_provider(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn check_provider_presets(args : Array[String]) -> Unit {
+  check_json_endpoint(args, provider_presets_path(args), "Provider")
+}
+
+///|
 async fn test_api_endpoints(args : Array[String]) -> Unit {
   guard provider_test_endpoints_path(args) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
@@ -3401,6 +3411,22 @@ fn universal_provider_upsert_path(args : Array[String]) -> String? {
     None => ()
   }
   Some("/upsert_universal_provider?\{query.join("&")}")
+}
+
+///|
+fn provider_presets_path(args : Array[String]) -> String {
+  let query : Array[String] = [
+    cli_query_pair("appType", provider_app_arg(args)),
+  ]
+  match parse_string_arg(args, "--query") {
+    Some(value) => query.push(cli_query_pair("query", value))
+    None => ()
+  }
+  match parse_string_arg_any(args, "--sort-mode", "--sortMode") {
+    Some(value) => query.push(cli_query_pair("sortMode", value))
+    None => ()
+  }
+  cli_path_with_query("/get_provider_presets", query)
 }
 
 ///|

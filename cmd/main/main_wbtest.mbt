@@ -474,6 +474,13 @@ test "top level ccs provider command names build command alias paths" {
       "/upsert_universal_provider?id=u%201&name=Universal%20One&providerType=openai-compatible&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&apps=claude%2Ccodex&codexModel=gpt-5&reasoningEffort=medium",
     ),
   )
+  assert_eq(
+    provider_presets_path([
+      "moonstat", "provider", "presets", "list", "--app", "gemini", "--query", "unity2",
+      "--sort-mode", "nameAsc",
+    ]),
+    "/get_provider_presets?appType=gemini&query=unity2&sortMode=nameAsc",
+  )
 }
 
 ///|

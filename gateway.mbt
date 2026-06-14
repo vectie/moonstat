@@ -1539,6 +1539,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/sync_universal_provider", (r, w) => {
     self.handle_sync_universal_provider(r, w)
   })
+  router.add_handler(@httpx.Method::Get, "/get_provider_presets", (r, w) => {
+    self.handle_get_provider_presets(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/test_api_endpoints", (r, w) => {
     self.handle_test_api_endpoints(r, w)
   })
@@ -9927,6 +9930,16 @@ async fn Gateway::handle_sync_universal_provider(
     w,
     Json::boolean(self.provider_router.sync_universal_provider(id)),
   )
+}
+
+///|
+async fn Gateway::handle_get_provider_presets(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_provider_presets_json(r.path))
 }
 
 ///|
