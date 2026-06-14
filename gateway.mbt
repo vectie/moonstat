@@ -914,8 +914,8 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/update_skill", (r, w) => {
     self.handle_update_skill(r, w)
   })
-  router.add_handler(@httpx.Method::Post, "/migrate_skill_storage", (_, w) => {
-    self.handle_migrate_skill_storage(w)
+  router.add_handler(@httpx.Method::Post, "/migrate_skill_storage", (r, w) => {
+    self.handle_migrate_skill_storage(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/search_skills_sh", (r, w) => {
     self.handle_search_skills_sh(r, w)
@@ -7185,10 +7185,16 @@ async fn Gateway::handle_update_skill(
 ///|
 async fn Gateway::handle_migrate_skill_storage(
   self : Gateway,
+  r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_migrate_skill_storage_json())
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["target"]) is Some(target) else {
+    write_usage_bad_request(w, "missing_storage_target")
+    return
+  }
+  write_usage_json(w, ccs_migrate_skill_storage_json(target))
 }
 
 ///|

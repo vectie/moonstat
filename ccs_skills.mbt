@@ -68,6 +68,7 @@ fn ccs_skill_state_default_json() -> Json {
     "installed": Json::array([]),
     "repos": Json::array(ccs_skill_default_repos_json()),
     "backups": Json::array([]),
+    "skillStorageLocation": Json::string("cc_switch"),
   }.to_json()
 }
 
@@ -88,6 +89,9 @@ async fn ccs_skill_state_load(path? : String = ccs_skill_state_path()) -> Json {
   }
   if obj.get("backups") is None {
     obj["backups"] = Json::array([])
+  }
+  if obj.get("skillStorageLocation") is None {
+    obj["skillStorageLocation"] = Json::string("cc_switch")
   }
   Json::object(obj)
 }
@@ -661,11 +665,173 @@ async fn ccs_update_skill_json(
 }
 
 ///|
-fn ccs_migrate_skill_storage_json() -> Json {
+async fn ccs_migrate_skill_storage_json(
+  target : String,
+  state_path? : String = ccs_skill_state_path(),
+  cc_switch_dir? : String = ccs_cc_switch_skills_dir(),
+  unified_dir? : String = ccs_unified_skills_dir(),
+) -> Json {
+  guard ccs_normalize_skill_storage_location(target) is Some(target_location) else {
+    return ccs_skill_migration_result_json(0, 0, [
+      Json::string("invalid target storage location: \{target}"),
+    ])
+  }
+  let state = ccs_skill_state_load(path=state_path)
+  guard state is Object(obj) else {
+    return ccs_skill_migration_result_json(0, 0, [
+      Json::string("failed to load skill state"),
+    ])
+  }
+  let current_location = ccs_normalize_skill_storage_location(
+    store_json_string_or_default(obj, "skillStorageLocation", "cc_switch"),
+  ).unwrap_or("cc_switch")
+  if current_location == target_location {
+    return ccs_skill_migration_result_json(0, 0, [])
+  }
+  let source_dir = ccs_skill_storage_dir(
+    current_location, cc_switch_dir, unified_dir,
+  )
+  let dest_dir = ccs_skill_storage_dir(
+    target_location, cc_switch_dir, unified_dir,
+  )
+  ccs_skill_make_directory(dest_dir) catch {
+    err =>
+      return ccs_skill_migration_result_json(0, 0, [
+        Json::string("failed to create target directory: \{err}"),
+      ])
+  }
+  let installed : Array[Json] = match obj.get("installed") {
+    Some(Array(items)) => items
+    _ => []
+  }
+  let mut migrated_count = 0
+  let mut skipped_count = 0
+  let errors : Array[Json] = []
+  for item in installed {
+    guard item is Object(skill) else {
+      skipped_count = skipped_count + 1
+      continue
+    }
+    let directory = ccs_skill_install_name(
+      store_json_string_or_default(skill, "directory", ""),
+    )
+    if directory.is_empty() {
+      skipped_count = skipped_count + 1
+      continue
+    }
+    let source_path = @pathx.join(source_dir, directory)
+    let dest_path = @pathx.join(dest_dir, directory)
+    if !@fs.exists(source_path) {
+      skipped_count = skipped_count + 1
+      continue
+    }
+    if @fs.exists(dest_path) {
+      skipped_count = skipped_count + 1
+      continue
+    }
+    match ccs_copy_skill_directory(source_path, dest_path) {
+      Ok(_) => {
+        @fs.rmdir(source_path, recursive=true) catch {
+          err =>
+            errors.push(
+              Json::string(
+                "failed to remove source directory \{source_path}: \{err}",
+              ),
+            )
+        }
+        migrated_count = migrated_count + 1
+      }
+      Err(message) => errors.push(Json::string(message))
+    }
+  }
+  obj["skillStorageLocation"] = Json::string(target_location)
+  ignore(ccs_skill_state_save(Json::object(obj), path=state_path))
+  ccs_skill_migration_result_json(migrated_count, skipped_count, errors)
+}
+
+///|
+fn ccs_normalize_skill_storage_location(value : String) -> String? {
+  match value.trim().to_owned().to_lower() {
+    "cc_switch" | "cc-switch" | "ccswitch" => Some("cc_switch")
+    "unified" => Some("unified")
+    _ => None
+  }
+}
+
+///|
+fn ccs_cc_switch_skills_dir() -> String {
+  @pathx.join(ccs_app_config_dir(), "skills")
+}
+
+///|
+fn ccs_unified_skills_dir() -> String {
+  @pathx.join(ccs_home_dir(), ".agents/skills")
+}
+
+///|
+fn ccs_skill_storage_dir(
+  location : String,
+  cc_switch_dir : String,
+  unified_dir : String,
+) -> String {
+  if location == "unified" {
+    unified_dir
+  } else {
+    cc_switch_dir
+  }
+}
+
+///|
+async fn ccs_copy_skill_directory(
+  source_path : String,
+  dest_path : String,
+) -> Result[Unit, String] {
+  try {
+    let kind = @fs.kind(source_path, follow_symlink=false)
+    match kind {
+      @fs.FileKind::Directory => {
+        ccs_skill_make_directory(dest_path)
+        let entries = @fsx.list_directory(source_path)
+        for entry in entries {
+          let child_source = entry.path
+          let child_dest = @pathx.join(dest_path, entry.name)
+          match entry.kind {
+            @fsx.FileKind::Directory =>
+              match ccs_copy_skill_directory(child_source, child_dest) {
+                Ok(_) => ()
+                Err(message) => return Err(message)
+              }
+            @fsx.FileKind::Regular | @fsx.FileKind::SymLink => {
+              let bytes = @fs.read_file(child_source)
+              @fs.write_file(child_dest, bytes, create=0o644, truncate=true)
+            }
+            _ => ()
+          }
+        }
+      }
+      @fs.FileKind::Regular | @fs.FileKind::SymLink => {
+        ccs_skill_make_directory(@pathx.dirname(dest_path).to_owned())
+        let bytes = @fs.read_file(source_path)
+        @fs.write_file(dest_path, bytes, create=0o644, truncate=true)
+      }
+      _ => return Err("unsupported skill entry kind: \{source_path}")
+    }
+    Ok(())
+  } catch {
+    err => Err("failed to copy skill directory \{source_path}: \{err}")
+  }
+}
+
+///|
+fn ccs_skill_migration_result_json(
+  migrated_count : Int,
+  skipped_count : Int,
+  errors : Array[Json],
+) -> Json {
   {
-    "migratedCount": Json::number(0.0),
-    "skippedCount": Json::number(0.0),
-    "errors": Json::array([]),
+    "migratedCount": Json::number(migrated_count.to_double()),
+    "skippedCount": Json::number(skipped_count.to_double()),
+    "errors": Json::array(errors),
   }.to_json()
 }
 

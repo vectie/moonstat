@@ -107,3 +107,85 @@ async test "ccs skills discovery and search expose ccs compatible shapes" {
   assert_eq(results.length(), 2)
   assert_eq(search["query"], Json::string("skill"))
 }
+
+///|
+async test "ccs skill storage migration moves installed directories" {
+  @fsx.with_temporary_directory("moonstat-skill-storage-XXXXXX", async fn(
+    tmpdir,
+  ) {
+    let state_path = @pathx.join(tmpdir, "skills_state.json")
+    let cc_switch_dir = @pathx.join(tmpdir, "cc-switch-skills")
+    let unified_dir = @pathx.join(tmpdir, "unified-skills")
+    let movable_dir = @pathx.join(cc_switch_dir, "traffic-stats")
+    let skipped_source_dir = @pathx.join(cc_switch_dir, "already-there")
+    let skipped_dest_dir = @pathx.join(unified_dir, "already-there")
+    @fsx.make_directory(movable_dir, recursive=true, exists_ok=true)
+    @fsx.make_directory(skipped_source_dir, recursive=true, exists_ok=true)
+    @fsx.make_directory(skipped_dest_dir, recursive=true, exists_ok=true)
+    @fsx.write_to_file(@pathx.join(movable_dir, "SKILL.md"), "# Traffic Stats")
+    @fsx.write_to_file(
+      @pathx.join(skipped_source_dir, "SKILL.md"),
+      "# Source copy",
+    )
+    @fsx.write_to_file(@pathx.join(skipped_dest_dir, "SKILL.md"), "# Existing")
+    ignore(
+      ccs_skill_state_save(
+        {
+          "installed": Json::array([
+            {
+              "id": Json::string("local:traffic-stats"),
+              "directory": Json::string("traffic-stats"),
+              "name": Json::string("Traffic Stats"),
+            }.to_json(),
+            {
+              "id": Json::string("local:already-there"),
+              "directory": Json::string("already-there"),
+              "name": Json::string("Already There"),
+            }.to_json(),
+          ]),
+          "repos": Json::array([]),
+          "backups": Json::array([]),
+          "skillStorageLocation": Json::string("cc_switch"),
+        }.to_json(),
+        path=state_path,
+      ),
+    )
+
+    guard ccs_migrate_skill_storage_json(
+        "unified",
+        state_path~,
+        cc_switch_dir~,
+        unified_dir~,
+      )
+      is Object(result) else {
+      fail("expected migration result")
+    }
+    assert_eq(result["migratedCount"], Json::number(1.0))
+    assert_eq(result["skippedCount"], Json::number(1.0))
+    assert_eq(result["errors"], Json::array([]))
+    assert_false(@fs.exists(movable_dir))
+    assert_true(
+      @fsx.exists_as_file(@pathx.join(unified_dir, "traffic-stats/SKILL.md")),
+    )
+    assert_true(
+      @fsx.exists_as_file(@pathx.join(skipped_source_dir, "SKILL.md")),
+    )
+    guard ccs_skill_state_load(path=state_path) is Object(next_state) else {
+      fail("expected migrated state")
+    }
+    assert_eq(next_state["skillStorageLocation"], Json::string("unified"))
+
+    guard ccs_migrate_skill_storage_json(
+        "unified",
+        state_path~,
+        cc_switch_dir~,
+        unified_dir~,
+      )
+      is Object(noop) else {
+      fail("expected noop migration result")
+    }
+    assert_eq(noop["migratedCount"], Json::number(0.0))
+    assert_eq(noop["skippedCount"], Json::number(0.0))
+    assert_eq(noop["errors"], Json::array([]))
+  })
+}

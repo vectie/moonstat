@@ -429,6 +429,22 @@ test "top level ccs proxy command names build command alias paths" {
     Some("{\"imports\":[]}"),
   )
   assert_eq(
+    migrate_skill_storage_path([
+      "moonstat", "migrate_skill_storage", "--target", "unified",
+    ]),
+    Some("/migrate_skill_storage?target=unified"),
+  )
+  assert_eq(
+    migrate_skill_storage_path([
+      "moonstat", "migrate_skill_storage", "--target", "cc switch",
+    ]),
+    Some("/migrate_skill_storage?target=cc%20switch"),
+  )
+  assert_eq(
+    migrate_skill_storage_path(["moonstat", "migrate_skill_storage"]),
+    None,
+  )
+  assert_eq(
     delete_env_vars_body([
       "moonstat", "delete_env_vars", "--conflicts", "[{\"key\":\"OPENAI_API_KEY\",\"sourcePath\":\"/tmp/.zshrc\"}]",
     ]),

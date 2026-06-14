@@ -589,7 +589,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
         "Skills",
       )
     ["migrate_skill_storage", ..] | ["migrate-skill-storage", ..] =>
-      check_json_post_endpoint(arr, "/migrate_skill_storage", "Skills")
+      migrate_skill_storage(arr)
     ["search_skills_sh", ..] | ["search-skills-sh", ..] =>
       check_usage_endpoint(arr, skill_search_path(arr))
     ["get_skills", ..] | ["get-skills", ..] =>
@@ -1263,6 +1263,7 @@ fn print_help() -> Unit {
   println("  --conflicts <json>  JSON conflict array for ccs env delete")
   println("  --imports <json>    JSON import array for ccs skill import")
   println("  --items <json>      JSON item array for ccs bulk commands")
+  println("  --target <loc>      Skill storage target: cc_switch or unified")
   println("  --script-code <json> JSON UsageResult for ccs testUsageScript")
   println("  --value <value>    Value for ccs proxy scalar setter commands")
   println(
@@ -2062,6 +2063,26 @@ async fn import_skills_from_apps(args : Array[String]) -> Unit {
 ///|
 fn import_skills_from_apps_body(args : Array[String]) -> String? {
   parse_string_arg_any(args, "--imports", "--body")
+}
+
+///|
+async fn migrate_skill_storage(args : Array[String]) -> Unit {
+  guard migrate_skill_storage_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --target")
+    return
+  }
+  check_json_post_endpoint(args, path, "Skills")
+}
+
+///|
+fn migrate_skill_storage_path(args : Array[String]) -> String? {
+  guard parse_string_arg(args, "--target") is Some(target) else { return None }
+  Some(
+    cli_path_with_query("/migrate_skill_storage", [
+      cli_query_pair("target", target),
+    ]),
+  )
 }
 
 ///|
