@@ -687,6 +687,15 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/get_tool_versions", (r, w) => {
     self.handle_get_tool_versions(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/run_tool_lifecycle_action", (r, w) => {
+    self.handle_run_tool_lifecycle_action(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/probe_tool_installations", (r, w) => {
+    self.handle_probe_tool_installations(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/probe_tool_installations", (r, w) => {
+    self.handle_probe_tool_installations(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/set_window_theme", (r, w) => {
     self.handle_set_window_theme(r, w)
   })
@@ -1285,6 +1294,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/sync_current_providers_live", (_, w) => {
     self.handle_sync_current_providers_live(w)
   })
+  router.add_handler(@httpx.Method::Post, "/import_default_config", (r, w) => {
+    self.handle_import_default_config(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_providers", (r, w) => {
     self.handle_get_providers(r, w)
   })
@@ -1310,6 +1322,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   })
   router.add_handler(@httpx.Method::Post, "/switch_provider_test_hook", (r, w) => {
     self.handle_switch_provider(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/open_provider_terminal", (r, w) => {
+    self.handle_open_provider_terminal(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_claude_desktop_status", (_, w) => {
     self.handle_get_claude_desktop_status(w)
@@ -4991,6 +5006,46 @@ async fn Gateway::handle_get_tool_versions(
 }
 
 ///|
+async fn Gateway::handle_run_tool_lifecycle_action(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  let tools = match body {
+    Some(Object(obj)) => ccs_requested_tool_names_from_json(obj.get("tools"))
+    _ => ccs_requested_tool_names(proxy_string_request(r.path, body, ["tools"]))
+  }
+  guard proxy_string_request(r.path, body, ["action"]) is Some(action) else {
+    write_usage_bad_request(w, "missing_action")
+    return
+  }
+  match ccs_run_tool_lifecycle_action_json(tools, action) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
+async fn Gateway::handle_probe_tool_installations(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  let tools = match body {
+    Some(Object(obj)) => ccs_requested_tool_names_from_json(obj.get("tools"))
+    _ => ccs_requested_tool_names(proxy_string_request(r.path, body, ["tools"]))
+  }
+  match ccs_probe_tool_installations_json(tools) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
+}
+
+///|
 async fn Gateway::handle_set_window_theme(
   self : Gateway,
   r : @httpx.RequestReader,
@@ -7363,6 +7418,23 @@ async fn Gateway::handle_get_current_provider(
 }
 
 ///|
+async fn Gateway::handle_import_default_config(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard provider_app_from_request(r.path, body) is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app")
+    return
+  }
+  write_usage_json(
+    w,
+    ccs_import_default_config_json(self.provider_router, app_type),
+  )
+}
+
+///|
 async fn Gateway::handle_add_provider(
   self : Gateway,
   r : @httpx.RequestReader,
@@ -7495,6 +7567,35 @@ async fn Gateway::handle_switch_provider(
     provider.provider_name,
   )
   write_usage_json(w, { "warnings": Json::array([]) }.to_json())
+}
+
+///|
+async fn Gateway::handle_open_provider_terminal(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard provider_app_from_request(r.path, body) is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app")
+    return
+  }
+  guard proxy_string_request(r.path, body, ["providerId", "provider_id"])
+    is Some(provider_id) else {
+    write_usage_bad_request(w, "missing_provider_id")
+    return
+  }
+  let cwd = proxy_string_request(r.path, body, ["cwd"])
+  match
+    ccs_open_provider_terminal_json(
+      self.provider_router,
+      app_type,
+      provider_id,
+      cwd,
+    ) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|

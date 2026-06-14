@@ -270,6 +270,10 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       switch_provider_test_hook(arr)
     ["sync_current_providers_live", ..] | ["sync-current-providers-live", ..] =>
       sync_current_providers_live(arr)
+    ["import_default_config", ..] | ["import-default-config", ..] =>
+      import_default_config(arr)
+    ["open_provider_terminal", ..] | ["open-provider-terminal", ..] =>
+      open_provider_terminal(arr)
     ["get_claude_desktop_status", ..] | ["get-claude-desktop-status", ..] =>
       check_usage_endpoint(arr, "/get_claude_desktop_status")
     ["get_claude_desktop_default_routes", ..]
@@ -407,6 +411,10 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, "/get_skills_migration_result")
     ["get_tool_versions", ..] | ["get-tool-versions", ..] =>
       check_usage_endpoint(arr, tool_versions_path(arr))
+    ["run_tool_lifecycle_action", ..] | ["run-tool-lifecycle-action", ..] =>
+      run_tool_lifecycle_action(arr)
+    ["probe_tool_installations", ..] | ["probe-tool-installations", ..] =>
+      check_usage_endpoint(arr, tool_installations_path(arr))
     ["set_window_theme", ..] | ["set-window-theme", ..] =>
       check_usage_endpoint(arr, window_theme_path(arr))
     ["enter_lightweight_mode", ..] | ["enter-lightweight-mode", ..] =>
@@ -1871,6 +1879,25 @@ async fn sync_current_providers_live(args : Array[String]) -> Unit {
 }
 
 ///|
+async fn import_default_config(args : Array[String]) -> Unit {
+  check_json_post_endpoint(
+    args,
+    provider_app_path(args, "/import_default_config"),
+    "Provider",
+  )
+}
+
+///|
+async fn open_provider_terminal(args : Array[String]) -> Unit {
+  guard open_provider_terminal_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --provider-id")
+    return
+  }
+  check_json_post_endpoint(args, path, "Provider")
+}
+
+///|
 async fn check_live_provider_settings(args : Array[String]) -> Unit {
   check_json_endpoint(
     args,
@@ -2399,6 +2426,20 @@ fn provider_id_path(args : Array[String], path : String) -> String? {
 }
 
 ///|
+fn open_provider_terminal_path(args : Array[String]) -> String? {
+  guard provider_id_arg(args) is Some(provider_id) else { return None }
+  let query : Array[String] = [
+    cli_query_pair("app", provider_app_arg(args)),
+    cli_query_pair("providerId", provider_id),
+  ]
+  match parse_string_arg(args, "--cwd") {
+    Some(cwd) => query.push(cli_query_pair("cwd", cwd))
+    None => ()
+  }
+  Some(cli_path_with_query("/open_provider_terminal", query))
+}
+
+///|
 fn provider_live_ids_path(app_type : String) -> String {
   match app_type {
     "opencode" => "/get_opencode_live_provider_ids"
@@ -2705,6 +2746,35 @@ fn tool_versions_path(args : Array[String]) -> String {
   match parse_string_arg(args, "--tools") {
     Some(tools) => "/get_tool_versions?\{cli_query_pair("tools", tools)}"
     None => "/get_tool_versions"
+  }
+}
+
+///|
+async fn run_tool_lifecycle_action(args : Array[String]) -> Unit {
+  guard tool_lifecycle_path(args) is Some(path) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --action")
+    return
+  }
+  check_json_post_endpoint(args, path, "App shell")
+}
+
+///|
+fn tool_lifecycle_path(args : Array[String]) -> String? {
+  guard parse_string_arg(args, "--action") is Some(action) else { return None }
+  let query : Array[String] = [cli_query_pair("action", action)]
+  match parse_string_arg(args, "--tools") {
+    Some(tools) => query.push(cli_query_pair("tools", tools))
+    None => ()
+  }
+  Some(cli_path_with_query("/run_tool_lifecycle_action", query))
+}
+
+///|
+fn tool_installations_path(args : Array[String]) -> String {
+  match parse_string_arg(args, "--tools") {
+    Some(tools) => "/probe_tool_installations?\{cli_query_pair("tools", tools)}"
+    None => "/probe_tool_installations"
   }
 }
 
