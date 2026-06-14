@@ -552,6 +552,39 @@ test "session imports skip matching proxy log fingerprints" {
 }
 
 ///|
+test "session imports treat missing proxy data source like ccs" {
+  let stats = TrafficStats::new()
+  stats.record_request_log(
+    RequestLog::new(
+      request_id="proxy-legacy-source",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="gpt-5.5",
+      usage=TokenUsage::new(
+        input_tokens=100,
+        output_tokens=10,
+        cache_read_tokens=60,
+        model=Some("gpt-5.5"),
+      ),
+      status_code=200,
+      created_at=10,
+      data_source="",
+    ),
+  )
+  let content =
+    #|{"type":"session_meta","payload":{"session_id":"legacy-source"}}
+    #|{"type":"event_msg","timestamp":"1970-01-01T00:00:10Z","payload":{"type":"token_count","info":{"model":"gpt-5.5","total_token_usage":{"input_tokens":100,"cached_input_tokens":60,"output_tokens":10}}}}
+  let result = stats.ingest_codex_session_jsonl(
+    file_path="/tmp/codex/legacy-source.jsonl",
+    content~,
+    last_modified=1L,
+  )
+  assert_eq(result.imported, 0)
+  assert_eq(result.skipped, 1)
+  assert_eq(stats.request_logs.length(), 1)
+}
+
+///|
 test "opencode session import skips matching proxy log fingerprints" {
   let stats = TrafficStats::new()
   stats.record_request_log(

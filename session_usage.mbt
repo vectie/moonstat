@@ -1515,7 +1515,7 @@ fn TrafficStats::should_skip_session_insert(
     let cache_creation_matches = log.cache_creation_tokens ==
       usage.cache_creation_tokens ||
       allow_missing_cache_creation
-    if log.data_source == "proxy" &&
+    if request_log_data_source(log) == "proxy" &&
       log.status_code >= 200 &&
       log.status_code < 300 &&
       log.app_type == app_type &&
