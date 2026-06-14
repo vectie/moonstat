@@ -527,9 +527,20 @@ async fn Gateway::record_success_stream_usage(
   response_bytes : Int,
   record_provider? : Bool = true,
   first_token_ms? : Int? = None,
+  skip_empty_usage? : Bool = false,
 ) -> Unit {
   if record_provider {
     self.record_provider_result(true)
+  }
+  if skip_empty_usage {
+    match usage {
+      Some(usage) if usage.has_billable_tokens() => ()
+      _ => {
+        self.stats.record_success_without_usage_log(response_bytes)
+        self.stats.save_persistent_store()
+        return
+      }
+    }
   }
   self.stats.record_success_usage_with_pricing(
     usage.unwrap_or(TokenUsage::empty()),
@@ -2917,6 +2928,7 @@ async fn Gateway::forward_streaming_codex_response(
           response_bytes,
           record_provider=false,
           first_token_ms~,
+          skip_empty_usage=use_chat_bridge,
         )
         w.flush()
         return
@@ -14645,6 +14657,7 @@ async fn Gateway::forward_successful_claude_compatible_stream(
       0,
       record_provider=false,
       first_token_ms~,
+      skip_empty_usage=true,
     )
   } else if api_format == "gemini_native" {
     let first_token_ms = self.forward_gemini_native_sse_as_anthropic(
@@ -14655,6 +14668,7 @@ async fn Gateway::forward_successful_claude_compatible_stream(
       0,
       record_provider=false,
       first_token_ms~,
+      skip_empty_usage=true,
     )
   } else if api_format == "openai_responses" {
     let reader = CodexStreamReader::new(client, request_model)
@@ -14674,6 +14688,7 @@ async fn Gateway::forward_successful_claude_compatible_stream(
       0,
       record_provider=false,
       first_token_ms~,
+      skip_empty_usage=true,
     )
   } else {
     let first_token_ms = self.forward_anthropic_sse_passthrough(
@@ -14684,6 +14699,7 @@ async fn Gateway::forward_successful_claude_compatible_stream(
       0,
       record_provider=false,
       first_token_ms~,
+      skip_empty_usage=true,
     )
   }
   if api_format == "openai_responses" {

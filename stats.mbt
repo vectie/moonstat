@@ -476,6 +476,17 @@ pub fn TrafficStats::record_success_usage(
 }
 
 ///|
+fn TrafficStats::record_success_without_usage_log(
+  self : TrafficStats,
+  response_bytes : Int,
+) -> Unit {
+  self.successful_responses += 1
+  self.response_bytes += response_bytes
+  self.last_error = None
+  self.finish_request()
+}
+
+///|
 fn TrafficStats::record_success_usage_with_pricing(
   self : TrafficStats,
   usage : TokenUsage,

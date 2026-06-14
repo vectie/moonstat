@@ -2279,6 +2279,28 @@ async test "gateway records all zero ccs stream usage request log" {
 }
 
 ///|
+async test "gateway skips all zero ccs transformed stream usage log" {
+  let gateway = Gateway::new(port=0)
+  gateway.stats.record_inbound(10)
+  let _ = gateway.activate_provider("codex")
+  gateway.stats.record_request_context(
+    "codex",
+    "gpt-5",
+    provider_type=Some("codex"),
+  )
+  gateway.stats.record_stream_mode(true)
+  gateway.record_success_stream_usage(
+    Some(TokenUsage::empty()),
+    42,
+    skip_empty_usage=true,
+  )
+  assert_eq(gateway.stats.successful_responses, 1)
+  assert_eq(gateway.stats.response_bytes, 42)
+  assert_eq(gateway.stats.request_logs.length(), 0)
+  assert_true(gateway.stats.current_request_id is None)
+}
+
+///|
 async test "gateway records all zero ccs nonstream usage request log" {
   let gateway = Gateway::new(port=0)
   gateway.stats.record_inbound(10)
