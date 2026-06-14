@@ -4545,7 +4545,15 @@ async fn ccs_config_exists(app : String) -> Bool {
 }
 
 ///|
-fn ccs_env_conflicts_json(app : String) -> Json {
+async fn ccs_env_conflicts_json(app : String) -> Json {
+  ccs_env_conflicts_json_with_shell_files(app, ccs_env_shell_config_paths())
+}
+
+///|
+async fn ccs_env_conflicts_json_with_shell_files(
+  app : String,
+  shell_files : Array[String],
+) -> Json {
   let conflicts : Array[Json] = []
   for key in ccs_env_conflict_keys(ccs_normalize_app_type(app)) {
     match getenv_or_none(key) {
@@ -4554,14 +4562,62 @@ fn ccs_env_conflicts_json(app : String) -> Json {
           {
             "varName": Json::string(key),
             "varValue": Json::string(value),
-            "sourceType": Json::string("process"),
-            "sourcePath": Json::string("environment"),
+            "sourceType": Json::string("system"),
+            "sourcePath": Json::string("Process Environment"),
           }.to_json(),
         )
       _ => ()
     }
   }
+  for file_path in shell_files {
+    ccs_push_shell_env_conflicts(
+      conflicts,
+      file_path,
+      ccs_env_conflict_keys(ccs_normalize_app_type(app)),
+    )
+  }
   Json::array(conflicts)
+}
+
+///|
+async fn ccs_push_shell_env_conflicts(
+  conflicts : Array[Json],
+  file_path : String,
+  keywords : Array[String],
+) -> Unit {
+  let content = @fsx.read_file(file_path) catch { _ => return }
+  let mut line_number = 0
+  for line_view in content.split("\n") {
+    line_number += 1
+    let trimmed = line_view.to_owned().trim().to_owned()
+    guard ccs_env_assignment_line(trimmed) is Some((var_name, var_value)) else {
+      continue
+    }
+    if ccs_env_name_matches_keywords(var_name, keywords) {
+      conflicts.push(
+        {
+          "varName": Json::string(var_name),
+          "varValue": Json::string(ccs_trim_env_value_quotes(var_value)),
+          "sourceType": Json::string("file"),
+          "sourcePath": Json::string("\{file_path}:\{line_number}"),
+        }.to_json(),
+      )
+    }
+  }
+}
+
+///|
+fn ccs_env_shell_config_paths() -> Array[String] {
+  let home = ccs_home_dir()
+  [
+    @pathx.join(home, ".bashrc"),
+    @pathx.join(home, ".bash_profile"),
+    @pathx.join(home, ".zshrc"),
+    @pathx.join(home, ".zprofile"),
+    @pathx.join(home, ".profile"),
+    "/etc/profile",
+    "/etc/bashrc",
+  ]
 }
 
 ///|
@@ -4598,11 +4654,131 @@ fn ccs_env_backup_json(body : Json?) -> Json {
   let timestamp = @async.now().to_int().to_string()
   {
     "backupPath": Json::string(
-      @pathx.join(ccs_app_config_dir(), "env-backup-\{timestamp}.json"),
+      @pathx.join(
+        @pathx.join(ccs_app_config_dir(), "backups"),
+        "env-backup-\{timestamp}.json",
+      ),
     ),
     "timestamp": Json::string(timestamp),
     "conflicts": Json::array(conflicts),
   }.to_json()
+}
+
+///|
+async fn ccs_delete_env_vars_json(body : Json?) -> Result[Json, String] {
+  let backup = ccs_env_backup_json(body)
+  guard backup is Object(obj) else { return Err("invalid_backup") }
+  guard obj.get("backupPath") is Some(String(backup_path)) else {
+    return Err("missing_backup_path")
+  }
+  @fsx.make_directory(
+    @pathx.dirname(backup_path),
+    recursive=true,
+    exists_ok=true,
+  ) catch {
+    error => return Err("创建备份目录失败: \{error}")
+  }
+  @fsx.write_to_file(backup_path, backup.stringify(indent=2) + "\n") catch {
+    error => return Err("写入备份文件失败: \{error}")
+  }
+  for conflict in ccs_env_conflicts_from_body(body) {
+    match ccs_delete_single_env_conflict(conflict) {
+      Ok(_) => ()
+      Err(error) =>
+        return Err(
+          "删除环境变量失败: \{error}. 备份已保存到: \{backup_path}",
+        )
+    }
+  }
+  Ok(backup)
+}
+
+///|
+async fn ccs_delete_single_env_conflict(
+  conflict : Json,
+) -> Result[Unit, String] {
+  guard conflict is Object(obj) else { return Err("invalid_conflict") }
+  let source_type = ccs_env_conflict_string(obj, "sourceType", "source_type")
+  let var_name = ccs_env_conflict_string(obj, "varName", "var_name")
+  let source_path = ccs_env_conflict_string(obj, "sourcePath", "source_path")
+  match (source_type, var_name, source_path) {
+    (Some("file"), Some(var_name), Some(source_path)) => {
+      let file_path = ccs_env_source_file_path(source_path)
+      guard !file_path.is_empty() else {
+        return Err("无效的文件路径格式")
+      }
+      let content = @fsx.read_file(file_path) catch {
+        error => return Err("读取文件失败 \{file_path}: \{error}")
+      }
+      let kept : Array[String] = []
+      for line_view in content.split("\n") {
+        let line = line_view.to_owned()
+        match ccs_env_assignment_line(line.trim().to_owned()) {
+          Some((name, _)) if name == var_name => ()
+          _ => kept.push(line)
+        }
+      }
+      @fsx.write_to_file(file_path, kept.join("\n")) catch {
+        error => return Err("写入文件失败 \{file_path}: \{error}")
+      }
+      Ok(())
+    }
+    (Some("system"), _, _) | (Some("process"), _, _) => Ok(())
+    (Some(other), _, _) => Err("未知的环境变量来源类型: \{other}")
+    _ => Err("invalid_conflict")
+  }
+}
+
+///|
+async fn ccs_restore_env_backup_json(
+  backup_path : String?,
+) -> Result[Json, String] {
+  guard backup_path is Some(path) else { return Err("missing_backup_path") }
+  let content = @fsx.read_file(path) catch {
+    error => return Err("读取备份文件失败: \{error}")
+  }
+  let parsed = @json.parse(content) catch {
+    error => return Err("解析备份文件失败: \{error}")
+  }
+  for conflict in ccs_env_conflicts_from_body(Some(parsed)) {
+    match ccs_restore_single_env_conflict(conflict) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+  }
+  Ok(Json::null())
+}
+
+///|
+async fn ccs_restore_single_env_conflict(
+  conflict : Json,
+) -> Result[Unit, String] {
+  guard conflict is Object(obj) else { return Err("invalid_conflict") }
+  let source_type = ccs_env_conflict_string(obj, "sourceType", "source_type")
+  let var_name = ccs_env_conflict_string(obj, "varName", "var_name")
+  let var_value = ccs_env_conflict_string(obj, "varValue", "var_value")
+  let source_path = ccs_env_conflict_string(obj, "sourcePath", "source_path")
+  match (source_type, var_name, var_value, source_path) {
+    (Some("file"), Some(var_name), Some(var_value), Some(source_path)) => {
+      let file_path = ccs_env_source_file_path(source_path)
+      guard !file_path.is_empty() else {
+        return Err("无效的文件路径格式")
+      }
+      let content = @fsx.read_file(file_path) catch {
+        error => return Err("读取文件失败 \{file_path}: \{error}")
+      }
+      @fsx.write_to_file(
+        file_path,
+        content + "\nexport \{var_name}=\{var_value}",
+      ) catch {
+        error => return Err("写入文件失败 \{file_path}: \{error}")
+      }
+      Ok(())
+    }
+    (Some(other), _, _, _) =>
+      Err("无法恢复类型为 \{other} 的环境变量")
+    _ => Err("invalid_conflict")
+  }
 }
 
 ///|
@@ -4616,6 +4792,80 @@ fn ccs_env_conflicts_from_body(body : Json?) -> Array[Json] {
       }
     _ => []
   }
+}
+
+///|
+fn ccs_env_conflict_string(
+  obj : Map[String, Json],
+  key : String,
+  alt : String,
+) -> String? {
+  match obj.get(key) {
+    Some(String(value)) => Some(value)
+    _ =>
+      match obj.get(alt) {
+        Some(String(value)) => Some(value)
+        _ => None
+      }
+  }
+}
+
+///|
+fn ccs_env_source_file_path(source_path : String) -> String {
+  match source_path.find(":") {
+    Some(index) => source_path[:index].to_owned()
+    None => source_path
+  }
+}
+
+///|
+fn ccs_env_assignment_line(line : String) -> (String, String)? {
+  if line.is_empty() || line.has_prefix("#") {
+    return None
+  }
+  let export_line = if line.has_prefix("export ") {
+    line[7:].to_owned().trim().to_owned()
+  } else {
+    line
+  }
+  match export_line.find("=") {
+    Some(index) => {
+      let name = export_line[:index].to_owned().trim().to_owned()
+      let value = export_line[index + 1:].to_owned().trim().to_owned()
+      if name.is_empty() {
+        None
+      } else {
+        Some((name, value))
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn ccs_env_name_matches_keywords(
+  var_name : String,
+  keywords : Array[String],
+) -> Bool {
+  let upper = var_name.to_upper()
+  for keyword in keywords {
+    if upper.contains(keyword) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn ccs_trim_env_value_quotes(value : String) -> String {
+  let trimmed = value.trim().to_owned()
+  if trimmed.length() >= 2 {
+    if (trimmed.has_prefix("\"") && trimmed.has_suffix("\"")) ||
+      (trimmed.has_prefix("'") && trimmed.has_suffix("'")) {
+      return trimmed[1:trimmed.length() - 1].to_owned()
+    }
+  }
+  trimmed
 }
 
 ///|
@@ -6369,7 +6619,10 @@ async fn Gateway::handle_delete_env_vars(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  write_usage_json(w, ccs_env_backup_json(body))
+  match ccs_delete_env_vars_json(body) {
+    Ok(backup) => write_usage_json(w, backup)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|
@@ -6380,8 +6633,13 @@ async fn Gateway::handle_restore_env_backup(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  ignore(proxy_string_request(r.path, body, ["backupPath", "backup_path"]))
-  write_usage_json(w, Json::null())
+  let backup_path = proxy_string_request(r.path, body, [
+    "backupPath", "backup_path",
+  ])
+  match ccs_restore_env_backup_json(backup_path) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|

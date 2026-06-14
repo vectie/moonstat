@@ -5466,6 +5466,54 @@ test "ccs env helpers preserve conflicts and known keys" {
 }
 
 ///|
+async test "ccs env helpers scan delete and restore file conflicts" {
+  @fsx.with_temporary_directory("moonstat-env-XXXXXX", async fn(tmpdir) {
+    let shell_path = @pathx.join(tmpdir, ".zshrc")
+    @fsx.write_to_file(
+      shell_path, "export OPENAI_API_KEY=\"sk-test\"\nKEEP=1\nOPENAI_BASE_URL='http://local'\n# OPENAI_ORG=skip\n",
+    )
+    guard ccs_env_conflicts_json_with_shell_files("codex", [shell_path])
+      is Array(conflicts) else {
+      fail("expected conflicts")
+    }
+    let file_conflicts : Array[Json] = []
+    for conflict in conflicts {
+      guard conflict is Object(obj) else { continue }
+      if obj["sourceType"] == Json::string("file") {
+        file_conflicts.push(conflict)
+      }
+    }
+    assert_eq(file_conflicts.length(), 2)
+    guard file_conflicts[0] is Object(first) else {
+      fail("expected first file conflict")
+    }
+    assert_eq(first["varName"], Json::string("OPENAI_API_KEY"))
+    assert_eq(first["varValue"], Json::string("sk-test"))
+    assert_eq(first["sourcePath"], Json::string("\{shell_path}:1"))
+    match ccs_delete_single_env_conflict(file_conflicts[0]) {
+      Ok(_) => ()
+      Err(error) => fail(error)
+    }
+    let deleted = @fsx.read_file(shell_path)
+    assert_false(deleted.contains("OPENAI_API_KEY"))
+    assert_true(deleted.contains("OPENAI_BASE_URL"))
+    let backup_path = @pathx.join(tmpdir, "backup.json")
+    let backup = {
+      "backupPath": Json::string(backup_path),
+      "timestamp": Json::string("test"),
+      "conflicts": Json::array([file_conflicts[0]]),
+    }.to_json()
+    @fsx.write_to_file(backup_path, backup.stringify(indent=2) + "\n")
+    match ccs_restore_env_backup_json(Some(backup_path)) {
+      Ok(_) => ()
+      Err(error) => fail(error)
+    }
+    let restored = @fsx.read_file(shell_path)
+    assert_true(restored.contains("export OPENAI_API_KEY=sk-test"))
+  })
+}
+
+///|
 test "ccs mcp helpers preserve server apps and config shape" {
   let spec = {
     "name": Json::string("Filesystem"),

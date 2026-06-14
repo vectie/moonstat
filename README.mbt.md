@@ -437,7 +437,10 @@ conflict commands are mirrored by `/get_config_status`, `/get_config_dir`,
 `/get_common_config_snippet`, `/set_common_config_snippet`,
 `/extract_common_config_snippet`, `/check_env_conflicts`, `/delete_env_vars`,
 and `/restore_env_backup`; standalone folder open/pick and env delete/restore
-routes are intentionally non-destructive and snippets are kept in gateway memory.
+routes keep CCS-compatible shapes. File-sourced env conflicts are backed up under
+`.cc-switch/backups`, removed from shell config files, and restored from that
+backup JSON; process environment conflicts remain non-destructive like CCS Unix
+system entries. Snippets are kept in gateway memory.
 CCS settings and Claude plugin commands are mirrored by `/get_settings`,
 `/save_settings`, `/get_rectifier_config`, `/set_rectifier_config`,
 `/get_optimizer_config`, `/set_optimizer_config`,
