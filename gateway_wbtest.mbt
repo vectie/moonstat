@@ -2712,6 +2712,11 @@ test "gateway records upstream failures into provider router before finish" {
 ///|
 test "ccs upstream status retryability matches client error bucket" {
   assert_false(ccs_upstream_status_retryable(400))
+  assert_false(ccs_upstream_status_retryable(405))
+  assert_false(ccs_upstream_status_retryable(406))
+  assert_false(ccs_upstream_status_retryable(413))
+  assert_false(ccs_upstream_status_retryable(414))
+  assert_false(ccs_upstream_status_retryable(415))
   assert_false(ccs_upstream_status_retryable(422))
   assert_false(ccs_upstream_status_retryable(501))
   assert_true(ccs_upstream_status_retryable(401))
