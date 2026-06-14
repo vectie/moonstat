@@ -11067,7 +11067,10 @@ fn Gateway::stream_check_provider_result_json(
     return None
   }
   ignore(provider)
-  let model = stream_check_model_for_app(self.stream_check_config, app_type)
+  let model = stream_check_reported_model_for_app(
+    self.stream_check_config,
+    app_type,
+  )
   let configured = true
   let status = if configured { "operational" } else { "failed" }
   let message = if configured {
@@ -11099,6 +11102,38 @@ fn stream_check_model_for_app(
     "claude" | "claude-desktop" => config.claude_model
     "gemini" => config.gemini_model
     _ => config.codex_model
+  }
+}
+
+///|
+fn stream_check_reported_model_for_app(
+  config : StreamCheckConfig,
+  app_type : String,
+) -> String {
+  let model = stream_check_model_for_app(config, app_type)
+  if app_type == "codex" {
+    stream_check_parse_model_with_effort(model).0
+  } else {
+    model
+  }
+}
+
+///|
+fn stream_check_parse_model_with_effort(model : String) -> (String, String?) {
+  let split = match model.find("@") {
+    Some(index) => Some(index)
+    None => model.find("#")
+  }
+  match split {
+    Some(index) => {
+      let effort = model[index + 1:]
+      if !effort.is_empty() {
+        (model[:index].to_owned(), Some(effort.to_owned()))
+      } else {
+        (model, None)
+      }
+    }
+    None => (model, None)
   }
 }
 

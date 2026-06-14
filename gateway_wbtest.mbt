@@ -851,6 +851,45 @@ test "stream check result uses ccs camelCase shape" {
 }
 
 ///|
+test "stream check strips ccs codex effort suffix from result model" {
+  let gateway = Gateway::new(port=17018, host="127.0.0.18", model="gpt-5")
+  gateway.stream_check_config = {
+    ..gateway.stream_check_config,
+    codex_model: "gpt-5.5@low",
+    claude_model: "claude-sonnet-4-5#high",
+  }
+  guard gateway.stream_check_provider_result_json("codex", "codex-oauth")
+    is Some(Object(result)) else {
+    fail("expected stream check result")
+  }
+  assert_eq(result["modelUsed"], Json::string("gpt-5.5"))
+  assert_eq(
+    stream_check_reported_model_for_app(gateway.stream_check_config, "claude"),
+    "claude-sonnet-4-5#high",
+  )
+}
+
+///|
+test "stream check codex effort parser follows ccs separators" {
+  assert_eq(
+    stream_check_parse_model_with_effort("gpt-5.1-codex@low").0,
+    "gpt-5.1-codex",
+  )
+  assert_eq(
+    stream_check_parse_model_with_effort("o1-preview#high").0,
+    "o1-preview",
+  )
+  assert_eq(
+    stream_check_parse_model_with_effort("gpt-4o-mini").0,
+    "gpt-4o-mini",
+  )
+  assert_eq(
+    stream_check_parse_model_with_effort("gpt-5.1-codex@").0,
+    "gpt-5.1-codex@",
+  )
+}
+
+///|
 test "stream check all provider ids follow ccs proxy target filter" {
   let router = ProviderRouter::new()
   router.upsert_provider(
