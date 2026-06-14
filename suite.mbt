@@ -283,6 +283,16 @@ fn moonstat_suite_integrations_json(
       "openai_base_url": Json::string(openai_base_url),
       "anthropic_base_url": Json::string(anthropic_base_url),
       "default_model": Json::string(model),
+      "moonclaw_model_config": moonclaw_model_config_json(
+        openai_base_url, model,
+      ),
+      "moonclaw_models_json": Json::array([
+        moonclaw_model_config_json(openai_base_url, model),
+      ]),
+      "moonclaw_models_path_candidates": Json::array([
+        Json::string(".moonclaw/models/models.json"),
+        Json::string("~/.moonclaw/models/models.json"),
+      ]),
       "health_url": Json::string("\{base_url}/health"),
       "usage_summary_url": Json::string("\{base_url}/usage/summary"),
       "usage_logs_url": Json::string("\{base_url}/usage/logs"),
@@ -293,6 +303,7 @@ fn moonstat_suite_integrations_json(
       "env": Json::object({
         "OPENAI_BASE_URL": Json::string(openai_base_url),
         "ANTHROPIC_BASE_URL": Json::string(anthropic_base_url),
+        "OPENAI_API_KEY": Json::string("moonstat-local"),
       }),
     }),
     "moonbook": Json::object({
@@ -341,6 +352,21 @@ fn moonstat_suite_integrations_json(
       ),
       "config_status_url": Json::string("\{base_url}/get_config_status"),
     }),
+  })
+}
+
+///|
+fn moonclaw_model_config_json(openai_base_url : String, model : String) -> Json {
+  Json::object({
+    "name": Json::string("moonstat/\{model}"),
+    "description": Json::string(
+      "Moonstat local OpenAI-compatible proxy model for the Moon suite.",
+    ),
+    "model_name": Json::string(model),
+    "model_type": Json::string("saas/openai"),
+    "api_key": Json::string("moonstat-local"),
+    "base_url": Json::string(openai_base_url),
+    "safe_zone_tokens": Json::number(200000.0),
   })
 }
 

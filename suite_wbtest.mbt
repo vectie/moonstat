@@ -319,6 +319,26 @@ test "suite manifest publishes moonstat service contract" {
     moonclaw_env["OPENAI_BASE_URL"],
     Json::string("http://127.0.0.1:15721/v1"),
   )
+  assert_eq(moonclaw_env["OPENAI_API_KEY"], Json::string("moonstat-local"))
+  guard moonclaw["moonclaw_model_config"] is Object(model_config) else {
+    fail("expected moonclaw model config")
+  }
+  assert_eq(model_config["name"], Json::string("moonstat/gpt-5"))
+  assert_eq(model_config["model_name"], Json::string("gpt-5"))
+  assert_eq(model_config["model_type"], Json::string("saas/openai"))
+  assert_eq(model_config["api_key"], Json::string("moonstat-local"))
+  assert_eq(model_config["base_url"], Json::string("http://127.0.0.1:15721/v1"))
+  assert_eq(model_config["safe_zone_tokens"], Json::number(200000.0))
+  guard moonclaw["moonclaw_models_json"] is Array(models_json) else {
+    fail("expected moonclaw models json")
+  }
+  assert_eq(models_json.length(), 1)
+  assert_eq(models_json[0], moonclaw["moonclaw_model_config"])
+  guard moonclaw["moonclaw_models_path_candidates"] is Array(paths) else {
+    fail("expected moonclaw models path candidates")
+  }
+  assert_true(paths.contains(Json::string(".moonclaw/models/models.json")))
+  assert_true(paths.contains(Json::string("~/.moonclaw/models/models.json")))
   assert_eq(
     moonclaw["provider_presets_url"],
     Json::string("http://127.0.0.1:15721/get_provider_presets"),
