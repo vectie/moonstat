@@ -2402,12 +2402,18 @@ async test "gateway streaming success records provider health before request com
     fail("request should remain open until stream end")
   }
 
-  gateway.record_success_stream_usage(None, 24, record_provider=false)
+  gateway.record_success_stream_usage(
+    None,
+    24,
+    record_provider=false,
+    first_token_ms=Some(7),
+  )
   assert_true(gateway.stats.successful_responses == 1)
   assert_true(gateway.stats.response_bytes == 24)
   assert_true(gateway.stats.request_logs.length() == 1)
   assert_true(gateway.stats.request_logs[0].is_streaming)
   assert_true(gateway.stats.request_logs[0].model == "gpt-5")
+  assert_true(gateway.stats.request_logs[0].first_token_ms == Some(7))
   assert_true(gateway.stats.current_request_id is None)
   guard gateway.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",

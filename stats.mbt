@@ -482,6 +482,7 @@ fn TrafficStats::record_success_usage_with_pricing(
   response_bytes : Int,
   pricing_overrides : Array[ModelPricing],
   deleted_model_ids : Map[String, Bool],
+  first_token_ms? : Int? = None,
 ) -> Unit {
   self.successful_responses += 1
   self.input_tokens += usage.input_tokens
@@ -496,6 +497,7 @@ fn TrafficStats::record_success_usage_with_pricing(
     None,
     pricing_overrides~,
     deleted_model_ids~,
+    first_token_ms~,
   )
   self.finish_request()
 }
@@ -508,6 +510,7 @@ fn TrafficStats::record_completed_request(
   error_message : String?,
   pricing_overrides? : Array[ModelPricing] = [],
   deleted_model_ids? : Map[String, Bool] = Map([], capacity=0),
+  first_token_ms? : Int? = None,
 ) -> Unit {
   guard self.current_request_id is Some(fallback_request_id) else { return }
   let request_id = usage.dedup_request_id(fallback_request_id)
@@ -569,6 +572,7 @@ fn TrafficStats::record_completed_request(
       total_cost_usd=cost.total_cost_usd,
       status_code~,
       latency_ms~,
+      first_token_ms~,
       duration_ms=Some(latency_ms),
       error_message~,
       session_id=self.current_request_session_id,

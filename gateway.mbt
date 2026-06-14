@@ -526,6 +526,7 @@ async fn Gateway::record_success_stream_usage(
   usage : TokenUsage?,
   response_bytes : Int,
   record_provider? : Bool = true,
+  first_token_ms? : Int? = None,
 ) -> Unit {
   if record_provider {
     self.record_provider_result(true)
@@ -535,8 +536,21 @@ async fn Gateway::record_success_stream_usage(
     response_bytes,
     self.pricing_override_rows(),
     self.pricing_deleted_model_ids,
+    first_token_ms~,
   )
   self.stats.save_persistent_store()
+}
+
+///|
+fn ccs_first_stream_event_ms(current : Int?, started_at_ms : Int?) -> Int? {
+  match current {
+    Some(_) => current
+    None =>
+      match started_at_ms {
+        Some(started_at) => Some(max_int(@async.now().to_int() - started_at, 0))
+        None => Some(0)
+      }
+  }
 }
 
 ///|
@@ -2408,10 +2422,16 @@ async fn Gateway::forward_streaming_chat_completion(
         w.flush()
         self.record_provider_result(true)
         let mut response_bytes = 0
+        let mut first_token_ms : Int? = None
         if first_line is [.. "data: ", .. rest] {
           let data = rest.trim().to_owned()
           if data != "[DONE]" {
-            push_sse_json_event(stream_events, data)
+            if push_sse_json_event(stream_events, data) {
+              first_token_ms = ccs_first_stream_event_ms(
+                first_token_ms,
+                self.stats.current_request_started_at_ms,
+              )
+            }
             if codex_stream_event_to_openai_chat_chunk(
                 data, id, response_model, created,
               )
@@ -2429,7 +2449,12 @@ async fn Gateway::forward_streaming_chat_completion(
           if data == "[DONE]" {
             break
           }
-          push_sse_json_event(stream_events, data)
+          if push_sse_json_event(stream_events, data) {
+            first_token_ms = ccs_first_stream_event_ms(
+              first_token_ms,
+              self.stats.current_request_started_at_ms,
+            )
+          }
           if codex_stream_event_to_openai_chat_chunk(
               data, id, response_model, created,
             )
@@ -2446,6 +2471,7 @@ async fn Gateway::forward_streaming_chat_completion(
           token_usage_from_codex_stream_events_auto(stream_events),
           response_bytes,
           record_provider=false,
+          first_token_ms~,
         )
         w.write("data: [DONE]\n\n")
         w.flush()
@@ -2796,6 +2822,7 @@ async fn Gateway::forward_streaming_codex_response(
         w.write_header(@status.Ok)
         let mut response_bytes = 0
         let stream_events : Array[Json] = []
+        let mut first_token_ms : Int? = None
         let chat_state = ChatToCodexResponsesStreamState::new_with_context(
           codex_request_model(request, self.model),
           codex_chat_tool_context_from_responses_request(outbound_request),
@@ -2803,13 +2830,25 @@ async fn Gateway::forward_streaming_codex_response(
         if first_line is [.. "data: ", .. rest] {
           let data = rest.trim().to_owned()
           if use_chat_bridge {
+            let before = stream_events.length()
             let (_, bytes) = write_chat_provider_codex_stream_data(
               w, data, chat_state, stream_events,
             )
             response_bytes += bytes
+            if stream_events.length() > before {
+              first_token_ms = ccs_first_stream_event_ms(
+                first_token_ms,
+                self.stats.current_request_started_at_ms,
+              )
+            }
           } else {
             if data != "[DONE]" {
-              push_sse_json_event(stream_events, data)
+              if push_sse_json_event(stream_events, data) {
+                first_token_ms = ccs_first_stream_event_ms(
+                  first_token_ms,
+                  self.stats.current_request_started_at_ms,
+                )
+              }
             }
             response_bytes += first_line.length() + 1
             w.write(first_line)
@@ -2827,10 +2866,17 @@ async fn Gateway::forward_streaming_codex_response(
           if use_chat_bridge {
             guard line is [.. "data: ", .. rest] else { continue }
             let data = rest.trim().to_owned()
+            let before = stream_events.length()
             let (done, bytes) = write_chat_provider_codex_stream_data(
               w, data, chat_state, stream_events,
             )
             response_bytes += bytes
+            if stream_events.length() > before {
+              first_token_ms = ccs_first_stream_event_ms(
+                first_token_ms,
+                self.stats.current_request_started_at_ms,
+              )
+            }
             if done {
               break
             }
@@ -2839,7 +2885,12 @@ async fn Gateway::forward_streaming_codex_response(
             if line is [.. "data: ", .. rest] {
               let data = rest.trim().to_owned()
               if data != "[DONE]" {
-                push_sse_json_event(stream_events, data)
+                if push_sse_json_event(stream_events, data) {
+                  first_token_ms = ccs_first_stream_event_ms(
+                    first_token_ms,
+                    self.stats.current_request_started_at_ms,
+                  )
+                }
               }
             }
             w.write(line)
@@ -2860,6 +2911,7 @@ async fn Gateway::forward_streaming_codex_response(
           token_usage_from_codex_stream_events_auto(stream_events),
           response_bytes,
           record_provider=false,
+          first_token_ms~,
         )
         w.flush()
         return
@@ -14572,24 +14624,33 @@ async fn Gateway::forward_successful_claude_compatible_stream(
   self.record_provider_result(true)
   let stream_events : Array[Json] = []
   if api_format == "openai_chat" {
-    self.forward_openai_chat_sse_as_anthropic(client, stream_events, w)
+    let first_token_ms = self.forward_openai_chat_sse_as_anthropic(
+      client, stream_events, w,
+    )
     self.record_success_stream_usage(
       token_usage_from_openai_stream_events(stream_events),
       0,
       record_provider=false,
+      first_token_ms~,
     )
   } else if api_format == "gemini_native" {
-    self.forward_gemini_native_sse_as_anthropic(
+    let first_token_ms = self.forward_gemini_native_sse_as_anthropic(
       client, stream_events, provider_id, session_id, w,
     )
     self.record_success_stream_usage(
       token_usage_from_gemini_stream_chunks(stream_events),
       0,
       record_provider=false,
+      first_token_ms~,
     )
   } else if api_format == "openai_responses" {
     let reader = CodexStreamReader::new(client, request_model)
+    let mut first_token_ms : Int? = None
     while reader.read() is Some(event) {
+      first_token_ms = ccs_first_stream_event_ms(
+        first_token_ms,
+        self.stats.current_request_started_at_ms,
+      )
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
       w.flush()
@@ -14599,13 +14660,17 @@ async fn Gateway::forward_successful_claude_compatible_stream(
       token_usage_from_codex_stream_events_auto(reader.events),
       0,
       record_provider=false,
+      first_token_ms~,
     )
   } else {
-    self.forward_anthropic_sse_passthrough(client, stream_events, w)
+    let first_token_ms = self.forward_anthropic_sse_passthrough(
+      client, stream_events, w,
+    )
     self.record_success_stream_usage(
       token_usage_from_claude_stream_events(stream_events),
       0,
       record_provider=false,
+      first_token_ms~,
     )
   }
   if api_format == "openai_responses" {
@@ -15253,8 +15318,8 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
   reader : &@io.Reader,
   events : Array[Json],
   w : @httpx.ResponseWriter,
-) -> Unit {
-  let _ = self
+) -> Int? {
+  let mut first_token_ms : Int? = None
   let state = OpenAIChatAnthropicStreamState::new()
   let mut finished = false
   while reader.read_until("\n") is Some(line) {
@@ -15271,6 +15336,10 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
+    first_token_ms = ccs_first_stream_event_ms(
+      first_token_ms,
+      self.stats.current_request_started_at_ms,
+    )
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
@@ -15284,6 +15353,7 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
       w.flush()
     }
   }
+  first_token_ms
 }
 
 ///|
@@ -15292,20 +15362,25 @@ async fn Gateway::forward_anthropic_sse_passthrough(
   reader : &@io.Reader,
   events : Array[Json],
   w : @httpx.ResponseWriter,
-) -> Unit {
-  let _ = self
+) -> Int? {
+  let mut first_token_ms : Int? = None
   while reader.read_until("\n") is Some(line) {
     if line is [.. "data: ", .. rest] {
       let data = rest.trim().to_owned()
       let parsed = @json.parse(data) catch { _ => Json::null() }
       if parsed != Json::null() {
         events.push(parsed)
+        first_token_ms = ccs_first_stream_event_ms(
+          first_token_ms,
+          self.stats.current_request_started_at_ms,
+        )
       }
     }
     w.write(line)
     w.write("\n")
     w.flush()
   }
+  first_token_ms
 }
 
 ///|
@@ -15316,7 +15391,8 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
   provider_id : String,
   session_id : String?,
   w : @httpx.ResponseWriter,
-) -> Unit {
+) -> Int? {
+  let mut first_token_ms : Int? = None
   let state = GeminiNativeAnthropicStreamState::new()
   let mut finished = false
   while reader.read_until("\n") is Some(line) {
@@ -15333,6 +15409,10 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
+    first_token_ms = ccs_first_stream_event_ms(
+      first_token_ms,
+      self.stats.current_request_started_at_ms,
+    )
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
@@ -15351,6 +15431,7 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
       self.gemini_shadow.record_assistant_turn(provider_id, session_id, turn)
     _ => ()
   }
+  first_token_ms
 }
 
 ///|
@@ -16355,7 +16436,12 @@ async fn Gateway::handle_streaming_request(
   w.write_header(@status.Ok)
   let reader = CodexStreamReader::new(client, request.model)
   self.record_provider_result(true)
+  let mut first_token_ms : Int? = None
   while reader.read() is Some(event) {
+    first_token_ms = ccs_first_stream_event_ms(
+      first_token_ms,
+      self.stats.current_request_started_at_ms,
+    )
     w.write("event: \{event.event_type}\n")
     w.write("data: \{event.data}\n\n")
     w.flush()
@@ -16365,6 +16451,7 @@ async fn Gateway::handle_streaming_request(
     token_usage_from_codex_stream_events_auto(reader.events),
     0,
     record_provider=false,
+    first_token_ms~,
   )
   w.write("event: message_stop\ndata: {}\n\n")
   w.flush()
@@ -16643,11 +16730,14 @@ fn codex_stream_events_from_sse_block(
 }
 
 ///|
-fn push_sse_json_event(events : Array[Json], data : String) -> Unit {
+fn push_sse_json_event(events : Array[Json], data : String) -> Bool {
   let json_result : Result[Json, Error] = try? @json.parse(data)
   match json_result {
-    Ok(json) => events.push(json)
-    Err(_) => ()
+    Ok(json) => {
+      events.push(json)
+      true
+    }
+    Err(_) => false
   }
 }
 
