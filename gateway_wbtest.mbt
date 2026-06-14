@@ -177,6 +177,50 @@ async test "usage script token plan template uses standalone ccs native query" {
 }
 
 ///|
+async test "usage script official subscription template uses standalone ccs native query" {
+  let path = "/testUsageScript?providerId=p1&app=unknown&templateType=official_subscription"
+  guard test_usage_script_template_result(path, None) is Some(result) else {
+    fail("expected template result")
+  }
+  assert_eq(UsageResult::new(false).to_json(), result.to_json())
+}
+
+///|
+test "official subscription quota usage conversion mirrors ccs rows" {
+  let result = ccs_subscription_usage_result_from_quota(
+    SubscriptionQuota::new("claude", tiers=[
+      ccs_quota_tier_json("five_hour", 12.5, resets_at=Some("five-reset")),
+      ccs_quota_tier_json("seven_day", 75.0),
+    ]),
+  )
+  assert_true(result.success)
+  guard result.data is Some(rows) else { fail("expected rows") }
+  assert_eq(rows.length(), 2)
+  assert_eq(rows[0].plan_name, Some("five_hour"))
+  assert_eq(rows[0].total, Some(100.0))
+  assert_eq(rows[0].used, Some(12.5))
+  assert_eq(rows[0].remaining, Some(87.5))
+  assert_eq(rows[0].unit, Some("%"))
+  assert_eq(rows[0].is_valid, Some(true))
+  assert_eq(rows[0].extra, Some("five-reset"))
+  assert_eq(rows[1].extra, None)
+}
+
+///|
+test "official subscription quota usage conversion falls back to credential message" {
+  assert_eq(
+    ccs_subscription_usage_result_from_quota(
+      SubscriptionQuota::new(
+        "claude",
+        credential_message=Some("No OAuth entry found in credentials"),
+        success=false,
+      ),
+    ).to_json(),
+    UsageResult::new(false, error=Some("No OAuth entry found in credentials")).to_json(),
+  )
+}
+
+///|
 test "token plan quota usage conversion mirrors ccs rows" {
   let result = ccs_token_plan_usage_result_from_quota(
     SubscriptionQuota::new(

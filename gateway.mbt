@@ -13635,8 +13635,50 @@ async fn test_usage_script_template_result(
         ),
       )
     }
+    "official_subscription" => {
+      let app_type = proxy_string_request(path, body, [
+        "app", "appType", "app_type", "tool",
+      ]).unwrap_or("")
+      Some(
+        ccs_subscription_usage_result_from_quota(
+          ccs_get_subscription_quota(app_type),
+        ),
+      )
+    }
     _ => None
   }
+}
+
+///|
+fn ccs_subscription_usage_result_from_quota(
+  quota : SubscriptionQuota,
+) -> UsageResult {
+  if !quota.success {
+    return UsageResult::new(
+      false,
+      error=match quota.error {
+        Some(error) => Some(error)
+        None => quota.credential_message
+      },
+    )
+  }
+  let data : Array[UsageData] = []
+  for tier in quota.tiers {
+    guard tier is Object(obj) else { continue }
+    let used = ccs_json_double_from_map(obj, "utilization").unwrap_or(0.0)
+    data.push(
+      UsageData::new(
+        plan_name=json_string_from_map(obj, "name"),
+        remaining=Some(100.0 - used),
+        total=Some(100.0),
+        used=Some(used),
+        unit=Some("%"),
+        is_valid=Some(true),
+        extra=json_string_from_map(obj, "resetsAt"),
+      ),
+    )
+  }
+  UsageResult::new(true, data=if data.is_empty() { None } else { Some(data) })
 }
 
 ///|
