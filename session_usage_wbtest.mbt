@@ -61,6 +61,25 @@ test "claude session import keeps cache-only billable rows like ccs" {
 }
 
 ///|
+test "claude session import ignores non-u64 token fields like ccs" {
+  let stats = TrafficStats::new()
+  let content =
+    #|{"type":"assistant","sessionId":"session-invalid","message":{"id":"msg_invalid","model":"claude-sonnet-4-20250514","usage":{"input_tokens":-3,"output_tokens":5,"cache_read_input_tokens":7.5,"cache_creation_input_tokens":-9}},"timestamp":"1970-01-01T00:00:22Z"}
+  let result = stats.ingest_claude_session_jsonl(
+    file_path="/tmp/project/invalid.jsonl",
+    content~,
+    last_modified=1L,
+  )
+  assert_eq(result.imported, 1)
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.input_tokens, 0)
+  assert_eq(log.output_tokens, 5)
+  assert_eq(log.cache_read_tokens, 0)
+  assert_eq(log.cache_creation_tokens, 0)
+}
+
+///|
 test "claude session import stores offsets and skips duplicate session rows" {
   let stats = TrafficStats::new()
   let file_path = "/tmp/project/dedup.jsonl"
@@ -129,6 +148,26 @@ test "codex session import computes cumulative deltas like ccs" {
 }
 
 ///|
+test "codex session import keeps invalid cached token key from falling back" {
+  let stats = TrafficStats::new()
+  let content =
+    #|{"type":"session_meta","payload":{"session_id":"codex-invalid"}}
+    #|{"type":"event_msg","timestamp":"1970-01-01T00:00:10Z","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10,"cached_input_tokens":3,"output_tokens":2}}}}
+    #|{"type":"event_msg","timestamp":"1970-01-01T00:00:20Z","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":18,"cached_input_tokens":-5,"cache_read_input_tokens":12,"output_tokens":6}}}}
+  let result = stats.ingest_codex_session_jsonl(
+    file_path="/tmp/codex/invalid.jsonl",
+    content~,
+    last_modified=1L,
+  )
+  assert_eq(result.imported, 2)
+  assert_eq(stats.request_logs.length(), 2)
+  let second = stats.request_logs[1]
+  assert_eq(second.input_tokens, 8)
+  assert_eq(second.cache_read_tokens, 0)
+  assert_eq(second.output_tokens, 4)
+}
+
+///|
 test "codex session import restores state before offset skip" {
   let stats = TrafficStats::new()
   let file_path = "/tmp/codex/offset.jsonl"
@@ -191,6 +230,29 @@ test "gemini session import merges thoughts into output like ccs" {
   let second = stats.request_logs[1]
   assert_eq(second.request_id, "gemini_session:gemini-s1:g2")
   assert_eq(second.cache_read_tokens, 42)
+}
+
+///|
+test "gemini session import ignores non-u64 token fields like ccs" {
+  let stats = TrafficStats::new()
+  let content =
+    #|{
+    #|  "sessionId": "gemini-invalid",
+    #|  "messages": [
+    #|    {"type":"gemini","id":"g1","model":"gemini-3-pro-preview","timestamp":"1970-01-01T00:00:30Z","tokens":{"input":-10,"output":2,"cached":1.25,"thoughts":-4}}
+    #|  ]
+    #|}
+  let result = stats.ingest_gemini_session_json(
+    file_path="/tmp/gemini/invalid.json",
+    content~,
+    last_modified=1L,
+  )
+  assert_eq(result.imported, 1)
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.input_tokens, 0)
+  assert_eq(log.output_tokens, 2)
+  assert_eq(log.cache_read_tokens, 0)
 }
 
 ///|
@@ -299,6 +361,35 @@ test "opencode message import defaults missing cache and skips incomplete rows" 
   assert_eq(zero_result.imported, 0)
   assert_eq(zero_result.skipped, 1)
   assert_eq(stats.request_logs.length(), 1)
+}
+
+///|
+test "opencode message import ignores non-u64 token fields like ccs" {
+  let stats = TrafficStats::new()
+  let data =
+    #|{
+    #|  "role": "assistant",
+    #|  "tokens": {
+    #|    "input": -100,
+    #|    "output": 200,
+    #|    "reasoning": 1.5,
+    #|    "cache": { "read": -3, "write": 4.7 }
+    #|  },
+    #|  "modelID": "mimo-v2.5-pro",
+    #|  "time": { "created": 1779755333700, "completed": 1779755334700 }
+    #|}
+  let result = stats.ingest_opencode_message_json(
+    session_id="opencode-invalid",
+    message_id="invalid",
+    data~,
+  )
+  assert_eq(result.imported, 1)
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.input_tokens, 0)
+  assert_eq(log.output_tokens, 200)
+  assert_eq(log.cache_read_tokens, 0)
+  assert_eq(log.cache_creation_tokens, 0)
 }
 
 ///|

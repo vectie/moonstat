@@ -1064,8 +1064,8 @@ fn parse_cumulative_session_tokens(
 ) -> CumulativeSessionTokens? {
   Some(CumulativeSessionTokens::{
     input: json_int_or_zero(obj, "input_tokens"),
-    cached_input: match json_int(obj, "cached_input_tokens") {
-      Some(value) => value
+    cached_input: match obj.get("cached_input_tokens") {
+      Some(_) => json_int_or_zero(obj, "cached_input_tokens")
       None => json_int_or_zero(obj, "cache_read_input_tokens")
     },
     output: json_int_or_zero(obj, "output_tokens"),
