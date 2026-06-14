@@ -329,7 +329,7 @@ fn moonstat_suite_integrations_json(
       "usage_model_pricing_file": Json::string(
         @pathx.join(default_moonstat_stats_dir(), MOONSTAT_MODEL_PRICING_FILE),
       ),
-      "cli": Json::string("moon run cmd/main --"),
+      "cli": Json::string("moonstat"),
       "moondesk_adapter_package": Json::string(
         "vectie/moondesk/adapters/moonbook",
       ),
@@ -352,12 +352,12 @@ fn moonstat_suite_integrations_json(
       "moonclaw_provider_manifest_path": Json::string(
         ".moonclaw/providers.json",
       ),
-      "moonclaw_provider_manifest_command": Json::string("moon run cmd/main --"),
+      "moonclaw_provider_manifest_command": Json::string("moonstat"),
       "moonclaw_provider_manifest_target": Json::string("moonbook"),
       "moonbook_provider_manifest_path": Json::string(
         ".moonclaw/providers.json",
       ),
-      "moonbook_provider_manifest_command": Json::string("moon run cmd/main --"),
+      "moonbook_provider_manifest_command": Json::string("moonstat"),
       "adapter_packages": Json::array([
         Json::string("vectie/moontown/adapters/moonclaw"),
         Json::string("vectie/moontown/adapters/moonbook"),

@@ -383,7 +383,7 @@ test "suite manifest publishes moonstat service contract" {
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
     ),
   )
-  assert_eq(moonbook["cli"], Json::string("moon run cmd/main --"))
+  assert_eq(moonbook["cli"], Json::string("moonstat"))
   assert_eq(
     moonbook["moondesk_adapter_package"],
     Json::string("vectie/moondesk/adapters/moonbook"),
@@ -409,7 +409,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     moontown["moonclaw_provider_manifest_command"],
-    Json::string("moon run cmd/main --"),
+    Json::string("moonstat"),
   )
   assert_eq(
     moontown["moonclaw_provider_manifest_target"],
@@ -421,7 +421,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     moontown["moonbook_provider_manifest_command"],
-    Json::string("moon run cmd/main --"),
+    Json::string("moonstat"),
   )
   guard moontown["adapter_packages"] is Array(moontown_adapters) else {
     fail("expected moontown adapters")
