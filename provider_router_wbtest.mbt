@@ -544,6 +544,103 @@ test "provider router ccs auto failover enable seeds empty queue" {
 }
 
 ///|
+test "provider router ccs reset switches back to recovered higher priority provider" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="claude",
+      provider_id="p1",
+      provider_name="Primary",
+    ),
+  )
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="claude",
+      provider_id="p2",
+      provider_name="Fallback",
+    ),
+  )
+  router.set_failover_queue("claude", ["p1", "p2"])
+  router.set_current_provider("claude", "p2")
+  router.set_auto_failover("claude", true)
+  router.record_result("p1", "claude", false, false, now_ms=1000)
+  assert_true(
+    router.reset_provider_breaker_ccs(
+      "p1",
+      "claude",
+      app_enabled=true,
+      proxy_running=true,
+    ),
+  )
+  assert_eq(router.current_provider_id("claude"), Some("p1"))
+  guard router.get_circuit_breaker_stats("p1", "claude") is Some(stats) else {
+    fail("expected reset breaker stats")
+  }
+  assert_true(stats.state == Closed)
+}
+
+///|
+test "provider router ccs reset does not switch without takeover auto failover and priority" {
+  let router = ProviderRouter::new()
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="p1",
+      provider_name="Primary",
+    ),
+  )
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="p2",
+      provider_name="Fallback",
+    ),
+  )
+  router.set_failover_queue("codex", ["p1", "p2"])
+  router.set_current_provider("codex", "p2")
+  assert_false(
+    router.reset_provider_breaker_ccs(
+      "p1",
+      "codex",
+      app_enabled=true,
+      proxy_running=true,
+    ),
+  )
+  assert_eq(router.current_provider_id("codex"), Some("p2"))
+
+  router.set_auto_failover("codex", true)
+  assert_false(
+    router.reset_provider_breaker_ccs(
+      "p1",
+      "codex",
+      app_enabled=false,
+      proxy_running=true,
+    ),
+  )
+  assert_eq(router.current_provider_id("codex"), Some("p2"))
+
+  assert_false(
+    router.reset_provider_breaker_ccs(
+      "p1",
+      "codex",
+      app_enabled=true,
+      proxy_running=false,
+    ),
+  )
+  assert_eq(router.current_provider_id("codex"), Some("p2"))
+
+  assert_false(
+    router.reset_provider_breaker_ccs(
+      "p2",
+      "codex",
+      app_enabled=true,
+      proxy_running=true,
+    ),
+  )
+  assert_eq(router.current_provider_id("codex"), Some("p2"))
+}
+
+///|
 test "provider router exposes ccs provider map and current id" {
   let router = ProviderRouter::new()
   router.upsert_provider(

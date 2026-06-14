@@ -1461,6 +1461,39 @@ pub fn ProviderRouter::reset_provider_breaker(
 }
 
 ///|
+fn ProviderRouter::reset_provider_breaker_ccs(
+  self : ProviderRouter,
+  provider_id : String,
+  app_type : String,
+  app_enabled~ : Bool,
+  proxy_running~ : Bool,
+) -> Bool {
+  self.reset_provider_breaker(provider_id, app_type)
+  if !app_enabled ||
+    !proxy_running ||
+    !self.auto_failover_enabled_for_app(app_type) {
+    return false
+  }
+  guard self.current_provider_ids.get(app_type) is Some(current_id) else {
+    return false
+  }
+  guard failover_queue_index(self.failover_queues.get(app_type), provider_id)
+    is Some(restored_order) else {
+    return false
+  }
+  guard failover_queue_index(self.failover_queues.get(app_type), current_id)
+    is Some(current_order) else {
+    return false
+  }
+  if restored_order < current_order {
+    self.current_provider_ids.set(app_type, provider_id)
+    true
+  } else {
+    false
+  }
+}
+
+///|
 pub fn ProviderRouter::update_all_configs(
   self : ProviderRouter,
   config : CircuitBreakerConfig,
@@ -1621,4 +1654,19 @@ fn ProviderRouter::breaker_for(
 ///|
 fn circuit_key(app_type : String, provider_id : String) -> String {
   "\{app_type}:\{provider_id}"
+}
+
+///|
+fn failover_queue_index(queue : Array[String]?, provider_id : String) -> Int? {
+  match queue {
+    Some(queue) => {
+      for i in 0..<queue.length() {
+        if queue[i] == provider_id {
+          return Some(i)
+        }
+      }
+      None
+    }
+    None => None
+  }
 }

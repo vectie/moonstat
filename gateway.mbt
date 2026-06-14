@@ -8801,7 +8801,13 @@ async fn Gateway::handle_proxy_reset_circuit_breaker(
     write_usage_bad_request(w, "missing_provider_id_or_app_type")
     return
   }
-  self.provider_router.reset_provider_breaker(query.provider_id, query.app_type)
+  let app_enabled = self.proxy_app_enabled_for_app(query.app_type)
+  let _switched = self.provider_router.reset_provider_breaker_ccs(
+    query.provider_id,
+    query.app_type,
+    app_enabled~,
+    proxy_running=self.proxy_enabled,
+  )
   write_usage_json(w, ccs_unit_success_json())
 }
 
