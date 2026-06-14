@@ -8587,6 +8587,63 @@ test "ccs imports missing claude providers into claude desktop namespace" {
 }
 
 ///|
+fn ccs_direct_compatible_claude_desktop_provider(
+  provider_type? : String? = Some("anthropic"),
+  api_format? : String? = Some("anthropic"),
+  is_full_url? : Bool = false,
+  token? : String? = Some("sk-ant"),
+) -> ProviderRouteTarget {
+  let routes : Map[String, ClaudeDesktopModelRoute] = {
+    "claude-sonnet-4-6": ClaudeDesktopModelRoute::new(model="claude-sonnet-4-6"),
+  }
+  let env : Map[String, Json] = {
+    "ANTHROPIC_BASE_URL": Json::string("https://direct.example/v1"),
+  }
+  match token {
+    Some(token) => env["ANTHROPIC_AUTH_TOKEN"] = Json::string(token)
+    None => ()
+  }
+  ProviderRouteTarget::new(
+    app_type="claude",
+    provider_id="direct",
+    provider_name="Direct",
+    provider_type~,
+    api_format~,
+    is_full_url~,
+    settings_config=Some({ "env": Json::object(env) }.to_json()),
+    claude_desktop_model_routes=routes,
+  )
+}
+
+///|
+test "ccs claude desktop direct compatibility filters unsafe providers" {
+  assert_true(
+    ccs_direct_compatible_claude_desktop_provider().is_compatible_claude_desktop_direct_provider(),
+  )
+  assert_false(
+    ccs_direct_compatible_claude_desktop_provider(
+      provider_type=Some("official"),
+    ).is_compatible_claude_desktop_direct_provider(),
+  )
+  assert_false(
+    ccs_direct_compatible_claude_desktop_provider(
+      api_format=Some("openai_chat"),
+    ).is_compatible_claude_desktop_direct_provider(),
+  )
+  assert_false(
+    ccs_direct_compatible_claude_desktop_provider(
+      provider_type=Some("github_copilot"),
+    ).is_compatible_claude_desktop_direct_provider(),
+  )
+  assert_false(
+    ccs_direct_compatible_claude_desktop_provider(is_full_url=true).is_compatible_claude_desktop_direct_provider(),
+  )
+  assert_false(
+    ccs_direct_compatible_claude_desktop_provider(token=None).is_compatible_claude_desktop_direct_provider(),
+  )
+}
+
+///|
 test "ccs import skips claude providers without direct or proxy compatibility" {
   let gateway = Gateway::new(port=17073)
   gateway.provider_router.upsert_provider(

@@ -9766,7 +9766,8 @@ fn ProviderRouteTarget::is_compatible_claude_desktop_direct_provider(
     _ => ()
   }
   match self.provider_type {
-    Some("github_copilot") | Some("codex_oauth") => return false
+    Some("official") | Some("github_copilot") | Some("codex_oauth") =>
+      return false
     _ => ()
   }
   if self.is_full_url {
