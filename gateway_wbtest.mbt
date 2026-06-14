@@ -817,6 +817,11 @@ test "suite config helpers mirror ccs openclaw hermes shapes" {
     "http://127.0.0.1:9120/settings/models",
   )
   assert_eq(hermes_web_ui_probe_url(9120), "http://127.0.0.1:9120/api/status")
+  assert_eq(HERMES_DASHBOARD_COMMAND, "hermes dashboard")
+  assert_eq(
+    hermes_dashboard_background_shell_command(),
+    "nohup hermes dashboard >/tmp/moonstat_hermes_dashboard.log 2>&1 &",
+  )
 }
 
 ///|

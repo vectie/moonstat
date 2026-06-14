@@ -9894,7 +9894,10 @@ async fn Gateway::handle_launch_hermes_dashboard(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, Json::null())
+  match launch_hermes_dashboard_standalone() {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|
@@ -11932,6 +11935,32 @@ fn hermes_web_ui_target_url(port : Int, path : String) -> String {
 ///|
 fn hermes_web_ui_probe_url(port : Int) -> String {
   "http://127.0.0.1:\{port}/api/status"
+}
+
+///|
+const HERMES_DASHBOARD_COMMAND = "hermes dashboard"
+
+///|
+const HERMES_DASHBOARD_LOG_PATH = "/tmp/moonstat_hermes_dashboard.log"
+
+///|
+fn hermes_dashboard_background_shell_command() -> String {
+  "nohup \{HERMES_DASHBOARD_COMMAND} >\{HERMES_DASHBOARD_LOG_PATH} 2>&1 &"
+}
+
+///|
+async fn launch_hermes_dashboard_standalone() -> Result[Json, String] {
+  let result = @spawn.spawn(
+    "sh",
+    ["-lc", hermes_dashboard_background_shell_command()],
+    timeout=2000,
+  ) catch {
+    _ => return Err("hermes_dashboard_launch_failed")
+  }
+  if result.status != 0 {
+    return Err("hermes_dashboard_launch_failed")
+  }
+  Ok(Json::null())
 }
 
 ///|
