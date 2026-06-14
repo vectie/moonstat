@@ -2,6 +2,9 @@
 const REQUEST_LOG_LIMIT = 500
 
 ///|
+const USAGE_ROLLUP_RETAIN_DAYS = 30
+
+///|
 pub struct RequestLog {
   request_id : String
   provider_id : String
@@ -626,6 +629,15 @@ pub fn TrafficStats::rollup_request_logs_before(
     self.request_logs.push(log)
   }
   deleted
+}
+
+///|
+pub fn TrafficStats::rollup_and_prune(
+  self : TrafficStats,
+  retain_days? : Int = USAGE_ROLLUP_RETAIN_DAYS,
+  now_ts? : Int = trend_now_seconds(),
+) -> Int {
+  self.rollup_request_logs_before(usage_rollup_cutoff_ts(now_ts, retain_days))
 }
 
 ///|
@@ -1563,6 +1575,13 @@ fn rollup_date_bounds_empty(start_date : Int?, end_date : Int?) -> Bool {
     (Some(start), Some(end)) => start > end
     _ => false
   }
+}
+
+///|
+fn usage_rollup_cutoff_ts(now_ts : Int, retain_days : Int) -> Int {
+  let safe_retain_days = max_int(retain_days, 0)
+  let target_ts = now_ts - safe_retain_days * TREND_DAY_SECONDS
+  trend_local_next_day_start_ts(target_ts)
 }
 
 ///|

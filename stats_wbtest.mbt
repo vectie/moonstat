@@ -1447,6 +1447,41 @@ test "usage rollups aggregate old effective rows like ccs daily rollups" {
 }
 
 ///|
+test "usage rollup cutoff aligns to local midnight after retained target day" {
+  with_test_timezone("UTC", fn() raise {
+    let now = TREND_DAY_SECONDS * 100 + 14 * 60 * 60
+    assert_eq(usage_rollup_cutoff_ts(now, 30), TREND_DAY_SECONDS * 71)
+    let stats = TrafficStats::new()
+    stats.record_request_log(
+      RequestLog::new(
+        request_id="old-complete-day",
+        provider_id="codex-oauth",
+        app_type="codex",
+        model="gpt-5",
+        usage=TokenUsage::new(input_tokens=1, output_tokens=1),
+        status_code=200,
+        created_at=TREND_DAY_SECONDS * 70 + 23 * 60 * 60,
+      ),
+    )
+    stats.record_request_log(
+      RequestLog::new(
+        request_id="retained-midnight",
+        provider_id="codex-oauth",
+        app_type="codex",
+        model="gpt-5",
+        usage=TokenUsage::new(input_tokens=1, output_tokens=1),
+        status_code=200,
+        created_at=TREND_DAY_SECONDS * 71,
+      ),
+    )
+    assert_eq(stats.rollup_and_prune(retain_days=30, now_ts=now), 1)
+    assert_eq(stats.daily_rollups.length(), 1)
+    assert_eq(stats.request_logs.length(), 1)
+    assert_eq(stats.request_logs[0].request_id, "retained-midnight")
+  })
+}
+
+///|
 test "usage trends follow process local timezone like ccs" {
   with_test_timezone("UTC", fn() raise {
     assert_eq(trend_timestamp_rfc3339(0), "1970-01-01T00:00:00+00:00")

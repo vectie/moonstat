@@ -552,8 +552,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   self.logger.info(
     "Starting Anthropic -> Codex OAuth Gateway on \{self.host}:\{self.port}",
   )
-  self.stats.load_persistent_store()
   self.load_model_pricing_store()
+  self.stats.load_persistent_store()
+  let backfilled = self.stats.backfill_missing_usage_costs(
+    self.pricing_override_rows(),
+    self.pricing_deleted_model_ids,
+  )
+  let pruned = self.stats.rollup_and_prune()
+  if backfilled > 0 || pruned > 0 {
+    self.stats.save_persistent_store()
+  }
   let creds_result : Result[@codex.Credentials, Error] = try? @codex.load_credentials()
   if creds_result is Ok(creds) {
     self.credentials = Some(creds)
