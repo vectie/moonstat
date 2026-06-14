@@ -886,16 +886,26 @@ test "official provider ignores ccs custom user agent metadata" {
 }
 
 ///|
-test "ccs custom user agent parser rejects empty and multiline values" {
+test "ccs custom user agent parser matches header value validation" {
   assert_eq(
     parse_custom_user_agent(Some("  CodexBot/1.0  ")),
     Some("CodexBot/1.0"),
+  )
+  assert_eq(
+    parse_custom_user_agent(Some("claude-cli/2.1.161 \t Kimi")),
+    Some("claude-cli/2.1.161 \t Kimi"),
+  )
+  assert_eq(
+    parse_custom_user_agent(Some("claude-cli/2.1.161 中文")),
+    Some("claude-cli/2.1.161 中文"),
   )
   assert_true(parse_custom_user_agent(Some("   ")) is None)
   assert_true(
     parse_custom_user_agent(Some("CodexBot/1.0\nX-Other: bad")) is None,
   )
   assert_true(parse_custom_user_agent(Some("CodexBot/1.0\rX")) is None)
+  assert_true(parse_custom_user_agent(Some("CodexBot/1.0\u{0}X")) is None)
+  assert_true(parse_custom_user_agent(Some("CodexBot/1.0\u{7f}X")) is None)
 }
 
 ///|

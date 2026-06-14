@@ -84,15 +84,7 @@ pub async fn fetch_models(
       Ok(target) => target
       Err(err) => return Err(err)
     }
-    let headers : Map[String, String] = {
-      "Authorization": "Bearer \{api_key}",
-      "Accept": "application/json",
-    }
-    match user_agent {
-      Some(value) if !value.trim().is_empty() =>
-        headers["User-Agent"] = value.trim().to_owned()
-      _ => ()
-    }
+    let headers = model_fetch_headers(api_key, user_agent)
     let client = @http.Client::new(target.origin, headers~)
     defer client.close()
     let response = client.get(target.path) catch {
@@ -115,6 +107,22 @@ pub async fn fetch_models(
     }
   }
   Err("All candidates failed: \{last_err.unwrap_or("no candidates")}")
+}
+
+///|
+fn model_fetch_headers(
+  api_key : String,
+  user_agent : String?,
+) -> Map[String, String] {
+  let headers : Map[String, String] = {
+    "Authorization": "Bearer \{api_key}",
+    "Accept": "application/json",
+  }
+  match parse_custom_user_agent(user_agent) {
+    Some(value) => headers["User-Agent"] = value
+    None => ()
+  }
+  headers
 }
 
 ///|

@@ -395,6 +395,22 @@ test "provider model fetch error body truncates long text" {
 }
 
 ///|
+test "model fetch headers reuse ccs custom user agent validation" {
+  let valid = model_fetch_headers(
+    "sk-test",
+    Some("  claude-cli/2.1.161 \t Kimi  "),
+  )
+  assert_eq(valid["Authorization"], "Bearer sk-test")
+  assert_eq(valid["Accept"], "application/json")
+  assert_eq(valid["User-Agent"], "claude-cli/2.1.161 \t Kimi")
+  let invalid = model_fetch_headers(
+    "sk-test",
+    Some("claude-cli/2.1.161\nX-Other: bad"),
+  )
+  assert_true(invalid.get("User-Agent") is None)
+}
+
+///|
 async test "fetch provider models rejects empty api key before network" {
   let result = fetch_models("https://api.example.com", "", false, None, None)
   assert_true(result is Err("API Key is required to fetch models"))

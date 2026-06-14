@@ -3404,10 +3404,7 @@ fn parse_custom_user_agent(value : String?) -> String? {
   match value {
     Some(raw) => {
       let trimmed = raw.trim().to_owned()
-      if trimmed.is_empty() ||
-        trimmed.contains("\n") ||
-        trimmed.contains("\r") ||
-        trimmed.contains("\u{0}") {
+      if trimmed.is_empty() || !custom_user_agent_header_value_valid(trimmed) {
         None
       } else {
         Some(trimmed)
@@ -3415,6 +3412,20 @@ fn parse_custom_user_agent(value : String?) -> String? {
     }
     None => None
   }
+}
+
+///|
+fn custom_user_agent_header_value_valid(value : String) -> Bool {
+  for ch in value {
+    let code = ch.to_int()
+    if code == 9 {
+      continue
+    }
+    if code < 32 || code == 127 {
+      return false
+    }
+  }
+  true
 }
 
 ///|
