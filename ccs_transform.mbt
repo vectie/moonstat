@@ -915,6 +915,7 @@ fn anthropic_json_to_openai_responses(
   copy_json_field(obj, result, "temperature")
   copy_json_field(obj, result, "top_p")
   copy_json_field(obj, result, "stream")
+  append_openai_responses_reasoning(obj, result)
   append_openai_responses_tools(obj, result)
   append_openai_responses_tool_choice(obj, result)
   if cache_key is Some(key) && !key.trim().is_empty() {
@@ -924,6 +925,64 @@ fn anthropic_json_to_openai_responses(
     apply_codex_oauth_responses_constraints(result, obj, codex_fast_mode)
   }
   Json::object(result)
+}
+
+///|
+fn append_openai_responses_reasoning(
+  obj : Map[String, Json],
+  result : Map[String, Json],
+) -> Unit {
+  guard json_string_from_map(obj, "model") is Some(model) else { return }
+  guard supports_openai_responses_reasoning_effort(model) else { return }
+  guard resolve_openai_responses_reasoning_effort(obj) is Some(effort) else {
+    return
+  }
+  result["reasoning"] = Json::object({ "effort": Json::string(effort) })
+}
+
+///|
+fn supports_openai_responses_reasoning_effort(model : String) -> Bool {
+  let normalized = model.to_lower()
+  if is_openai_o_series_model(normalized) {
+    return true
+  }
+  normalized.has_prefix("gpt-") &&
+  normalized.length() > "gpt-".length() &&
+  normalized["gpt-".length()] >= 53 &&
+  normalized["gpt-".length()] <= 57
+}
+
+///|
+fn resolve_openai_responses_reasoning_effort(
+  obj : Map[String, Json],
+) -> String? {
+  match obj.get("output_config") {
+    Some(Object(output_config)) =>
+      match json_string_from_map(output_config, "effort") {
+        Some("low") => return Some("low")
+        Some("medium") => return Some("medium")
+        Some("high") => return Some("high")
+        Some("max") => return Some("xhigh")
+        Some(_) => return None
+        None => ()
+      }
+    _ => ()
+  }
+  match obj.get("thinking") {
+    Some(Object(thinking)) =>
+      match json_string_from_map(thinking, "type") {
+        Some("adaptive") => Some("xhigh")
+        Some("enabled") =>
+          match json_int_from_map(thinking, "budget_tokens") {
+            Some(budget) if budget < 4000 => Some("low")
+            Some(budget) if budget < 16000 => Some("medium")
+            Some(_) => Some("high")
+            None => Some("high")
+          }
+        _ => None
+      }
+    _ => None
+  }
 }
 
 ///|

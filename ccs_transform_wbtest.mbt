@@ -61,6 +61,133 @@ test "ccs responses transform uses session cache key" {
 }
 
 ///|
+test "ccs responses output config max maps to reasoning xhigh" {
+  let body = Json::object({
+    "model": Json::string("gpt-5.4"),
+    "messages": Json::array([
+      Json::object({
+        "role": Json::string("user"),
+        "content": Json::string("hello"),
+      }),
+    ]),
+    "max_tokens": Json::number(128.0),
+    "output_config": Json::object({ "effort": Json::string("max") }),
+  })
+  let transformed = transform_claude_request_for_api_format(
+    body, "openai_responses",
+  )
+  guard transformed is Object(obj) else { fail("expected object") }
+  guard obj["reasoning"] is Object(reasoning) else {
+    fail("expected reasoning")
+  }
+  assert_eq(reasoning["effort"], Json::string("xhigh"))
+}
+
+///|
+test "ccs responses output config takes priority over thinking" {
+  let body = Json::object({
+    "model": Json::string("gpt-5.4"),
+    "messages": Json::array([
+      Json::object({
+        "role": Json::string("user"),
+        "content": Json::string("hello"),
+      }),
+    ]),
+    "output_config": Json::object({ "effort": Json::string("low") }),
+    "thinking": Json::object({ "type": Json::string("adaptive") }),
+  })
+  let transformed = transform_claude_request_for_api_format(
+    body, "openai_responses",
+  )
+  guard transformed is Object(obj) else { fail("expected object") }
+  guard obj["reasoning"] is Object(reasoning) else {
+    fail("expected reasoning")
+  }
+  assert_eq(reasoning["effort"], Json::string("low"))
+}
+
+///|
+test "ccs responses thinking budget maps to reasoning effort" {
+  let low = Json::object({
+    "model": Json::string("gpt-5.4"),
+    "messages": Json::array([]),
+    "thinking": Json::object({
+      "type": Json::string("enabled"),
+      "budget_tokens": Json::number(2048.0),
+    }),
+  })
+  let medium = Json::object({
+    "model": Json::string("gpt-5.4"),
+    "messages": Json::array([]),
+    "thinking": Json::object({
+      "type": Json::string("enabled"),
+      "budget_tokens": Json::number(8000.0),
+    }),
+  })
+  let high = Json::object({
+    "model": Json::string("gpt-5.4"),
+    "messages": Json::array([]),
+    "thinking": Json::object({
+      "type": Json::string("enabled"),
+      "budget_tokens": Json::number(32000.0),
+    }),
+  })
+  guard transform_claude_request_for_api_format(low, "openai_responses")
+    is Object(low_obj) else {
+    fail("expected low object")
+  }
+  guard transform_claude_request_for_api_format(medium, "openai_responses")
+    is Object(medium_obj) else {
+    fail("expected medium object")
+  }
+  guard transform_claude_request_for_api_format(high, "openai_responses")
+    is Object(high_obj) else {
+    fail("expected high object")
+  }
+  guard low_obj["reasoning"] is Object(low_reasoning) else {
+    fail("expected low reasoning")
+  }
+  guard medium_obj["reasoning"] is Object(medium_reasoning) else {
+    fail("expected medium reasoning")
+  }
+  guard high_obj["reasoning"] is Object(high_reasoning) else {
+    fail("expected high reasoning")
+  }
+  assert_eq(low_reasoning["effort"], Json::string("low"))
+  assert_eq(medium_reasoning["effort"], Json::string("medium"))
+  assert_eq(high_reasoning["effort"], Json::string("high"))
+}
+
+///|
+test "ccs responses thinking adaptive skips non reasoning models" {
+  let reasoning_body = Json::object({
+    "model": Json::string("o3-mini"),
+    "messages": Json::array([]),
+    "thinking": Json::object({ "type": Json::string("adaptive") }),
+  })
+  let plain_body = Json::object({
+    "model": Json::string("gpt-4o"),
+    "messages": Json::array([]),
+    "thinking": Json::object({ "type": Json::string("adaptive") }),
+  })
+  guard transform_claude_request_for_api_format(
+      reasoning_body, "openai_responses",
+    )
+    is Object(reasoning_obj) else {
+    fail("expected reasoning object")
+  }
+  guard reasoning_obj["reasoning"] is Object(reasoning) else {
+    fail("expected reasoning")
+  }
+  assert_eq(reasoning["effort"], Json::string("xhigh"))
+  guard transform_claude_request_for_api_format(plain_body, "openai_responses")
+    is Object(plain_obj) else {
+    fail("expected plain object")
+  }
+  assert_true(plain_obj.get("reasoning") is None)
+}
+
+///|
 test "ccs codex oauth responses constraints match ccs" {
   let body = Json::object({
     "model": Json::string("gpt-5.4"),
