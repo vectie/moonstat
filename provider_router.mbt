@@ -581,6 +581,48 @@ fn CustomEndpoint::to_json(self : CustomEndpoint) -> Json {
 }
 
 ///|
+priv struct ProviderHealthState {
+  is_healthy : Bool
+  consecutive_failures : Int
+  last_success_at : String?
+  last_failure_at : String?
+  last_error : String?
+  updated_at : String
+}
+
+///|
+fn ProviderHealthState::new_default(updated_at : String) -> ProviderHealthState {
+  {
+    is_healthy: true,
+    consecutive_failures: 0,
+    last_success_at: None,
+    last_failure_at: None,
+    last_error: None,
+    updated_at,
+  }
+}
+
+///|
+fn ProviderHealthState::new_healthy(
+  updated_at : String,
+  last_failure_at? : String? = None,
+) -> ProviderHealthState {
+  {
+    is_healthy: true,
+    consecutive_failures: 0,
+    last_success_at: Some(updated_at),
+    last_failure_at,
+    last_error: None,
+    updated_at,
+  }
+}
+
+///|
+fn provider_health_key(app_type : String, provider_id : String) -> String {
+  "\{app_type}:\{provider_id}"
+}
+
+///|
 pub fn ProviderSelection::ok(
   providers : Array[ProviderRouteTarget],
 ) -> ProviderSelection {
@@ -610,6 +652,7 @@ pub struct ProviderRouter {
   auto_failover_enabled : Map[String, Bool]
   max_retries : Map[String, Int]
   circuit_breakers : Map[String, CircuitBreaker]
+  priv provider_health : Map[String, ProviderHealthState]
   priv app_circuit_configs : Map[String, CircuitBreakerConfig]
   mut circuit_config : CircuitBreakerConfig
 }
@@ -628,6 +671,7 @@ pub fn ProviderRouter::new(
     auto_failover_enabled: Map([], capacity=0),
     max_retries: Map([], capacity=0),
     circuit_breakers: Map([], capacity=0),
+    provider_health: Map([], capacity=0),
     app_circuit_configs: Map([], capacity=0),
     circuit_config,
   }
@@ -1474,8 +1518,19 @@ pub fn ProviderRouter::record_result(
   let breaker = self.breaker_for(app_type, provider_id)
   if success {
     breaker.record_success(used_half_open_permit)
+    self.record_provider_health_success(
+      provider_id,
+      app_type,
+      now_ms.to_string(),
+    )
   } else {
     breaker.record_failure(used_half_open_permit, now_ms~)
+    self.record_provider_health_failure(
+      provider_id,
+      app_type,
+      "request_failed",
+      now_ms.to_string(),
+    )
   }
 }
 
@@ -1498,6 +1553,11 @@ pub fn ProviderRouter::reset_provider_breaker(
   app_type : String,
 ) -> Unit {
   self.breaker_for(app_type, provider_id).reset()
+  self.record_provider_health_success(
+    provider_id,
+    app_type,
+    @async.now().to_int().to_string(),
+  )
 }
 
 ///|
@@ -1579,28 +1639,123 @@ fn ProviderRouter::provider_health_json(
   updated_at : String,
 ) -> Json {
   let stats = self.get_circuit_breaker_stats(provider_id, app_type)
-  let is_healthy = match stats {
-    Some(stats) => stats.state != Open
-    None => true
+  let health = self.provider_health_state(provider_id, app_type, updated_at)
+  let is_circuit_open = match stats {
+    Some(stats) => stats.state == Open
+    None => false
   }
-  let consecutive_failures = match stats {
-    Some(stats) => stats.consecutive_failures
-    None => 0
-  }
+  let is_healthy = health.is_healthy && !is_circuit_open
   let last_error = match stats {
     Some(stats) if stats.state == Open => Json::string("circuit_open")
-    _ => Json::null()
+    _ => provider_health_optional_string_json(health.last_error)
   }
   {
     "provider_id": Json::string(provider_id),
     "app_type": Json::string(app_type),
     "is_healthy": Json::boolean(is_healthy),
-    "consecutive_failures": Json::number(consecutive_failures.to_double()),
-    "last_success_at": Json::null(),
-    "last_failure_at": Json::null(),
+    "consecutive_failures": Json::number(
+      health.consecutive_failures.to_double(),
+    ),
+    "last_success_at": provider_health_optional_string_json(
+      health.last_success_at,
+    ),
+    "last_failure_at": provider_health_optional_string_json(
+      health.last_failure_at,
+    ),
     "last_error": last_error,
-    "updated_at": Json::string(updated_at),
+    "updated_at": Json::string(health.updated_at),
   }.to_json()
+}
+
+///|
+fn ProviderRouter::record_provider_health_success(
+  self : ProviderRouter,
+  provider_id : String,
+  app_type : String,
+  updated_at : String,
+) -> Unit {
+  let key = provider_health_key(app_type, provider_id)
+  let last_failure_at = match self.provider_health.get(key) {
+    Some(state) => state.last_failure_at
+    None => None
+  }
+  self.provider_health.set(
+    key,
+    ProviderHealthState::new_healthy(updated_at, last_failure_at~),
+  )
+}
+
+///|
+fn ProviderRouter::record_provider_health_failure(
+  self : ProviderRouter,
+  provider_id : String,
+  app_type : String,
+  error : String,
+  updated_at : String,
+) -> Unit {
+  let key = provider_health_key(app_type, provider_id)
+  let previous = self.provider_health.get(key)
+  let consecutive_failures = previous
+    .map(fn(state) { state.consecutive_failures })
+    .unwrap_or(0) +
+    1
+  let last_success_at = match previous {
+    Some(state) => state.last_success_at
+    None => None
+  }
+  self.provider_health.set(key, {
+    is_healthy: consecutive_failures < self.failure_threshold_for_app(app_type),
+    consecutive_failures,
+    last_success_at,
+    last_failure_at: Some(updated_at),
+    last_error: Some(error),
+    updated_at,
+  })
+}
+
+///|
+fn ProviderRouter::provider_health_state(
+  self : ProviderRouter,
+  provider_id : String,
+  app_type : String,
+  updated_at : String,
+) -> ProviderHealthState {
+  let key = provider_health_key(app_type, provider_id)
+  match self.provider_health.get(key) {
+    Some(state) => state
+    None =>
+      match self.get_circuit_breaker_stats(provider_id, app_type) {
+        Some(stats) if stats.state == Open =>
+          {
+            is_healthy: false,
+            consecutive_failures: stats.consecutive_failures,
+            last_success_at: None,
+            last_failure_at: None,
+            last_error: Some("circuit_open"),
+            updated_at,
+          }
+        _ => ProviderHealthState::new_default(updated_at)
+      }
+  }
+}
+
+///|
+fn ProviderRouter::failure_threshold_for_app(
+  self : ProviderRouter,
+  app_type : String,
+) -> Int {
+  self.app_circuit_configs
+  .get(app_type)
+  .map(fn(config) { config.failure_threshold })
+  .unwrap_or(self.circuit_config.failure_threshold)
+}
+
+///|
+fn provider_health_optional_string_json(value : String?) -> Json {
+  match value {
+    Some(value) => Json::string(value)
+    None => Json::null()
+  }
 }
 
 ///|

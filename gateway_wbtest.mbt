@@ -2129,6 +2129,9 @@ test "proxy provider health alias mirrors circuit breaker state" {
     fail("expected open provider health object")
   }
   assert_eq(open["is_healthy"], Json::boolean(false))
+  assert_eq(open["consecutive_failures"], Json::number(4.0))
+  assert_eq(open["last_success_at"], Json::null())
+  assert_eq(open["last_failure_at"], Json::string("1000"))
   assert_eq(open["last_error"], Json::string("circuit_open"))
   guard gateway.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "claude",
@@ -2149,6 +2152,17 @@ test "proxy provider health alias mirrors circuit breaker state" {
   assert_true(reset_stats.state == Closed)
   assert_eq(reset_stats.total_requests, 0)
   assert_eq(reset_stats.failed_requests, 0)
+  guard gateway.provider_router.provider_health_json(
+      "codex-oauth", "claude", "test-time-after-reset",
+    )
+    is Object(reset_health) else {
+    fail("expected reset provider health object")
+  }
+  assert_eq(reset_health["is_healthy"], Json::boolean(true))
+  assert_eq(reset_health["consecutive_failures"], Json::number(0.0))
+  assert_true(reset_health["last_success_at"] is String(_))
+  assert_eq(reset_health["last_failure_at"], Json::string("1000"))
+  assert_eq(reset_health["last_error"], Json::null())
 }
 
 ///|
