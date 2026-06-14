@@ -12230,7 +12230,7 @@ fn proxy_provider_query_from_request(
 
 ///|
 fn proxy_app_type_from_request(path : StringView, body : Json?) -> String? {
-  match proxy_string_request(path, body, ["app_type", "appType"]) {
+  match proxy_string_request(path, body, ["app_type", "appType", "app"]) {
     Some(app_type) if !app_type.trim().is_empty() =>
       Some(app_type.trim().to_owned())
     _ => None

@@ -199,8 +199,8 @@ test "proxy config setter paths encode ccs command arguments" {
   )
   assert_eq(
     proxy_app_config_update_path([
-      "moonstat", "proxy", "app-config", "set", "--app-type", "codex", "--enabled",
-      "true", "--auto-failover-enabled", "false", "--max-retries", "5", "--streaming-first-byte-timeout",
+      "moonstat", "proxy", "app-config", "set", "--app", "codex", "--enabled", "true",
+      "--auto-failover-enabled", "false", "--max-retries", "5", "--streaming-first-byte-timeout",
       "11", "--streaming-idle-timeout", "22", "--non-streaming-timeout", "33", "--failure-threshold",
       "7", "--success-threshold", "3", "--timeout-seconds", "44", "--error-rate-threshold",
       "0.4", "--min-requests", "12",
@@ -209,7 +209,7 @@ test "proxy config setter paths encode ccs command arguments" {
   )
   assert_eq(
     proxy_takeover_update_path([
-      "moonstat", "proxy", "takeover-status", "set", "--app-type", "codex", "--enabled",
+      "moonstat", "proxy", "takeover-status", "set", "--app", "codex", "--enabled",
       "true",
     ]),
     Some("/proxy/takeover-status?app_type=codex&enabled=true"),
@@ -217,7 +217,7 @@ test "proxy config setter paths encode ccs command arguments" {
   assert_eq(
     proxy_app_value_update_path(
       [
-        "moonstat", "proxy", "default-cost-multiplier", "set", "--app-type", "codex",
+        "moonstat", "proxy", "default-cost-multiplier", "set", "--app", "codex",
         "--value", "1.25",
       ],
       "/proxy/default-cost-multiplier",
@@ -227,7 +227,7 @@ test "proxy config setter paths encode ccs command arguments" {
   assert_eq(
     proxy_provider_endpoint_path(
       [
-        "moonstat", "proxy", "switch-proxy-provider", "--app-type", "codex", "--provider-id",
+        "moonstat", "proxy", "switch-proxy-provider", "--app", "codex", "--provider-id",
         "codex-oauth",
       ],
       "/switch_proxy_provider",

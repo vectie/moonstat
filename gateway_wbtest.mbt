@@ -415,6 +415,13 @@ test "proxy failover command parsers accept ccs json payload keys" {
     Some("codex"),
   )
   assert_eq(
+    proxy_app_type_from_request(
+      "/get_failover_queue",
+      Some({ "app": Json::string(" gemini ") }.to_json()),
+    ),
+    Some("gemini"),
+  )
+  assert_eq(
     proxy_bool_request("/set_auto_failover_enabled", body, ["enabled"]),
     Some(true),
   )

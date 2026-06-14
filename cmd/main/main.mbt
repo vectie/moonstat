@@ -2455,9 +2455,7 @@ async fn check_proxy_endpoint(args : Array[String], path : String) -> Unit {
 
 ///|
 async fn check_proxy_app_endpoint(args : Array[String], path : String) -> Unit {
-  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
-    "claude",
-  )
+  let app_type = proxy_app_arg(args)
   check_proxy_endpoint(args, "\{path}?app_type=\{cli_url_encode(app_type)}")
 }
 
@@ -2480,12 +2478,18 @@ fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? 
     is Some(provider_id) else {
     return None
   }
-  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
-    "claude",
-  )
+  let app_type = proxy_app_arg(args)
   Some(
     "\{path}?provider_id=\{cli_url_encode(provider_id)}&app_type=\{cli_url_encode(app_type)}",
   )
+}
+
+///|
+fn proxy_app_arg(args : Array[String]) -> String {
+  match parse_string_arg_any(args, "--app", "--app-type") {
+    Some(value) => value
+    None => parse_string_arg(args, "--appType").unwrap_or("claude")
+  }
 }
 
 ///|
@@ -3588,9 +3592,7 @@ fn provider_upsert_path(
 ///|
 fn proxy_app_value_update_path(args : Array[String], path : String) -> String? {
   guard parse_string_arg(args, "--value") is Some(value) else { return None }
-  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
-    "claude",
-  )
+  let app_type = proxy_app_arg(args)
   Some(
     "\{path}?app_type=\{cli_url_encode(app_type)}&value=\{cli_url_encode(value)}",
   )
@@ -3667,9 +3669,7 @@ fn global_proxy_url_path(args : Array[String], path : String) -> String? {
 
 ///|
 fn proxy_app_config_update_path(args : Array[String]) -> String {
-  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
-    "claude",
-  )
+  let app_type = proxy_app_arg(args)
   let query : Array[String] = [cli_query_pair("appType", app_type)]
   match parse_string_arg(args, "--enabled") {
     Some(value) => query.push(cli_query_pair("enabled", value))
@@ -3739,9 +3739,7 @@ fn proxy_takeover_update_path(args : Array[String]) -> String? {
   guard parse_string_arg(args, "--enabled") is Some(enabled) else {
     return None
   }
-  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
-    "claude",
-  )
+  let app_type = proxy_app_arg(args)
   Some(
     "/proxy/takeover-status?app_type=\{cli_url_encode(app_type)}&enabled=\{cli_url_encode(enabled)}",
   )
@@ -3752,9 +3750,7 @@ fn proxy_auto_failover_enabled_path(args : Array[String]) -> String? {
   guard parse_string_arg(args, "--enabled") is Some(enabled) else {
     return None
   }
-  let app_type = parse_string_arg_any(args, "--app-type", "--appType").unwrap_or(
-    "claude",
-  )
+  let app_type = proxy_app_arg(args)
   Some(
     "/proxy/auto-failover-enabled?app_type=\{cli_url_encode(app_type)}&enabled=\{cli_url_encode(enabled)}",
   )
