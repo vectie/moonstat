@@ -5443,6 +5443,236 @@ fn ccs_toml_split_csv(text : String) -> Array[String] {
 }
 
 ///|
+fn ccs_validate_common_config_snippet(
+  app_type : String,
+  snippet : String,
+) -> String? {
+  if snippet.trim().is_empty() {
+    return None
+  }
+  match app_type {
+    "claude" | "gemini" | "omo" | "omo-slim" => {
+      ignore(
+        @json.parse(snippet) catch {
+          err => return Some("Invalid JSON format: \{err}")
+        },
+      )
+      None
+    }
+    "codex" =>
+      if ccs_validate_codex_toml_snippet(snippet) {
+        None
+      } else {
+        Some("Invalid TOML format")
+      }
+    _ => None
+  }
+}
+
+///|
+fn ccs_validate_codex_toml_snippet(snippet : String) -> Bool {
+  for line_view in snippet.split("\n") {
+    let line = ccs_toml_strip_comment(line_view.to_owned()).trim().to_owned()
+    if line.is_empty() {
+      continue
+    }
+    if line.has_prefix("[") {
+      if !line.has_suffix("]") {
+        return false
+      }
+      let section = line[1:line.length() - 1].trim()
+      if section.is_empty() {
+        return false
+      }
+      continue
+    }
+    if line.has_suffix("]") {
+      return false
+    }
+    if ccs_toml_assignment(line) is None {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn ccs_extract_common_config_snippet_from_settings_config(
+  app_type : String,
+  settings_config : String,
+) -> Result[String, String] {
+  let parsed = @json.parse(settings_config) catch {
+    err => return Err("Invalid JSON format: \{err}")
+  }
+  Ok(ccs_extract_common_config_snippet_json(app_type, parsed))
+}
+
+///|
+fn ccs_extract_common_config_snippet_json(
+  app_type : String,
+  settings : Json,
+) -> String {
+  match app_type {
+    "claude" => ccs_extract_claude_common_config(settings)
+    "codex" => ccs_extract_codex_common_config(settings)
+    "gemini" => ccs_extract_gemini_common_config(settings)
+    "opencode" => ccs_extract_opencode_common_config(settings)
+    "openclaw" => ccs_extract_openclaw_common_config(settings)
+    _ => ""
+  }
+}
+
+///|
+fn ccs_extract_claude_common_config(settings : Json) -> String {
+  guard settings is Object(config) else { return "{}" }
+  match config.get("env") {
+    Some(Object(env)) => {
+      for
+        key in [
+          "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_MODEL", "ANTHROPIC_REASONING_MODEL",
+          "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME",
+          "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME", "ANTHROPIC_DEFAULT_SONNET_MODEL",
+          "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME", "ANTHROPIC_BASE_URL",
+        ] {
+        env.remove(key)
+      }
+      if env.length() == 0 {
+        config.remove("env")
+      } else {
+        config["env"] = Json::object(env)
+      }
+    }
+    _ => ()
+  }
+  for key in ["apiBaseUrl", "primaryModel", "smallFastModel"] {
+    config.remove(key)
+  }
+  if config.length() == 0 {
+    "{}"
+  } else {
+    Json::object(config).stringify(indent=2)
+  }
+}
+
+///|
+fn ccs_extract_codex_common_config(settings : Json) -> String {
+  guard settings is Object(config) else { return "" }
+  let toml = json_string_from_map_any(config, ["config"]).unwrap_or("")
+  if toml.is_empty() {
+    return ""
+  }
+  ccs_extract_codex_common_config_from_toml(toml)
+}
+
+///|
+fn ccs_extract_codex_common_config_from_toml(toml : String) -> String {
+  let lines : Array[String] = []
+  let mut skip_model_providers = false
+  let mut current_section = ""
+  for line_view in toml.split("\n") {
+    let original = line_view.to_owned()
+    let stripped = ccs_toml_strip_comment(original).trim().to_owned()
+    if stripped.has_prefix("[") && stripped.has_suffix("]") {
+      let section = stripped[1:stripped.length() - 1].trim().to_owned()
+      current_section = section
+      skip_model_providers = section == "model_providers" ||
+        section.has_prefix("model_providers.")
+      if skip_model_providers {
+        continue
+      }
+      lines.push(original.trim_end().to_owned())
+      continue
+    }
+    if skip_model_providers {
+      continue
+    }
+    if current_section.is_empty() {
+      match ccs_toml_assignment(stripped) {
+        Some((key, _)) if key == "model" ||
+          key == "model_provider" ||
+          key == "base_url" => continue
+        _ => ()
+      }
+    }
+    lines.push(original.trim_end().to_owned())
+  }
+  ccs_clean_blank_lines(lines).trim().to_owned()
+}
+
+///|
+fn ccs_clean_blank_lines(lines : Array[String]) -> String {
+  let cleaned : Array[String] = []
+  let mut blank_run = 0
+  for line in lines {
+    if line.trim().is_empty() {
+      blank_run += 1
+      if blank_run <= 1 {
+        cleaned.push("")
+      }
+    } else {
+      blank_run = 0
+      cleaned.push(line)
+    }
+  }
+  cleaned.join("\n")
+}
+
+///|
+fn ccs_extract_gemini_common_config(settings : Json) -> String {
+  guard settings is Object(config) else { return "{}" }
+  let snippet : Map[String, Json] = {}
+  match config.get("env") {
+    Some(Object(env)) =>
+      for key in env.keys() {
+        if key == "GOOGLE_GEMINI_BASE_URL" || key == "GEMINI_API_KEY" {
+          continue
+        }
+        match env.get(key) {
+          Some(String(value)) if !value.trim().is_empty() =>
+            snippet[key] = Json::string(value.trim().to_owned())
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+  if snippet.length() == 0 {
+    "{}"
+  } else {
+    Json::object(snippet).stringify(indent=2)
+  }
+}
+
+///|
+fn ccs_extract_opencode_common_config(settings : Json) -> String {
+  guard settings is Object(config) else { return "{}" }
+  match config.get("options") {
+    Some(Object(options)) => {
+      options.remove("apiKey")
+      options.remove("baseURL")
+      config["options"] = Json::object(options)
+    }
+    _ => ()
+  }
+  if config.length() == 0 {
+    "{}"
+  } else {
+    Json::object(config).stringify(indent=2)
+  }
+}
+
+///|
+fn ccs_extract_openclaw_common_config(settings : Json) -> String {
+  guard settings is Object(config) else { return "{}" }
+  config.remove("apiKey")
+  config.remove("baseUrl")
+  if config.length() == 0 {
+    "{}"
+  } else {
+    Json::object(config).stringify(indent=2)
+  }
+}
+
+///|
 async fn ccs_import_mcp_from_codex_file(
   servers : Map[String, Json],
   file_path : String,
@@ -7102,6 +7332,13 @@ async fn Gateway::handle_set_common_config_snippet(
   let snippet = proxy_string_request(r.path, body, [
     "snippet", "content", "value",
   ]).unwrap_or("")
+  match ccs_validate_common_config_snippet(app_type, snippet) {
+    Some(error) => {
+      write_usage_bad_request(w, error)
+      return
+    }
+    None => ()
+  }
   if snippet.trim().is_empty() {
     self.config_snippets.remove(app_type)
   } else {
@@ -7121,6 +7358,13 @@ async fn Gateway::handle_set_common_config_snippet_request(
   let snippet = proxy_string_request(r.path, body, [
     "snippet", "content", "value",
   ]).unwrap_or("")
+  match ccs_validate_common_config_snippet(app_type, snippet) {
+    Some(error) => {
+      write_usage_bad_request(w, error)
+      return
+    }
+    None => ()
+  }
   if snippet.trim().is_empty() {
     self.config_snippets.remove(app_type)
   } else {
@@ -7139,7 +7383,14 @@ async fn Gateway::handle_extract_common_config_snippet(
   let app_type = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
   match
     proxy_string_request(r.path, body, ["settingsConfig", "settings_config"]) {
-    Some(settings_config) => write_usage_json(w, Json::string(settings_config))
+    Some(settings_config) =>
+      match
+        ccs_extract_common_config_snippet_from_settings_config(
+          app_type, settings_config,
+        ) {
+        Ok(snippet) => write_usage_json(w, Json::string(snippet))
+        Err(error) => write_usage_bad_request(w, error)
+      }
     None =>
       match self.config_snippets.get(app_type) {
         Some(snippet) => write_usage_json(w, Json::string(snippet))

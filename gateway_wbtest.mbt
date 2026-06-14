@@ -895,6 +895,92 @@ test "proxy pricing config runtime overrides feed provider activation defaults" 
 }
 
 ///|
+test "common config snippet validation mirrors ccs formats" {
+  assert_eq(
+    ccs_validate_common_config_snippet("codex", "# comment only\n"),
+    None,
+  )
+  assert_true(ccs_validate_common_config_snippet("codex", "[broken") is Some(_))
+  assert_true(
+    ccs_validate_common_config_snippet("claude", "{\"env\":") is Some(_),
+  )
+  assert_eq(
+    ccs_validate_common_config_snippet("gemini", "{\"EXTRA\":\"kept\"}"),
+    None,
+  )
+}
+
+///|
+test "common config extraction strips ccs provider-specific fields" {
+  let claude = ccs_extract_common_config_snippet_json(
+    "claude",
+    Json::object({
+      "apiBaseUrl": Json::string("https://provider.example"),
+      "primaryModel": Json::string("claude-sonnet"),
+      "env": Json::object({
+        "ANTHROPIC_API_KEY": Json::string("secret"),
+        "ANTHROPIC_MODEL": Json::string("claude-sonnet"),
+        "KEEP_ME": Json::string("1"),
+      }),
+      "custom": Json::boolean(true),
+    }),
+  )
+  guard @json.parse(claude) is Object(claude_obj) else {
+    fail("expected extracted claude JSON")
+  }
+  assert_true(claude_obj.get("apiBaseUrl") is None)
+  assert_true(claude_obj.get("primaryModel") is None)
+  guard claude_obj["env"] is Object(claude_env) else {
+    fail("expected claude env")
+  }
+  assert_true(claude_env.get("ANTHROPIC_API_KEY") is None)
+  assert_true(claude_env.get("ANTHROPIC_MODEL") is None)
+  assert_eq(claude_env["KEEP_ME"], Json::string("1"))
+
+  let gemini = ccs_extract_common_config_snippet_json(
+    "gemini",
+    Json::object({
+      "env": Json::object({
+        "GEMINI_API_KEY": Json::string("secret"),
+        "GOOGLE_GEMINI_BASE_URL": Json::string("https://provider.example"),
+        "EXTRA": Json::string(" kept "),
+      }),
+    }),
+  )
+  guard @json.parse(gemini) is Object(gemini_obj) else {
+    fail("expected extracted gemini JSON")
+  }
+  assert_true(gemini_obj.get("GEMINI_API_KEY") is None)
+  assert_eq(gemini_obj["EXTRA"], Json::string("kept"))
+}
+
+///|
+test "codex common config extraction removes provider toml tables" {
+  let settings = Json::object({
+    "config": Json::string(
+      (
+        #|model = "gpt-5"
+        #|model_provider = "openai"
+        #|base_url = "https://provider.example"
+        #|approval_policy = "never"
+        #|
+        #|[model_providers.openai]
+        #|base_url = "https://provider.example"
+        #|api_key = "secret"
+        #|
+        #|[tools]
+        #|web_search = true
+      ),
+    ),
+  })
+  let snippet = ccs_extract_common_config_snippet_json("codex", settings)
+  assert_true(!snippet.contains("model_provider"))
+  assert_true(!snippet.contains("[model_providers.openai]"))
+  assert_true(snippet.contains("approval_policy = \"never\""))
+  assert_true(snippet.contains("[tools]"))
+}
+
+///|
 test "proxy circuit breaker config alias matches ccs shape" {
   let gateway = Gateway::new(port=17006, host="127.0.0.7", model="gpt-5")
   guard gateway.provider_router.circuit_config.to_json() is Object(config) else {
