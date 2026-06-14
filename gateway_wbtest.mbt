@@ -3875,6 +3875,15 @@ test "codex compatible provider detects chat completions bridge" {
     ),
     "https://api.example.com/v1/chat/completions?x=1",
   )
+  assert_eq(
+    codex_compatible_provider_url(
+      "https://api.example.com/v1",
+      codex_compatible_chat_completions_endpoint(
+        "/backend-api/codex/responses/compact?foo=bar",
+      ),
+    ),
+    "https://api.example.com/v1/chat/completions?foo=bar",
+  )
   let full_url_provider = ProviderRouteTarget::new(
     app_type="codex",
     provider_id="chat-url",
@@ -3883,6 +3892,15 @@ test "codex compatible provider detects chat completions bridge" {
     api_key=Some("sk-test"),
   )
   assert_true(full_url_provider.codex_uses_chat_completions())
+  assert_eq(
+    codex_compatible_provider_url(
+      "https://api.example.com/v1/chat/completions?fixed=1",
+      codex_compatible_chat_completions_endpoint(
+        "/backend-api/codex/responses/compact?foo=bar",
+      ),
+    ),
+    "https://api.example.com/v1/chat/completions?fixed=1&foo=bar",
+  )
 }
 
 ///|

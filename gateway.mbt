@@ -3513,9 +3513,13 @@ fn codex_compatible_provider_url(
 
 ///|
 fn provider_base_is_full_endpoint(base_url : String) -> Bool {
-  base_url.has_suffix("/responses") ||
-  base_url.has_suffix("/chat/completions") ||
-  base_url.has_suffix("/messages")
+  let path = match base_url.find("?") {
+    Some(index) => base_url[:index]
+    None => base_url[:]
+  }
+  path.has_suffix("/responses") ||
+  path.has_suffix("/chat/completions") ||
+  path.has_suffix("/messages")
 }
 
 ///|
