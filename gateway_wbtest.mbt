@@ -335,10 +335,17 @@ test "provider command helpers parse ccs sort and endpoint test payloads" {
         "url": "not-a-url",
         "latency": null,
         "status": null,
-        "error": "URL 无效",
+        "error": "URL 无效: relative URL without a base",
       },
     ],
   )
+
+  json_inspect(provider_endpoint_latency_result_json("http://"), content={
+    "url": "http://",
+    "latency": null,
+    "status": null,
+    "error": "URL 无效: empty host",
+  })
 }
 
 ///|

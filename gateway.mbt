@@ -12426,7 +12426,15 @@ fn provider_endpoint_latency_result_json(raw_url : String) -> Json {
       "url": Json::string(trimmed),
       "latency": Json::null(),
       "status": Json::null(),
-      "error": Json::string("URL 无效"),
+      "error": Json::string(ccs_endpoint_invalid_url_error(trimmed)),
+    }.to_json()
+  }
+  if ccs_endpoint_url_missing_host(trimmed) {
+    return {
+      "url": Json::string(trimmed),
+      "latency": Json::null(),
+      "status": Json::null(),
+      "error": Json::string(ccs_endpoint_invalid_url_error(trimmed)),
     }.to_json()
   }
   {
@@ -12435,6 +12443,44 @@ fn provider_endpoint_latency_result_json(raw_url : String) -> Json {
     "status": Json::number(200.0),
     "error": Json::null(),
   }.to_json()
+}
+
+///|
+fn ccs_endpoint_invalid_url_error(url : String) -> String {
+  if url.has_prefix("http://") || url.has_prefix("https://") {
+    if ccs_endpoint_url_missing_host(url) {
+      "URL 无效: empty host"
+    } else {
+      "URL 无效"
+    }
+  } else {
+    "URL 无效: relative URL without a base"
+  }
+}
+
+///|
+fn ccs_endpoint_url_missing_host(url : String) -> Bool {
+  match endpoint_url_host_start(url) {
+    Some(start) => {
+      if url.length() <= start {
+        return true
+      }
+      let rest = url[start:]
+      rest.has_prefix("/") || rest.has_prefix("?") || rest.has_prefix("#")
+    }
+    None => false
+  }
+}
+
+///|
+fn endpoint_url_host_start(url : String) -> Int? {
+  if url.has_prefix("http://") {
+    Some(7)
+  } else if url.has_prefix("https://") {
+    Some(8)
+  } else {
+    None
+  }
 }
 
 ///|
