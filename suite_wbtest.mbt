@@ -119,6 +119,15 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET|POST /get_tool_versions")))
   assert_true(routes.contains(Json::string("GET|POST /open_external")))
   assert_true(routes.contains(Json::string("GET /is_lightweight_mode")))
+  assert_true(routes.contains(Json::string("GET|POST /export_config_to_file")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /import_config_from_file")),
+  )
+  assert_true(routes.contains(Json::string("POST /create_db_backup")))
+  assert_true(routes.contains(Json::string("GET /list_db_backups")))
+  assert_true(routes.contains(Json::string("POST /restore_db_backup")))
+  assert_true(routes.contains(Json::string("POST /rename_db_backup")))
+  assert_true(routes.contains(Json::string("DELETE|POST /delete_db_backup")))
   assert_true(routes.contains(Json::string("GET /get_installed_skills")))
   assert_true(routes.contains(Json::string("GET /get_skill_backups")))
   assert_true(routes.contains(Json::string("POST /install_skill_unified")))

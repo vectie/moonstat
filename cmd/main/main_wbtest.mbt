@@ -656,6 +656,41 @@ test "top level ccs config command names build config paths" {
     ]),
     Some("/restore_env_backup?backupPath=%2Ftmp%2Fenv%20backup.json"),
   )
+  assert_eq(
+    config_file_path(
+      ["moonstat", "export_config_to_file", "--filePath", "/tmp/moon stat.json"],
+      "/export_config_to_file",
+    ),
+    "/export_config_to_file?filePath=%2Ftmp%2Fmoon%20stat.json",
+  )
+  assert_eq(
+    config_file_path(
+      ["moonstat", "import_config_from_file", "--path", "/tmp/in.json"],
+      "/import_config_from_file",
+    ),
+    "/import_config_from_file?filePath=%2Ftmp%2Fin.json",
+  )
+  assert_eq(
+    db_backup_filename_path(
+      ["moonstat", "restore_db_backup", "--filename", "moonstat-1.db"],
+      "/restore_db_backup",
+    ),
+    "/restore_db_backup?filename=moonstat-1.db",
+  )
+  assert_eq(
+    db_backup_rename_path([
+      "moonstat", "rename_db_backup", "--oldFilename", "moonstat-1.db", "--newName",
+      "renamed",
+    ]),
+    "/rename_db_backup?oldFilename=moonstat-1.db&newName=renamed",
+  )
+  assert_eq(
+    db_backup_filename_path(
+      ["moonstat", "delete_db_backup", "--name", "renamed.db"],
+      "/delete_db_backup",
+    ),
+    "/delete_db_backup?filename=renamed.db",
+  )
 }
 
 ///|

@@ -417,6 +417,36 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, "/is_lightweight_mode")
     ["save_file_dialog", ..] | ["save-file-dialog", ..] =>
       check_usage_endpoint(arr, save_file_dialog_path(arr))
+    ["export_config_to_file", ..] | ["export-config-to-file", ..] =>
+      check_json_post_endpoint(
+        arr,
+        config_file_path(arr, "/export_config_to_file"),
+        "Import/export",
+      )
+    ["import_config_from_file", ..] | ["import-config-from-file", ..] =>
+      check_json_post_endpoint(
+        arr,
+        config_file_path(arr, "/import_config_from_file"),
+        "Import/export",
+      )
+    ["create_db_backup", ..] | ["create-db-backup", ..] =>
+      check_json_post_endpoint(arr, "/create_db_backup", "Import/export")
+    ["list_db_backups", ..] | ["list-db-backups", ..] =>
+      check_usage_endpoint(arr, "/list_db_backups")
+    ["restore_db_backup", ..] | ["restore-db-backup", ..] =>
+      check_json_post_endpoint(
+        arr,
+        db_backup_filename_path(arr, "/restore_db_backup"),
+        "Import/export",
+      )
+    ["rename_db_backup", ..] | ["rename-db-backup", ..] =>
+      check_json_post_endpoint(arr, db_backup_rename_path(arr), "Import/export")
+    ["delete_db_backup", ..] | ["delete-db-backup", ..] =>
+      check_json_post_endpoint(
+        arr,
+        db_backup_filename_path(arr, "/delete_db_backup"),
+        "Import/export",
+      )
     ["open_file_dialog", ..] | ["open-file-dialog", ..] =>
       check_usage_endpoint(arr, "/open_file_dialog")
     ["open_zip_file_dialog", ..] | ["open-zip-file-dialog", ..] =>
@@ -2602,6 +2632,60 @@ fn save_file_dialog_path(args : Array[String]) -> String {
     Some(name) => "/save_file_dialog?\{cli_query_pair("defaultName", name)}"
     None => "/save_file_dialog"
   }
+}
+
+///|
+fn config_file_path(args : Array[String], base_path : String) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--file-path", "--filePath") {
+    Some(file_path) => query.push(cli_query_pair("filePath", file_path))
+    None =>
+      match parse_string_arg(args, "--path") {
+        Some(file_path) => query.push(cli_query_pair("filePath", file_path))
+        None => ()
+      }
+  }
+  cli_path_with_query(base_path, query)
+}
+
+///|
+fn db_backup_filename_arg(args : Array[String]) -> String? {
+  match parse_string_arg_any(args, "--filename", "--fileName") {
+    Some(filename) => Some(filename)
+    None => parse_string_arg(args, "--name")
+  }
+}
+
+///|
+fn db_backup_filename_path(args : Array[String], base_path : String) -> String {
+  let query : Array[String] = []
+  match db_backup_filename_arg(args) {
+    Some(filename) => query.push(cli_query_pair("filename", filename))
+    None => ()
+  }
+  cli_path_with_query(base_path, query)
+}
+
+///|
+fn db_backup_rename_path(args : Array[String]) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--old-filename", "--oldFilename") {
+    Some(filename) => query.push(cli_query_pair("oldFilename", filename))
+    None =>
+      match parse_string_arg(args, "--filename") {
+        Some(filename) => query.push(cli_query_pair("oldFilename", filename))
+        None => ()
+      }
+  }
+  match parse_string_arg_any(args, "--new-name", "--newName") {
+    Some(name) => query.push(cli_query_pair("newName", name))
+    None =>
+      match parse_string_arg(args, "--name") {
+        Some(name) => query.push(cli_query_pair("newName", name))
+        None => ()
+      }
+  }
+  cli_path_with_query("/rename_db_backup", query)
 }
 
 ///|

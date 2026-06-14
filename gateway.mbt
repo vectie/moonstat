@@ -714,6 +714,36 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/save_file_dialog", (r, w) => {
     self.handle_save_file_dialog(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/export_config_to_file", (r, w) => {
+    self.handle_export_config_to_file(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/export_config_to_file", (r, w) => {
+    self.handle_export_config_to_file(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/import_config_from_file", (r, w) => {
+    self.handle_import_config_from_file(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/import_config_from_file", (r, w) => {
+    self.handle_import_config_from_file(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/create_db_backup", (_, w) => {
+    self.handle_create_db_backup(w)
+  })
+  router.add_handler(@httpx.Method::Get, "/list_db_backups", (_, w) => {
+    self.handle_list_db_backups(w)
+  })
+  router.add_handler(@httpx.Method::Post, "/restore_db_backup", (r, w) => {
+    self.handle_restore_db_backup(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/rename_db_backup", (r, w) => {
+    self.handle_rename_db_backup(r, w)
+  })
+  router.add_handler(@httpx.Method::Delete, "/delete_db_backup", (r, w) => {
+    self.handle_delete_db_backup(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/delete_db_backup", (r, w) => {
+    self.handle_delete_db_backup(r, w)
+  })
   router.add_handler(@httpx.Method::Post, "/open_file_dialog", (_, w) => {
     self.handle_open_file_dialog(w)
   })
@@ -4906,6 +4936,107 @@ async fn Gateway::handle_save_file_dialog(
   let body = proxy_json_body(r)
   ignore(proxy_string_request(r.path, body, ["defaultName", "default_name"]))
   write_usage_json(w, ccs_dialog_result_json())
+}
+
+///|
+async fn Gateway::handle_export_config_to_file(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["filePath", "file_path", "path"])
+    is Some(file_path) else {
+    write_usage_bad_request(w, "missing_file_path")
+    return
+  }
+  write_usage_json(w, self.ccs_export_config_to_file_json(file_path))
+}
+
+///|
+async fn Gateway::handle_import_config_from_file(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["filePath", "file_path", "path"])
+    is Some(file_path) else {
+    write_usage_bad_request(w, "missing_file_path")
+    return
+  }
+  write_usage_json(w, self.ccs_import_config_from_file_json(file_path))
+}
+
+///|
+async fn Gateway::handle_create_db_backup(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.ccs_create_db_backup_json())
+}
+
+///|
+async fn Gateway::handle_list_db_backups(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  write_usage_json(w, ccs_list_db_backups_json())
+}
+
+///|
+async fn Gateway::handle_restore_db_backup(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["filename", "fileName", "name"])
+    is Some(filename) else {
+    write_usage_bad_request(w, "missing_filename")
+    return
+  }
+  write_usage_json(w, self.ccs_restore_db_backup_json(filename))
+}
+
+///|
+async fn Gateway::handle_rename_db_backup(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, [
+      "oldFilename", "old_filename", "filename",
+    ])
+    is Some(old_filename) else {
+    write_usage_bad_request(w, "missing_old_filename")
+    return
+  }
+  guard proxy_string_request(r.path, body, ["newName", "new_name", "name"])
+    is Some(new_name) else {
+    write_usage_bad_request(w, "missing_new_name")
+    return
+  }
+  write_usage_json(w, ccs_rename_db_backup_json(old_filename, new_name))
+}
+
+///|
+async fn Gateway::handle_delete_db_backup(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  ignore(self)
+  let body = proxy_json_body(r)
+  guard proxy_string_request(r.path, body, ["filename", "fileName", "name"])
+    is Some(filename) else {
+    write_usage_bad_request(w, "missing_filename")
+    return
+  }
+  write_usage_json(w, ccs_delete_db_backup_json(filename))
 }
 
 ///|
