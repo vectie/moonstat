@@ -11618,6 +11618,137 @@ fn provider_settings_config_from_body(body : Json?) -> Json? {
 }
 
 ///|
+fn provider_settings_base_url(app_type : String, settings : Json?) -> String? {
+  guard settings is Some(Object(obj)) else { return None }
+  match app_type {
+    "codex" =>
+      match json_string_from_map_any(obj, ["config"]) {
+        Some(config) => codex_toml_string_value(config, "base_url")
+        None => None
+      }
+    "gemini" =>
+      match obj.get("env") {
+        Some(Object(env)) =>
+          json_non_empty_string_from_map_any(env, ["GOOGLE_GEMINI_BASE_URL"])
+        _ => None
+      }
+    "hermes" => json_non_empty_string_from_map_any(obj, ["base_url"])
+    "opencode" | "omo" | "omo-slim" =>
+      match obj.get("options") {
+        Some(Object(options)) =>
+          json_non_empty_string_from_map_any(options, ["baseURL"])
+        _ => None
+      }
+    "openclaw" => json_non_empty_string_from_map_any(obj, ["baseUrl"])
+    "claude" | "claude-desktop" =>
+      match obj.get("env") {
+        Some(Object(env)) =>
+          json_non_empty_string_from_map_any(env, ["ANTHROPIC_BASE_URL"])
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn provider_settings_api_key(app_type : String, settings : Json?) -> String? {
+  guard settings is Some(Object(obj)) else { return None }
+  match app_type {
+    "codex" =>
+      match obj.get("auth") {
+        Some(Object(auth)) =>
+          json_non_empty_string_from_map_any(auth, ["OPENAI_API_KEY"])
+        _ => None
+      }
+    "gemini" =>
+      match obj.get("env") {
+        Some(Object(env)) =>
+          json_non_empty_string_from_map_any(env, [
+            "GEMINI_API_KEY", "GOOGLE_API_KEY",
+          ])
+        _ => None
+      }
+    "hermes" => json_non_empty_string_from_map_any(obj, ["api_key"])
+    "opencode" | "omo" | "omo-slim" =>
+      match obj.get("options") {
+        Some(Object(options)) =>
+          json_non_empty_string_from_map_any(options, ["apiKey"])
+        _ => None
+      }
+    "openclaw" => json_non_empty_string_from_map_any(obj, ["apiKey"])
+    "claude" | "claude-desktop" =>
+      match obj.get("env") {
+        Some(Object(env)) =>
+          json_non_empty_string_from_map_any(env, [
+            "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "GOOGLE_API_KEY",
+          ])
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn json_non_empty_string_from_map_any(
+  obj : Map[String, Json],
+  keys : Array[String],
+) -> String? {
+  for key in keys {
+    match json_string_from_map(obj, key) {
+      Some(value) if !value.trim().is_empty() => return Some(value)
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn provider_prefer_non_empty(primary : String?, fallback : String?) -> String? {
+  match primary {
+    Some(value) if !value.trim().is_empty() => Some(value)
+    _ =>
+      match fallback {
+        Some(value) if !value.trim().is_empty() => Some(value)
+        _ => None
+      }
+  }
+}
+
+///|
+fn codex_toml_string_value(content : String, key : String) -> String? {
+  for raw_line in content.split("\n") {
+    let line = raw_line.trim()
+    if line.has_prefix("#") {
+      continue
+    }
+    let mut index = 0
+    let mut found_key = ""
+    let mut found_value = ""
+    for part in line.split("=") {
+      if index == 0 {
+        found_key = part.trim().to_owned()
+      } else if index == 1 {
+        found_value = part.trim().to_owned()
+      }
+      index += 1
+    }
+    if index < 2 || found_key != key {
+      continue
+    }
+    let value = found_value
+    if value.length() >= 2 &&
+      value[0] == '"' &&
+      value[value.length() - 1] == '"' {
+      return Some(value[1:value.length() - 1].to_owned())
+    }
+    if !value.is_empty() {
+      return Some(value)
+    }
+  }
+  None
+}
+
+///|
 fn provider_inline_settings_config(obj : Map[String, Json]) -> Json? {
   let settings : Map[String, Json] = {}
   for key in ["customUserAgent", "custom_user_agent", "userAgent", "user_agent"] {
@@ -12086,10 +12217,17 @@ fn provider_target_from_request(
   let api_format = provider_string_from_request(path, body, [
     "api_format", "apiFormat",
   ])
-  let base_url = provider_string_from_request(path, body, [
-    "base_url", "baseUrl", "websiteUrl",
-  ])
-  let api_key = provider_string_from_request(path, body, ["api_key", "apiKey"])
+  let settings_config = provider_settings_config_from_body(body)
+  let base_url = provider_prefer_non_empty(
+    provider_string_from_request(path, body, [
+      "base_url", "baseUrl", "websiteUrl",
+    ]),
+    provider_settings_base_url(app_type, settings_config),
+  )
+  let api_key = provider_prefer_non_empty(
+    provider_string_from_request(path, body, ["api_key", "apiKey"]),
+    provider_settings_api_key(app_type, settings_config),
+  )
   let notes = provider_string_from_request(path, body, ["notes"])
   let is_full_url = provider_bool_from_request(path, body, [
     "is_full_url", "isFullUrl", "fullUrl",
@@ -12111,7 +12249,7 @@ fn provider_target_from_request(
       is_full_url~,
       model_mapping~,
       claude_desktop_model_routes~,
-      settings_config=provider_settings_config_from_body(body),
+      settings_config~,
       notes~,
     ),
   )

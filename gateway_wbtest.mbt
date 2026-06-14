@@ -433,6 +433,141 @@ test "provider target parses ccs claude desktop route metadata" {
 }
 
 ///|
+test "provider target resolves ccs app settings credentials" {
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("opencode-native"),
+            "settingsConfig": {
+              "options": {
+                "baseURL": Json::string("https://opencode.example/v1"),
+                "apiKey": Json::string("sk-opencode"),
+              }.to_json(),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "opencode",
+    )
+    is Some(opencode) else {
+    fail("expected opencode provider")
+  }
+  assert_eq(opencode.base_url, Some("https://opencode.example/v1"))
+  assert_eq(opencode.api_key, Some("sk-opencode"))
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("openclaw-native"),
+            "settingsConfig": {
+              "baseUrl": Json::string("https://openclaw.example/v1"),
+              "apiKey": Json::string("sk-openclaw"),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "openclaw",
+    )
+    is Some(openclaw) else {
+    fail("expected openclaw provider")
+  }
+  assert_eq(openclaw.base_url, Some("https://openclaw.example/v1"))
+  assert_eq(openclaw.api_key, Some("sk-openclaw"))
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("hermes-native"),
+            "settingsConfig": {
+              "base_url": Json::string("https://hermes.example/v1"),
+              "api_key": Json::string("sk-hermes"),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "hermes",
+    )
+    is Some(hermes) else {
+    fail("expected hermes provider")
+  }
+  assert_eq(hermes.base_url, Some("https://hermes.example/v1"))
+  assert_eq(hermes.api_key, Some("sk-hermes"))
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("gemini-native"),
+            "settingsConfig": {
+              "env": {
+                "GOOGLE_GEMINI_BASE_URL": Json::string("https://gemini.example"),
+                "GEMINI_API_KEY": Json::string(""),
+                "GOOGLE_API_KEY": Json::string("sk-gemini"),
+              }.to_json(),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "gemini",
+    )
+    is Some(gemini) else {
+    fail("expected gemini provider")
+  }
+  assert_eq(gemini.base_url, Some("https://gemini.example"))
+  assert_eq(gemini.api_key, Some("sk-gemini"))
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("desktop-native"),
+            "settingsConfig": {
+              "env": {
+                "ANTHROPIC_BASE_URL": Json::string(
+                  "https://desktop.example/anthropic",
+                ),
+                "ANTHROPIC_AUTH_TOKEN": Json::string("sk-desktop"),
+              }.to_json(),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "claude-desktop",
+    )
+    is Some(desktop) else {
+    fail("expected claude desktop provider")
+  }
+  assert_eq(desktop.base_url, Some("https://desktop.example/anthropic"))
+  assert_eq(desktop.api_key, Some("sk-desktop"))
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("codex-native"),
+            "settingsConfig": {
+              "auth": { "OPENAI_API_KEY": Json::string("sk-codex") }.to_json(),
+              "config": Json::string(
+                "model_provider = \"custom\"\n[model_providers.custom]\nbase_url = \"https://codex.example/v1\"",
+              ),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "codex",
+    )
+    is Some(codex) else {
+    fail("expected codex provider")
+  }
+  assert_eq(codex.base_url, Some("https://codex.example/v1"))
+  assert_eq(codex.api_key, Some("sk-codex"))
+}
+
+///|
 test "provider target keeps ccs custom user agent metadata" {
   guard provider_target_from_request(
       "/add_provider",
