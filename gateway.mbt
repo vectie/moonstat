@@ -14659,21 +14659,21 @@ fn claude_desktop_model_list_json(
 
 ///|
 fn claude_desktop_route_model_list_json(
-  routes : Array[(String, String, Bool)],
+  routes : Array[(String, String, String?, Bool)],
 ) -> Json {
   let data = routes.map(fn(route) {
-    let (route_id, _, supports_1m) = route
-    claude_desktop_model_json(route_id, supports_1m~)
+    let (route_id, _, label_override, supports_1m) = route
+    claude_desktop_model_json(route_id, label_override~, supports_1m~)
   })
   let first_id = match routes.get(0) {
-    Some((route_id, _, _)) => Json::string(route_id)
+    Some((route_id, _, _, _)) => Json::string(route_id)
     None => Json::null()
   }
   let last_id = if routes.is_empty() {
     Json::null()
   } else {
     match routes.get(routes.length() - 1) {
-      Some((route_id, _, _)) => Json::string(route_id)
+      Some((route_id, _, _, _)) => Json::string(route_id)
       None => Json::null()
     }
   }
@@ -14686,11 +14686,19 @@ fn claude_desktop_route_model_list_json(
 }
 
 ///|
-fn claude_desktop_model_json(id : String, supports_1m? : Bool = true) -> Json {
+fn claude_desktop_model_json(
+  id : String,
+  label_override? : String? = None,
+  supports_1m? : Bool = true,
+) -> Json {
   let obj : Map[String, Json] = {
     "type": Json::string("model"),
     "id": Json::string(id),
     "created_at": Json::string("2024-01-01T00:00:00Z"),
+  }
+  match label_override {
+    Some(label) => obj["labelOverride"] = Json::string(label)
+    None => ()
   }
   if supports_1m {
     obj["supports1m"] = Json::boolean(true)
@@ -14782,8 +14790,8 @@ fn claude_role_keyword(model : String) -> String? {
 ///|
 fn ProviderRouteTarget::resolved_claude_desktop_model_routes(
   self : ProviderRouteTarget,
-) -> Array[(String, String, Bool)] {
-  let routes : Array[(String, String, Bool)] = []
+) -> Array[(String, String, String?, Bool)] {
+  let routes : Array[(String, String, String?, Bool)] = []
   if self.claude_desktop_model_routes.is_empty() {
     return routes
   }
@@ -14808,25 +14816,42 @@ fn ProviderRouteTarget::resolved_claude_desktop_model_routes(
     if trimmed_route_id.is_empty() || upstream_model.is_empty() {
       continue
     }
-    let resolved_route_id = if is_claude_safe_model_id(trimmed_route_id) {
+    let route_id_is_safe = is_claude_safe_model_id(trimmed_route_id)
+    let resolved_route_id = if route_id_is_safe {
       trimmed_route_id
     } else {
       next_claude_desktop_catalog_safe_route_id(routes, reserved_route_ids)
     }
+    let label_override = match route.label_override {
+      Some(label) => {
+        let label = label.trim().to_owned()
+        if label.is_empty() {
+          None
+        } else {
+          Some(label)
+        }
+      }
+      None => if route_id_is_safe { None } else { Some(upstream_model) }
+    }
     routes.push(
-      (resolved_route_id, upstream_model, route.supports_1m.unwrap_or(false)),
+      (
+        resolved_route_id,
+        upstream_model,
+        label_override,
+        route.supports_1m.unwrap_or(false),
+      ),
     )
   }
   routes.sort_by(fn(left, right) {
-    let (left_route_id, _, _) = left
-    let (right_route_id, _, _) = right
+    let (left_route_id, _, _, _) = left
+    let (right_route_id, _, _, _) = right
     left_route_id.compare(right_route_id)
   })
-  let deduped : Array[(String, String, Bool)] = []
+  let deduped : Array[(String, String, String?, Bool)] = []
   for route in routes {
-    let (route_id, _, _) = route
+    let (route_id, _, _, _) = route
     match deduped.last() {
-      Some((previous_route_id, _, _)) if previous_route_id == route_id => ()
+      Some((previous_route_id, _, _, _)) if previous_route_id == route_id => ()
       _ => deduped.push(route)
     }
   }
@@ -14835,13 +14860,13 @@ fn ProviderRouteTarget::resolved_claude_desktop_model_routes(
 
 ///|
 fn next_claude_desktop_catalog_safe_route_id(
-  existing : Array[(String, String, Bool)],
+  existing : Array[(String, String, String?, Bool)],
   reserved : Array[String],
 ) -> String {
   for route_id in claude_desktop_default_proxy_route_ids() {
     if !reserved.contains(route_id) &&
       !existing.any(fn(route) {
-        let (existing_route_id, _, _) = route
+        let (existing_route_id, _, _, _) = route
         existing_route_id == route_id
       }) {
       return route_id
@@ -14851,7 +14876,7 @@ fn next_claude_desktop_catalog_safe_route_id(
     let route_id = "claude-sonnet-4-6-r\{index}"
     if !reserved.contains(route_id) &&
       !existing.any(fn(route) {
-        let (existing_route_id, _, _) = route
+        let (existing_route_id, _, _, _) = route
         existing_route_id == route_id
       }) {
       return route_id
@@ -14876,13 +14901,13 @@ fn ProviderRouteTarget::claude_desktop_route_upstream_model(
   }
   let routes = self.resolved_claude_desktop_model_routes()
   for route in routes {
-    let (route_id, upstream_model, _) = route
+    let (route_id, upstream_model, _, _) = route
     if route_id == requested {
       return Some(upstream_model)
     }
   }
   for route in routes {
-    let (route_id, upstream_model, _) = route
+    let (route_id, upstream_model, _, _) = route
     if claude_desktop_opus_route_alias_matches(route_id, requested) {
       return Some(upstream_model)
     }
@@ -14894,7 +14919,7 @@ fn ProviderRouteTarget::claude_desktop_route_upstream_model(
   guard is_claude_safe_model_id(requested) else { return None }
   guard claude_role_keyword(requested) is Some(role) else { return None }
   for route in routes {
-    let (route_id, upstream_model, _) = route
+    let (route_id, upstream_model, _, _) = route
     if claude_role_keyword(route_id) == Some(role) {
       return Some(upstream_model)
     }

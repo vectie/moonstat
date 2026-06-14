@@ -51,7 +51,9 @@ test "claude desktop model list uses ccs provider route metadata" {
   guard data[1] is Object(second) else { fail("expected second model") }
   assert_eq(first["id"], Json::string("claude-haiku-4-5"))
   assert_eq(first["supports1m"], Json::boolean(true))
+  assert_true(first.get("labelOverride") is None)
   assert_eq(second["id"], Json::string("claude-sonnet-4-6"))
+  assert_eq(second["labelOverride"], Json::string("gpt-5-upstream"))
   assert_true(second.get("supports1m") is None)
   assert_eq(obj["first_id"], Json::string("claude-haiku-4-5"))
   assert_eq(obj["last_id"], Json::string("claude-sonnet-4-6"))
