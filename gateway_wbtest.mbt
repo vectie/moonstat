@@ -424,6 +424,60 @@ test "provider target parses ccs claude desktop route metadata" {
 }
 
 ///|
+test "provider target keeps ccs custom user agent metadata" {
+  guard provider_target_from_request(
+      "/add_provider",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("ua-provider"),
+            "name": Json::string("UA Provider"),
+            "meta": {
+              "customUserAgent": Json::string("  claude-cli/2.1.161  "),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "claude",
+    )
+    is Some(provider) else {
+    fail("expected provider target")
+  }
+  assert_eq(provider_custom_user_agent(provider), Some("claude-cli/2.1.161"))
+  let headers = claude_compatible_provider_headers(
+    "anthropic-key",
+    "anthropic",
+    custom_user_agent=provider_custom_user_agent(provider),
+  )
+  assert_eq(headers["User-Agent"], "claude-cli/2.1.161")
+}
+
+///|
+test "ccs custom user agent parser rejects empty and multiline values" {
+  assert_eq(
+    parse_custom_user_agent(Some("  CodexBot/1.0  ")),
+    Some("CodexBot/1.0"),
+  )
+  assert_true(parse_custom_user_agent(Some("   ")) is None)
+  assert_true(
+    parse_custom_user_agent(Some("CodexBot/1.0\nX-Other: bad")) is None,
+  )
+  assert_true(parse_custom_user_agent(Some("CodexBot/1.0\rX")) is None)
+}
+
+///|
+test "codex compatible provider headers honor custom user agent" {
+  let headers = codex_compatible_provider_headers(
+    "sk-test",
+    "text/event-stream",
+    Some("codex_cli_rs/0.99"),
+  )
+  assert_eq(headers["Authorization"], "Bearer sk-test")
+  assert_eq(headers["Accept"], "text/event-stream")
+  assert_eq(headers["User-Agent"], "codex_cli_rs/0.99")
+}
+
+///|
 test "usage query helpers parse ccs request log parameters" {
   let path = "/usage/logs?page=2&pageSize=25&appType=codex&providerName=Codex+OAuth&model=anthropic%2Fclaude-sonnet-4.5&statusCode=200&startDate=10&end_date=20"
   assert_eq(usage_query_int(path, "page"), Some(2))

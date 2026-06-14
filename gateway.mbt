@@ -3081,11 +3081,11 @@ async fn Gateway::post_codex_compatible_provider_json(
   let base_url = provider.base_url.unwrap()
   let api_key = provider.api_key.unwrap()
   let url = codex_compatible_provider_url(base_url, endpoint)
-  let headers = {
-    "Authorization": "Bearer \{api_key}",
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-  }
+  let headers = codex_compatible_provider_headers(
+    api_key,
+    "application/json",
+    provider_custom_user_agent(provider),
+  )
   match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
     Err(message) => return Err(message)
     Ok(_) => ()
@@ -3108,11 +3108,11 @@ async fn Gateway::post_codex_compatible_provider_stream(
   let api_key = provider.api_key.unwrap()
   let url = codex_compatible_provider_url(base_url, endpoint)
   let (origin, path) = split_origin_and_path(url)
-  let headers = {
-    "Authorization": "Bearer \{api_key}",
-    "Content-Type": "application/json",
-    "Accept": "text/event-stream",
-  }
+  let headers = codex_compatible_provider_headers(
+    api_key,
+    "text/event-stream",
+    provider_custom_user_agent(provider),
+  )
   match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
     Err(message) => return Err(message)
     Ok(_) => ()
@@ -3149,6 +3149,7 @@ async fn Gateway::post_claude_compatible_provider_json(
     api_key,
     api_format,
     anthropic_beta~,
+    custom_user_agent=provider_custom_user_agent(provider),
   )
   match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
     Err(message) => return Err(message)
@@ -3204,6 +3205,7 @@ fn claude_compatible_provider_headers(
   api_format : String,
   anthropic_beta? : String? = None,
   accept? : String = "application/json",
+  custom_user_agent? : String? = None,
 ) -> Map[String, String] {
   let headers : Map[String, String] = {
     "Content-Type": "application/json",
@@ -3221,7 +3223,70 @@ fn claude_compatible_provider_headers(
     }
     _ => headers["Authorization"] = "Bearer \{api_key}"
   }
+  match custom_user_agent {
+    Some(value) => headers["User-Agent"] = value
+    None => ()
+  }
   headers
+}
+
+///|
+fn codex_compatible_provider_headers(
+  api_key : String,
+  accept : String,
+  custom_user_agent : String?,
+) -> Map[String, String] {
+  let headers : Map[String, String] = {
+    "Authorization": "Bearer \{api_key}",
+    "Content-Type": "application/json",
+    "Accept": accept,
+  }
+  match custom_user_agent {
+    Some(value) => headers["User-Agent"] = value
+    None => ()
+  }
+  headers
+}
+
+///|
+fn provider_custom_user_agent(provider : ProviderRouteTarget) -> String? {
+  guard provider.settings_config is Some(Object(obj)) else { return None }
+  match
+    parse_custom_user_agent(
+      json_string_from_map_any(obj, [
+        "customUserAgent", "custom_user_agent", "userAgent", "user_agent",
+      ]),
+    ) {
+    Some(value) => return Some(value)
+    None => ()
+  }
+  match obj.get("meta") {
+    Some(Object(meta)) =>
+      parse_custom_user_agent(
+        json_string_from_map_any(meta, [
+          "customUserAgent", "custom_user_agent", "userAgent", "user_agent",
+        ]),
+      )
+    _ => None
+  }
+}
+
+///|
+fn parse_custom_user_agent(value : String?) -> String? {
+  match value {
+    Some(raw) => {
+      let trimmed = raw.trim().to_owned()
+      if trimmed.is_empty() ||
+        trimmed.contains("\n") ||
+        trimmed.contains("\r") ||
+        trimmed.contains("\u{0}") {
+        None
+      } else {
+        Some(trimmed)
+      }
+    }
+    None => None
+  }
 }
 
 ///|
@@ -11371,8 +11436,28 @@ fn provider_settings_config_from_body(body : Json?) -> Json? {
     None =>
       match obj.get("settings_config") {
         Some(settings) => Some(settings)
-        None => None
+        None => provider_inline_settings_config(obj)
       }
+  }
+}
+
+///|
+fn provider_inline_settings_config(obj : Map[String, Json]) -> Json? {
+  let settings : Map[String, Json] = {}
+  for key in ["customUserAgent", "custom_user_agent", "userAgent", "user_agent"] {
+    match obj.get(key) {
+      Some(value) => settings[key] = value
+      None => ()
+    }
+  }
+  match obj.get("meta") {
+    Some(meta) => settings["meta"] = meta
+    None => ()
+  }
+  if settings.is_empty() {
+    None
+  } else {
+    Some(Json::object(settings))
   }
 }
 
@@ -14468,6 +14553,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
     provider.is_full_url,
   )
   let (origin, path) = split_origin_and_path(url)
+  let custom_user_agent = provider_custom_user_agent(provider)
   let client = @http.Client::new(
     origin,
     headers=claude_compatible_provider_headers(
@@ -14475,6 +14561,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
       api_format,
       anthropic_beta~,
       accept="text/event-stream",
+      custom_user_agent~,
     ),
   )
   defer client.close()
@@ -14497,6 +14584,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
             api_format,
             anthropic_beta~,
             accept="text/event-stream",
+            custom_user_agent~,
           ),
         )
         defer retry_client.close()
@@ -14570,6 +14658,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
             api_format,
             anthropic_beta~,
             accept="text/event-stream",
+            custom_user_agent~,
           ),
         )
         defer retry_client.close()
