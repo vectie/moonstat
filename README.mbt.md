@@ -291,12 +291,12 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /proxy/running`
 - `GET /is_proxy_running`
 - `GET|POST /usage/logs`
-- `GET /usage/summary`
-- `GET /usage/summary/by-app`
-- `GET /usage/trends`
-- `GET /usage/provider-limits`
-- `GET /usage/provider-stats`
-- `GET /usage/model-stats`
+- `GET|POST /usage/summary`
+- `GET|POST /usage/summary/by-app`
+- `GET|POST /usage/trends`
+- `GET|POST /usage/provider-limits`
+- `GET|POST /usage/provider-stats`
+- `GET|POST /usage/model-stats`
 - `GET /usage/data-sources`
 - `POST /usage/sync-session`
 - `GET /usage/model-pricing`
@@ -336,12 +336,12 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /stream_check_all_providers?appType=codex&proxyTargetsOnly=true`
 - `GET /get_stream_check_config`
 - `POST /save_stream_check_config?codexModel=gpt-5.5@low&timeoutSecs=45`
-- CCS command-name aliases: `GET /get_usage_summary`,
-  `GET /get_usage_summary_by_app`, `GET /get_usage_trends`,
-  `GET /get_provider_stats`, `GET /get_model_stats`, `GET|POST /get_request_logs`,
+- CCS command-name aliases: `GET|POST /get_usage_summary`,
+  `GET|POST /get_usage_summary_by_app`, `GET|POST /get_usage_trends`,
+  `GET|POST /get_provider_stats`, `GET|POST /get_model_stats`, `GET|POST /get_request_logs`,
   `GET /get_request_detail?requestId=...`, `GET /get_model_pricing`,
   `POST /update_model_pricing`, `DELETE /delete_model_pricing`,
-  `GET /check_provider_limits`, `POST /sync_session_usage`,
+  `GET|POST /check_provider_limits`, `POST /sync_session_usage`,
   `GET /get_usage_data_sources`, `GET /queryProviderUsage`, `GET /get_balance`,
   `GET /get_subscription_quota`, `GET /get_codex_oauth_quota`,
   `GET /get_codex_oauth_models`, `GET /get_coding_plan_quota`,

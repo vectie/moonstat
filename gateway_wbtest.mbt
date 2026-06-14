@@ -420,6 +420,69 @@ test "usage request log helpers let query override ccs body filters" {
 }
 
 ///|
+test "usage aggregate helpers parse ccs structured command args" {
+  let body = {
+    "startDate": Json::number(100.0),
+    "endDate": Json::number(200.0),
+    "appType": Json::string("codex"),
+    "providerId": Json::string("codex-oauth"),
+    "dailyLimitUsd": Json::string("1.25"),
+    "monthlyLimitUsd": Json::number(9.5),
+  }.to_json()
+  let path = "/get_usage_summary"
+  assert_eq(
+    usage_int_from_request(path, Some(body), ["start_date", "startDate"]),
+    Some(100),
+  )
+  assert_eq(
+    usage_int_from_request(path, Some(body), ["end_date", "endDate"]),
+    Some(200),
+  )
+  assert_eq(
+    usage_string_from_request(path, Some(body), ["app_type", "appType"]),
+    Some("codex"),
+  )
+  assert_eq(
+    usage_string_from_request(path, Some(body), ["provider_id", "providerId"]),
+    Some("codex-oauth"),
+  )
+  assert_eq(
+    usage_string_from_request(path, Some(body), [
+      "daily_limit_usd", "dailyLimitUsd",
+    ]),
+    Some("1.25"),
+  )
+  assert_eq(
+    usage_string_from_request(path, Some(body), [
+      "monthly_limit_usd", "monthlyLimitUsd",
+    ]),
+    Some("9.5"),
+  )
+}
+
+///|
+test "usage aggregate helpers prefer query params over ccs body args" {
+  let body = {
+    "startDate": Json::number(100.0),
+    "endDate": Json::number(200.0),
+    "appType": Json::string("claude"),
+  }.to_json()
+  let path = "/get_provider_stats?startDate=10&endDate=20&appType=codex"
+  assert_eq(
+    usage_int_from_request(path, Some(body), ["start_date", "startDate"]),
+    Some(10),
+  )
+  assert_eq(
+    usage_int_from_request(path, Some(body), ["end_date", "endDate"]),
+    Some(20),
+  )
+  assert_eq(
+    usage_string_from_request(path, Some(body), ["app_type", "appType"]),
+    Some("codex"),
+  )
+}
+
+///|
 test "provider selection errors use ccs proxy error codes" {
   assert_eq(
     provider_selection_error_status(AllProvidersCircuitOpen),

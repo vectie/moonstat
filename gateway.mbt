@@ -1552,37 +1552,73 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/usage/summary", (r, w) => {
     self.handle_usage_summary(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/usage/summary", (r, w) => {
+    self.handle_usage_summary(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_usage_summary", (r, w) => {
+    self.handle_usage_summary(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_usage_summary", (r, w) => {
     self.handle_usage_summary(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/summary/by-app", (r, w) => {
     self.handle_usage_summary_by_app(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/usage/summary/by-app", (r, w) => {
+    self.handle_usage_summary_by_app(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_usage_summary_by_app", (r, w) => {
+    self.handle_usage_summary_by_app(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_usage_summary_by_app", (r, w) => {
     self.handle_usage_summary_by_app(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/trends", (r, w) => {
     self.handle_usage_trends(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/usage/trends", (r, w) => {
+    self.handle_usage_trends(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_usage_trends", (r, w) => {
+    self.handle_usage_trends(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_usage_trends", (r, w) => {
     self.handle_usage_trends(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/provider-limits", (r, w) => {
     self.handle_usage_provider_limits(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/usage/provider-limits", (r, w) => {
+    self.handle_usage_provider_limits(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/check_provider_limits", (r, w) => {
+    self.handle_usage_provider_limits(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/check_provider_limits", (r, w) => {
     self.handle_usage_provider_limits(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/provider-stats", (r, w) => {
     self.handle_usage_provider_stats(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/usage/provider-stats", (r, w) => {
+    self.handle_usage_provider_stats(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_provider_stats", (r, w) => {
+    self.handle_usage_provider_stats(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_provider_stats", (r, w) => {
     self.handle_usage_provider_stats(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/model-stats", (r, w) => {
     self.handle_usage_model_stats(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/usage/model-stats", (r, w) => {
+    self.handle_usage_model_stats(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/get_model_stats", (r, w) => {
+    self.handle_usage_model_stats(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/get_model_stats", (r, w) => {
     self.handle_usage_model_stats(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/data-sources", (_, w) => {
@@ -8736,12 +8772,15 @@ async fn Gateway::handle_usage_summary(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  let body = proxy_json_body(r)
   write_usage_json(
     w,
     self.stats.usage_summary_filtered_json(
-      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
-      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
-      app_type=usage_query_value_any(r.path, "app_type", "appType"),
+      start_date=usage_int_from_request(r.path, body, [
+        "start_date", "startDate",
+      ]),
+      end_date=usage_int_from_request(r.path, body, ["end_date", "endDate"]),
+      app_type=usage_string_from_request(r.path, body, ["app_type", "appType"]),
     ),
   )
 }
@@ -8752,11 +8791,14 @@ async fn Gateway::handle_usage_summary_by_app(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  let body = proxy_json_body(r)
   write_usage_json(
     w,
     self.stats.usage_summary_by_app_filtered_json(
-      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
-      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
+      start_date=usage_int_from_request(r.path, body, [
+        "start_date", "startDate",
+      ]),
+      end_date=usage_int_from_request(r.path, body, ["end_date", "endDate"]),
     ),
   )
 }
@@ -8767,9 +8809,12 @@ async fn Gateway::handle_usage_trends(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let start_ts = usage_query_int_any(r.path, "start_date", "startDate")
-  let end_ts = usage_query_int_any(r.path, "end_date", "endDate")
-  let app_type = usage_query_value_any(r.path, "app_type", "appType")
+  let body = proxy_json_body(r)
+  let start_ts = usage_int_from_request(r.path, body, [
+    "start_date", "startDate",
+  ])
+  let end_ts = usage_int_from_request(r.path, body, ["end_date", "endDate"])
+  let app_type = usage_string_from_request(r.path, body, ["app_type", "appType"])
   write_usage_json(
     w,
     self.stats.usage_trends_json(start_ts~, end_ts~, app_type~),
@@ -8782,25 +8827,23 @@ async fn Gateway::handle_usage_provider_limits(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  guard usage_query_value_any(r.path, "provider_id", "providerId")
+  let body = proxy_json_body(r)
+  guard usage_string_from_request(r.path, body, ["provider_id", "providerId"])
     is Some(provider_id) else {
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  guard usage_query_value_any(r.path, "app_type", "appType") is Some(app_type) else {
+  guard usage_string_from_request(r.path, body, ["app_type", "appType"])
+    is Some(app_type) else {
     write_usage_bad_request(w, "missing_app_type")
     return
   }
-  let daily_limit_usd = usage_query_value_any(
-    r.path,
-    "daily_limit_usd",
-    "dailyLimitUsd",
-  )
-  let monthly_limit_usd = usage_query_value_any(
-    r.path,
-    "monthly_limit_usd",
-    "monthlyLimitUsd",
-  )
+  let daily_limit_usd = usage_string_from_request(r.path, body, [
+    "daily_limit_usd", "dailyLimitUsd",
+  ])
+  let monthly_limit_usd = usage_string_from_request(r.path, body, [
+    "monthly_limit_usd", "monthlyLimitUsd",
+  ])
   write_usage_json(
     w,
     self.stats.provider_limit_status_json(
@@ -8818,12 +8861,15 @@ async fn Gateway::handle_usage_provider_stats(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  let body = proxy_json_body(r)
   write_usage_json(
     w,
     self.stats.provider_stats_filtered_json(
-      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
-      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
-      app_type=usage_query_value_any(r.path, "app_type", "appType"),
+      start_date=usage_int_from_request(r.path, body, [
+        "start_date", "startDate",
+      ]),
+      end_date=usage_int_from_request(r.path, body, ["end_date", "endDate"]),
+      app_type=usage_string_from_request(r.path, body, ["app_type", "appType"]),
     ),
   )
 }
@@ -8834,12 +8880,15 @@ async fn Gateway::handle_usage_model_stats(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  let body = proxy_json_body(r)
   write_usage_json(
     w,
     self.stats.model_stats_filtered_json(
-      start_date=usage_query_int_any(r.path, "start_date", "startDate"),
-      end_date=usage_query_int_any(r.path, "end_date", "endDate"),
-      app_type=usage_query_value_any(r.path, "app_type", "appType"),
+      start_date=usage_int_from_request(r.path, body, [
+        "start_date", "startDate",
+      ]),
+      end_date=usage_int_from_request(r.path, body, ["end_date", "endDate"]),
+      app_type=usage_string_from_request(r.path, body, ["app_type", "appType"]),
     ),
   )
 }
