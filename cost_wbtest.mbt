@@ -149,8 +149,14 @@ test "model pricing lookup mirrors ccs normalization cases" {
     find_static_model_pricing("gpt-5.4@low").unwrap().model_id,
     "gpt-5.4",
   )
+  assert_eq(
+    find_static_model_pricing("claude-sonnet-4-6 [1M]").unwrap().model_id,
+    "claude-sonnet-4-6-20260217",
+  )
   assert_true(find_static_model_pricing("kimi-for-coding") is None)
   assert_true(find_static_model_pricing("unknown-model-123") is None)
+  assert_true(find_static_model_pricing("unknown") is None)
+  assert_true(find_static_model_pricing("gpt-[1m]-5") is None)
 }
 
 ///|

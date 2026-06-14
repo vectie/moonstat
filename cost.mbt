@@ -426,6 +426,9 @@ fn mp(
 fn model_pricing_candidates(model_id : String) -> Array[String] {
   let candidates : Array[String] = []
   let base = clean_model_id_for_pricing(model_id)
+  if is_placeholder_model_id_for_pricing(base) {
+    return candidates
+  }
   let queue : Array[String] = [base]
   let mut index = 0
   while index < queue.length() {
@@ -471,7 +474,21 @@ fn clean_model_id_for_pricing(model_id : String) -> String {
 
 ///|
 fn strip_one_m_context_marker(model_id : String) -> String {
-  model_id.replace(old="[1m]", new="").replace(old="[1M]", new="").to_string()
+  let marker = "[1m]"
+  if model_id.has_suffix(marker) {
+    model_id[:model_id.length() - marker.length()].to_owned()
+  } else {
+    model_id
+  }
+}
+
+///|
+fn is_placeholder_model_id_for_pricing(model_id : String) -> Bool {
+  let normalized = model_id.trim().to_lower()
+  normalized.is_empty() ||
+  normalized == "unknown" ||
+  normalized == "null" ||
+  normalized == "none"
 }
 
 ///|
