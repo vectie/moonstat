@@ -1,20 +1,20 @@
 ///|
 test "ccs external url normalization mirrors shell command behavior" {
   assert_eq(
-    ccs_normalize_external_url("github.com/farion1231/cc-switch"),
-    "https://github.com/farion1231/cc-switch",
+    ccs_normalize_external_url("github.com/vectie/moonstat"),
+    "https://github.com/vectie/moonstat",
   )
   assert_eq(
-    ccs_normalize_external_url("https://github.com/farion1231/cc-switch"),
-    "https://github.com/farion1231/cc-switch",
+    ccs_normalize_external_url("https://github.com/vectie/moonstat"),
+    "https://github.com/vectie/moonstat",
   )
   assert_eq(
-    ccs_normalize_external_url("HTTP://github.com/farion1231/cc-switch"),
-    "https://HTTP://github.com/farion1231/cc-switch",
+    ccs_normalize_external_url("HTTP://github.com/vectie/moonstat"),
+    "https://HTTP://github.com/vectie/moonstat",
   )
   assert_eq(
-    ccs_normalize_external_url(" http://github.com/farion1231/cc-switch "),
-    "https:// http://github.com/farion1231/cc-switch ",
+    ccs_normalize_external_url(" http://github.com/vectie/moonstat "),
+    "https:// http://github.com/vectie/moonstat ",
   )
 }
 

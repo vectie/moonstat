@@ -167,7 +167,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /get_config_dir?app=codex`
 - `GET /open_config_folder?app=codex`
 - `GET /pick_directory?defaultPath=/tmp`
-- `GET|POST /open_external?url=https://github.com/farion1231/cc-switch`
+- `GET|POST /open_external?url=https://github.com/vectie/moonstat`
 - `GET|POST /copy_text_to_clipboard?text=hello`
 - `GET|POST /check_for_updates`
 - `GET|POST /update_tray_menu`
@@ -223,7 +223,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /restart_app`
 - `POST /install_update_and_restart`
 - `GET /get_app_config_dir_override`
-- `POST /set_app_config_dir_override?path=/tmp/cc-switch`
+- `POST /set_app_config_dir_override?path=/tmp/moonstat`
 - `POST /set_auto_launch?enabled=true`
 - `GET /get_auto_launch_status`
 - `GET /get_rectifier_config`

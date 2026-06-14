@@ -20,6 +20,9 @@ const CCS_TIER_GEMINI_FLASH = "gemini_flash"
 const CCS_TIER_GEMINI_FLASH_LITE = "gemini_flash_lite"
 
 ///|
+const MOONSTAT_CODEX_OAUTH_RELOGIN_MESSAGE = "Codex OAuth access token expired or rejected. Please re-login via moonstat."
+
+///|
 priv struct CcsTokenCredentials {
   token : String?
   refresh_token : String?
@@ -37,6 +40,11 @@ priv struct CcsGeminiOAuthClient {
 ///|
 fn ccs_quota_now_millis() -> Int64 {
   @os.unix_seconds().to_int64() * 1000L
+}
+
+///|
+fn moonstat_codex_oauth_relogin_message() -> String {
+  MOONSTAT_CODEX_OAUTH_RELOGIN_MESSAGE
 }
 
 ///|
@@ -174,7 +182,7 @@ async fn ccs_get_codex_oauth_quota(account_id : String?) -> SubscriptionQuota {
             token,
             ccs_resolve_codex_oauth_account(account_id, creds.account_id),
             "codex_oauth",
-            "Codex OAuth access token expired or rejected. Please re-login via cc-switch.",
+            moonstat_codex_oauth_relogin_message(),
           )
           if result.success {
             return result
@@ -195,7 +203,7 @@ async fn ccs_get_codex_oauth_quota(account_id : String?) -> SubscriptionQuota {
             token,
             ccs_resolve_codex_oauth_account(account_id, creds.account_id),
             "codex_oauth",
-            "Codex OAuth access token expired or rejected. Please re-login via cc-switch.",
+            moonstat_codex_oauth_relogin_message(),
           )
         None =>
           ccs_quota_error(

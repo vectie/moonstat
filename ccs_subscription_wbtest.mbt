@@ -162,6 +162,14 @@ test "ccs codex oauth account resolver matches tauri command fallback" {
 }
 
 ///|
+test "moonstat codex oauth relogin message is branded" {
+  assert_eq(
+    moonstat_codex_oauth_relogin_message(),
+    "Codex OAuth access token expired or rejected. Please re-login via moonstat.",
+  )
+}
+
+///|
 test "ccs subscription gemini oauth client comes from env" {
   let old_id = @os.getenv("MOONSTAT_GEMINI_OAUTH_CLIENT_ID") catch { _ => None }
   let old_secret = @os.getenv("MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET") catch {
