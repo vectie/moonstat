@@ -771,6 +771,269 @@ test "usage aggregate keeps malformed cache-inclusive input like ccs sql helper"
 }
 
 ///|
+test "usage summary excludes partial rollup boundary days like ccs" {
+  with_test_timezone("UTC", fn() raise {
+    let stats = TrafficStats::new()
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-01-01",
+        request_count=10,
+        success_count=10,
+        input_tokens=1000,
+        output_tokens=500,
+        total_cost_nano=1_000_000_000L,
+        avg_latency_ms=100,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-01-02",
+        request_count=20,
+        success_count=19,
+        input_tokens=2000,
+        output_tokens=1000,
+        total_cost_nano=2_000_000_000L,
+        avg_latency_ms=120,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-01-03",
+        request_count=30,
+        success_count=29,
+        input_tokens=3000,
+        output_tokens=1500,
+        total_cost_nano=3_000_000_000L,
+        avg_latency_ms=140,
+      ),
+    )
+
+    let summary = stats.usage_summary_filtered_json(
+      start_date=Some(1_704_110_400),
+      end_date=Some(1_704_283_200),
+      app_type=Some("claude"),
+    )
+    guard summary is Object(obj) else { fail("expected summary object") }
+    assert_eq(obj["totalRequests"], Json::number(20.0))
+    assert_eq(obj["totalInputTokens"], Json::number(2000.0))
+    assert_eq(obj["totalOutputTokens"], Json::number(1000.0))
+    assert_eq(obj["totalCost"], Json::string("2.000000"))
+    assert_eq(obj["successRate"], Json::number(95.0))
+  })
+}
+
+///|
+test "usage summary includes end day rollup for minute precision end time like ccs" {
+  with_test_timezone("UTC", fn() raise {
+    let stats = TrafficStats::new()
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-01-01",
+        request_count=10,
+        success_count=10,
+        input_tokens=1000,
+        output_tokens=500,
+        total_cost_nano=1_000_000_000L,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-01-02",
+        request_count=20,
+        success_count=19,
+        input_tokens=2000,
+        output_tokens=1000,
+        total_cost_nano=2_000_000_000L,
+      ),
+    )
+
+    let summary = stats.usage_summary_filtered_json(
+      start_date=Some(1_704_067_200),
+      end_date=Some(1_704_239_940),
+      app_type=Some("claude"),
+    )
+    guard summary is Object(obj) else { fail("expected summary object") }
+    assert_eq(obj["totalRequests"], Json::number(30.0))
+    assert_eq(obj["totalInputTokens"], Json::number(3000.0))
+    assert_eq(obj["totalOutputTokens"], Json::number(1500.0))
+  })
+}
+
+///|
+test "provider stats exclude partial rollup boundary days like ccs" {
+  with_test_timezone("UTC", fn() raise {
+    let stats = TrafficStats::new()
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-02-01",
+        provider_id="p-rollup",
+        request_count=5,
+        success_count=5,
+        input_tokens=500,
+        output_tokens=250,
+        total_cost_nano=500_000_000L,
+        avg_latency_ms=100,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-02-02",
+        provider_id="p-rollup",
+        request_count=8,
+        success_count=7,
+        input_tokens=800,
+        output_tokens=400,
+        total_cost_nano=800_000_000L,
+        avg_latency_ms=120,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-02-03",
+        provider_id="p-rollup",
+        request_count=12,
+        success_count=11,
+        input_tokens=1200,
+        output_tokens=600,
+        total_cost_nano=1_200_000_000L,
+        avg_latency_ms=140,
+      ),
+    )
+
+    guard stats.provider_stats_filtered_json(
+        start_date=Some(1_706_788_800),
+        end_date=Some(1_706_961_600),
+        app_type=Some("claude"),
+      )
+      is Array(rows) else {
+      fail("expected provider stats array")
+    }
+    assert_eq(rows.length(), 1)
+    guard rows[0] is Object(row) else { fail("expected provider row") }
+    assert_eq(row["providerId"], Json::string("p-rollup"))
+    assert_eq(row["requestCount"], Json::number(8.0))
+    assert_eq(row["totalTokens"], Json::number(1200.0))
+  })
+}
+
+///|
+test "usage trends combine boundary details with full-day rollups like ccs" {
+  with_test_timezone("UTC", fn() raise {
+    let stats = TrafficStats::new()
+    stats.record_request_log(
+      RequestLog::new(
+        request_id="day-1-detail",
+        provider_id="p1",
+        app_type="claude",
+        model="claude-3",
+        usage=TokenUsage::new(input_tokens=100, output_tokens=50),
+        total_cost_usd="0.010000",
+        status_code=200,
+        latency_ms=100,
+        created_at=1_709_298_000,
+      ),
+    )
+    stats.record_request_log(
+      RequestLog::new(
+        request_id="day-3-detail",
+        provider_id="p1",
+        app_type="claude",
+        model="claude-3",
+        usage=TokenUsage::new(input_tokens=200, output_tokens=75),
+        total_cost_usd="0.020000",
+        status_code=200,
+        latency_ms=110,
+        created_at=1_709_460_000,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-03-02",
+        request_count=4,
+        success_count=4,
+        input_tokens=400,
+        output_tokens=200,
+        total_cost_nano=400_000_000L,
+        avg_latency_ms=120,
+      ),
+    )
+
+    guard stats.usage_trends_json(
+        start_ts=Some(1_709_294_400),
+        end_ts=Some(1_709_467_200),
+        app_type=Some("claude"),
+      )
+      is Array(rows) else {
+      fail("expected trend rows")
+    }
+    assert_eq(rows.length(), 3)
+    guard rows[0] is Object(day_one) else { fail("expected day one row") }
+    guard rows[1] is Object(day_two) else { fail("expected day two row") }
+    guard rows[2] is Object(day_three) else { fail("expected day three row") }
+    assert_eq(day_one["requestCount"], Json::number(1.0))
+    assert_eq(day_one["totalTokens"], Json::number(150.0))
+    assert_eq(day_two["requestCount"], Json::number(4.0))
+    assert_eq(day_two["totalTokens"], Json::number(600.0))
+    assert_eq(day_three["requestCount"], Json::number(1.0))
+    assert_eq(day_three["totalTokens"], Json::number(275.0))
+  })
+}
+
+///|
+test "model stats exclude partial rollup boundary days like ccs" {
+  with_test_timezone("UTC", fn() raise {
+    let stats = TrafficStats::new()
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-04-01",
+        model="claude-3",
+        request_count=3,
+        success_count=3,
+        input_tokens=300,
+        output_tokens=150,
+        total_cost_nano=300_000_000L,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-04-02",
+        model="claude-3",
+        request_count=6,
+        success_count=5,
+        input_tokens=600,
+        output_tokens=300,
+        total_cost_nano=600_000_000L,
+      ),
+    )
+    stats.daily_rollups.push(
+      ccs_test_rollup(
+        "2024-04-03",
+        model="claude-3",
+        request_count=9,
+        success_count=8,
+        input_tokens=900,
+        output_tokens=450,
+        total_cost_nano=900_000_000L,
+      ),
+    )
+
+    guard stats.model_stats_filtered_json(
+        start_date=Some(1_711_972_800),
+        end_date=Some(1_712_145_600),
+        app_type=Some("claude"),
+      )
+      is Array(rows) else {
+      fail("expected model stats array")
+    }
+    assert_eq(rows.length(), 1)
+    guard rows[0] is Object(row) else { fail("expected model row") }
+    assert_eq(row["model"], Json::string("claude-3"))
+    assert_eq(row["requestCount"], Json::number(6.0))
+    assert_eq(row["totalTokens"], Json::number(900.0))
+  })
+}
+
+///|
 test "usage aggregate lists match ccs route payloads" {
   let stats = TrafficStats::new()
   stats.record_request_log(
@@ -1344,6 +1607,41 @@ fn[T] with_test_timezone(zone : String, f : () -> T raise) -> T raise {
       restore_test_timezone(old_tz)
       value
     }
+  }
+}
+
+///|
+fn ccs_test_rollup(
+  date : String,
+  provider_id? : String = "p1",
+  provider_name? : String? = None,
+  app_type? : String = "claude",
+  model? : String = "claude-3",
+  request_count~ : Int,
+  success_count~ : Int,
+  input_tokens~ : Int,
+  output_tokens~ : Int,
+  cache_read_tokens? : Int = 0,
+  cache_creation_tokens? : Int = 0,
+  total_cost_nano~ : Int64,
+  avg_latency_ms? : Int = 100,
+) -> UsageDailyRollup {
+  {
+    date,
+    app_type,
+    provider_id,
+    provider_name,
+    model,
+    request_model: None,
+    pricing_model: None,
+    request_count,
+    success_count,
+    input_tokens,
+    output_tokens,
+    cache_read_tokens,
+    cache_creation_tokens,
+    total_cost_nano,
+    avg_latency_ms,
   }
 }
 
