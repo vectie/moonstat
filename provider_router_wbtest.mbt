@@ -379,8 +379,10 @@ test "provider route target serializes ccs claude desktop model routes" {
     provider_name="Desktop Provider",
     api_key=Some("sk-hidden"),
     claude_desktop_model_routes=routes,
+    notes=Some("Desktop provider notes"),
   )
   guard target.to_json() is Object(json) else { fail("expected target object") }
+  assert_eq(json["notes"], Json::string("Desktop provider notes"))
   guard json["claudeDesktopModelRoutes"] is Object(route_json) else {
     fail("expected claude desktop routes")
   }
@@ -395,6 +397,7 @@ test "provider route target serializes ccs claude desktop model routes" {
     fail("expected ccs provider object")
   }
   guard provider["meta"] is Object(meta) else { fail("expected provider meta") }
+  assert_eq(provider["notes"], Json::string("Desktop provider notes"))
   guard meta["claudeDesktopModelRoutes"] is Object(meta_routes) else {
     fail("expected ccs route metadata")
   }
@@ -414,6 +417,7 @@ test "provider router exposes ccs failover queue and available providers" {
       provider_name="Provider A",
       provider_type=Some("codex"),
       settings_config=Some({ "model": Json::string("gpt-5") }.to_json()),
+      notes=Some("Primary provider"),
     ),
   )
   router.upsert_provider(
@@ -421,11 +425,17 @@ test "provider router exposes ccs failover queue and available providers" {
       app_type="codex",
       provider_id="b",
       provider_name="Provider B",
+      notes=Some("Fallback provider"),
     ),
   )
   router.set_failover_queue("codex", ["b"])
   json_inspect(router.failover_queue_json("codex"), content=[
-    { "providerId": "b", "providerName": "Provider B", "sortIndex": null },
+    {
+      "providerId": "b",
+      "providerName": "Provider B",
+      "sortIndex": null,
+      "providerNotes": "Fallback provider",
+    },
   ])
   guard router.available_failover_providers_json("codex") is Array(available) else {
     fail("expected available providers array")
@@ -436,6 +446,7 @@ test "provider router exposes ccs failover queue and available providers" {
   }
   assert_eq(provider["id"], Json::string("a"))
   assert_eq(provider["name"], Json::string("Provider A"))
+  assert_eq(provider["notes"], Json::string("Primary provider"))
   assert_eq(provider["inFailoverQueue"], Json::boolean(false))
   guard provider["settingsConfig"] is Object(settings) else {
     fail("expected settingsConfig")

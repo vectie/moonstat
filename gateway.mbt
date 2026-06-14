@@ -12098,6 +12098,7 @@ fn provider_target_from_request(
     "base_url", "baseUrl", "websiteUrl",
   ])
   let api_key = provider_string_from_request(path, body, ["api_key", "apiKey"])
+  let notes = provider_string_from_request(path, body, ["notes"])
   let is_full_url = provider_bool_from_request(path, body, [
     "is_full_url", "isFullUrl", "fullUrl",
   ]).unwrap_or(false)
@@ -12119,6 +12120,7 @@ fn provider_target_from_request(
       model_mapping~,
       claude_desktop_model_routes~,
       settings_config=provider_settings_config_from_body(body),
+      notes~,
     ),
   )
 }

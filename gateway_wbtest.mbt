@@ -385,6 +385,7 @@ test "provider target parses ccs claude desktop route metadata" {
           "provider": {
             "id": Json::string("desktop-provider"),
             "name": Json::string("Desktop Provider"),
+            "notes": Json::string("Pinned fallback"),
             "modelMapping": { "sonnetModel": Json::string("mapping-fallback") }.to_json(),
             "meta": {
               "claudeDesktopModelRoutes": {
@@ -405,6 +406,7 @@ test "provider target parses ccs claude desktop route metadata" {
     fail("expected provider target")
   }
   assert_eq(provider.provider_id, "desktop-provider")
+  assert_eq(provider.notes, Some("Pinned fallback"))
   guard provider.model_mapping is Some(mapping) else {
     fail("expected model mapping")
   }

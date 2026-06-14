@@ -361,6 +361,7 @@ pub struct ProviderRouteTarget {
   model_mapping : ModelMapping?
   claude_desktop_model_routes : Map[String, ClaudeDesktopModelRoute]
   settings_config : Json?
+  notes : String?
 }
 
 ///|
@@ -412,6 +413,7 @@ pub fn ProviderRouteTarget::new(
     capacity=0,
   ),
   settings_config? : Json? = None,
+  notes? : String? = None,
 ) -> ProviderRouteTarget {
   {
     app_type,
@@ -428,6 +430,7 @@ pub fn ProviderRouteTarget::new(
     model_mapping,
     claude_desktop_model_routes,
     settings_config,
+    notes,
   }
 }
 
@@ -448,6 +451,9 @@ pub fn ProviderRouteTarget::to_json(self : ProviderRouteTarget) -> Json {
   }
   if self.settings_config is Some(settings_config) {
     obj["settingsConfig"] = settings_config
+  }
+  if self.notes is Some(notes) {
+    obj["notes"] = Json::string(notes)
   }
   if !self.claude_desktop_model_routes.is_empty() {
     obj["claudeDesktopModelRoutes"] = claude_desktop_model_routes_json(
@@ -475,6 +481,9 @@ fn ProviderRouteTarget::to_ccs_provider_json(
   }
   if self.provider_type is Some(provider_type) {
     obj["category"] = Json::string(provider_type)
+  }
+  if self.notes is Some(notes) {
+    obj["notes"] = Json::string(notes)
   }
   if sort_index is Some(sort_index) {
     obj["sortIndex"] = Json::number(sort_index.to_double())
@@ -1327,13 +1336,15 @@ fn ProviderRouter::failover_queue_json(
       Some(index) => Json::number(index.to_double())
       None => Json::null()
     }
-    rows.push(
-      {
-        "providerId": Json::string(provider.provider_id),
-        "providerName": Json::string(provider.provider_name),
-        "sortIndex": sort_index,
-      }.to_json(),
-    )
+    let row : Map[String, Json] = {
+      "providerId": Json::string(provider.provider_id),
+      "providerName": Json::string(provider.provider_name),
+      "sortIndex": sort_index,
+    }
+    if provider.notes is Some(notes) {
+      row["providerNotes"] = Json::string(notes)
+    }
+    rows.push(row.to_json())
   }
   Json::array(rows)
 }
