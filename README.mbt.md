@@ -66,13 +66,17 @@ launchers. `suite write-status` writes the same status contract to
 `~/.moonstat/suite-status.json` by default. The contract also includes a
 machine-readable `suite_integrations` object:
 
-- MoonClaw gets local OpenAI/Anthropic base URLs, default model, health URL, and
-  env names.
-- MoonBook gets usage summary/log/trend/data-source URLs plus the durable usage
-  log and pricing files.
-- Moontown gets health/status/stats and provider-limit probe URLs.
+- MoonClaw gets local OpenAI/Anthropic base URLs, env names, a
+  `moonclaw_providers_file_json` provider entry, and the project/home config
+  paths where MoonClaw can load that entry.
+- MoonBook gets usage summary/log/trend/data-source URLs, the durable usage log
+  and pricing files, and the MoonBook adapter package names used by Moondesk and
+  Moontown.
+- Moontown gets health/status/stats and provider-limit probe URLs plus the
+  MoonClaw provider-manifest path/command used for MoonBook task providers.
 - Moondesk gets the status file, health/status/stats, model catalog, and Claude
-  Desktop gateway base URL.
+  Desktop gateway base URL plus adapter packages for MoonClaw, MoonBook, and
+  Moontown.
 
 ## Proxy Surface
 
