@@ -292,6 +292,7 @@ test "traffic stats leaves ccs error pricing model empty" {
     "router",
     "Router",
     pricing_model_source="request",
+    cost_multiplier="2.5",
   )
   stats.record_request_context(
     "claude",
@@ -305,6 +306,7 @@ test "traffic stats leaves ccs error pricing model empty" {
   assert_eq(log.model, "client-alias")
   assert_eq(log.request_model, Some("client-alias"))
   assert_eq(log.pricing_model, Some(""))
+  assert_eq(log.cost_multiplier, "1.0")
   assert_eq(log.status_code, 502)
   assert_eq(log.error_message, Some("upstream_error"))
   assert_eq(log.total_cost_usd, "0")
@@ -314,6 +316,7 @@ test "traffic stats leaves ccs error pricing model empty" {
   assert_eq(obj["model"], Json::string("client-alias"))
   assert_eq(obj["requestModel"], Json::string("client-alias"))
   assert_eq(obj["pricingModel"], Json::string(""))
+  assert_eq(obj["costMultiplier"], Json::string("1.0"))
 }
 
 ///|

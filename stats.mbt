@@ -558,7 +558,11 @@ fn TrafficStats::record_completed_request(
   let pricing = find_model_pricing(
     pricing_model, pricing_overrides, deleted_model_ids,
   )
-  let cost_multiplier = self.current_request_cost_multiplier
+  let cost_multiplier = if error_message is Some(_) {
+    "1.0"
+  } else {
+    self.current_request_cost_multiplier
+  }
   let cost = match pricing {
     Some(model_pricing) if usage.has_billable_tokens() =>
       calculate_cost_for_app(app_type, usage, model_pricing, cost_multiplier~)
