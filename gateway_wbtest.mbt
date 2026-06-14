@@ -336,6 +336,24 @@ test "usage query helpers parse ccs auto failover boolean parameters" {
 }
 
 ///|
+test "pick directory parser accepts ccs defaultPath payload key" {
+  assert_eq(
+    proxy_string_request(
+      "/pick_directory",
+      Some({ "defaultPath": Json::string("/tmp/ccs") }.to_json()),
+      ["default_path", "defaultPath"],
+    ),
+    Some("/tmp/ccs"),
+  )
+  assert_eq(
+    proxy_string_request("/pick_directory?default_path=/tmp/moonstat", None, [
+      "default_path", "defaultPath",
+    ]),
+    Some("/tmp/moonstat"),
+  )
+}
+
+///|
 test "proxy failover command parsers accept ccs json payload keys" {
   let body = Some(
     {

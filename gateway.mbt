@@ -678,6 +678,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/pick_directory", (r, w) => {
     self.handle_pick_directory(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/pick_directory", (r, w) => {
+    self.handle_pick_directory(r, w)
+  })
   router.add_handler(@httpx.Method::Get, "/open_external", (r, w) => {
     self.handle_open_external(r, w)
   })
@@ -6430,9 +6433,10 @@ async fn Gateway::handle_pick_directory(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
+  let body = proxy_json_body(r)
   write_usage_json(
     w,
-    match usage_query_value_any(r.path, "default_path", "defaultPath") {
+    match proxy_string_request(r.path, body, ["default_path", "defaultPath"]) {
       Some(path) => Json::string(path)
       None => Json::null()
     },

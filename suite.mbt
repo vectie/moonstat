@@ -503,7 +503,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET /get_config_status", "GET /get_claude_desktop_status", "GET /get_claude_desktop_default_routes",
     "POST /import_claude_desktop_providers_from_claude", "POST /ensure_claude_desktop_official_provider",
     "GET /get_claude_code_config_path", "GET /get_config_dir", "GET /open_config_folder",
-    "GET /pick_directory", "GET /get_app_config_path", "GET /open_app_config_folder",
+    "GET|POST /pick_directory", "GET /get_app_config_path", "GET /open_app_config_folder",
     "GET /get_claude_common_config_snippet", "POST /set_claude_common_config_snippet",
     "GET /get_common_config_snippet", "POST /set_common_config_snippet", "GET|POST /extract_common_config_snippet",
     "GET /check_env_conflicts", "POST /delete_env_vars", "POST /restore_env_backup",
