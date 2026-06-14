@@ -136,6 +136,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `DELETE /remove_provider_from_live_config?app=codex&id=custom`
 - `POST /switch_provider?app=codex&id=custom`
 - `POST /sync_current_providers_live`
+- `POST /import_default_config_test_hook?app=codex`
 - `GET /read_live_provider_settings?app=codex`
 - `GET /get_opencode_live_provider_ids`
 - `GET /get_openclaw_live_provider_ids`

@@ -365,6 +365,13 @@ test "top level ccs proxy command names build command alias paths" {
     Some("/test_proxy_url?url=socks5%3A%2F%2F127.0.0.1%3A1080"),
   )
   assert_eq(
+    provider_app_path(
+      ["moonstat", "import_default_config_test_hook", "--app", "codex"],
+      "/import_default_config_test_hook",
+    ),
+    "/import_default_config_test_hook?app=codex",
+  )
+  assert_eq(
     openclaw_default_model_path([
       "moonstat", "set_openclaw_default_model", "--primary", "gpt-5", "--fallbacks",
       "sonnet,opus",

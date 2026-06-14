@@ -1297,6 +1297,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/import_default_config", (r, w) => {
     self.handle_import_default_config(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/import_default_config_test_hook", (
+    r,
+    w,
+  ) => self.handle_import_default_config(r, w))
   router.add_handler(@httpx.Method::Get, "/get_providers", (r, w) => {
     self.handle_get_providers(r, w)
   })

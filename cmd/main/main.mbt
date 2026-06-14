@@ -272,6 +272,9 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       sync_current_providers_live(arr)
     ["import_default_config", ..] | ["import-default-config", ..] =>
       import_default_config(arr)
+    ["import_default_config_test_hook", ..]
+    | ["import-default-config-test-hook", ..] =>
+      import_default_config_test_hook(arr)
     ["open_provider_terminal", ..] | ["open-provider-terminal", ..] =>
       open_provider_terminal(arr)
     ["get_claude_desktop_status", ..] | ["get-claude-desktop-status", ..] =>
@@ -1883,6 +1886,15 @@ async fn import_default_config(args : Array[String]) -> Unit {
   check_json_post_endpoint(
     args,
     provider_app_path(args, "/import_default_config"),
+    "Provider",
+  )
+}
+
+///|
+async fn import_default_config_test_hook(args : Array[String]) -> Unit {
+  check_json_post_endpoint(
+    args,
+    provider_app_path(args, "/import_default_config_test_hook"),
     "Provider",
   )
 }
