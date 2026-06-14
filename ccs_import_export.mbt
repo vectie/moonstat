@@ -32,6 +32,46 @@ fn ccs_backup_filename(filename : String) -> String {
 }
 
 ///|
+fn ccs_valid_db_backup_filename(filename : String) -> Bool {
+  !filename.contains("..") &&
+  !filename.contains("/") &&
+  !filename.contains("\\") &&
+  filename.has_suffix(".db")
+}
+
+///|
+fn ccs_db_backup_filename_error(filename : String) -> String? {
+  if ccs_valid_db_backup_filename(filename) {
+    None
+  } else {
+    Some("Invalid backup filename")
+  }
+}
+
+///|
+fn ccs_db_backup_new_filename(new_name : String) -> Result[String, String] {
+  let trimmed = new_name.trim().to_owned()
+  if trimmed.is_empty() {
+    return Err("New name cannot be empty")
+  }
+  let name_part = if trimmed.has_suffix(".db") {
+    trimmed[:trimmed.length() - 3].to_owned()
+  } else {
+    trimmed
+  }
+  if name_part.length() > 100 {
+    return Err("Name too long (max 100 characters)")
+  }
+  if name_part.contains("..") ||
+    name_part.contains("/") ||
+    name_part.contains("\\") ||
+    name_part.contains("\u{0000}") {
+    return Err("Invalid characters in new name")
+  }
+  Ok(name_part + ".db")
+}
+
+///|
 async fn ccs_ensure_db_backup_dir() -> Unit {
   @fsx.make_directory(ccs_db_backup_dir(), recursive=true, exists_ok=true) catch {
     _ => ()
@@ -253,58 +293,110 @@ async fn ccs_list_db_backups_json() -> Json {
   let entries = @fsx.list_directory(ccs_db_backup_dir()) catch {
     _ => return Json::array([])
   }
-  let rows : Array[Json] = []
+  let rows : Array[CcsDbBackupEntry] = []
   for entry in entries {
     if !(entry.kind is @fsx.FileKind::Regular) || !entry.name.has_suffix(".db") {
       continue
     }
     let content = @fsx.read_file(entry.path) catch { _ => "" }
-    rows.push(
-      {
-        "filename": Json::string(entry.name),
-        "sizeBytes": Json::number(content.length().to_double()),
-        "createdAt": Json::string(ccs_file_mtime(entry.path).to_string()),
-      }.to_json(),
-    )
+    let modified_at = ccs_file_mtime(entry.path)
+    rows.push(CcsDbBackupEntry::{
+      filename: entry.name,
+      size_bytes: content.length(),
+      created_at: modified_at,
+    })
   }
-  Json::array(rows)
+  ccs_sort_db_backup_entries(rows)
+  Json::array(rows.map(fn(row) { row.to_json() }))
 }
 
 ///|
 async fn Gateway::ccs_restore_db_backup_json(
   self : Gateway,
   filename : String,
-) -> Json {
+) -> Result[Json, String] {
+  match ccs_db_backup_filename_error(filename) {
+    Some(error) => return Err(error)
+    None => ()
+  }
   let path = ccs_db_backup_path(filename)
-  let content = @fsx.read_file(path) catch { _ => return Json::string("") }
-  let parsed = @json.parse(content) catch { _ => return Json::string("") }
+  if !(@fsx.exists_as_file(path) catch { _ => false }) {
+    return Err("Backup file not found: \{filename}")
+  }
+  let content = @fsx.read_file(path) catch { error => return Err("\{error}") }
+  let parsed = @json.parse(content) catch { error => return Err("\{error}") }
   self.ccs_apply_import_snapshot(parsed)
-  Json::string(ccs_backup_filename(filename))
+  Ok(Json::string(filename))
 }
 
 ///|
 async fn ccs_rename_db_backup_json(
   old_filename : String,
   new_name : String,
-) -> Json {
+) -> Result[Json, String] {
+  match ccs_db_backup_filename_error(old_filename) {
+    Some(error) => return Err(error)
+    None => ()
+  }
+  let new_filename = match ccs_db_backup_new_filename(new_name) {
+    Ok(name) => name
+    Err(error) => return Err(error)
+  }
   let old_path = ccs_db_backup_path(old_filename)
-  let new_filename = ccs_backup_filename(new_name)
   let new_path = ccs_db_backup_path(new_filename)
-  let content = @fsx.read_file(old_path) catch { _ => return Json::string("") }
+  if !(@fsx.exists_as_file(old_path) catch { _ => false }) {
+    return Err("Backup file not found: \{old_filename}")
+  }
+  let new_path_exists = @fsx.exists_as_file(new_path) catch { _ => false }
+  if new_path_exists {
+    return Err("A backup named '\{new_filename}' already exists")
+  }
+  let content = @fsx.read_file(old_path) catch {
+    error => return Err("\{error}")
+  }
   ccs_ensure_db_backup_dir()
   @fsx.write_to_file(new_path, content) catch {
-    _ => return Json::string("")
+    error => return Err("\{error}")
   }
   @fsx.remove(old_path) catch {
     _ => ()
   }
-  Json::string(new_filename)
+  Ok(Json::string(new_filename))
 }
 
 ///|
-async fn ccs_delete_db_backup_json(filename : String) -> Json {
-  @fsx.remove(ccs_db_backup_path(filename)) catch {
-    _ => ()
+async fn ccs_delete_db_backup_json(filename : String) -> Result[Json, String] {
+  match ccs_db_backup_filename_error(filename) {
+    Some(error) => return Err(error)
+    None => ()
   }
-  Json::null()
+  let path = ccs_db_backup_path(filename)
+  if !(@fsx.exists_as_file(path) catch { _ => false }) {
+    return Err("Backup file not found: \{filename}")
+  }
+  @fsx.remove(path) catch {
+    error => return Err("\{error}")
+  }
+  Ok(Json::null())
+}
+
+///|
+priv struct CcsDbBackupEntry {
+  filename : String
+  size_bytes : Int
+  created_at : Int64
+}
+
+///|
+fn ccs_sort_db_backup_entries(rows : Array[CcsDbBackupEntry]) -> Unit {
+  rows.sort_by(fn(left, right) { right.created_at.compare(left.created_at) })
+}
+
+///|
+fn CcsDbBackupEntry::to_json(self : CcsDbBackupEntry) -> Json {
+  {
+    "filename": Json::string(self.filename),
+    "sizeBytes": Json::number(self.size_bytes.to_double()),
+    "createdAt": Json::string(self.created_at.to_string()),
+  }.to_json()
 }

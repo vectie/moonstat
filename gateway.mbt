@@ -6626,7 +6626,10 @@ async fn Gateway::handle_restore_db_backup(
     write_usage_bad_request(w, "missing_filename")
     return
   }
-  write_usage_json(w, self.ccs_restore_db_backup_json(filename))
+  match self.ccs_restore_db_backup_json(filename) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|
@@ -6649,7 +6652,10 @@ async fn Gateway::handle_rename_db_backup(
     write_usage_bad_request(w, "missing_new_name")
     return
   }
-  write_usage_json(w, ccs_rename_db_backup_json(old_filename, new_name))
+  match ccs_rename_db_backup_json(old_filename, new_name) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|
@@ -6665,7 +6671,10 @@ async fn Gateway::handle_delete_db_backup(
     write_usage_bad_request(w, "missing_filename")
     return
   }
-  write_usage_json(w, ccs_delete_db_backup_json(filename))
+  match ccs_delete_db_backup_json(filename) {
+    Ok(result) => write_usage_json(w, result)
+    Err(error) => write_usage_bad_request(w, error)
+  }
 }
 
 ///|
