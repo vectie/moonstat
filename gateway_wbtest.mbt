@@ -2687,15 +2687,15 @@ test "proxy status running follows ccs start stop state" {
 ///|
 test "proxy takeover status alias is ccs-compatible standalone false state" {
   let gateway = Gateway::new(port=17003, host="127.0.0.4", model="gpt-5")
-  json_inspect(gateway.proxy_takeover_status_json(), content={
-    "claude": false,
-    "claude-desktop": false,
-    "codex": false,
-    "gemini": false,
-    "opencode": false,
-    "openclaw": false,
-    "hermes": false,
-  })
+  guard gateway.proxy_takeover_status_json() is Object(status) else {
+    fail("expected takeover status object")
+  }
+  assert_eq(status.size(), 5)
+  assert_eq(status["claude"], Json::boolean(false))
+  assert_eq(status["codex"], Json::boolean(false))
+  assert_eq(status["gemini"], Json::boolean(false))
+  assert_eq(status["opencode"], Json::boolean(false))
+  assert_eq(status["openclaw"], Json::boolean(false))
 }
 
 ///|

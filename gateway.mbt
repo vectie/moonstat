@@ -10950,14 +10950,10 @@ async fn Gateway::handle_update_endpoint_last_used(
 fn Gateway::proxy_takeover_status_json(self : Gateway) -> Json {
   {
     "claude": Json::boolean(self.proxy_takeover_for_app("claude")),
-    "claude-desktop": Json::boolean(
-      self.proxy_takeover_for_app("claude-desktop"),
-    ),
     "codex": Json::boolean(self.proxy_takeover_for_app("codex")),
     "gemini": Json::boolean(self.proxy_takeover_for_app("gemini")),
     "opencode": Json::boolean(self.proxy_takeover_for_app("opencode")),
     "openclaw": Json::boolean(self.proxy_takeover_for_app("openclaw")),
-    "hermes": Json::boolean(self.proxy_takeover_for_app("hermes")),
   }.to_json()
 }
 
@@ -10968,10 +10964,7 @@ fn Gateway::proxy_takeover_for_app(self : Gateway, app_type : String) -> Bool {
 
 ///|
 fn Gateway::proxy_takeover_active(self : Gateway) -> Bool {
-  for
-    app_type in [
-      "claude", "claude-desktop", "codex", "gemini", "opencode", "openclaw", "hermes",
-    ] {
+  for app_type in ["claude", "codex", "gemini", "opencode", "openclaw"] {
     if self.proxy_takeover_for_app(app_type) {
       return true
     }
@@ -10981,10 +10974,7 @@ fn Gateway::proxy_takeover_active(self : Gateway) -> Bool {
 
 ///|
 fn Gateway::proxy_clear_takeover(self : Gateway) -> Unit {
-  for
-    app_type in [
-      "claude", "claude-desktop", "codex", "gemini", "opencode", "openclaw", "hermes",
-    ] {
+  for app_type in ["claude", "codex", "gemini", "opencode", "openclaw"] {
     self.proxy_takeover_enabled.set(app_type, false)
   }
 }
