@@ -4331,8 +4331,9 @@ async fn delete_usage_pricing(args : Array[String]) -> Unit {
     defer client.close()
     client.request(@http.RequestMethod::Delete, path)
     let response = client.end_request()
-    if response.code == 204 {
-      println("Deleted model pricing")
+    if response.code == 200 {
+      let body = client.read_all().text()
+      println(body)
     } else {
       let body = client.read_all().text()
       logger.error("Usage pricing delete failed: \{response.code} \{body}")

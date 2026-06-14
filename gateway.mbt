@@ -11039,10 +11039,7 @@ async fn Gateway::handle_usage_update_model_pricing(
   )
   self.save_model_pricing_store()
   self.stats.save_persistent_store()
-  w.header().set("Content-Type", "application/json")
-  w.write_header(@status.Ok)
-  w.write(pricing.to_json().stringify(indent=2))
-  w.flush()
+  write_usage_json(w, Json::null())
 }
 
 ///|
@@ -11064,8 +11061,7 @@ async fn Gateway::handle_usage_delete_model_pricing(
   }
   self.pricing_deleted_model_ids.set(trimmed, true)
   self.save_model_pricing_store()
-  w.write_header(@status.NoContent)
-  w.flush()
+  write_usage_json(w, Json::null())
 }
 
 ///|
@@ -11091,19 +11087,7 @@ async fn Gateway::handle_usage_request_detail(
       self.pricing_deleted_model_ids,
     ) {
     Some(detail) => write_usage_json(w, detail)
-    None => {
-      w.header().set("Content-Type", "application/json")
-      w.write_header(@status.NotFound)
-      w.write(
-        {
-          "error": Json::string("request_not_found"),
-          "requestId": Json::string(request_id),
-        }
-        .to_json()
-        .stringify(indent=2),
-      )
-      w.flush()
-    }
+    None => write_usage_json(w, Json::null())
   }
 }
 
