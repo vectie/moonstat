@@ -569,24 +569,14 @@ async fn ccs_scan_sessions() -> Array[CcsSessionMeta] {
       None => ()
     }
   }
-  for path in ccs_collect_provider_session_files("opencode") {
-    match ccs_parse_generic_json_session(path, "opencode") {
-      Some(meta) => result.push(meta)
-      None => ()
-    }
-  }
+  result.append(ccs_scan_opencode_sessions())
   for path in ccs_collect_provider_session_files("openclaw") {
     match ccs_parse_generic_json_session(path, "openclaw") {
       Some(meta) => result.push(meta)
       None => ()
     }
   }
-  for path in ccs_collect_provider_session_files("hermes") {
-    match ccs_parse_generic_json_session(path, "hermes") {
-      Some(meta) => result.push(meta)
-      None => ()
-    }
-  }
+  result.append(ccs_scan_hermes_sessions())
   result
 }
 
@@ -624,9 +614,11 @@ async fn ccs_load_session_messages(
 ) -> Result[Array[CcsSessionMessage], String] {
   let provider = ccs_normalize_app_type(provider_id)
   if source_path.has_prefix("sqlite:") {
-    return Err(
-      "\{provider} SQLite session sources are not implemented in moonstat yet.",
-    )
+    return match provider {
+      "opencode" => ccs_load_opencode_sqlite_messages(source_path)
+      "hermes" => ccs_load_hermes_sqlite_messages(source_path)
+      _ => Err("Unsupported SQLite session provider: \{provider_id}")
+    }
   }
   guard @fsx.exists_as_file(source_path) else {
     return Err("session source not found: \{source_path}")
@@ -652,9 +644,11 @@ async fn ccs_delete_session(
 ) -> Result[Bool, String] {
   let provider = ccs_normalize_app_type(provider_id)
   if source_path.has_prefix("sqlite:") {
-    return Err(
-      "\{provider} SQLite session deletion is not implemented in moonstat yet.",
-    )
+    return match provider {
+      "opencode" => ccs_delete_opencode_sqlite_session(session_id, source_path)
+      "hermes" => ccs_delete_hermes_sqlite_session(session_id, source_path)
+      _ => Err("Unsupported SQLite session provider: \{provider_id}")
+    }
   }
   guard @fsx.exists_as_file(source_path) else {
     return Err("session source not found: \{source_path}")
@@ -784,6 +778,168 @@ fn ccs_opencode_data_dir() -> String {
       @pathx.join(base.trim(), "opencode")
     _ => @pathx.join(@pathx.join(ccs_home_dir(), ".local/share"), "opencode")
   }
+}
+
+///|
+fn ccs_opencode_db_path() -> String {
+  @pathx.join(ccs_opencode_data_dir(), "opencode.db")
+}
+
+///|
+fn ccs_hermes_db_path() -> String {
+  @pathx.join(ccs_config_dir("hermes"), "state.db")
+}
+
+///|
+async fn ccs_scan_opencode_sessions() -> Array[CcsSessionMeta] {
+  let sqlite_sessions = ccs_scan_opencode_sqlite_sessions()
+  let result = sqlite_sessions.copy()
+  for path in ccs_collect_provider_session_files("opencode") {
+    match ccs_parse_generic_json_session(path, "opencode") {
+      Some(meta) if !ccs_session_has_id(sqlite_sessions, meta.session_id) =>
+        result.push(meta)
+      _ => ()
+    }
+  }
+  result
+}
+
+///|
+async fn ccs_scan_hermes_sessions() -> Array[CcsSessionMeta] {
+  let sqlite_sessions = ccs_scan_hermes_sqlite_sessions()
+  let result = sqlite_sessions.copy()
+  for path in ccs_collect_provider_session_files("hermes") {
+    match ccs_parse_generic_json_session(path, "hermes") {
+      Some(meta) if !ccs_session_has_id(sqlite_sessions, meta.session_id) =>
+        result.push(meta)
+      _ => ()
+    }
+  }
+  result
+}
+
+///|
+fn ccs_session_has_id(
+  sessions : Array[CcsSessionMeta],
+  session_id : String,
+) -> Bool {
+  sessions.any(fn(session) { session.session_id == session_id })
+}
+
+///|
+async fn ccs_scan_opencode_sqlite_sessions() -> Array[CcsSessionMeta] {
+  let db_path = ccs_opencode_db_path()
+  if !@fsx.exists_as_file(db_path) {
+    return []
+  }
+  let rows = match
+    ccs_sqlite_json_rows(
+      db_path,
+      "SELECT id, title, directory, time_created, time_updated FROM session ORDER BY time_updated DESC",
+      read_only=true,
+    ) {
+    Ok(rows) => rows
+    Err(_) => return []
+  }
+  ccs_opencode_sqlite_rows_to_sessions(db_path, rows)
+}
+
+///|
+fn ccs_opencode_sqlite_rows_to_sessions(
+  db_path : String,
+  rows : Array[Json],
+) -> Array[CcsSessionMeta] {
+  let sessions = []
+  for row in rows {
+    guard row is Object(obj) else { continue }
+    guard ccs_json_string(obj.get("id")) is Some(session_id) else { continue }
+    let directory = ccs_json_string(obj.get("directory")).unwrap_or("")
+    let raw_title = ccs_json_string(obj.get("title")).unwrap_or("")
+    let display_title = if raw_title.is_empty() {
+      ccs_path_basename(directory)
+    } else {
+      Some(raw_title)
+    }
+    sessions.push(CcsSessionMeta::{
+      provider_id: "opencode",
+      session_id,
+      title: display_title,
+      summary: display_title,
+      project_dir: if directory.is_empty() {
+        None
+      } else {
+        Some(directory)
+      },
+      created_at: ccs_json_int64(obj.get("time_created")),
+      last_active_at: ccs_json_int64(obj.get("time_updated")),
+      source_path: Some("sqlite:\{db_path}:\{session_id}"),
+      resume_command: Some("opencode session resume \{session_id}"),
+    })
+  }
+  sessions
+}
+
+///|
+async fn ccs_scan_hermes_sqlite_sessions() -> Array[CcsSessionMeta] {
+  let db_path = ccs_hermes_db_path()
+  if !@fsx.exists_as_file(db_path) {
+    return []
+  }
+  let rows = match
+    ccs_sqlite_json_rows(
+      db_path,
+      "SELECT * FROM sessions ORDER BY rowid DESC LIMIT 500",
+      read_only=true,
+    ) {
+    Ok(rows) => rows
+    Err(_) => return []
+  }
+  ccs_hermes_sqlite_rows_to_sessions(db_path, rows)
+}
+
+///|
+fn ccs_hermes_sqlite_rows_to_sessions(
+  db_path : String,
+  rows : Array[Json],
+) -> Array[CcsSessionMeta] {
+  let sessions = []
+  for row in rows {
+    guard row is Object(obj) else { continue }
+    guard ccs_json_string(obj.get("id")) is Some(session_id) else { continue }
+    let title = match ccs_json_string(obj.get("title")) {
+      Some(value) if !value.is_empty() =>
+        Some(ccs_truncate_summary(value, ccs_session_title_max_chars))
+      _ => None
+    }
+    let cwd = match
+      ccs_first_string(
+        ccs_json_string(obj.get("cwd")),
+        ccs_json_string(obj.get("directory")),
+      ) {
+      Some(value) if !value.is_empty() => Some(value)
+      _ => None
+    }
+    let started_at = ccs_first_timestamp(
+      ccs_json_timestamp_ms(obj.get("started_at")),
+      ccs_json_timestamp_ms(obj.get("created_at")),
+    )
+    let ended_at = ccs_first_timestamp(
+      ccs_json_timestamp_ms(obj.get("ended_at")),
+      ccs_json_timestamp_ms(obj.get("updated_at")),
+    )
+    sessions.push(CcsSessionMeta::{
+      provider_id: "hermes",
+      session_id,
+      title,
+      summary: None,
+      project_dir: cwd,
+      created_at: started_at,
+      last_active_at: ccs_first_timestamp(ended_at, started_at),
+      source_path: Some("sqlite:\{db_path}#\{session_id}"),
+      resume_command: None,
+    })
+  }
+  sessions
 }
 
 ///|
@@ -1265,6 +1421,402 @@ fn ccs_parse_generic_json_session_lines(
     source_path: Some(path),
     resume_command: None,
   })
+}
+
+///|
+priv struct CcsSqliteSessionSource {
+  db_path : String
+  session_id : String
+}
+
+///|
+async fn ccs_load_opencode_sqlite_messages(
+  source_path : String,
+) -> Result[Array[CcsSessionMessage], String] {
+  guard ccs_parse_opencode_sqlite_source(source_path) is Some(source) else {
+    return Err("Invalid SQLite source reference: \{source_path}")
+  }
+  let query = (
+    #|SELECT
+    #|  m.id AS message_id,
+    #|  m.time_created AS ts,
+    #|  m.data AS message_data,
+    #|  json_group_array(p.data) AS parts
+    #|FROM message m
+    #|LEFT JOIN part p ON p.session_id = m.session_id AND p.message_id = m.id
+    #|WHERE m.session_id = $SESSION
+    #|GROUP BY m.id, m.time_created, m.data
+    #|ORDER BY m.time_created ASC;
+  ).replace_all(old="$SESSION", new=ccs_sqlite_quote(source.session_id))
+  let rows = match ccs_sqlite_json_rows(source.db_path, query, read_only=true) {
+    Ok(rows) => rows
+    Err(error) => return Err(error)
+  }
+  Ok(ccs_opencode_sqlite_rows_to_messages(rows))
+}
+
+///|
+fn ccs_opencode_sqlite_rows_to_messages(
+  rows : Array[Json],
+) -> Array[CcsSessionMessage] {
+  let messages = []
+  for row in rows {
+    guard row is Object(obj) else { continue }
+    guard ccs_json_string(obj.get("message_data")) is Some(message_data) else {
+      continue
+    }
+    let message_value = @json.parse(message_data) catch { _ => Json::null() }
+    let role = (match message_value {
+      Object(message) => json_string_from_map_any(message, ["role"])
+      _ => None
+    }).unwrap_or("unknown")
+    let parts = match ccs_json_string(obj.get("parts")) {
+      Some(parts_json) => ccs_opencode_parts_text(parts_json)
+      None => ""
+    }
+    if parts.trim().is_empty() {
+      continue
+    }
+    messages.push(CcsSessionMessage::{
+      role,
+      content: parts,
+      ts: ccs_json_int64(obj.get("ts")),
+    })
+  }
+  messages
+}
+
+///|
+fn ccs_opencode_parts_text(parts_json : String) -> String {
+  let parsed = @json.parse(parts_json) catch { _ => return "" }
+  guard parsed is Array(parts) else { return "" }
+  let texts = []
+  for raw_part in parts {
+    guard ccs_json_string(Some(raw_part)) is Some(part_text) else { continue }
+    let part_json = @json.parse(part_text) catch { _ => continue }
+    match ccs_opencode_part_text(part_json) {
+      Some(text) if !text.trim().is_empty() => texts.push(text)
+      _ => ()
+    }
+  }
+  texts.join("\n")
+}
+
+///|
+fn ccs_opencode_part_text(part : Json) -> String? {
+  guard part is Object(obj) else { return None }
+  match json_string_from_map_any(obj, ["type"]) {
+    Some("text") =>
+      match json_string_from_map_any(obj, ["text"]) {
+        Some(text) if !text.trim().is_empty() => Some(text)
+        _ => None
+      }
+    Some("tool") =>
+      Some(
+        "[Tool: \{json_string_from_map_any(obj, ["tool"]).unwrap_or("unknown")}]",
+      )
+    _ => None
+  }
+}
+
+///|
+async fn ccs_load_hermes_sqlite_messages(
+  source_path : String,
+) -> Result[Array[CcsSessionMessage], String] {
+  guard ccs_parse_hermes_sqlite_source(source_path) is Some(source) else {
+    return Err("Invalid SQLite source reference: \{source_path}")
+  }
+  let query = (
+    #|SELECT role, content, created_at
+    #|FROM messages
+    #|WHERE session_id = $SESSION
+    #|ORDER BY created_at ASC;
+  ).replace_all(old="$SESSION", new=ccs_sqlite_quote(source.session_id))
+  let rows = match ccs_sqlite_json_rows(source.db_path, query, read_only=true) {
+    Ok(rows) => rows
+    Err(error) => return Err(error)
+  }
+  let messages = []
+  for row in rows {
+    guard row is Object(obj) else { continue }
+    guard ccs_json_string(obj.get("role")) is Some(role) else { continue }
+    guard ccs_json_string(obj.get("content")) is Some(content) else { continue }
+    if content.trim().is_empty() {
+      continue
+    }
+    messages.push(CcsSessionMessage::{
+      role,
+      content,
+      ts: ccs_json_timestamp_ms(obj.get("created_at")),
+    })
+  }
+  Ok(messages)
+}
+
+///|
+async fn ccs_delete_opencode_sqlite_session(
+  session_id : String,
+  source_path : String,
+) -> Result[Bool, String] {
+  ccs_delete_opencode_sqlite_session_with_expected(
+    session_id,
+    source_path,
+    ccs_opencode_db_path(),
+  )
+}
+
+///|
+async fn ccs_delete_opencode_sqlite_session_with_expected(
+  session_id : String,
+  source_path : String,
+  expected_db_path : String,
+) -> Result[Bool, String] {
+  guard ccs_parse_opencode_sqlite_source(source_path) is Some(source) else {
+    return Err("Invalid SQLite source reference: \{source_path}")
+  }
+  if source.session_id != session_id {
+    return Err(
+      "OpenCode SQLite session ID mismatch: expected \{session_id}, found \{source.session_id}",
+    )
+  }
+  match
+    ccs_validate_sqlite_db_path(source.db_path, expected_db_path, "OpenCode") {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let deleted = match
+    ccs_sqlite_count_session(source.db_path, "session", "id", session_id) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let quoted = ccs_sqlite_quote(session_id)
+  let query = (
+    #|BEGIN;
+    #|DELETE FROM part WHERE session_id = $SESSION;
+    #|DELETE FROM message WHERE session_id = $SESSION;
+    #|DELETE FROM session WHERE id = $SESSION;
+    #|COMMIT;
+  ).replace_all(old="$SESSION", new=quoted)
+  match ccs_sqlite_exec(source.db_path, query) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  Ok(deleted > 0)
+}
+
+///|
+async fn ccs_delete_hermes_sqlite_session(
+  session_id : String,
+  source_path : String,
+) -> Result[Bool, String] {
+  ccs_delete_hermes_sqlite_session_with_expected(
+    session_id,
+    source_path,
+    ccs_hermes_db_path(),
+  )
+}
+
+///|
+async fn ccs_delete_hermes_sqlite_session_with_expected(
+  session_id : String,
+  source_path : String,
+  expected_db_path : String,
+) -> Result[Bool, String] {
+  guard ccs_parse_hermes_sqlite_source(source_path) is Some(source) else {
+    return Err("Invalid SQLite source reference: \{source_path}")
+  }
+  if source.session_id != session_id {
+    return Err(
+      "Hermes SQLite session ID mismatch: expected \{session_id}, found \{source.session_id}",
+    )
+  }
+  match
+    ccs_validate_sqlite_db_path(source.db_path, expected_db_path, "Hermes") {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let deleted = match
+    ccs_sqlite_count_session(source.db_path, "sessions", "id", session_id) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let quoted = ccs_sqlite_quote(session_id)
+  ignore(
+    ccs_sqlite_exec(
+      source.db_path,
+      "DELETE FROM messages WHERE session_id = \{quoted};",
+    ),
+  )
+  match
+    ccs_sqlite_exec(
+      source.db_path,
+      "DELETE FROM sessions WHERE id = \{quoted};",
+    ) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  Ok(deleted > 0)
+}
+
+///|
+fn ccs_parse_opencode_sqlite_source(source : String) -> CcsSqliteSessionSource? {
+  guard source.has_prefix("sqlite:") else { return None }
+  let rest = source["sqlite:".length():].to_owned()
+  let sep = ccs_last_index_of(rest, ":ses_")
+  guard sep >= 0 else { return None }
+  let db_path = rest[:sep].to_owned()
+  let session_id = rest[sep + 1:].to_owned()
+  if db_path.is_empty() || session_id.is_empty() {
+    None
+  } else {
+    Some(CcsSqliteSessionSource::{ db_path, session_id })
+  }
+}
+
+///|
+fn ccs_parse_hermes_sqlite_source(source : String) -> CcsSqliteSessionSource? {
+  guard source.has_prefix("sqlite:") else { return None }
+  let rest = source["sqlite:".length():].to_owned()
+  let sep = ccs_last_index_of(rest, "#")
+  guard sep >= 0 else { return None }
+  let db_path = rest[:sep].to_owned()
+  let session_id = rest[sep + 1:].to_owned()
+  if db_path.is_empty() || session_id.is_empty() {
+    None
+  } else {
+    Some(CcsSqliteSessionSource::{ db_path, session_id })
+  }
+}
+
+///|
+fn ccs_last_index_of(value : String, needle : String) -> Int {
+  let mut offset = 0
+  let mut last = -1
+  while offset < value.length() {
+    match value[offset:].find(needle) {
+      Some(index) => {
+        last = offset + index
+        offset = last + 1
+      }
+      None => return last
+    }
+  }
+  last
+}
+
+///|
+async fn ccs_validate_sqlite_db_path(
+  db_path : String,
+  expected_path : String,
+  provider_label : String,
+) -> Result[Unit, String] {
+  let db_resolved = @fsx.resolve(db_path) catch {
+    error => return Err("Failed to canonicalize SQLite database path: \{error}")
+  }
+  let expected_resolved = @fsx.resolve(expected_path) catch {
+    error =>
+      return Err(
+        "Failed to canonicalize expected \{provider_label} database path: \{error}",
+      )
+  }
+  if db_resolved != expected_resolved {
+    return Err("SQLite path does not match expected \{provider_label} database")
+  }
+  Ok(())
+}
+
+///|
+async fn ccs_sqlite_count_session(
+  db_path : String,
+  table : String,
+  id_column : String,
+  session_id : String,
+) -> Result[Int, String] {
+  let rows = match
+    ccs_sqlite_json_rows(
+      db_path,
+      "SELECT COUNT(*) AS deleted FROM \{table} WHERE \{id_column} = \{ccs_sqlite_quote(session_id)};",
+      read_only=true,
+    ) {
+    Ok(rows) => rows
+    Err(error) => return Err(error)
+  }
+  guard rows.length() > 0 && rows[0] is Object(obj) else { return Ok(0) }
+  Ok(ccs_json_int64(obj.get("deleted")).unwrap_or(0L).to_int())
+}
+
+///|
+async fn ccs_sqlite_json_rows(
+  db_path : String,
+  query : String,
+  read_only~ : Bool,
+) -> Result[Array[Json], String] {
+  let process = try {
+    if read_only {
+      @spawn.spawn(
+        "sqlite3",
+        ["-readonly", "-json", db_path, query],
+        timeout=10000,
+      )
+    } else {
+      @spawn.spawn("sqlite3", ["-json", db_path, query], timeout=10000)
+    }
+  } catch {
+    error => return Err("SQLite query failed \{db_path}: \{error}")
+  }
+  if process.status != 0 {
+    return Err("SQLite query failed \{db_path}: \{process.stderr.trim()}")
+  }
+  if process.stdout.trim().is_empty() {
+    return Ok([])
+  }
+  let parsed = @json.parse(process.stdout) catch {
+    error => return Err("SQLite JSON parse failed: \{error}")
+  }
+  guard parsed is Array(rows) else {
+    return Err("SQLite JSON output was not an array")
+  }
+  Ok(rows)
+}
+
+///|
+async fn ccs_sqlite_exec(
+  db_path : String,
+  query : String,
+) -> Result[Unit, String] {
+  let process = @spawn.spawn("sqlite3", [db_path, query], timeout=10000) catch {
+    error => return Err("SQLite query failed \{db_path}: \{error}")
+  }
+  if process.status != 0 {
+    return Err("SQLite query failed \{db_path}: \{process.stderr.trim()}")
+  }
+  Ok(())
+}
+
+///|
+fn ccs_sqlite_quote(value : String) -> String {
+  "'\{value.replace_all(old="'", new="''")}'"
+}
+
+///|
+fn ccs_json_string(value : Json?) -> String? {
+  match value {
+    Some(String(value)) => Some(value)
+    Some(Number(n, ..)) => Some(n.to_string())
+    _ => None
+  }
+}
+
+///|
+fn ccs_json_int64(value : Json?) -> Int64? {
+  match value {
+    Some(Number(n, ..)) => Some(n.to_int64())
+    Some(String(raw)) =>
+      Some(@string.parse_int64(raw.trim().to_owned(), base=10)) catch {
+        _ => None
+      }
+    _ => None
+  }
 }
 
 ///|

@@ -59,6 +59,104 @@ test "ccs delete sessions parser accepts raw arrays and items wrapper" {
 }
 
 ///|
+async test "ccs opencode sqlite sessions scan load and delete" {
+  @fsx.with_temporary_directory("moonstat-opencode-sqlite-XXXXXX", tmpdir => {
+    let db_path = @pathx.join(tmpdir, "opencode.db")
+    let setup =
+      #|CREATE TABLE session(id TEXT PRIMARY KEY, title TEXT, directory TEXT, time_created INTEGER, time_updated INTEGER);
+      #|CREATE TABLE message(id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+      #|CREATE TABLE part(message_id TEXT, session_id TEXT, time_created INTEGER, data TEXT);
+      #|INSERT INTO session VALUES('ses_1', '', '/tmp/open project', 1770000000000, 1770000005000);
+      #|INSERT INTO message VALUES('msg_1', 'ses_1', 1770000001000, 1770000002000, '{"role":"assistant"}');
+      #|INSERT INTO part VALUES('msg_1', 'ses_1', 1770000001001, '{"type":"text","text":"hello"}');
+      #|INSERT INTO part VALUES('msg_1', 'ses_1', 1770000001002, '{"type":"tool","tool":"Bash"}');
+    let created = @spawn.spawn("sqlite3", [db_path, setup], timeout=10000)
+    assert_eq(created.status, 0)
+
+    let rows = ccs_sqlite_json_rows(
+      db_path,
+      "SELECT id, title, directory, time_created, time_updated FROM session ORDER BY time_updated DESC",
+      read_only=true,
+    ).unwrap()
+    let sessions = ccs_opencode_sqlite_rows_to_sessions(db_path, rows)
+    assert_eq(sessions.length(), 1)
+    assert_eq(sessions[0].session_id, "ses_1")
+    assert_eq(sessions[0].title, Some("open project"))
+    assert_eq(sessions[0].source_path, Some("sqlite:\{db_path}:ses_1"))
+    assert_eq(sessions[0].resume_command, Some("opencode session resume ses_1"))
+
+    let messages = ccs_load_session_messages(
+      "opencode",
+      "sqlite:\{db_path}:ses_1",
+    ).unwrap()
+    assert_eq(messages.length(), 1)
+    assert_eq(messages[0].role, "assistant")
+    assert_eq(messages[0].content, "hello\n[Tool: Bash]")
+
+    assert_eq(
+      ccs_delete_opencode_sqlite_session_with_expected(
+        "ses_1",
+        "sqlite:\{db_path}:ses_1",
+        db_path,
+      ),
+      Ok(true),
+    )
+    let after = ccs_sqlite_json_rows(
+      db_path,
+      "SELECT id, title, directory, time_created, time_updated FROM session ORDER BY time_updated DESC",
+      read_only=true,
+    ).unwrap()
+    assert_eq(ccs_opencode_sqlite_rows_to_sessions(db_path, after).length(), 0)
+  })
+}
+
+///|
+async test "ccs hermes sqlite sessions scan load and delete" {
+  @fsx.with_temporary_directory("moonstat-hermes-sqlite-XXXXXX", tmpdir => {
+    let db_path = @pathx.join(tmpdir, "state.db")
+    let setup =
+      #|CREATE TABLE sessions(id TEXT PRIMARY KEY, title TEXT, cwd TEXT, started_at INTEGER, ended_at INTEGER);
+      #|CREATE TABLE messages(session_id TEXT, role TEXT, content TEXT, created_at INTEGER);
+      #|INSERT INTO sessions VALUES('h1', 'Hermes title', '/tmp/hermes', 1770000000, 1770000060);
+      #|INSERT INTO messages VALUES('h1', 'user', 'hi hermes', 1770000000);
+      #|INSERT INTO messages VALUES('h1', 'assistant', 'hello hermes', 1770000001);
+    let created = @spawn.spawn("sqlite3", [db_path, setup], timeout=10000)
+    assert_eq(created.status, 0)
+
+    let rows = ccs_sqlite_json_rows(
+      db_path,
+      "SELECT * FROM sessions ORDER BY rowid DESC LIMIT 500",
+      read_only=true,
+    ).unwrap()
+    let sessions = ccs_hermes_sqlite_rows_to_sessions(db_path, rows)
+    assert_eq(sessions.length(), 1)
+    assert_eq(sessions[0].session_id, "h1")
+    assert_eq(sessions[0].title, Some("Hermes title"))
+    assert_eq(sessions[0].source_path, Some("sqlite:\{db_path}#h1"))
+
+    let messages = ccs_load_session_messages("hermes", "sqlite:\{db_path}#h1").unwrap()
+    assert_eq(messages.length(), 2)
+    assert_eq(messages[0].role, "user")
+    assert_eq(messages[1].content, "hello hermes")
+
+    assert_eq(
+      ccs_delete_hermes_sqlite_session_with_expected(
+        "h1",
+        "sqlite:\{db_path}#h1",
+        db_path,
+      ),
+      Ok(true),
+    )
+    let after = ccs_sqlite_json_rows(
+      db_path,
+      "SELECT * FROM sessions ORDER BY rowid DESC LIMIT 500",
+      read_only=true,
+    ).unwrap()
+    assert_eq(ccs_hermes_sqlite_rows_to_sessions(db_path, after).length(), 0)
+  })
+}
+
+///|
 test "ccs session terminal target follows CCS preferred terminal aliases" {
   assert_eq(ccs_session_terminal_target(None), "terminal")
   assert_eq(ccs_session_terminal_target(Some("iterm2")), "iterm")
