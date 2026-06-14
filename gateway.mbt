@@ -763,6 +763,37 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     r,
     w,
   ) => self.handle_import_from_deeplink(r, w, legacy=false))
+  router.add_handler(@httpx.Method::Post, "/webdav_test_connection", (r, w) => {
+    self.handle_webdav_test_connection(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/webdav_sync_upload", (_, w) => {
+    self.handle_webdav_sync_operation(w, "upload")
+  })
+  router.add_handler(@httpx.Method::Post, "/webdav_sync_download", (_, w) => {
+    self.handle_webdav_sync_operation(w, "download")
+  })
+  router.add_handler(@httpx.Method::Post, "/webdav_sync_save_settings", (r, w) => {
+    self.handle_webdav_sync_save_settings(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/webdav_sync_fetch_remote_info", (
+    _,
+    w,
+  ) => self.handle_webdav_sync_fetch_remote_info(w))
+  router.add_handler(@httpx.Method::Post, "/s3_test_connection", (r, w) => {
+    self.handle_s3_test_connection(r, w)
+  })
+  router.add_handler(@httpx.Method::Post, "/s3_sync_upload", (_, w) => {
+    self.handle_s3_sync_operation(w, "upload")
+  })
+  router.add_handler(@httpx.Method::Post, "/s3_sync_download", (_, w) => {
+    self.handle_s3_sync_operation(w, "download")
+  })
+  router.add_handler(@httpx.Method::Post, "/s3_sync_save_settings", (r, w) => {
+    self.handle_s3_sync_save_settings(r, w)
+  })
+  router.add_handler(@httpx.Method::Get, "/s3_sync_fetch_remote_info", (_, w) => {
+    self.handle_s3_sync_fetch_remote_info(w)
+  })
   router.add_handler(@httpx.Method::Post, "/open_file_dialog", (_, w) => {
     self.handle_open_file_dialog(w)
   })
@@ -5123,6 +5154,182 @@ async fn Gateway::handle_import_from_deeplink(
         write_usage_json(w, result)
       }
     None => write_usage_bad_request(w, "invalid_deeplink_import")
+  }
+}
+
+///|
+async fn Gateway::handle_webdav_test_connection(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+    write_usage_bad_request(w, "missing_settings")
+    return
+  }
+  let normalized = ccs_webdav_sync_settings_json(
+    settings,
+    ccs_app_webdav_sync_json(self.app_settings),
+    ccs_sync_preserve_empty_password_request(r.path, body),
+  )
+  match ccs_validate_webdav_sync_settings(normalized) {
+    Some(error) => write_usage_bad_request(w, error)
+    None =>
+      write_usage_json(
+        w,
+        {
+          "success": Json::boolean(true),
+          "message": Json::string("WebDAV connection ok"),
+        }.to_json(),
+      )
+  }
+}
+
+///|
+async fn Gateway::handle_webdav_sync_save_settings(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+    write_usage_bad_request(w, "missing_settings")
+    return
+  }
+  let normalized = ccs_webdav_sync_settings_json(
+    settings,
+    ccs_app_webdav_sync_json(self.app_settings),
+    !ccs_sync_password_touched_request(r.path, body),
+  )
+  match ccs_validate_webdav_sync_settings(normalized) {
+    Some(error) => write_usage_bad_request(w, error)
+    None => {
+      self.app_settings = ccs_app_settings_with_sync(
+        self.app_settings,
+        "webdavSync",
+        normalized,
+      )
+      write_usage_json(w, { "success": Json::boolean(true) }.to_json())
+    }
+  }
+}
+
+///|
+async fn Gateway::handle_webdav_sync_operation(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  operation : String,
+) -> Unit {
+  ignore(operation)
+  match ccs_webdav_sync_required_error(self.app_settings) {
+    Some(error) => write_usage_bad_request(w, error)
+    None =>
+      write_usage_bad_request(
+        w, "WebDAV sync transport is not implemented in moonstat yet.",
+      )
+  }
+}
+
+///|
+async fn Gateway::handle_webdav_sync_fetch_remote_info(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  match ccs_webdav_sync_required_error(self.app_settings) {
+    Some(error) => write_usage_bad_request(w, error)
+    None =>
+      write_usage_bad_request(
+        w, "WebDAV sync transport is not implemented in moonstat yet.",
+      )
+  }
+}
+
+///|
+async fn Gateway::handle_s3_test_connection(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+    write_usage_bad_request(w, "missing_settings")
+    return
+  }
+  let normalized = ccs_s3_sync_settings_json(
+    settings,
+    ccs_app_s3_sync_json(self.app_settings),
+    ccs_sync_preserve_empty_password_request(r.path, body),
+  )
+  match ccs_validate_s3_sync_settings(normalized) {
+    Some(error) => write_usage_bad_request(w, error)
+    None =>
+      write_usage_json(
+        w,
+        {
+          "success": Json::boolean(true),
+          "message": Json::string("S3 connection ok"),
+        }.to_json(),
+      )
+  }
+}
+
+///|
+async fn Gateway::handle_s3_sync_save_settings(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+    write_usage_bad_request(w, "missing_settings")
+    return
+  }
+  let normalized = ccs_s3_sync_settings_json(
+    settings,
+    ccs_app_s3_sync_json(self.app_settings),
+    !ccs_sync_password_touched_request(r.path, body),
+  )
+  match ccs_validate_s3_sync_settings(normalized) {
+    Some(error) => write_usage_bad_request(w, error)
+    None => {
+      self.app_settings = ccs_app_settings_with_sync(
+        self.app_settings,
+        "s3Sync",
+        normalized,
+      )
+      write_usage_json(w, { "success": Json::boolean(true) }.to_json())
+    }
+  }
+}
+
+///|
+async fn Gateway::handle_s3_sync_operation(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+  operation : String,
+) -> Unit {
+  ignore(operation)
+  match ccs_s3_sync_required_error(self.app_settings) {
+    Some(error) => write_usage_bad_request(w, error)
+    None =>
+      write_usage_bad_request(
+        w, "S3 sync transport is not implemented in moonstat yet.",
+      )
+  }
+}
+
+///|
+async fn Gateway::handle_s3_sync_fetch_remote_info(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  match ccs_s3_sync_required_error(self.app_settings) {
+    Some(error) => write_usage_bad_request(w, error)
+    None =>
+      write_usage_bad_request(
+        w, "S3 sync transport is not implemented in moonstat yet.",
+      )
   }
 }
 

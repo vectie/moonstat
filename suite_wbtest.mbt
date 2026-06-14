@@ -134,6 +134,18 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(
     routes.contains(Json::string("POST /import_from_deeplink_unified")),
   )
+  assert_true(routes.contains(Json::string("POST /webdav_test_connection")))
+  assert_true(routes.contains(Json::string("POST /webdav_sync_upload")))
+  assert_true(routes.contains(Json::string("POST /webdav_sync_download")))
+  assert_true(routes.contains(Json::string("POST /webdav_sync_save_settings")))
+  assert_true(
+    routes.contains(Json::string("GET /webdav_sync_fetch_remote_info")),
+  )
+  assert_true(routes.contains(Json::string("POST /s3_test_connection")))
+  assert_true(routes.contains(Json::string("POST /s3_sync_upload")))
+  assert_true(routes.contains(Json::string("POST /s3_sync_download")))
+  assert_true(routes.contains(Json::string("POST /s3_sync_save_settings")))
+  assert_true(routes.contains(Json::string("GET /s3_sync_fetch_remote_info")))
   assert_true(routes.contains(Json::string("GET /get_installed_skills")))
   assert_true(routes.contains(Json::string("GET /get_skill_backups")))
   assert_true(routes.contains(Json::string("POST /install_skill_unified")))

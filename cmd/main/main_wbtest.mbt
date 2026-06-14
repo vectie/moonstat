@@ -718,6 +718,26 @@ test "top level ccs config command names build config paths" {
     ),
     "/import_from_deeplink_unified?url=ccswitch%3A%2F%2Fv1%2Fimport%3Fresource%3Dprompt%26app%3Dcodex%26name%3DDaily%26content%3DSGVsbG8",
   )
+  assert_eq(
+    sync_settings_path(
+      [
+        "moonstat", "webdav_sync_save_settings", "--settings", "{\"baseUrl\":\"https://dav.example.com\"}",
+        "--passwordTouched", "false",
+      ],
+      "/webdav_sync_save_settings",
+    ),
+    "/webdav_sync_save_settings?settings=%7B%22baseUrl%22%3A%22https%3A%2F%2Fdav.example.com%22%7D&passwordTouched=false",
+  )
+  assert_eq(
+    sync_settings_path(
+      [
+        "moonstat", "s3_test_connection", "--config", "{\"bucket\":\"moonstat\"}",
+        "--preserve-empty-password", "true",
+      ],
+      "/s3_test_connection",
+    ),
+    "/s3_test_connection?settings=%7B%22bucket%22%3A%22moonstat%22%7D&preserveEmptyPassword=true",
+  )
 }
 
 ///|

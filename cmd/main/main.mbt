@@ -468,6 +468,43 @@ pub async fn start(args : ArrayView[String]) -> Unit {
         deeplink_request_path(arr, "/import_from_deeplink_unified"),
         "Deeplink",
       )
+    ["webdav_test_connection", ..] | ["webdav-test-connection", ..] =>
+      check_json_post_endpoint(
+        arr,
+        sync_settings_path(arr, "/webdav_test_connection"),
+        "Sync",
+      )
+    ["webdav_sync_upload", ..] | ["webdav-sync-upload", ..] =>
+      check_json_post_endpoint(arr, "/webdav_sync_upload", "Sync")
+    ["webdav_sync_download", ..] | ["webdav-sync-download", ..] =>
+      check_json_post_endpoint(arr, "/webdav_sync_download", "Sync")
+    ["webdav_sync_save_settings", ..] | ["webdav-sync-save-settings", ..] =>
+      check_json_post_endpoint(
+        arr,
+        sync_settings_path(arr, "/webdav_sync_save_settings"),
+        "Sync",
+      )
+    ["webdav_sync_fetch_remote_info", ..]
+    | ["webdav-sync-fetch-remote-info", ..] =>
+      check_usage_endpoint(arr, "/webdav_sync_fetch_remote_info")
+    ["s3_test_connection", ..] | ["s3-test-connection", ..] =>
+      check_json_post_endpoint(
+        arr,
+        sync_settings_path(arr, "/s3_test_connection"),
+        "Sync",
+      )
+    ["s3_sync_upload", ..] | ["s3-sync-upload", ..] =>
+      check_json_post_endpoint(arr, "/s3_sync_upload", "Sync")
+    ["s3_sync_download", ..] | ["s3-sync-download", ..] =>
+      check_json_post_endpoint(arr, "/s3_sync_download", "Sync")
+    ["s3_sync_save_settings", ..] | ["s3-sync-save-settings", ..] =>
+      check_json_post_endpoint(
+        arr,
+        sync_settings_path(arr, "/s3_sync_save_settings"),
+        "Sync",
+      )
+    ["s3_sync_fetch_remote_info", ..] | ["s3-sync-fetch-remote-info", ..] =>
+      check_usage_endpoint(arr, "/s3_sync_fetch_remote_info")
     ["open_file_dialog", ..] | ["open-file-dialog", ..] =>
       check_usage_endpoint(arr, "/open_file_dialog")
     ["open_zip_file_dialog", ..] | ["open-zip-file-dialog", ..] =>
@@ -2729,6 +2766,27 @@ fn deeplink_request_path(args : Array[String], base_path : String) -> String {
         Some(url) => query.push(cli_query_pair("url", url))
         None => ()
       }
+  }
+  cli_path_with_query(base_path, query)
+}
+
+///|
+fn sync_settings_path(args : Array[String], base_path : String) -> String {
+  let query : Array[String] = []
+  match parse_string_arg_any(args, "--settings", "--config") {
+    Some(settings) => query.push(cli_query_pair("settings", settings))
+    None => ()
+  }
+  match
+    parse_string_arg_any(
+      args, "--preserve-empty-password", "--preserveEmptyPassword",
+    ) {
+    Some(value) => query.push(cli_query_pair("preserveEmptyPassword", value))
+    None => ()
+  }
+  match parse_string_arg_any(args, "--password-touched", "--passwordTouched") {
+    Some(value) => query.push(cli_query_pair("passwordTouched", value))
+    None => ()
   }
   cli_path_with_query(base_path, query)
 }
