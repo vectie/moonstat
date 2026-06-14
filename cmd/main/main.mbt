@@ -530,8 +530,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       )
     ["delete_session", ..] | ["delete-session", ..] =>
       check_json_post_endpoint(arr, delete_session_path(arr), "Session")
-    ["delete_sessions", ..] | ["delete-sessions", ..] =>
-      check_json_post_endpoint(arr, "/delete_sessions", "Session")
+    ["delete_sessions", ..] | ["delete-sessions", ..] => delete_sessions(arr)
     ["read_omo_local_file", ..] | ["read-omo-local-file", ..] =>
       check_usage_endpoint(arr, "/read_omo_local_file")
     ["get_current_omo_provider_id", ..] | ["get-current-omo-provider-id", ..] =>
@@ -1262,6 +1261,7 @@ fn print_help() -> Unit {
   println("  --server <json>     MCP server JSON for ccs MCP upsert commands")
   println("  --command <cmd>     MCP command name for validation/upsert")
   println("  --content <text>    Prompt content for ccs prompt upsert commands")
+  println("  --items <json>      JSON item array for ccs bulk commands")
   println("  --script-code <json> JSON UsageResult for ccs testUsageScript")
   println("  --value <value>    Value for ccs proxy scalar setter commands")
   println(
@@ -2031,6 +2031,21 @@ async fn save_settings(args : Array[String]) -> Unit {
     return
   }
   post_json_body_endpoint(args, "/save_settings", settings, "Settings")
+}
+
+///|
+async fn delete_sessions(args : Array[String]) -> Unit {
+  guard delete_sessions_body(args) is Some(body) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --items JSON")
+    return
+  }
+  post_json_body_endpoint(args, "/delete_sessions", body, "Session")
+}
+
+///|
+fn delete_sessions_body(args : Array[String]) -> String? {
+  parse_string_arg_any(args, "--items", "--body")
 }
 
 ///|

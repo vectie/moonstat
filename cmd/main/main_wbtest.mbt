@@ -402,6 +402,20 @@ test "top level ccs proxy command names build command alias paths" {
     ]),
     Some("/set_hermes_memory_enabled?kind=user&enabled=false"),
   )
+  assert_eq(
+    delete_sessions_body([
+      "moonstat", "delete_sessions", "--items", "[{\"providerId\":\"codex\",\"sessionId\":\"s1\",\"sourcePath\":\"/tmp/s1.jsonl\"}]",
+    ]),
+    Some(
+      "[{\"providerId\":\"codex\",\"sessionId\":\"s1\",\"sourcePath\":\"/tmp/s1.jsonl\"}]",
+    ),
+  )
+  assert_eq(
+    delete_sessions_body([
+      "moonstat", "delete_sessions", "--body", "{\"items\":[]}",
+    ]),
+    Some("{\"items\":[]}"),
+  )
 }
 
 ///|
