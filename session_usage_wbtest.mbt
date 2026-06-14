@@ -199,6 +199,35 @@ test "codex session import restores state before offset skip" {
 }
 
 ///|
+test "codex session import accepts last token usage deltas like ccs" {
+  let stats = TrafficStats::new()
+  let content =
+    #|{"type":"session_meta","payload":{"session_id":"codex-last"}}
+    #|{"type":"turn_context","payload":{"info":{"model":"OpenAI/GPT-5.5-2026-05-14"}}}
+    #|{"type":"event_msg","timestamp":"1970-01-01T00:00:10Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":10,"cached_input_tokens":20,"output_tokens":2}}}}
+    #|{"type":"event_msg","timestamp":"1970-01-01T00:00:20Z","payload":{"type":"token_count","info":{"model_name":"OpenAI/GPT-5.5-2026-05-14","last_token_usage":{"input_tokens":5,"cache_read_input_tokens":3,"output_tokens":4}}}}
+  let result = stats.ingest_codex_session_jsonl(
+    file_path="/tmp/codex/last-token.jsonl",
+    content~,
+    last_modified=1L,
+  )
+  assert_eq(result.imported, 2)
+  assert_eq(stats.request_logs.length(), 2)
+  let first = stats.request_logs[0]
+  assert_eq(first.request_id, "codex_session:codex-last:1")
+  assert_eq(first.model, "gpt-5.5")
+  assert_eq(first.input_tokens, 10)
+  assert_eq(first.cache_read_tokens, 10)
+  assert_eq(first.output_tokens, 2)
+  let second = stats.request_logs[1]
+  assert_eq(second.request_id, "codex_session:codex-last:2")
+  assert_eq(second.model, "gpt-5.5")
+  assert_eq(second.input_tokens, 5)
+  assert_eq(second.cache_read_tokens, 3)
+  assert_eq(second.output_tokens, 4)
+}
+
+///|
 test "gemini session import merges thoughts into output like ccs" {
   let stats = TrafficStats::new()
   let content =
