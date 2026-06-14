@@ -6666,6 +6666,7 @@ async fn Gateway::handle_proxy_stop_with_restore(
 ) -> Unit {
   self.proxy_enabled = false
   self.proxy_clear_takeover()
+  self.proxy_clear_enabled_apps_for_manual_stop()
   write_usage_json(w, { "ok": Json::boolean(true) }.to_json())
 }
 
@@ -8668,6 +8669,13 @@ fn Gateway::proxy_clear_takeover(self : Gateway) -> Unit {
       "claude", "claude-desktop", "codex", "gemini", "opencode", "openclaw", "hermes",
     ] {
     self.proxy_takeover_enabled.set(app_type, false)
+  }
+}
+
+///|
+fn Gateway::proxy_clear_enabled_apps_for_manual_stop(self : Gateway) -> Unit {
+  for app_type in ["claude", "codex", "gemini"] {
+    self.proxy_app_enabled.set(app_type, false)
   }
 }
 

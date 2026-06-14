@@ -547,6 +547,24 @@ test "proxy lifecycle state matches ccs command aliases" {
   assert_true(gateway.proxy_takeover_active())
   gateway.proxy_clear_takeover()
   assert_false(gateway.proxy_takeover_active())
+  gateway.proxy_enabled = true
+  gateway.proxy_app_enabled.set("claude", true)
+  gateway.proxy_app_enabled.set("codex", true)
+  gateway.proxy_app_enabled.set("gemini", true)
+  gateway.provider_router.set_failover_queue("codex", ["codex-oauth"])
+  gateway.provider_router.set_auto_failover("codex", true)
+  gateway.proxy_clear_enabled_apps_for_manual_stop()
+  assert_false(gateway.proxy_app_enabled_for_app("claude"))
+  assert_false(gateway.proxy_app_enabled_for_app("codex"))
+  assert_false(gateway.proxy_app_enabled_for_app("gemini"))
+  assert_true(gateway.provider_router.auto_failover_enabled_for_app("codex"))
+  json_inspect(gateway.provider_router.failover_queue_json("codex"), content=[
+    {
+      "providerId": "codex-oauth",
+      "providerName": "Codex OAuth",
+      "sortIndex": 0,
+    },
+  ])
 }
 
 ///|
