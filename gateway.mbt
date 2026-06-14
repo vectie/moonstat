@@ -13804,6 +13804,16 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
     false,
     request_path=request_path[:],
   ).replace_all(old="__MODEL__", new=normalize_gemini_model_id(upstream_model))
+  self.logger.debug(
+    prompt_cache_trace_message(
+      app_type,
+      provider.provider_id,
+      endpoint,
+      Some(api_format),
+      upstream_body,
+      session_id is Some(_),
+    ),
+  )
   let outbound = self.claude_provider_outbound_body(
     provider, upstream_body, api_format, session_id,
   )
@@ -14953,6 +14963,16 @@ async fn Gateway::forward_streaming_claude_compatible_request(
     true,
     request_path=request_path[:],
   ).replace_all(old="__MODEL__", new=normalize_gemini_model_id(upstream_model))
+  self.logger.debug(
+    prompt_cache_trace_message(
+      app_type,
+      provider.provider_id,
+      endpoint,
+      Some(api_format),
+      upstream_body,
+      session_id is Some(_),
+    ),
+  )
   let outbound = self.claude_provider_outbound_body(
     provider, upstream_body, api_format, session_id,
   )

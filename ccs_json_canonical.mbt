@@ -50,3 +50,82 @@ fn canonicalize_tool_arguments(value : Json?) -> String {
     None => "{}"
   }
 }
+
+///|
+fn short_value_hash(value : Json?) -> String {
+  match value {
+    None => "absent"
+    Some(value) =>
+      short_sha256_hex(@encoding/utf8.encode(canonical_json_string(value)))
+  }
+}
+
+///|
+fn short_sha256_hex(bytes : Bytes) -> String {
+  let digest = @crypto.sha256(bytes)
+  let builder = StringBuilder::new()
+  for i in 0..<8 {
+    let value = digest[i].to_int()
+    builder.write_char(ccs_json_hex_digit(value / 16))
+    builder.write_char(ccs_json_hex_digit(value % 16))
+  }
+  builder.to_string()
+}
+
+///|
+fn ccs_json_hex_digit(value : Int) -> Char {
+  if value < 10 {
+    ('0'.to_int() + value).unsafe_to_char()
+  } else {
+    ('a'.to_int() + value - 10).unsafe_to_char()
+  }
+}
+
+///|
+fn prompt_cache_trace_message(
+  app_type : String,
+  provider_id : String,
+  endpoint : String,
+  api_format : String?,
+  body : Json,
+  session_client_provided : Bool,
+) -> String {
+  let prompt_cache_key = match body {
+    Object(obj) =>
+      match obj.get("prompt_cache_key") {
+        Some(String(key)) => "present(len=\{key.length()})"
+        _ => "absent"
+      }
+    _ => "absent"
+  }
+  let store = json_field_for_cache_trace(body, "store")
+  let stream = json_field_for_cache_trace(body, "stream")
+  let format = api_format.unwrap_or("native")
+  "[CacheTrace] app=\{app_type}, provider=\{provider_id}, endpoint=\{endpoint}, api_format=\{format}, session_client_provided=\{session_client_provided}, prompt_cache_key=\{prompt_cache_key}, store=\{store}, stream=\{stream}, instructions_hash=\{short_value_hash(json_field(body, "instructions"))}, tools_hash=\{short_value_hash(json_field(body, "tools"))}, input_hash=\{short_value_hash(json_field(body, "input"))}, include_hash=\{short_value_hash(json_field(body, "include"))}, body_hash=\{short_value_hash(Some(body))}"
+}
+
+///|
+fn json_field(body : Json, key : String) -> Json? {
+  match body {
+    Object(obj) => obj.get(key)
+    _ => None
+  }
+}
+
+///|
+fn json_field_for_cache_trace(body : Json, key : String) -> String {
+  match json_field(body, key) {
+    Some(value) => json_value_for_cache_trace(value)
+    None => "absent"
+  }
+}
+
+///|
+fn json_value_for_cache_trace(value : Json) -> String {
+  match value {
+    String(value) => value
+    Array(values) => "array(len=\{values.length()})"
+    Object(values) => "object(len=\{values.keys().count()})"
+    _ => value.stringify()
+  }
+}
