@@ -36,6 +36,22 @@ test "suite manifest publishes moonstat service contract" {
     obj["usage_sync_session_url"],
     Json::string("http://127.0.0.1:15721/usage/sync-session"),
   )
+  assert_eq(
+    obj["stream_check_provider_url"],
+    Json::string("http://127.0.0.1:15721/stream_check_provider"),
+  )
+  assert_eq(
+    obj["stream_check_all_providers_url"],
+    Json::string("http://127.0.0.1:15721/stream_check_all_providers"),
+  )
+  assert_eq(
+    obj["stream_check_config_url"],
+    Json::string("http://127.0.0.1:15721/get_stream_check_config"),
+  )
+  assert_eq(
+    obj["config_status_url"],
+    Json::string("http://127.0.0.1:15721/get_config_status"),
+  )
   assert_eq(obj["usage_store_dir"], Json::string(default_moonstat_stats_dir()))
   assert_eq(
     obj["usage_request_logs_file"],
@@ -69,6 +85,7 @@ test "suite manifest publishes moonstat service contract" {
   }
   assert_true(capabilities.contains(Json::string("openai-compatible-proxy")))
   assert_true(capabilities.contains(Json::string("ccs-usage-statistics")))
+  assert_true(capabilities.contains(Json::string("ccs-stream-check")))
   assert_true(capabilities.contains(Json::string("ccs-skills-management")))
   assert_true(capabilities.contains(Json::string("suite-discovery")))
   assert_true(routes.contains(Json::string("GET /participant/register")))
@@ -88,6 +105,12 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(
     routes.contains(Json::string("GET /usage/request-detail/{request_id}")),
   )
+  assert_true(routes.contains(Json::string("GET|POST /stream_check_provider")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /stream_check_all_providers")),
+  )
+  assert_true(routes.contains(Json::string("GET /get_stream_check_config")))
+  assert_true(routes.contains(Json::string("POST /save_stream_check_config")))
   assert_true(routes.contains(Json::string("GET /auth_get_status")))
   assert_true(routes.contains(Json::string("GET /auth_list_accounts")))
   assert_true(routes.contains(Json::string("POST /auth_start_login")))
@@ -193,6 +216,8 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("POST /switch_provider_test_hook")))
   assert_true(routes.contains(Json::string("POST /import_default_config")))
   assert_true(routes.contains(Json::string("POST /open_provider_terminal")))
+  assert_true(routes.contains(Json::string("GET /get_claude_config_status")))
+  assert_true(routes.contains(Json::string("GET /get_config_status")))
   assert_true(routes.contains(Json::string("GET /get_claude_desktop_status")))
   assert_true(routes.contains(Json::string("POST /v1/messages")))
   assert_true(routes.contains(Json::string("POST /login")))
@@ -235,6 +260,10 @@ test "suite manifest publishes moonstat service contract" {
     fail("expected moontown integration")
   }
   assert_eq(
+    moontown["stream_check_all_providers_url"],
+    Json::string("http://127.0.0.1:15721/stream_check_all_providers"),
+  )
+  assert_eq(
     moontown["usage_provider_limits_url"],
     Json::string("http://127.0.0.1:15721/usage/provider-limits"),
   )
@@ -244,6 +273,14 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(
     moondesk["claude_desktop_base_url"],
     Json::string("http://127.0.0.1:15721/claude-desktop/v1"),
+  )
+  assert_eq(
+    moondesk["stream_check_config_url"],
+    Json::string("http://127.0.0.1:15721/get_stream_check_config"),
+  )
+  assert_eq(
+    moondesk["config_status_url"],
+    Json::string("http://127.0.0.1:15721/get_config_status"),
   )
   guard obj["commands"] is Object(commands) else { fail("expected commands") }
   assert_eq(commands["start"], Json::string("moonstat start --port 15721"))
@@ -255,6 +292,10 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(
     commands["suite_write_status"],
     Json::string("moonstat suite write-status"),
+  )
+  assert_eq(
+    commands["stream_check_all"],
+    Json::string("moonstat stream-check all --app-type <app_type>"),
   )
   assert_eq(obj["cli"], obj["commands"])
 }
@@ -293,6 +334,14 @@ async test "suite status writes discovery file" {
       Json::string("http://127.0.0.1:17000/usage/sync-session"),
     )
     assert_eq(
+      obj["stream_check_all_providers_url"],
+      Json::string("http://127.0.0.1:17000/stream_check_all_providers"),
+    )
+    assert_eq(
+      obj["config_status_url"],
+      Json::string("http://127.0.0.1:17000/get_config_status"),
+    )
+    assert_eq(
       obj["usage_request_logs_file"],
       Json::string(
         @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
@@ -322,6 +371,7 @@ async test "suite status writes discovery file" {
       fail("expected capabilities")
     }
     assert_true(capabilities.contains(Json::string("session-usage-sync")))
+    assert_true(capabilities.contains(Json::string("ccs-stream-check")))
     guard obj["suite_integrations"] is Object(integrations) else {
       fail("expected suite integrations")
     }
@@ -331,6 +381,10 @@ async test "suite status writes discovery file" {
     assert_eq(
       moondesk["models_url"],
       Json::string("http://127.0.0.1:17000/v1/models"),
+    )
+    assert_eq(
+      moondesk["stream_check_provider_url"],
+      Json::string("http://127.0.0.1:17000/stream_check_provider"),
     )
     guard obj["commands"] is Object(commands) else { fail("expected commands") }
     assert_eq(commands["start"], Json::string("moonstat start --port 17000"))

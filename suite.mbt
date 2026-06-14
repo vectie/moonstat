@@ -64,6 +64,18 @@ pub fn moonstat_suite_manifest_json(
     "usage_request_detail_url": Json::string(
       "\{moonstat_base_url(host, port)}/usage/request-detail/{request_id}",
     ),
+    "stream_check_provider_url": Json::string(
+      "\{moonstat_base_url(host, port)}/stream_check_provider",
+    ),
+    "stream_check_all_providers_url": Json::string(
+      "\{moonstat_base_url(host, port)}/stream_check_all_providers",
+    ),
+    "stream_check_config_url": Json::string(
+      "\{moonstat_base_url(host, port)}/get_stream_check_config",
+    ),
+    "config_status_url": Json::string(
+      "\{moonstat_base_url(host, port)}/get_config_status",
+    ),
     "usage_store_dir": Json::string(default_moonstat_stats_dir()),
     "usage_request_logs_file": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
@@ -154,6 +166,18 @@ pub fn moonstat_suite_status_json(
     ),
     "usage_request_detail_url": Json::string(
       "\{moonstat_base_url(host, port)}/usage/request-detail/{request_id}",
+    ),
+    "stream_check_provider_url": Json::string(
+      "\{moonstat_base_url(host, port)}/stream_check_provider",
+    ),
+    "stream_check_all_providers_url": Json::string(
+      "\{moonstat_base_url(host, port)}/stream_check_all_providers",
+    ),
+    "stream_check_config_url": Json::string(
+      "\{moonstat_base_url(host, port)}/get_stream_check_config",
+    ),
+    "config_status_url": Json::string(
+      "\{moonstat_base_url(host, port)}/get_config_status",
     ),
     "usage_store_dir": Json::string(default_moonstat_stats_dir()),
     "usage_request_logs_file": Json::string(
@@ -256,6 +280,9 @@ fn moonstat_suite_integrations_json(
       "health_url": Json::string("\{base_url}/health"),
       "usage_summary_url": Json::string("\{base_url}/usage/summary"),
       "usage_logs_url": Json::string("\{base_url}/usage/logs"),
+      "stream_check_all_providers_url": Json::string(
+        "\{base_url}/stream_check_all_providers",
+      ),
       "env": Json::object({
         "OPENAI_BASE_URL": Json::string(openai_base_url),
         "ANTHROPIC_BASE_URL": Json::string(anthropic_base_url),
@@ -279,6 +306,9 @@ fn moonstat_suite_integrations_json(
       "health_url": Json::string("\{base_url}/health"),
       "status_url": Json::string("\{base_url}/status"),
       "stats_url": Json::string("\{base_url}/stats"),
+      "stream_check_all_providers_url": Json::string(
+        "\{base_url}/stream_check_all_providers",
+      ),
       "usage_provider_limits_url": Json::string(
         "\{base_url}/usage/provider-limits",
       ),
@@ -292,6 +322,16 @@ fn moonstat_suite_integrations_json(
       "stats_url": Json::string("\{base_url}/stats"),
       "models_url": Json::string("\{openai_base_url}/models"),
       "claude_desktop_base_url": Json::string(claude_desktop_base_url),
+      "stream_check_provider_url": Json::string(
+        "\{base_url}/stream_check_provider",
+      ),
+      "stream_check_all_providers_url": Json::string(
+        "\{base_url}/stream_check_all_providers",
+      ),
+      "stream_check_config_url": Json::string(
+        "\{base_url}/get_stream_check_config",
+      ),
+      "config_status_url": Json::string("\{base_url}/get_config_status"),
     }),
   })
 }
@@ -300,8 +340,8 @@ fn moonstat_suite_integrations_json(
 fn moonstat_suite_capabilities() -> Array[String] {
   [
     "openai-compatible-proxy", "anthropic-compatible-proxy", "claude-desktop-gateway",
-    "gemini-compatible-proxy", "ccs-usage-statistics", "session-usage-sync", "provider-model-catalog",
-    "ccs-skills-management", "suite-discovery", "codex-config-install",
+    "gemini-compatible-proxy", "ccs-usage-statistics", "ccs-stream-check", "session-usage-sync",
+    "provider-model-catalog", "ccs-skills-management", "suite-discovery", "codex-config-install",
   ]
 }
 
@@ -326,6 +366,16 @@ fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
     "usage_pricing": Json::string("moonstat usage pricing"),
     "usage_detail": Json::string(
       "moonstat usage detail --request-id <request_id>",
+    ),
+    "stream_check_provider": Json::string(
+      "moonstat stream-check provider --app-type <app_type> --provider-id <provider_id>",
+    ),
+    "stream_check_all": Json::string(
+      "moonstat stream-check all --app-type <app_type>",
+    ),
+    "stream_check_config": Json::string("moonstat stream-check config"),
+    "stream_check_config_set": Json::string(
+      "moonstat stream-check config set --timeout-secs <seconds>",
     ),
     "codex_install": Json::string(
       "moonstat codex install --port \{port} --model \{model}",
@@ -357,34 +407,36 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET /usage/trends", "GET /usage/provider-limits", "GET /usage/model-stats",
     "GET|POST /usage/data-sources", "POST /usage/sync-session", "GET /usage/model-pricing",
     "POST /usage/model-pricing", "DELETE /usage/model-pricing", "GET /usage/request-detail/{request_id}",
-    "GET /v1/models", "GET /claude-desktop/v1/models", "POST /v1/messages", "POST /claude/v1/messages",
-    "POST /claude-desktop/v1/messages", "POST /responses", "POST /v1/responses",
-    "POST /v1/v1/responses", "POST /codex/v1/responses", "POST /responses/compact",
-    "POST /v1/responses/compact", "POST /v1/v1/responses/compact", "POST /codex/v1/responses/compact",
-    "POST /chat/completions", "POST /v1/chat/completions", "POST /v1/v1/chat/completions",
-    "POST /codex/v1/chat/completions", "POST /login", "GET /auth_get_status", "GET /auth_list_accounts",
-    "POST /auth_start_login", "POST /auth_poll_for_account", "POST /auth_remove_account",
-    "POST /auth_set_default_account", "POST /auth_logout", "GET /copilot_get_auth_status",
-    "GET /copilot_list_accounts", "GET /copilot_is_authenticated", "POST /copilot_start_device_flow",
-    "POST /copilot_poll_for_auth", "POST /copilot_poll_for_account", "POST /copilot_logout",
-    "DELETE /copilot_remove_account", "POST /copilot_set_default_account", "GET /copilot_get_token",
-    "GET /copilot_get_token_for_account", "GET /copilot_get_models", "GET /copilot_get_models_for_account",
-    "GET /copilot_get_usage", "GET /copilot_get_usage_for_account", "GET|POST /open_external",
-    "GET|POST /copy_text_to_clipboard", "GET|POST /check_for_updates", "GET /is_portable_mode",
-    "GET /get_init_error", "GET /get_migration_result", "GET /get_skills_migration_result",
-    "GET|POST /get_tool_versions", "POST /run_tool_lifecycle_action", "GET|POST /probe_tool_installations",
-    "GET|POST /set_window_theme", "GET|POST /enter_lightweight_mode", "GET|POST /exit_lightweight_mode",
-    "GET /is_lightweight_mode", "GET|POST /save_file_dialog", "GET|POST /export_config_to_file",
-    "GET|POST /import_config_from_file", "POST /create_db_backup", "GET /list_db_backups",
-    "POST /restore_db_backup", "POST /rename_db_backup", "DELETE|POST /delete_db_backup",
-    "GET|POST /parse_deeplink", "GET|POST /merge_deeplink_config", "POST /import_from_deeplink",
-    "POST /import_from_deeplink_unified", "POST /webdav_test_connection", "POST /webdav_sync_upload",
-    "POST /webdav_sync_download", "POST /webdav_sync_save_settings", "GET /webdav_sync_fetch_remote_info",
-    "POST /s3_test_connection", "POST /s3_sync_upload", "POST /s3_sync_download",
-    "POST /s3_sync_save_settings", "GET /s3_sync_fetch_remote_info", "GET|POST /list_sessions",
-    "GET|POST /get_session_messages", "POST /launch_session_terminal", "POST /delete_session",
-    "POST /delete_sessions", "GET|POST /read_omo_local_file", "GET|POST /get_current_omo_provider_id",
-    "POST /disable_current_omo", "GET|POST /read_omo_slim_local_file", "GET|POST /get_current_omo_slim_provider_id",
+    "GET|POST /stream_check_provider", "GET|POST /stream_check_all_providers", "GET /get_stream_check_config",
+    "POST /save_stream_check_config", "GET /v1/models", "GET /claude-desktop/v1/models",
+    "POST /v1/messages", "POST /claude/v1/messages", "POST /claude-desktop/v1/messages",
+    "POST /responses", "POST /v1/responses", "POST /v1/v1/responses", "POST /codex/v1/responses",
+    "POST /responses/compact", "POST /v1/responses/compact", "POST /v1/v1/responses/compact",
+    "POST /codex/v1/responses/compact", "POST /chat/completions", "POST /v1/chat/completions",
+    "POST /v1/v1/chat/completions", "POST /codex/v1/chat/completions", "POST /login",
+    "GET /auth_get_status", "GET /auth_list_accounts", "POST /auth_start_login",
+    "POST /auth_poll_for_account", "POST /auth_remove_account", "POST /auth_set_default_account",
+    "POST /auth_logout", "GET /copilot_get_auth_status", "GET /copilot_list_accounts",
+    "GET /copilot_is_authenticated", "POST /copilot_start_device_flow", "POST /copilot_poll_for_auth",
+    "POST /copilot_poll_for_account", "POST /copilot_logout", "DELETE /copilot_remove_account",
+    "POST /copilot_set_default_account", "GET /copilot_get_token", "GET /copilot_get_token_for_account",
+    "GET /copilot_get_models", "GET /copilot_get_models_for_account", "GET /copilot_get_usage",
+    "GET /copilot_get_usage_for_account", "GET|POST /open_external", "GET|POST /copy_text_to_clipboard",
+    "GET|POST /check_for_updates", "GET /is_portable_mode", "GET /get_init_error",
+    "GET /get_migration_result", "GET /get_skills_migration_result", "GET|POST /get_tool_versions",
+    "POST /run_tool_lifecycle_action", "GET|POST /probe_tool_installations", "GET|POST /set_window_theme",
+    "GET|POST /enter_lightweight_mode", "GET|POST /exit_lightweight_mode", "GET /is_lightweight_mode",
+    "GET|POST /save_file_dialog", "GET|POST /export_config_to_file", "GET|POST /import_config_from_file",
+    "POST /create_db_backup", "GET /list_db_backups", "POST /restore_db_backup",
+    "POST /rename_db_backup", "DELETE|POST /delete_db_backup", "GET|POST /parse_deeplink",
+    "GET|POST /merge_deeplink_config", "POST /import_from_deeplink", "POST /import_from_deeplink_unified",
+    "POST /webdav_test_connection", "POST /webdav_sync_upload", "POST /webdav_sync_download",
+    "POST /webdav_sync_save_settings", "GET /webdav_sync_fetch_remote_info", "POST /s3_test_connection",
+    "POST /s3_sync_upload", "POST /s3_sync_download", "POST /s3_sync_save_settings",
+    "GET /s3_sync_fetch_remote_info", "GET|POST /list_sessions", "GET|POST /get_session_messages",
+    "POST /launch_session_terminal", "POST /delete_session", "POST /delete_sessions",
+    "GET|POST /read_omo_local_file", "GET|POST /get_current_omo_provider_id", "POST /disable_current_omo",
+    "GET|POST /read_omo_slim_local_file", "GET|POST /get_current_omo_slim_provider_id",
     "POST /disable_current_omo_slim", "GET|POST /open_file_dialog", "GET|POST /open_zip_file_dialog",
     "GET /get_installed_skills", "GET /get_skill_backups", "POST /delete_skill_backup",
     "POST /restore_skill_backup", "POST /install_skill_unified", "POST /uninstall_skill_unified",
@@ -400,9 +452,9 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET /get_default_cost_multiplier", "GET /get_pricing_model_source", "GET /get_default_cost_multiplier_test_hook",
     "POST /set_default_cost_multiplier_test_hook", "GET /get_pricing_model_source_test_hook",
     "POST /set_pricing_model_source_test_hook", "POST /switch_provider_test_hook",
-    "POST /import_default_config", "POST /open_provider_terminal", "GET /get_claude_desktop_status",
-    "GET /get_claude_desktop_default_routes", "POST /import_claude_desktop_providers_from_claude",
-    "POST /ensure_claude_desktop_official_provider", "ANY /v1beta/*path", "ANY /gemini/v1beta/*path",
-    "ANY /gemini/v1/*path",
+    "POST /import_default_config", "POST /open_provider_terminal", "GET /get_claude_config_status",
+    "GET /get_config_status", "GET /get_claude_desktop_status", "GET /get_claude_desktop_default_routes",
+    "POST /import_claude_desktop_providers_from_claude", "POST /ensure_claude_desktop_official_provider",
+    "ANY /v1beta/*path", "ANY /gemini/v1beta/*path", "ANY /gemini/v1/*path",
   ]
 }
