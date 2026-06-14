@@ -2626,6 +2626,17 @@ test "usage pricing validation mirrors ccs invalid price messages" {
 }
 
 ///|
+test "usage decimal validation mirrors ccs frontend regex" {
+  assert_true(usage_non_negative_decimal("0"))
+  assert_true(usage_non_negative_decimal("1.25"))
+  assert_true(usage_non_negative_decimal(" 10 "))
+  assert_false(usage_non_negative_decimal(".5"))
+  assert_false(usage_non_negative_decimal("1."))
+  assert_false(usage_non_negative_decimal("-1"))
+  assert_false(usage_non_negative_decimal("abc"))
+}
+
+///|
 test "usage request detail id accepts ccs get_request_detail query" {
   assert_eq(
     usage_request_detail_id("/get_request_detail?requestId=session%3Amsg%2F1"),

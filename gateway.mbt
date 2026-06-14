@@ -14137,17 +14137,21 @@ fn usage_non_negative_decimal(value : String) -> Bool {
   }
   let mut seen_digit = false
   let mut seen_dot = false
+  let mut digit_after_dot = false
   for ch in trimmed {
     let code = ch.to_int()
     if code >= '0'.to_int() && code <= '9'.to_int() {
       seen_digit = true
-    } else if ch == '.' && !seen_dot {
+      if seen_dot {
+        digit_after_dot = true
+      }
+    } else if ch == '.' && !seen_dot && seen_digit {
       seen_dot = true
     } else {
       return false
     }
   }
-  seen_digit
+  seen_digit && (!seen_dot || digit_after_dot)
 }
 
 ///|
