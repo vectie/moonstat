@@ -246,6 +246,7 @@ pub struct TrafficStats {
   mut current_request_started_at_ms : Int?
   mut current_request_app_type : String?
   mut current_request_model : String?
+  mut current_request_outbound_model : String?
   mut current_request_session_id : String?
   mut current_request_provider_type : String?
   mut current_request_cost_multiplier : String
@@ -295,6 +296,7 @@ pub fn TrafficStats::new() -> TrafficStats {
     current_request_started_at_ms: None,
     current_request_app_type: None,
     current_request_model: None,
+    current_request_outbound_model: None,
     current_request_session_id: None,
     current_request_provider_type: None,
     current_request_cost_multiplier: "1.0",
@@ -345,6 +347,7 @@ pub fn TrafficStats::record_inbound(
   self.current_request_started_at_ms = Some(now.to_int())
   self.current_request_app_type = None
   self.current_request_model = None
+  self.current_request_outbound_model = None
   self.current_request_session_id = None
   self.current_request_provider_type = None
   self.current_request_cost_multiplier = "1.0"
@@ -358,11 +361,13 @@ pub fn TrafficStats::record_request_context(
   self : TrafficStats,
   app_type : String,
   model : String,
+  outbound_model? : String? = None,
   session_id? : String? = None,
   provider_type? : String? = None,
 ) -> Unit {
   self.current_request_app_type = Some(app_type)
   self.current_request_model = Some(model)
+  self.current_request_outbound_model = outbound_model
   self.current_request_session_id = session_id
   self.current_request_provider_type = provider_type
 }
@@ -521,7 +526,10 @@ fn TrafficStats::record_completed_request(
   }
   let app_type = self.current_request_app_type.unwrap_or("unknown")
   let pricing_model = match self.current_request_pricing_model_source {
-    "request" => request_model.unwrap_or(model)
+    "request" =>
+      self.current_request_outbound_model.unwrap_or(
+        request_model.unwrap_or(model),
+      )
     _ => model
   }
   let pricing = find_model_pricing(
@@ -1872,6 +1880,7 @@ fn TrafficStats::finish_request(self : TrafficStats) -> Unit {
   self.current_request_started_at_ms = None
   self.current_request_app_type = None
   self.current_request_model = None
+  self.current_request_outbound_model = None
   self.current_request_session_id = None
   self.current_request_provider_type = None
   self.current_request_is_streaming = false

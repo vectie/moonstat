@@ -232,6 +232,37 @@ test "traffic stats uses ccs session request id for message usage" {
 }
 
 ///|
+test "traffic stats request pricing uses ccs outbound model context" {
+  let stats = TrafficStats::new()
+  stats.record_inbound(64)
+  stats.set_active_target(
+    "claude",
+    "router",
+    "Router",
+    pricing_model_source="request",
+  )
+  stats.record_request_context(
+    "claude",
+    "client-alias",
+    outbound_model=Some("gpt-5"),
+  )
+  stats.record_success_usage(
+    TokenUsage::new(
+      input_tokens=1000,
+      output_tokens=0,
+      model=Some("response-model"),
+    ),
+    128,
+  )
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.model, "response-model")
+  assert_eq(log.request_model, Some("client-alias"))
+  assert_eq(log.pricing_model, Some("gpt-5"))
+  assert_eq(log.total_cost_usd, "0.00125")
+}
+
+///|
 test "traffic stats can price gateway requests with ccs model pricing overrides" {
   let stats = TrafficStats::new()
   stats.record_inbound(64)

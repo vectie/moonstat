@@ -638,6 +638,7 @@ pub struct TrafficStats {
   mut current_request_started_at_ms : Int?
   mut current_request_app_type : String?
   mut current_request_model : String?
+  mut current_request_outbound_model : String?
   mut current_request_session_id : String?
   mut current_request_provider_type : String?
   mut current_request_cost_multiplier : String
@@ -659,7 +660,7 @@ pub fn TrafficStats::provider_stats_json(Self, app_type? : String?) -> Json
 pub fn TrafficStats::record_bad_request(Self) -> Unit
 pub fn TrafficStats::record_inbound(Self, Int) -> Unit
 pub fn TrafficStats::record_internal_error(Self) -> Unit
-pub fn TrafficStats::record_request_context(Self, String, String, session_id? : String?, provider_type? : String?) -> Unit
+pub fn TrafficStats::record_request_context(Self, String, String, outbound_model? : String?, session_id? : String?, provider_type? : String?) -> Unit
 pub fn TrafficStats::record_request_log(Self, RequestLog) -> Unit
 pub fn TrafficStats::record_stream_mode(Self, Bool) -> Unit
 pub fn TrafficStats::record_success(Self, Int, Int, Int) -> Unit

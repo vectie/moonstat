@@ -13141,6 +13141,7 @@ async fn Gateway::handle_messages(
           self.stats.record_request_context(
             app_type,
             anthropic_request.model,
+            outbound_model=Some(model),
             session_id~,
             provider_type=Some("claude"),
           )
@@ -13228,6 +13229,13 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  self.stats.record_request_context(
+    app_type,
+    request.model,
+    outbound_model=Some(upstream_model),
+    session_id~,
+    provider_type=Some("claude"),
+  )
   let api_format = provider.claude_api_format_for_model(upstream_model)
   let upstream_body = prepare_upstream_request_body(
     claude_request_json_for_upstream(request_json, upstream_model),
@@ -14319,6 +14327,13 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  self.stats.record_request_context(
+    app_type,
+    request.model,
+    outbound_model=Some(upstream_model),
+    session_id~,
+    provider_type=Some("claude"),
+  )
   let api_format = provider.claude_api_format_for_model(upstream_model)
   let upstream_body = prepare_upstream_request_body(
     claude_stream_request_json_for_upstream(request_json, upstream_model),
