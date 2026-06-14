@@ -574,7 +574,13 @@ fn TrafficStats::record_completed_request(
       app_type~,
       model~,
       request_model~,
-      pricing_model=Some(pricing_model),
+      pricing_model=Some(
+        if error_message is Some(_) {
+          ""
+        } else {
+          pricing_model
+        },
+      ),
       usage~,
       input_cost_usd=cost.input_cost_usd,
       output_cost_usd=cost.output_cost_usd,

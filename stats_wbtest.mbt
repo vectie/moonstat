@@ -284,6 +284,36 @@ test "traffic stats empty usage falls back to ccs outbound model context" {
 }
 
 ///|
+test "traffic stats leaves ccs error pricing model empty" {
+  let stats = TrafficStats::new()
+  stats.record_inbound(64)
+  stats.set_active_target(
+    "claude",
+    "router",
+    "Router",
+    pricing_model_source="request",
+  )
+  stats.record_request_context(
+    "claude",
+    "client-alias",
+    outbound_model=Some("gpt-5"),
+  )
+  stats.record_stream_mode(true)
+  stats.record_upstream_error_status(25, 502)
+  assert_eq(stats.request_logs.length(), 1)
+  let log = stats.request_logs[0]
+  assert_eq(log.request_model, Some("client-alias"))
+  assert_eq(log.pricing_model, Some(""))
+  assert_eq(log.status_code, 502)
+  assert_eq(log.error_message, Some("upstream_error"))
+  assert_eq(log.total_cost_usd, "0")
+  guard log.to_ccs_request_log_detail_json() is Object(obj) else {
+    fail("expected request detail object")
+  }
+  assert_eq(obj["pricingModel"], Json::string(""))
+}
+
+///|
 test "traffic stats can price gateway requests with ccs model pricing overrides" {
   let stats = TrafficStats::new()
   stats.record_inbound(64)
