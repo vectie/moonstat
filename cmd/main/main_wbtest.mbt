@@ -416,6 +416,30 @@ test "top level ccs proxy command names build command alias paths" {
     ]),
     Some("{\"items\":[]}"),
   )
+  assert_eq(
+    import_skills_from_apps_body([
+      "moonstat", "import_skills_from_apps", "--imports", "[{\"directory\":\"traffic-stats\",\"apps\":{\"codex\":true}}]",
+    ]),
+    Some("[{\"directory\":\"traffic-stats\",\"apps\":{\"codex\":true}}]"),
+  )
+  assert_eq(
+    import_skills_from_apps_body([
+      "moonstat", "import_skills_from_apps", "--body", "{\"imports\":[]}",
+    ]),
+    Some("{\"imports\":[]}"),
+  )
+  assert_eq(
+    delete_env_vars_body([
+      "moonstat", "delete_env_vars", "--conflicts", "[{\"key\":\"OPENAI_API_KEY\",\"sourcePath\":\"/tmp/.zshrc\"}]",
+    ]),
+    Some("[{\"key\":\"OPENAI_API_KEY\",\"sourcePath\":\"/tmp/.zshrc\"}]"),
+  )
+  assert_eq(
+    delete_env_vars_body([
+      "moonstat", "delete_env_vars", "--body", "{\"conflicts\":[]}",
+    ]),
+    Some("{\"conflicts\":[]}"),
+  )
 }
 
 ///|

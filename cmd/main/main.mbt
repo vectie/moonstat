@@ -577,7 +577,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["scan_unmanaged_skills", ..] | ["scan-unmanaged-skills", ..] =>
       check_usage_endpoint(arr, "/scan_unmanaged_skills")
     ["import_skills_from_apps", ..] | ["import-skills-from-apps", ..] =>
-      check_json_post_endpoint(arr, "/import_skills_from_apps", "Skills")
+      import_skills_from_apps(arr)
     ["discover_available_skills", ..] | ["discover-available-skills", ..] =>
       check_usage_endpoint(arr, "/discover_available_skills")
     ["check_skill_updates", ..] | ["check-skill-updates", ..] =>
@@ -654,8 +654,7 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(arr, extract_common_config_snippet_path(arr))
     ["check_env_conflicts", ..] | ["check-env-conflicts", ..] =>
       check_usage_endpoint(arr, config_app_path(arr, "/check_env_conflicts"))
-    ["delete_env_vars", ..] | ["delete-env-vars", ..] =>
-      check_json_post_endpoint(arr, "/delete_env_vars", "Env")
+    ["delete_env_vars", ..] | ["delete-env-vars", ..] => delete_env_vars(arr)
     ["restore_env_backup", ..] | ["restore-env-backup", ..] =>
       restore_env_backup(arr)
     ["get_claude_mcp_status", ..] | ["get-claude-mcp-status", ..] =>
@@ -1261,6 +1260,8 @@ fn print_help() -> Unit {
   println("  --server <json>     MCP server JSON for ccs MCP upsert commands")
   println("  --command <cmd>     MCP command name for validation/upsert")
   println("  --content <text>    Prompt content for ccs prompt upsert commands")
+  println("  --conflicts <json>  JSON conflict array for ccs env delete")
+  println("  --imports <json>    JSON import array for ccs skill import")
   println("  --items <json>      JSON item array for ccs bulk commands")
   println("  --script-code <json> JSON UsageResult for ccs testUsageScript")
   println("  --value <value>    Value for ccs proxy scalar setter commands")
@@ -2046,6 +2047,36 @@ async fn delete_sessions(args : Array[String]) -> Unit {
 ///|
 fn delete_sessions_body(args : Array[String]) -> String? {
   parse_string_arg_any(args, "--items", "--body")
+}
+
+///|
+async fn import_skills_from_apps(args : Array[String]) -> Unit {
+  guard import_skills_from_apps_body(args) is Some(body) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --imports JSON")
+    return
+  }
+  post_json_body_endpoint(args, "/import_skills_from_apps", body, "Skills")
+}
+
+///|
+fn import_skills_from_apps_body(args : Array[String]) -> String? {
+  parse_string_arg_any(args, "--imports", "--body")
+}
+
+///|
+async fn delete_env_vars(args : Array[String]) -> Unit {
+  guard delete_env_vars_body(args) is Some(body) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --conflicts JSON")
+    return
+  }
+  post_json_body_endpoint(args, "/delete_env_vars", body, "Env")
+}
+
+///|
+fn delete_env_vars_body(args : Array[String]) -> String? {
+  parse_string_arg_any(args, "--conflicts", "--body")
 }
 
 ///|
