@@ -10688,9 +10688,9 @@ async fn Gateway::handle_test_api_endpoints(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  let timeout_secs = proxy_int_request(r.path, body, [
-    "timeoutSecs", "timeout_secs",
-  ]).unwrap_or(8)
+  let timeout_secs = provider_endpoint_sanitize_timeout_secs(
+    proxy_int_request(r.path, body, ["timeoutSecs", "timeout_secs"]),
+  )
   let urls = provider_endpoint_urls_from_request(r.path, body)
   write_usage_json(
     w,
@@ -13665,6 +13665,27 @@ fn split_endpoint_urls(value : String) -> Array[String] {
     urls.push(raw.to_owned())
   }
   urls
+}
+
+///|
+const CCS_ENDPOINT_DEFAULT_TIMEOUT_SECS = 8
+
+///|
+const CCS_ENDPOINT_MIN_TIMEOUT_SECS = 2
+
+///|
+const CCS_ENDPOINT_MAX_TIMEOUT_SECS = 30
+
+///|
+fn provider_endpoint_sanitize_timeout_secs(timeout_secs : Int?) -> Int {
+  let secs = timeout_secs.unwrap_or(CCS_ENDPOINT_DEFAULT_TIMEOUT_SECS)
+  if secs < CCS_ENDPOINT_MIN_TIMEOUT_SECS {
+    CCS_ENDPOINT_MIN_TIMEOUT_SECS
+  } else if secs > CCS_ENDPOINT_MAX_TIMEOUT_SECS {
+    CCS_ENDPOINT_MAX_TIMEOUT_SECS
+  } else {
+    secs
+  }
 }
 
 ///|

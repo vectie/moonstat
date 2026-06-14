@@ -636,6 +636,11 @@ test "provider command helpers parse ccs sort and endpoint test payloads" {
     "status": null,
     "error": "URL 无效: empty host",
   })
+
+  assert_eq(provider_endpoint_sanitize_timeout_secs(Some(1)), 2)
+  assert_eq(provider_endpoint_sanitize_timeout_secs(Some(999)), 30)
+  assert_eq(provider_endpoint_sanitize_timeout_secs(Some(10)), 10)
+  assert_eq(provider_endpoint_sanitize_timeout_secs(None), 8)
 }
 
 ///|
