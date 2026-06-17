@@ -21,4 +21,5 @@ import {
   "vectie/moonlib/spawn",
   "vectie/moonlib/uuid",
   "vectie/moonstat/oauth/codex",
+  "vectie/moonstat/core",
 }
