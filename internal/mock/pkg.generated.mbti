@@ -5,9 +5,9 @@ import {
   "moonbitlang/async",
   "moonbitlang/core/random",
   "moonbitlang/core/test",
+  "vectie/moonlib/uuid",
   "vectie/moonstat/clock",
   "vectie/moonstat/internal/pino",
-  "vectie/moonstat/internal/uuid",
   "vectie/moonstat/model",
 }
 

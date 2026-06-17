@@ -2,7 +2,7 @@
 package "vectie/moonstat/internal/spawn"
 
 import {
-  "vectie/moonstat/internal/errno",
+  "vectie/moonlib/errno",
 }
 
 // Values

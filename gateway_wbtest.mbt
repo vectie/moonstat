@@ -1997,7 +1997,7 @@ fn gateway_handler_uses_unit_success(source : String, handler : String) -> Bool 
 
 ///|
 async test "ccs proxy mutation command handlers return unit success bodies" {
-  let source = @fsx.read_file("gateway.mbt")
+  let source = @fsx.read_file("gateway_proxy.mbt")
   for
     handler in [
       "handle_proxy_update_config", "handle_proxy_update_global_config", "handle_proxy_update_app_config",

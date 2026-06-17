@@ -712,7 +712,7 @@ fn gateway_source_registers_path(source : String, path : String) -> Bool {
 
 ///|
 async test "gateway registers current CCS Tauri command handlers" {
-  let source = @fsx.read_file("gateway.mbt")
+  let source = @fsx.read_file("gateway_core.mbt")
   let moon_commands = moon_tauri_command_surface()
   assert_eq(moon_commands.length(), 274)
   for command in moon_commands {
