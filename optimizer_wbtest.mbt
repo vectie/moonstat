@@ -16,10 +16,10 @@ test "ccs copilot classifier marks tool result continuations as agent before san
       #|}
     ),
   )
-  let classification = classify_ccs_copilot_request(body, false, false, false)
+  let classification = classify_moon_copilot_request(body, false, false, false)
   assert_eq(classification.initiator, "agent")
-  let sanitized = sanitize_ccs_copilot_orphan_tool_results(body)
-  let after = classify_ccs_copilot_request(sanitized, false, false, false)
+  let sanitized = sanitize_moon_copilot_orphan_tool_results(body)
+  let after = classify_moon_copilot_request(sanitized, false, false, false)
   assert_eq(after.initiator, "user")
 }
 
@@ -46,7 +46,7 @@ test "ccs copilot sanitizer converts only orphan tool results" {
       #|}
     ),
   )
-  guard sanitize_ccs_copilot_orphan_tool_results(body) is Object(root) else {
+  guard sanitize_moon_copilot_orphan_tool_results(body) is Object(root) else {
     fail("expected object")
   }
   guard root["messages"] is Array(messages) else { fail("expected messages") }
@@ -93,10 +93,10 @@ test "ccs copilot optimizer merges tool result text and strips assistant thinkin
     base_url=Some("https://api.githubcopilot.com"),
     api_key=Some("token"),
   )
-  let optimized = apply_ccs_copilot_optimizer_for_provider(
+  let optimized = apply_moon_copilot_optimizer_for_provider(
     body,
     Some(provider),
-    ccs_default_copilot_optimizer_config_json(),
+    moon_default_copilot_optimizer_config_json(),
     false,
   )
   assert_eq(optimized.headers["x-initiator"], "agent")
@@ -151,8 +151,8 @@ test "ccs copilot optimizer merges valid tool result text blocks" {
       #|}
     ),
   )
-  let merged = merge_ccs_copilot_tool_results(
-    sanitize_ccs_copilot_orphan_tool_results(body),
+  let merged = merge_moon_copilot_tool_results(
+    sanitize_moon_copilot_orphan_tool_results(body),
   )
   guard merged is Object(root) else { fail("expected object") }
   guard root["messages"] is Array(messages) else { fail("expected messages") }
@@ -185,10 +185,10 @@ test "ccs copilot optimizer downgrades warmup model for anthropic beta probes" {
     base_url=Some("https://api.githubcopilot.com"),
     api_key=Some("token"),
   )
-  let optimized = apply_ccs_copilot_optimizer_for_provider(
+  let optimized = apply_moon_copilot_optimizer_for_provider(
     body,
     Some(provider),
-    ccs_default_copilot_optimizer_config_json(),
+    moon_default_copilot_optimizer_config_json(),
     true,
   )
   assert_eq(optimized.headers["x-initiator"], "user")
@@ -214,16 +214,16 @@ test "ccs copilot optimizer emits deterministic interaction headers" {
     base_url=Some("https://api.githubcopilot.com"),
     api_key=Some("token"),
   )
-  let first = apply_ccs_copilot_optimizer_for_provider(
+  let first = apply_moon_copilot_optimizer_for_provider(
     body,
     Some(provider),
-    ccs_default_copilot_optimizer_config_json(),
+    moon_default_copilot_optimizer_config_json(),
     false,
   )
-  let second = apply_ccs_copilot_optimizer_for_provider(
+  let second = apply_moon_copilot_optimizer_for_provider(
     body,
     Some(provider),
-    ccs_default_copilot_optimizer_config_json(),
+    moon_default_copilot_optimizer_config_json(),
     false,
   )
   assert_eq(first.headers["x-request-id"], second.headers["x-request-id"])
@@ -251,10 +251,10 @@ test "ccs copilot optimizer marks subagent interaction header" {
     base_url=Some("https://api.githubcopilot.com"),
     api_key=Some("token"),
   )
-  let optimized = apply_ccs_copilot_optimizer_for_provider(
+  let optimized = apply_moon_copilot_optimizer_for_provider(
     body,
     Some(provider),
-    ccs_default_copilot_optimizer_config_json(),
+    moon_default_copilot_optimizer_config_json(),
     false,
   )
   assert_eq(optimized.headers["x-initiator"], "agent")

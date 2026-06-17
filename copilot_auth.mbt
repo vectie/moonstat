@@ -8,7 +8,7 @@ const COPILOT_GHES_CLIENT_ID = "Ov23li8tweQw6odWQebz"
 const COPILOT_DEFAULT_DOMAIN = "github.com"
 
 ///|
-const COPILOT_CREDENTIALS_FILE = ".moonstat/copilot-credentials.json"
+const COPILOT_CREDENTIALS_FILE = ".moonsuite/copilot-credentials.json"
 
 ///|
 const COPILOT_EDITOR_VERSION = "vscode/1.110.1"

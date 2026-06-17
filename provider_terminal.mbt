@@ -1,22 +1,22 @@
 ///|
-fn ccs_import_default_config_json(
+fn moon_import_default_config_json(
   router : ProviderRouter,
   app_type : String,
 ) -> Result[Json, String] {
   let settings = router.read_live_provider_settings(app_type)
-  if ccs_settings_has_proxy_managed_placeholder(settings) {
+  if moon_settings_has_proxy_managed_placeholder(settings) {
     return Err("live_taken_over")
   }
   Ok(Json::boolean(router.import_live_providers(app_type) > 0))
 }
 
 ///|
-fn ccs_settings_has_proxy_managed_placeholder(settings : Json) -> Bool {
+fn moon_settings_has_proxy_managed_placeholder(settings : Json) -> Bool {
   match settings {
     String(value) => value == CCS_PROXY_MANAGED_PLACEHOLDER
     Array(items) => {
       for item in items {
-        if ccs_settings_has_proxy_managed_placeholder(item) {
+        if moon_settings_has_proxy_managed_placeholder(item) {
           return true
         }
       }
@@ -25,7 +25,7 @@ fn ccs_settings_has_proxy_managed_placeholder(settings : Json) -> Bool {
     Object(obj) => {
       for key in obj.keys() {
         guard obj.get(key) is Some(value) else { continue }
-        if ccs_settings_has_proxy_managed_placeholder(value) {
+        if moon_settings_has_proxy_managed_placeholder(value) {
           return true
         }
       }
@@ -36,7 +36,7 @@ fn ccs_settings_has_proxy_managed_placeholder(settings : Json) -> Bool {
 }
 
 ///|
-async fn ccs_open_provider_terminal_json(
+async fn moon_open_provider_terminal_json(
   router : ProviderRouter,
   app_type : String,
   provider_id : String,
@@ -45,9 +45,9 @@ async fn ccs_open_provider_terminal_json(
   guard router.provider_by_id(app_type, provider_id) is Some(provider) else {
     return Err("提供商 \{provider_id} 不存在")
   }
-  let cwd = ccs_resolve_terminal_cwd(cwd)
-  let command = ccs_provider_terminal_command(
-    ccs_provider_terminal_env(provider, app_type),
+  let cwd = moon_resolve_terminal_cwd(cwd)
+  let command = moon_provider_terminal_command(
+    moon_provider_terminal_env(provider, app_type),
     cwd,
   )
   let result = @spawn.spawn("osascript", ["-e", command], timeout=5000) catch {
@@ -72,7 +72,7 @@ async fn ccs_open_provider_terminal_json(
 }
 
 ///|
-async fn ccs_resolve_terminal_cwd(cwd : String?) -> String? {
+async fn moon_resolve_terminal_cwd(cwd : String?) -> String? {
   match cwd {
     Some(value) if !value.trim().is_empty() => {
       if value.contains("\n") || value.contains("\r") {
@@ -86,7 +86,7 @@ async fn ccs_resolve_terminal_cwd(cwd : String?) -> String? {
 }
 
 ///|
-fn ccs_provider_terminal_env(
+fn moon_provider_terminal_env(
   provider : ProviderRouteTarget,
   app_type : String,
 ) -> Map[String, String] {
@@ -143,27 +143,27 @@ fn ccs_provider_terminal_env(
 }
 
 ///|
-fn ccs_provider_terminal_command(
+fn moon_provider_terminal_command(
   env : Map[String, String],
   cwd : String?,
 ) -> String {
   let lines : Array[String] = []
   match cwd {
-    Some(path) => lines.push("cd \{ccs_shell_single_quote(path)}")
+    Some(path) => lines.push("cd \{moon_shell_single_quote(path)}")
     None => ()
   }
   for key in env.keys() {
     guard env.get(key) is Some(value) else { continue }
-    if ccs_is_safe_env_key(key) {
-      lines.push("export \{key}=\{ccs_shell_single_quote(value)}")
+    if moon_is_safe_env_key(key) {
+      lines.push("export \{key}=\{moon_shell_single_quote(value)}")
     }
   }
   lines.push("exec $SHELL -l")
-  "tell application \"Terminal\" to do script \{ccs_applescript_string(lines.join("; "))}"
+  "tell application \"Terminal\" to do script \{moon_applescript_string(lines.join("; "))}"
 }
 
 ///|
-fn ccs_is_safe_env_key(key : String) -> Bool {
+fn moon_is_safe_env_key(key : String) -> Bool {
   if key.is_empty() {
     return false
   }
@@ -181,7 +181,7 @@ fn ccs_is_safe_env_key(key : String) -> Bool {
 }
 
 ///|
-fn ccs_applescript_string(value : String) -> String {
+fn moon_applescript_string(value : String) -> String {
   "\"" +
   value.replace_all(old="\\", new="\\\\").replace_all(old="\"", new="\\\"") +
   "\""

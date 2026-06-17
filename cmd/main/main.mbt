@@ -176,23 +176,23 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["get_rectifier_config", ..] | ["get-rectifier-config", ..] =>
       check_usage_endpoint(arr, "/get_rectifier_config")
     ["set_rectifier_config", ..] | ["set-rectifier-config", ..] =>
-      set_ccs_json_config(arr, "/set_rectifier_config", "--config", "Settings")
+      set_moon_json_config(arr, "/set_rectifier_config", "--config", "Settings")
     ["get_optimizer_config", ..] | ["get-optimizer-config", ..] =>
       check_usage_endpoint(arr, "/get_optimizer_config")
     ["set_optimizer_config", ..] | ["set-optimizer-config", ..] =>
-      set_ccs_json_config(arr, "/set_optimizer_config", "--config", "Settings")
+      set_moon_json_config(arr, "/set_optimizer_config", "--config", "Settings")
     ["get_copilot_optimizer_config", ..]
     | ["get-copilot-optimizer-config", ..] =>
       check_usage_endpoint(arr, "/get_copilot_optimizer_config")
     ["set_copilot_optimizer_config", ..]
     | ["set-copilot-optimizer-config", ..] =>
-      set_ccs_json_config(
+      set_moon_json_config(
         arr, "/set_copilot_optimizer_config", "--config", "Settings",
       )
     ["get_log_config", ..] | ["get-log-config", ..] =>
       check_usage_endpoint(arr, "/get_log_config")
     ["set_log_config", ..] | ["set-log-config", ..] =>
-      set_ccs_json_config(arr, "/set_log_config", "--config", "Settings")
+      set_moon_json_config(arr, "/set_log_config", "--config", "Settings")
     ["get_global_proxy_url", ..] | ["get-global-proxy-url", ..] =>
       check_usage_endpoint(arr, "/get_global_proxy_url")
     ["set_global_proxy_url", ..] | ["set-global-proxy-url", ..] =>
@@ -910,21 +910,21 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["settings", "auto-launch", ..] =>
       check_usage_endpoint(arr, "/get_auto_launch_status")
     ["settings", "rectifier", "set", ..] =>
-      set_ccs_json_config(arr, "/set_rectifier_config", "--config", "Settings")
+      set_moon_json_config(arr, "/set_rectifier_config", "--config", "Settings")
     ["settings", "rectifier", ..] =>
       check_usage_endpoint(arr, "/get_rectifier_config")
     ["settings", "optimizer", "set", ..] =>
-      set_ccs_json_config(arr, "/set_optimizer_config", "--config", "Settings")
+      set_moon_json_config(arr, "/set_optimizer_config", "--config", "Settings")
     ["settings", "optimizer", ..] =>
       check_usage_endpoint(arr, "/get_optimizer_config")
     ["settings", "copilot-optimizer", "set", ..] =>
-      set_ccs_json_config(
+      set_moon_json_config(
         arr, "/set_copilot_optimizer_config", "--config", "Settings",
       )
     ["settings", "copilot-optimizer", ..] =>
       check_usage_endpoint(arr, "/get_copilot_optimizer_config")
     ["settings", "log", "set", ..] =>
-      set_ccs_json_config(arr, "/set_log_config", "--config", "Settings")
+      set_moon_json_config(arr, "/set_log_config", "--config", "Settings")
     ["settings", "log", ..] => check_usage_endpoint(arr, "/get_log_config")
     ["plugin", "claude", "status", ..] =>
       check_usage_endpoint(arr, "/get_claude_plugin_status")
@@ -1088,21 +1088,21 @@ fn print_help() -> Unit {
   println("  update_tray_menu          Alias for ccs update_tray_menu")
   println("  suite manifest            Print Moon suite service manifest")
   println("  suite status              Print Moon suite status contract")
-  println("  suite write-status        Write ~/.moonstat/suite-status.json")
+  println("  suite write-status        Write ~/.moonsuite/suite-status.json")
   println("  suite moonclaw-providers  Print MoonClaw providers.json")
   println("  suite write-moonclaw-providers  Write .moonclaw/providers.json")
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")
   println("  proxy status           Show ccs-style proxy server status")
   println(
-    "  <ccs_proxy_command>    Direct alias for CCS proxy/failover command names",
+    "  <moon_proxy_command>    Direct alias for CCS proxy/failover command names",
   )
   println(
-    "  <ccs_provider_command> Direct alias for CCS provider command names",
+    "  <moon_provider_command> Direct alias for CCS provider command names",
   )
-  println("  <ccs_usage_command>    Direct alias for CCS usage command names")
+  println("  <moon_usage_command>    Direct alias for CCS usage command names")
   println(
-    "  <ccs_stream_command>   Direct alias for CCS stream check command names",
+    "  <moon_stream_command>   Direct alias for CCS stream check command names",
   )
   println("  mcp list/upsert/delete/toggle  Manage ccs-style MCP servers")
   println("  mcp config/upsert-config       Manage app MCP config view")
@@ -1397,7 +1397,7 @@ async fn do_login(_args : Array[String]) -> Unit {
     logger.info("Login successful!")
     logger.info("Email: \{@codex.extract_token_claims(creds.idToken).email}")
     @codex.save_credentials(creds)
-    logger.info("Credentials saved to ~/.moonstat/codex-credentials.json")
+    logger.info("Credentials saved to ~/.moonsuite/codex-credentials.json")
   } catch {
     err => logger.error("Login failed: \{err}")
   }
@@ -2108,13 +2108,13 @@ fn delete_env_vars_body(args : Array[String]) -> String? {
 }
 
 ///|
-async fn set_ccs_json_config(
+async fn set_moon_json_config(
   args : Array[String],
   base_path : String,
   flag : String,
   label : String,
 ) -> Unit {
-  guard ccs_json_config_path(args, base_path, flag) is Some(path) else {
+  guard moon_json_config_path(args, base_path, flag) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required \{flag} JSON or config field flags")
     return
@@ -2722,7 +2722,7 @@ fn set_auto_launch_path(args : Array[String]) -> String? {
 }
 
 ///|
-fn ccs_json_config_path(
+fn moon_json_config_path(
   args : Array[String],
   base_path : String,
   flag : String,
@@ -2733,7 +2733,7 @@ fn ccs_json_config_path(
     None => ()
   }
   let query : Array[String] = []
-  for flag_name in ccs_json_config_flag_names() {
+  for flag_name in moon_json_config_flag_names() {
     match parse_string_arg(args, "--\{flag_name}") {
       Some(value) => query.push(cli_query_pair(flag_name, value))
       None => ()
@@ -2747,7 +2747,7 @@ fn ccs_json_config_path(
 }
 
 ///|
-fn ccs_json_config_flag_names() -> Array[String] {
+fn moon_json_config_flag_names() -> Array[String] {
   [
     "enabled", "requestThinkingSignature", "request_thinking_signature", "requestThinkingBudget",
     "request_thinking_budget", "requestMediaFallback", "request_media_fallback",

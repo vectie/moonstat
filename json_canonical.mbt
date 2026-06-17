@@ -66,14 +66,14 @@ fn short_sha256_hex(bytes : Bytes) -> String {
   let builder = StringBuilder::new()
   for i in 0..<8 {
     let value = digest[i].to_int()
-    builder.write_char(ccs_json_hex_digit(value / 16))
-    builder.write_char(ccs_json_hex_digit(value % 16))
+    builder.write_char(moon_json_hex_digit(value / 16))
+    builder.write_char(moon_json_hex_digit(value % 16))
   }
   builder.to_string()
 }
 
 ///|
-fn ccs_json_hex_digit(value : Int) -> Char {
+fn moon_json_hex_digit(value : Int) -> Char {
   if value < 10 {
     ('0'.to_int() + value).unsafe_to_char()
   } else {

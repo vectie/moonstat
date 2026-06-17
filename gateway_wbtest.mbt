@@ -162,7 +162,7 @@ async test "usage script github copilot template uses standalone native query" {
 
 ///|
 test "github copilot usage conversion mirrors ccs premium row" {
-  let result = ccs_copilot_usage_result_from_json(
+  let result = moon_copilot_usage_result_from_json(
     {
       "copilot_plan": Json::string("Individual"),
       "quota_reset_date": Json::string("2026-07-01"),
@@ -191,7 +191,7 @@ test "github copilot usage conversion mirrors ccs premium row" {
 ///|
 test "github copilot usage conversion reports malformed response" {
   assert_eq(
-    ccs_copilot_usage_result_from_json({}.to_json()).to_json(),
+    moon_copilot_usage_result_from_json({}.to_json()).to_json(),
     UsageResult::new(
       false,
       error=Some("Failed to parse Copilot usage response"),
@@ -238,10 +238,10 @@ async test "usage script official subscription template uses standalone ccs nati
 
 ///|
 test "official subscription quota usage conversion mirrors ccs rows" {
-  let result = ccs_subscription_usage_result_from_quota(
+  let result = moon_subscription_usage_result_from_quota(
     SubscriptionQuota::new("claude", tiers=[
-      ccs_quota_tier_json("five_hour", 12.5, resets_at=Some("five-reset")),
-      ccs_quota_tier_json("seven_day", 75.0),
+      moon_quota_tier_json("five_hour", 12.5, resets_at=Some("five-reset")),
+      moon_quota_tier_json("seven_day", 75.0),
     ]),
   )
   assert_true(result.success)
@@ -260,7 +260,7 @@ test "official subscription quota usage conversion mirrors ccs rows" {
 ///|
 test "official subscription quota usage conversion falls back to credential message" {
   assert_eq(
-    ccs_subscription_usage_result_from_quota(
+    moon_subscription_usage_result_from_quota(
       SubscriptionQuota::new(
         "claude",
         credential_message=Some("No OAuth entry found in credentials"),
@@ -273,19 +273,19 @@ test "official subscription quota usage conversion falls back to credential mess
 
 ///|
 test "token plan quota usage conversion mirrors ccs rows" {
-  let result = ccs_token_plan_usage_result_from_quota(
+  let result = moon_token_plan_usage_result_from_quota(
     SubscriptionQuota::new(
       "coding_plan",
       credential_message=Some("Pro (active)"),
       tiers=[
-        ccs_quota_tier_json(
+        moon_quota_tier_json(
           "five_hour",
           25.0,
           resets_at=Some("five-reset"),
           used_value_usd=Some(1.5),
           max_value_usd=Some(6.0),
         ),
-        ccs_quota_tier_json("weekly_limit", 75.0, resets_at=Some("week-reset")),
+        moon_quota_tier_json("weekly_limit", 75.0, resets_at=Some("week-reset")),
       ],
     ),
   )
@@ -363,11 +363,11 @@ test "ccs read command parsers accept json payload keys" {
     { "app": Json::string("codex"), "providerId": Json::string("codex-oauth") }.to_json(),
   )
   assert_eq(
-    ccs_config_app_from_request("/get_config_dir", app_body),
+    moon_config_app_from_request("/get_config_dir", app_body),
     Some("codex"),
   )
   assert_eq(
-    ccs_config_app_from_request("/get_common_config_snippet", app_type_body),
+    moon_config_app_from_request("/get_common_config_snippet", app_type_body),
     Some("gemini"),
   )
   assert_eq(
@@ -448,26 +448,26 @@ test "proxy failover command parsers accept ccs json payload keys" {
 
 ///|
 test "ccs settings defaults mirror desktop command payloads" {
-  guard ccs_default_app_settings_json() is Object(settings) else {
+  guard moon_default_app_settings_json() is Object(settings) else {
     fail("expected settings object")
   }
   assert_eq(proxy_json_bool(settings, "showInTray"), Some(true))
   assert_eq(proxy_json_bool(settings, "launchOnStartup"), Some(false))
   assert_eq(json_string_from_map(settings, "skillSyncMethod"), Some("auto"))
 
-  guard ccs_default_rectifier_config_json() is Object(rectifier) else {
+  guard moon_default_rectifier_config_json() is Object(rectifier) else {
     fail("expected rectifier object")
   }
   assert_eq(proxy_json_bool(rectifier, "enabled"), Some(true))
   assert_eq(proxy_json_bool(rectifier, "requestThinkingBudget"), Some(true))
 
-  guard ccs_default_optimizer_config_json() is Object(optimizer) else {
+  guard moon_default_optimizer_config_json() is Object(optimizer) else {
     fail("expected optimizer object")
   }
   assert_eq(proxy_json_bool(optimizer, "enabled"), Some(false))
   assert_eq(json_string_from_map(optimizer, "cacheTtl"), Some("1h"))
 
-  guard ccs_default_copilot_optimizer_config_json() is Object(copilot) else {
+  guard moon_default_copilot_optimizer_config_json() is Object(copilot) else {
     fail("expected copilot object")
   }
   assert_eq(proxy_json_bool(copilot, "warmupDowngrade"), Some(true))
@@ -503,7 +503,7 @@ test "ccs save settings merge preserves omitted sync secrets" {
       "secretAccessKey": Json::string(""),
     }.to_json(),
   }.to_json()
-  guard ccs_merge_settings_for_save(incoming, existing) is Object(merged) else {
+  guard moon_merge_settings_for_save(incoming, existing) is Object(merged) else {
     fail("expected merged settings")
   }
   guard merged.get("webdavSync") is Some(Object(webdav)) else {
@@ -519,64 +519,64 @@ test "ccs save settings merge preserves omitted sync secrets" {
 
 ///|
 test "ccs settings config query builders update defaults" {
-  guard ccs_rectifier_config_from_request(
+  guard moon_rectifier_config_from_request(
       "/set_rectifier_config?requestThinkingSignature=false",
       None,
-      ccs_default_rectifier_config_json(),
+      moon_default_rectifier_config_json(),
     )
     is Object(rectifier) else {
     fail("expected rectifier")
   }
   assert_eq(proxy_json_bool(rectifier, "requestThinkingSignature"), Some(false))
 
-  let optimizer = ccs_optimizer_config_from_request(
+  let optimizer = moon_optimizer_config_from_request(
     "/set_optimizer_config?enabled=true&cacheTtl=5m",
     None,
-    ccs_default_optimizer_config_json(),
+    moon_default_optimizer_config_json(),
   )
-  assert_true(ccs_optimizer_cache_ttl_valid(optimizer))
-  let invalid = ccs_optimizer_config_from_request(
+  assert_true(moon_optimizer_cache_ttl_valid(optimizer))
+  let invalid = moon_optimizer_config_from_request(
     "/set_optimizer_config?cacheTtl=30m",
     None,
-    ccs_default_optimizer_config_json(),
+    moon_default_optimizer_config_json(),
   )
-  assert_false(ccs_optimizer_cache_ttl_valid(invalid))
+  assert_false(moon_optimizer_cache_ttl_valid(invalid))
 }
 
 ///|
 test "ccs claude plugin detection matches managed primary api key" {
-  assert_true(ccs_json_primary_api_key_any("{\"primaryApiKey\":\"any\"}"))
-  assert_false(ccs_json_primary_api_key_any("{\"primaryApiKey\":\"real\"}"))
-  assert_false(ccs_json_primary_api_key_any("not-json"))
+  assert_true(moon_json_primary_api_key_any("{\"primaryApiKey\":\"any\"}"))
+  assert_false(moon_json_primary_api_key_any("{\"primaryApiKey\":\"real\"}"))
+  assert_false(moon_json_primary_api_key_any("not-json"))
 }
 
 ///|
 test "ccs workspace filename validators mirror OpenClaw whitelist" {
-  assert_true(ccs_validate_workspace_filename("AGENTS.md"))
-  assert_true(ccs_validate_workspace_filename("BOOTSTRAP.md"))
-  assert_false(ccs_validate_workspace_filename("../AGENTS.md"))
-  assert_false(ccs_validate_workspace_filename("notes.md"))
+  assert_true(moon_validate_workspace_filename("AGENTS.md"))
+  assert_true(moon_validate_workspace_filename("BOOTSTRAP.md"))
+  assert_false(moon_validate_workspace_filename("../AGENTS.md"))
+  assert_false(moon_validate_workspace_filename("notes.md"))
 
-  assert_true(ccs_validate_daily_memory_filename("2026-06-14.md"))
-  assert_false(ccs_validate_daily_memory_filename("2026-6-14.md"))
-  assert_false(ccs_validate_daily_memory_filename("../2026-06-14.md"))
-  assert_false(ccs_validate_daily_memory_filename("2026-06-14xmd"))
-  assert_false(ccs_validate_daily_memory_filename("2026-06-140md"))
-  assert_eq(ccs_daily_memory_date("2026-06-14.md"), "2026-06-14")
-  assert_true(ccs_daily_memory_list_filename("notes.md"))
-  assert_false(ccs_validate_daily_memory_filename("notes.md"))
-  assert_eq(ccs_daily_memory_date("notes.md"), "notes")
+  assert_true(moon_validate_daily_memory_filename("2026-06-14.md"))
+  assert_false(moon_validate_daily_memory_filename("2026-6-14.md"))
+  assert_false(moon_validate_daily_memory_filename("../2026-06-14.md"))
+  assert_false(moon_validate_daily_memory_filename("2026-06-14xmd"))
+  assert_false(moon_validate_daily_memory_filename("2026-06-140md"))
+  assert_eq(moon_daily_memory_date("2026-06-14.md"), "2026-06-14")
+  assert_true(moon_daily_memory_list_filename("notes.md"))
+  assert_false(moon_validate_daily_memory_filename("notes.md"))
+  assert_eq(moon_daily_memory_date("notes.md"), "notes")
 }
 
 ///|
 test "ccs daily memory search helpers count and snippet matches" {
-  let (count, first) = ccs_count_case_insensitive_matches(
+  let (count, first) = moon_count_case_insensitive_matches(
     "Plan today. plan tomorrow. PLAN later.", "plan",
   )
   assert_eq(count, 3)
   assert_eq(first, Some(0))
   assert_eq(
-    ccs_search_snippet("abcdefghijklmnopqrstuvwxyz", 10),
+    moon_search_snippet("abcdefghijklmnopqrstuvwxyz", 10),
     "abcdefghijklmnopqrstuvwxyz",
   )
 }
@@ -846,7 +846,7 @@ test "gateway add provider follows ccs current provider semantics" {
   )
   assert_eq(gateway.provider_router.current_provider_id("opencode"), None)
   assert_eq(
-    gateway.provider_router.current_provider_for_ccs_command("opencode"),
+    gateway.provider_router.current_provider_for_moon_command("opencode"),
     "",
   )
 }
@@ -1621,7 +1621,7 @@ async test "ccs open folder helper creates directory and returns boolean success
   ) {
     let target = @pathx.join(tmpdir, "nested/config")
     assert_false(@fsx.exists(target))
-    guard ccs_open_directory_result_json(target) is Ok(result) else {
+    guard moon_open_directory_result_json(target) is Ok(result) else {
       fail("expected open directory result")
     }
     assert_eq(result, Json::boolean(true))
@@ -1713,7 +1713,7 @@ test "global proxy url helpers use ccs response shapes" {
 
 ///|
 test "ccs local proxy scan catalog mirrors ccs common ports" {
-  let ports = ccs_local_proxy_ports()
+  let ports = moon_local_proxy_ports()
   assert_eq(ports.length(), 8)
   assert_eq(ports[0], (7890, "http", true))
   assert_eq(ports[1], (7891, "socks5", false))
@@ -1728,14 +1728,14 @@ test "ccs local proxy scan catalog mirrors ccs common ports" {
 ///|
 test "ccs local proxy scan expands mixed ports into http and socks5 entries" {
   json_inspect(
-    Json::array(ccs_detected_proxy_entries_json(7890, "http", true)),
+    Json::array(moon_detected_proxy_entries_json(7890, "http", true)),
     content=[
       { "url": "http://127.0.0.1:7890", "proxyType": "http", "port": 7890 },
       { "url": "socks5://127.0.0.1:7890", "proxyType": "socks5", "port": 7890 },
     ],
   )
   json_inspect(
-    Json::array(ccs_detected_proxy_entries_json(1080, "socks5", false)),
+    Json::array(moon_detected_proxy_entries_json(1080, "socks5", false)),
     content=[
       { "url": "socks5://127.0.0.1:1080", "proxyType": "socks5", "port": 1080 },
     ],
@@ -1938,7 +1938,7 @@ test "proxy lifecycle state matches ccs command aliases" {
   gateway.proxy_takeover_enabled.set("codex", true)
   assert_true(gateway.proxy_takeover_active())
   assert_eq(
-    ccs_stop_proxy_takeover_error(),
+    moon_stop_proxy_takeover_error(),
     "仍有应用处于代理接管状态，请先在设置中关闭对应应用接管后再停止本地路由。",
   )
   gateway.proxy_clear_takeover()
@@ -1977,7 +1977,7 @@ test "ccs auto failover enable requires proxy takeover" {
 
 ///|
 test "ccs unit commands return null success body" {
-  assert_eq(ccs_unit_success_json(), Json::null())
+  assert_eq(moon_unit_success_json(), Json::null())
 }
 
 ///|
@@ -1987,7 +1987,7 @@ fn gateway_handler_uses_unit_success(source : String, handler : String) -> Bool 
   for segment in source.split(marker) {
     if seen_marker {
       for block in segment.split("///|") {
-        return block.contains("write_usage_json(w, ccs_unit_success_json())")
+        return block.contains("write_usage_json(w, moon_unit_success_json())")
       }
     }
     seen_marker = true
@@ -2011,7 +2011,7 @@ async test "ccs proxy mutation command handlers return unit success bodies" {
 
 ///|
 test "standalone tray update mirrors ccs no tray result" {
-  assert_eq(ccs_update_tray_menu_result(), Json::boolean(false))
+  assert_eq(moon_update_tray_menu_result(), Json::boolean(false))
 }
 
 ///|
@@ -2039,8 +2039,8 @@ test "standalone external open records ccs normalized target" {
 ///|
 test "standalone update check records moonstat release target" {
   let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
-  assert_eq(gateway.record_external_open(ccs_update_url()), ccs_update_url())
-  assert_eq(gateway.last_external_url, Some(ccs_update_url()))
+  assert_eq(gateway.record_external_open(moon_update_url()), moon_update_url())
+  assert_eq(gateway.last_external_url, Some(moon_update_url()))
 }
 
 ///|
@@ -2429,22 +2429,22 @@ test "proxy pricing config makes claude desktop inherit claude defaults like ccs
 ///|
 test "common config snippet validation mirrors ccs formats" {
   assert_eq(
-    ccs_validate_common_config_snippet("codex", "# comment only\n"),
+    moon_validate_common_config_snippet("codex", "# comment only\n"),
     None,
   )
-  assert_true(ccs_validate_common_config_snippet("codex", "[broken") is Some(_))
+  assert_true(moon_validate_common_config_snippet("codex", "[broken") is Some(_))
   assert_true(
-    ccs_validate_common_config_snippet("claude", "{\"env\":") is Some(_),
+    moon_validate_common_config_snippet("claude", "{\"env\":") is Some(_),
   )
   assert_eq(
-    ccs_validate_common_config_snippet("gemini", "{\"EXTRA\":\"kept\"}"),
+    moon_validate_common_config_snippet("gemini", "{\"EXTRA\":\"kept\"}"),
     None,
   )
 }
 
 ///|
 test "common config extraction strips ccs provider-specific fields" {
-  let claude = ccs_extract_common_config_snippet_json(
+  let claude = moon_extract_common_config_snippet_json(
     "claude",
     Json::object({
       "apiBaseUrl": Json::string("https://provider.example"),
@@ -2469,7 +2469,7 @@ test "common config extraction strips ccs provider-specific fields" {
   assert_true(claude_env.get("ANTHROPIC_MODEL") is None)
   assert_eq(claude_env["KEEP_ME"], Json::string("1"))
 
-  let gemini = ccs_extract_common_config_snippet_json(
+  let gemini = moon_extract_common_config_snippet_json(
     "gemini",
     Json::object({
       "env": Json::object({
@@ -2505,7 +2505,7 @@ test "codex common config extraction removes provider toml tables" {
       ),
     ),
   })
-  let snippet = ccs_extract_common_config_snippet_json("codex", settings)
+  let snippet = moon_extract_common_config_snippet_json("codex", settings)
   assert_true(!snippet.contains("model_provider"))
   assert_true(!snippet.contains("[model_providers.openai]"))
   assert_true(snippet.contains("approval_policy = \"never\""))
@@ -2600,7 +2600,7 @@ test "proxy circuit breaker config update hot applies to existing breakers" {
 
 ///|
 test "ccs circuit breaker stats command currently returns null" {
-  assert_eq(ccs_circuit_breaker_stats_command_json(), Json::null())
+  assert_eq(moon_circuit_breaker_stats_command_json(), Json::null())
 }
 
 ///|
@@ -3089,23 +3089,23 @@ test "ccs session context keeps client session for upstream" {
 
 ///|
 test "ccs client format detects proxy path shapes" {
-  assert_true(ccs_client_format_from_path("/v1/messages") == Claude)
-  assert_true(ccs_client_format_from_path("/api/v1/messages") == Claude)
-  assert_true(ccs_client_format_from_path("/v1/responses") == Codex)
-  assert_true(ccs_client_format_from_path("/v1/chat/completions") == OpenAI)
+  assert_true(moon_client_format_from_path("/v1/messages") == Claude)
+  assert_true(moon_client_format_from_path("/api/v1/messages") == Claude)
+  assert_true(moon_client_format_from_path("/v1/responses") == Codex)
+  assert_true(moon_client_format_from_path("/v1/chat/completions") == OpenAI)
   assert_true(
-    ccs_client_format_from_path("/v1internal/models/gemini-pro:generateContent") ==
+    moon_client_format_from_path("/v1internal/models/gemini-pro:generateContent") ==
     GeminiCli,
   )
   assert_true(
-    ccs_client_format_from_path("/v1beta/models/gemini-pro:generateContent") ==
+    moon_client_format_from_path("/v1beta/models/gemini-pro:generateContent") ==
     Gemini,
   )
   assert_true(
-    ccs_client_format_from_path("/custom/models/gemini:generateContent") ==
+    moon_client_format_from_path("/custom/models/gemini:generateContent") ==
     Gemini,
   )
-  assert_true(ccs_client_format_from_path("/unknown") == Unknown)
+  assert_true(moon_client_format_from_path("/unknown") == Unknown)
   assert_eq(GeminiCli.to_string(), "gemini_cli")
 }
 
@@ -3120,9 +3120,9 @@ test "ccs client format falls back to body shape" {
       #|}
     ),
   )
-  assert_true(ccs_client_format_from_body(claude_body) == Claude)
+  assert_true(moon_client_format_from_body(claude_body) == Claude)
   assert_true(
-    ccs_client_format_for_request("/unknown", Some(claude_body)) == Claude,
+    moon_client_format_for_request("/unknown", Some(claude_body)) == Claude,
   )
 
   let openai_body = @json.parse(
@@ -3133,7 +3133,7 @@ test "ccs client format falls back to body shape" {
       #|}
     ),
   )
-  assert_true(ccs_client_format_from_body(openai_body) == OpenAI)
+  assert_true(moon_client_format_from_body(openai_body) == OpenAI)
 
   let codex_body = @json.parse(
     (
@@ -3142,7 +3142,7 @@ test "ccs client format falls back to body shape" {
       #|}
     ),
   )
-  assert_true(ccs_client_format_from_body(codex_body) == Codex)
+  assert_true(moon_client_format_from_body(codex_body) == Codex)
 
   let gemini_body = @json.parse(
     (
@@ -3151,11 +3151,11 @@ test "ccs client format falls back to body shape" {
       #|}
     ),
   )
-  assert_true(ccs_client_format_from_body(gemini_body) == Gemini)
+  assert_true(moon_client_format_from_body(gemini_body) == Gemini)
   assert_true(
-    ccs_client_format_for_request("/v1/responses", Some(gemini_body)) == Codex,
+    moon_client_format_for_request("/v1/responses", Some(gemini_body)) == Codex,
   )
-  assert_true(ccs_client_format_for_request("/unknown", None) == Unknown)
+  assert_true(moon_client_format_for_request("/unknown", None) == Unknown)
 }
 
 ///|
@@ -3238,7 +3238,7 @@ test "codex oauth headers trim empty ccs session ids" {
 
 ///|
 test "ccs managed account guard rejects copilot proxy placeholder" {
-  let result = ccs_reject_proxy_managed_placeholder_for_upstream(
+  let result = moon_reject_proxy_managed_placeholder_for_upstream(
     "https://api.githubcopilot.com/chat/completions",
     { "Authorization": "Bearer PROXY_MANAGED" },
   )
@@ -3251,7 +3251,7 @@ test "ccs managed account guard rejects copilot proxy placeholder" {
 
 ///|
 test "ccs managed account guard rejects codex proxy placeholder" {
-  let result = ccs_reject_proxy_managed_placeholder_for_upstream(
+  let result = moon_reject_proxy_managed_placeholder_for_upstream(
     "https://chatgpt.com/backend-api/codex/responses",
     { "Authorization": "Bearer PROXY_MANAGED" },
   )
@@ -3264,7 +3264,7 @@ test "ccs managed account guard rejects codex proxy placeholder" {
 
 ///|
 test "ccs managed account guard is scoped to managed upstreams" {
-  let result = ccs_reject_proxy_managed_placeholder_for_upstream(
+  let result = moon_reject_proxy_managed_placeholder_for_upstream(
     "https://api.example.com/v1/messages",
     { "Authorization": "Bearer PROXY_MANAGED" },
   )
@@ -3599,17 +3599,17 @@ test "gateway records upstream failures into provider router before finish" {
 
 ///|
 test "ccs upstream status retryability matches client error bucket" {
-  assert_false(ccs_upstream_status_retryable(400))
-  assert_false(ccs_upstream_status_retryable(405))
-  assert_false(ccs_upstream_status_retryable(406))
-  assert_false(ccs_upstream_status_retryable(413))
-  assert_false(ccs_upstream_status_retryable(414))
-  assert_false(ccs_upstream_status_retryable(415))
-  assert_false(ccs_upstream_status_retryable(422))
-  assert_false(ccs_upstream_status_retryable(501))
-  assert_true(ccs_upstream_status_retryable(401))
-  assert_true(ccs_upstream_status_retryable(429))
-  assert_true(ccs_upstream_status_retryable(502))
+  assert_false(moon_upstream_status_retryable(400))
+  assert_false(moon_upstream_status_retryable(405))
+  assert_false(moon_upstream_status_retryable(406))
+  assert_false(moon_upstream_status_retryable(413))
+  assert_false(moon_upstream_status_retryable(414))
+  assert_false(moon_upstream_status_retryable(415))
+  assert_false(moon_upstream_status_retryable(422))
+  assert_false(moon_upstream_status_retryable(501))
+  assert_true(moon_upstream_status_retryable(401))
+  assert_true(moon_upstream_status_retryable(429))
+  assert_true(moon_upstream_status_retryable(502))
 }
 
 ///|
@@ -4024,8 +4024,8 @@ async test "gateway applies ccs provider cost multiplier to request log" {
   assert_eq(log.cost_multiplier, "2.5")
   assert_eq(log.input_cost_usd, "0.001")
   assert_eq(log.total_cost_usd, "0.0025")
-  let ccs_log = log.to_ccs_request_log_detail_json()
-  guard ccs_log is Object(obj) else { fail("expected object") }
+  let moon_log = log.to_moon_request_log_detail_json()
+  guard moon_log is Object(obj) else { fail("expected object") }
   assert_eq(obj["costMultiplier"], Json::string("2.5"))
 }
 
@@ -4958,24 +4958,24 @@ test "claude compatible provider endpoints preserve ccs query semantics" {
 ///|
 test "ccs streaming request detection mirrors proxy forwarder" {
   assert_true(
-    ccs_streaming_request("/v1/responses", @json.parse("{\"stream\":true}"), {}),
+    moon_streaming_request("/v1/responses", @json.parse("{\"stream\":true}"), {}),
   )
   assert_true(
-    ccs_streaming_request(
+    moon_streaming_request(
       "/v1beta/models/gemini-2.5-pro:streamGenerateContent?alt=sse",
       @json.parse("{\"model\":\"gemini-2.5-pro\"}"),
       {},
     ),
   )
   assert_true(
-    ccs_streaming_request(
+    moon_streaming_request(
       "/v1/responses",
       @json.parse("{\"model\":\"gpt-5\"}"),
       { "accept": "application/json, text/event-stream" },
     ),
   )
   assert_false(
-    ccs_streaming_request(
+    moon_streaming_request(
       "/v1/responses",
       @json.parse("{\"model\":\"gpt-5\"}"),
       {},
@@ -5715,7 +5715,7 @@ test "ccs response header stripping removes hop by hop and connection listed hea
     "x-remove-too": "drop",
     "X-Keep": "ok",
   }
-  let cleaned = ccs_strip_hop_by_hop_response_headers(headers)
+  let cleaned = moon_strip_hop_by_hop_response_headers(headers)
   assert_eq(cleaned["Content-Type"], "application/json")
   assert_eq(cleaned["X-Keep"], "ok")
   assert_true(cleaned.get("Connection") is None)
@@ -5736,7 +5736,7 @@ test "ccs rebuilt response header stripping removes stale entity headers" {
     "Transfer-Encoding": "chunked",
     "X-Keep": "ok",
   }
-  let cleaned = ccs_strip_entity_headers_for_rebuilt_body(headers)
+  let cleaned = moon_strip_entity_headers_for_rebuilt_body(headers)
   assert_eq(cleaned["Content-Type"], "application/json")
   assert_eq(cleaned["X-Keep"], "ok")
   assert_true(cleaned.get("Content-Encoding") is None)
@@ -6371,7 +6371,7 @@ test "ccs rectifier retry body selects signature before budget" {
       #|}
     ),
   )
-  let retry = ccs_rectifier_retry_body(
+  let retry = moon_rectifier_retry_body(
     "Invalid `signature` in `thinking` block and thinking.budget_tokens: Input should be greater than or equal to 1024",
     body,
   )
@@ -6393,7 +6393,7 @@ test "ccs thinking optimizer uses adaptive mode for newer opus and sonnet" {
       #|}
     ),
   )
-  let optimized = optimize_ccs_thinking(body)
+  let optimized = optimize_moon_thinking(body)
   guard optimized is Object(obj) else { fail("expected object") }
   guard obj["thinking"] is Object(thinking) else { fail("expected thinking") }
   assert_eq(thinking["type"], Json::string("adaptive"))
@@ -6420,7 +6420,7 @@ test "ccs thinking optimizer injects legacy budget and beta" {
       #|}
     ),
   )
-  let optimized = optimize_ccs_thinking(body)
+  let optimized = optimize_moon_thinking(body)
   guard optimized is Object(obj) else { fail("expected object") }
   guard obj["thinking"] is Object(thinking) else { fail("expected thinking") }
   assert_eq(thinking["type"], Json::string("enabled"))
@@ -6444,7 +6444,7 @@ test "ccs thinking optimizer upgrades small enabled legacy budget" {
       #|}
     ),
   )
-  let optimized = optimize_ccs_thinking(body)
+  let optimized = optimize_moon_thinking(body)
   guard optimized is Object(obj) else { fail("expected object") }
   guard obj["thinking"] is Object(thinking) else { fail("expected thinking") }
   assert_eq(thinking["budget_tokens"], Json::number(4095.0))
@@ -6465,7 +6465,7 @@ test "ccs thinking optimizer skips haiku models" {
       #|}
     ),
   )
-  assert_eq(optimize_ccs_thinking(body), body)
+  assert_eq(optimize_moon_thinking(body), body)
 }
 
 ///|
@@ -6536,7 +6536,7 @@ test "ccs cache injector adds cache breakpoints at provider send sites" {
       #|}
     ),
   )
-  let optimized = inject_ccs_cache_breakpoints(body, "1h")
+  let optimized = inject_moon_cache_breakpoints(body, "1h")
   guard optimized is Object(obj) else { fail("expected object") }
   guard obj["tools"] is Array(tools) else { fail("expected tools") }
   guard tools[0] is Object(first_tool) else { fail("expected first tool") }
@@ -6562,7 +6562,7 @@ test "ccs cache injector adds cache breakpoints at provider send sites" {
   guard content[1] is Object(text) else { fail("expected text") }
   assert_true(thinking.get("cache_control") is None)
   assert_true(text.get("cache_control") is Some(_))
-  assert_eq(count_ccs_cache_breakpoints(optimized), 3)
+  assert_eq(count_moon_cache_breakpoints(optimized), 3)
 }
 
 ///|
@@ -6589,7 +6589,7 @@ test "ccs cache injector only upgrades ttl after four existing breakpoints" {
       #|}
     ),
   )
-  let optimized = inject_ccs_cache_breakpoints(body, "5m")
+  let optimized = inject_moon_cache_breakpoints(body, "5m")
   guard optimized is Object(obj) else { fail("expected object") }
   guard obj["tools"] is Array(tools) else { fail("expected tools") }
   guard tools[0] is Object(first_tool) else { fail("expected first tool") }
@@ -6602,7 +6602,7 @@ test "ccs cache injector only upgrades ttl after four existing breakpoints" {
     fail("expected metadata cache")
   }
   assert_eq(metadata_cache["ttl"], Json::string("old"))
-  assert_eq(count_ccs_cache_breakpoints(optimized), 4)
+  assert_eq(count_moon_cache_breakpoints(optimized), 4)
 }
 
 ///|
@@ -6637,11 +6637,11 @@ test "ccs optimizer runs only for enabled bedrock providers" {
     ),
   )
   let disabled = prepare_upstream_request_body(body, provider=Some(provider))
-  assert_eq(count_ccs_cache_breakpoints(disabled), 0)
+  assert_eq(count_moon_cache_breakpoints(disabled), 0)
   @os.setenv("MOONSTAT_OPTIMIZER_ENABLED", "true", overwrite=true)
   @os.setenv("MOONSTAT_CACHE_TTL", "1h", overwrite=true)
   let enabled = prepare_upstream_request_body(body, provider=Some(provider))
-  assert_eq(count_ccs_cache_breakpoints(enabled), 1)
+  assert_eq(count_moon_cache_breakpoints(enabled), 1)
   guard enabled is Object(enabled_obj) else { fail("expected enabled object") }
   guard enabled_obj["thinking"] is Object(thinking) else {
     fail("expected thinking")
@@ -6653,7 +6653,7 @@ test "ccs optimizer runs only for enabled bedrock providers" {
     provider_name="Plain",
   )
   let skipped = prepare_upstream_request_body(body, provider=Some(non_bedrock))
-  assert_eq(count_ccs_cache_breakpoints(skipped), 0)
+  assert_eq(count_moon_cache_breakpoints(skipped), 0)
   for key in keys {
     @os.unsetenv(key) catch {
       _ => ()
@@ -7042,24 +7042,24 @@ test "ccs media retry detects unsupported image upstream errors" {
   )
   assert_true(contains_image_blocks(body))
   assert_true(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       400, "{\"error\":{\"message\":\"This model does not support image input\"}}",
       body,
     ),
   )
   assert_true(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       415, "{\"error\":{\"message\":\"This model cannot process media inputs\"}}",
       body,
     ),
   )
   assert_true(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       422, "{\"message\":\"attachments are not supported by this model\"}", body,
     ),
   )
   assert_true(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       400,
       (
         #|{
@@ -7072,7 +7072,7 @@ test "ccs media retry detects unsupported image upstream errors" {
     ),
   )
   assert_false(
-    ccs_media_retry_should_trigger_with_config(
+    moon_media_retry_should_trigger_with_config(
       400,
       "{\"error\":{\"message\":\"This model does not support image input\"}}",
       body,
@@ -7086,7 +7086,7 @@ test "ccs media retry detects unsupported image upstream errors" {
     ),
   )
   assert_false(
-    ccs_media_retry_should_trigger_with_config(
+    moon_media_retry_should_trigger_with_config(
       400,
       "{\"error\":{\"message\":\"This model does not support image input\"}}",
       body,
@@ -7122,12 +7122,12 @@ test "ccs media retry ignores non media errors and bodies without images" {
     ),
   )
   assert_false(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       400, "{\"error\":{\"message\":\"Invalid API key\"}}", image_body,
     ),
   )
   assert_false(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       429, "{\"error\":{\"message\":\"This model does not support image input\"}}",
       image_body,
     ),
@@ -7148,7 +7148,7 @@ test "ccs media retry ignores non media errors and bodies without images" {
   )
   assert_false(contains_image_blocks(text_body))
   assert_false(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       400, "{\"error\":{\"message\":\"This model does not support image input\"}}",
       text_body,
     ),
@@ -7218,7 +7218,7 @@ test "ccs media retry handles streaming upstream bodies" {
   assert_eq(obj["stream"], Json::boolean(true))
   assert_true(contains_image_blocks(upstream))
   assert_true(
-    ccs_media_retry_should_trigger(
+    moon_media_retry_should_trigger(
       400, "{\"error\":{\"message\":\"This model does not support image input\"}}",
       upstream,
     ),
@@ -8247,27 +8247,27 @@ test "gemini native response converts to anthropic message with usage" {
 
 ///|
 test "ccs config helpers normalize suite app paths" {
-  assert_eq(ccs_normalize_app_type("claude_desktop"), "claude-desktop")
-  assert_eq(ccs_normalize_app_type("open-code"), "opencode")
-  assert_eq(ccs_normalize_app_type("omo_slim"), "omo-slim")
-  assert_eq(ccs_normalize_app_type("unknown"), "claude")
-  assert_eq(ccs_config_dir("codex"), @pathx.join(ccs_home_dir(), ".codex"))
+  assert_eq(moon_normalize_app_type("claude_desktop"), "claude-desktop")
+  assert_eq(moon_normalize_app_type("open-code"), "opencode")
+  assert_eq(moon_normalize_app_type("omo_slim"), "omo-slim")
+  assert_eq(moon_normalize_app_type("unknown"), "claude")
+  assert_eq(moon_config_dir("codex"), @pathx.join(moon_home_dir(), ".codex"))
   assert_eq(
-    ccs_config_file_path("openclaw"),
-    @pathx.join(ccs_config_dir("openclaw"), "openclaw.json"),
+    moon_config_file_path("openclaw"),
+    @pathx.join(moon_config_dir("openclaw"), "openclaw.json"),
   )
   assert_eq(
-    ccs_config_file_path("hermes"),
-    @pathx.join(ccs_config_dir("hermes"), "config.yaml"),
+    moon_config_file_path("hermes"),
+    @pathx.join(moon_config_dir("hermes"), "config.yaml"),
   )
 }
 
 ///|
 async test "ccs config status keeps ccs object shape" {
-  guard ccs_config_status_json("hermes") is Object(status) else {
+  guard moon_config_status_json("hermes") is Object(status) else {
     fail("expected status object")
   }
-  assert_eq(status["path"], Json::string(ccs_config_dir("hermes")))
+  assert_eq(status["path"], Json::string(moon_config_dir("hermes")))
   assert_true(
     status["exists"] == Json::boolean(true) ||
     status["exists"] == Json::boolean(false),
@@ -8276,24 +8276,24 @@ async test "ccs config status keeps ccs object shape" {
 
 ///|
 test "ccs env helpers preserve conflicts and known keys" {
-  assert_eq(ccs_env_conflict_keys("codex")[0], "OPENAI_API_KEY")
-  assert_eq(ccs_env_conflict_keys("hermes")[1], "HERMES_WEB_PORT")
-  assert_eq(ccs_env_conflict_keys("unknown")[0], "ANTHROPIC_API_KEY")
+  assert_eq(moon_env_conflict_keys("codex")[0], "OPENAI_API_KEY")
+  assert_eq(moon_env_conflict_keys("hermes")[1], "HERMES_WEB_PORT")
+  assert_eq(moon_env_conflict_keys("unknown")[0], "ANTHROPIC_API_KEY")
   let conflict = {
     "varName": Json::string("ANTHROPIC_API_KEY"),
     "varValue": Json::string("sk-test"),
   }.to_json()
   let body = { "conflicts": Json::array([conflict]) }.to_json()
-  let conflicts = ccs_env_conflicts_from_body(Some(body))
+  let conflicts = moon_env_conflicts_from_body(Some(body))
   assert_eq(conflicts.length(), 1)
   assert_eq(conflicts[0], conflict)
-  guard ccs_env_backup_json(Some(body)) is Object(backup) else {
+  guard moon_env_backup_json(Some(body)) is Object(backup) else {
     fail("expected backup object")
   }
   guard backup["backupPath"] is String(path) else {
     fail("expected backup path")
   }
-  assert_true(path.contains(".cc-switch"))
+  assert_true(path.contains(".moonsuite"))
   guard backup["timestamp"] is String(timestamp) else {
     fail("expected timestamp")
   }
@@ -8312,7 +8312,7 @@ async test "ccs env helpers scan delete and restore file conflicts" {
     @fsx.write_to_file(
       shell_path, "export OPENAI_API_KEY=\"sk-test\"\nKEEP=1\nOPENAI_BASE_URL='http://local'\n# OPENAI_ORG=skip\n",
     )
-    guard ccs_env_conflicts_json_with_shell_files("codex", [shell_path])
+    guard moon_env_conflicts_json_with_shell_files("codex", [shell_path])
       is Array(conflicts) else {
       fail("expected conflicts")
     }
@@ -8330,7 +8330,7 @@ async test "ccs env helpers scan delete and restore file conflicts" {
     assert_eq(first["varName"], Json::string("OPENAI_API_KEY"))
     assert_eq(first["varValue"], Json::string("sk-test"))
     assert_eq(first["sourcePath"], Json::string("\{shell_path}:1"))
-    match ccs_delete_single_env_conflict(file_conflicts[0]) {
+    match moon_delete_single_env_conflict(file_conflicts[0]) {
       Ok(_) => ()
       Err(error) => fail(error)
     }
@@ -8344,7 +8344,7 @@ async test "ccs env helpers scan delete and restore file conflicts" {
       "conflicts": Json::array([file_conflicts[0]]),
     }.to_json()
     @fsx.write_to_file(backup_path, backup.stringify(indent=2) + "\n")
-    match ccs_restore_env_backup_json(Some(backup_path)) {
+    match moon_restore_env_backup_json(Some(backup_path)) {
       Ok(_) => ()
       Err(error) => fail(error)
     }
@@ -8359,20 +8359,20 @@ test "ccs mcp helpers preserve server apps and config shape" {
     "name": Json::string("Filesystem"),
     "command": Json::string("npx"),
   }.to_json()
-  let server = ccs_mcp_server_from_spec("filesystem", spec, "codex")
+  let server = moon_mcp_server_from_spec("filesystem", spec, "codex")
   guard server is Object(obj) else { fail("expected server object") }
   assert_eq(obj["id"], Json::string("filesystem"))
   assert_eq(obj["name"], Json::string("Filesystem"))
-  assert_true(ccs_mcp_app_enabled(server, "codex"))
-  assert_false(ccs_mcp_app_enabled(server, "claude"))
-  let enabled = ccs_mcp_server_with_app(server, "claude", true)
-  assert_true(ccs_mcp_app_enabled(enabled, "claude"))
+  assert_true(moon_mcp_app_enabled(server, "codex"))
+  assert_false(moon_mcp_app_enabled(server, "claude"))
+  let enabled = moon_mcp_server_with_app(server, "claude", true)
+  assert_true(moon_mcp_app_enabled(enabled, "claude"))
   let servers : Map[String, Json] = { "filesystem": enabled }
-  guard ccs_mcp_servers_object_for_app(servers, Some("codex")) is Object(codex) else {
+  guard moon_mcp_servers_object_for_app(servers, Some("codex")) is Object(codex) else {
     fail("expected codex mcp servers")
   }
   assert_true(codex.get("filesystem") is Some(_))
-  guard ccs_mcp_config_text(servers) is Some(config_text) else {
+  guard moon_mcp_config_text(servers) is Some(config_text) else {
     fail("expected mcp config")
   }
   assert_true(config_text.contains("\"mcpServers\""))
@@ -8388,7 +8388,7 @@ test "ccs mcp request parser accepts encoded server JSON" {
       "server": { "command": Json::string("sh") }.to_json(),
     }.to_json(),
   }.to_json()
-  guard ccs_mcp_server_from_request(
+  guard moon_mcp_server_from_request(
       "/upsert_mcp_server?app=codex",
       Some(body),
       "codex",
@@ -8399,7 +8399,7 @@ test "ccs mcp request parser accepts encoded server JSON" {
   assert_eq(id, "shell")
   guard server is Object(obj) else { fail("expected normalized server") }
   assert_eq(obj["name"], Json::string("Shell"))
-  assert_true(ccs_mcp_app_enabled(server, "codex"))
+  assert_true(moon_mcp_app_enabled(server, "codex"))
 }
 
 ///|
@@ -8411,20 +8411,20 @@ test "ccs mcp import helpers merge app configs" {
       "bad": { "type": Json::string("stdio") }.to_json(),
     }.to_json(),
   }.to_json()
-  assert_eq(ccs_import_mcp_from_root_json(servers, "claude", claude_root), 1)
+  assert_eq(moon_import_mcp_from_root_json(servers, "claude", claude_root), 1)
   guard servers.get("filesystem") is Some(filesystem) else {
     fail("expected imported filesystem server")
   }
-  assert_true(ccs_mcp_app_enabled(filesystem, "claude"))
-  assert_false(ccs_mcp_app_enabled(filesystem, "codex"))
+  assert_true(moon_mcp_app_enabled(filesystem, "claude"))
+  assert_false(moon_mcp_app_enabled(filesystem, "codex"))
   assert_true(servers.get("bad") is None)
-  assert_eq(ccs_import_mcp_from_root_json(servers, "codex", claude_root), 1)
+  assert_eq(moon_import_mcp_from_root_json(servers, "codex", claude_root), 1)
   guard servers.get("filesystem") is Some(updated) else {
     fail("expected updated filesystem server")
   }
-  assert_true(ccs_mcp_app_enabled(updated, "claude"))
-  assert_true(ccs_mcp_app_enabled(updated, "codex"))
-  assert_eq(ccs_import_mcp_from_root_json(servers, "codex", claude_root), 0)
+  assert_true(moon_mcp_app_enabled(updated, "claude"))
+  assert_true(moon_mcp_app_enabled(updated, "codex"))
+  assert_eq(moon_import_mcp_from_root_json(servers, "codex", claude_root), 0)
 }
 
 ///|
@@ -8435,11 +8435,11 @@ test "ccs mcp import normalizes gemini httpUrl specs" {
       "web": { "httpUrl": Json::string("https://mcp.example") }.to_json(),
     }.to_json(),
   }.to_json()
-  assert_eq(ccs_import_mcp_from_root_json(servers, "gemini", gemini_root), 1)
+  assert_eq(moon_import_mcp_from_root_json(servers, "gemini", gemini_root), 1)
   guard servers.get("web") is Some(Object(web)) else {
     fail("expected imported web server")
   }
-  assert_true(ccs_mcp_app_enabled(Json::object(web), "gemini"))
+  assert_true(moon_mcp_app_enabled(Json::object(web), "gemini"))
   guard web["server"] is Object(spec) else {
     fail("expected normalized server spec")
   }
@@ -8461,11 +8461,11 @@ test "ccs mcp import parses codex official toml servers" {
     #|
     #|[mcp_servers.bad]
     #|type = "stdio"
-  assert_eq(ccs_import_mcp_from_codex_toml_text(servers, content), 1)
+  assert_eq(moon_import_mcp_from_codex_toml_text(servers, content), 1)
   guard servers.get("filesystem") is Some(Object(server)) else {
     fail("expected imported filesystem server")
   }
-  assert_true(ccs_mcp_app_enabled(Json::object(server), "codex"))
+  assert_true(moon_mcp_app_enabled(Json::object(server), "codex"))
   guard server["server"] is Object(spec) else { fail("expected server spec") }
   assert_eq(spec["type"], Json::string("stdio"))
   assert_eq(spec["command"], Json::string("npx"))
@@ -8475,7 +8475,7 @@ test "ccs mcp import parses codex official toml servers" {
   guard spec["env"] is Object(env) else { fail("expected env") }
   assert_eq(env["TOKEN"], Json::string("secret"))
   assert_true(servers.get("bad") is None)
-  assert_eq(ccs_import_mcp_from_codex_toml_text(servers, content), 0)
+  assert_eq(moon_import_mcp_from_codex_toml_text(servers, content), 0)
 }
 
 ///|
@@ -8493,7 +8493,7 @@ test "ccs mcp import parses codex legacy toml servers" {
     #|type = "sse"
     #|url = "https://sse.example"
     #|description = "legacy server"
-  assert_eq(ccs_import_mcp_from_codex_toml_text(servers, content), 2)
+  assert_eq(moon_import_mcp_from_codex_toml_text(servers, content), 2)
   guard servers.get("web") is Some(Object(web)) else {
     fail("expected imported web server")
   }
@@ -8515,7 +8515,7 @@ test "ccs mcp import parses codex legacy toml servers" {
 
 ///|
 test "ccs prompt helpers keep app-scoped prompt records" {
-  guard ccs_prompt_from_request(
+  guard moon_prompt_from_request(
       "/upsert_prompt?app=codex&id=review&name=Review&content=Check%20this&description=Code%20review",
       None,
     )
@@ -8529,16 +8529,16 @@ test "ccs prompt helpers keep app-scoped prompt records" {
   assert_eq(obj["content"], Json::string("Check this"))
   assert_eq(obj["enabled"], Json::boolean(true))
   let prompts : Map[String, Json] = {}
-  prompts[ccs_prompt_store_key(app, id)] = prompt
-  prompts[ccs_prompt_store_key("claude", "review")] = ccs_normalize_prompt(
+  prompts[moon_prompt_store_key(app, id)] = prompt
+  prompts[moon_prompt_store_key("claude", "review")] = moon_normalize_prompt(
     "review",
     { "content": Json::string("Claude") }.to_json(),
   )
-  guard ccs_prompts_object_for_app(prompts, "codex") is Object(codex) else {
+  guard moon_prompts_object_for_app(prompts, "codex") is Object(codex) else {
     fail("expected codex prompts")
   }
   assert_true(codex.get("review") is Some(_))
-  guard ccs_prompts_object_for_app(prompts, "claude") is Object(claude) else {
+  guard moon_prompts_object_for_app(prompts, "claude") is Object(claude) else {
     fail("expected claude prompts")
   }
   assert_true(claude.get("review") is Some(_))
@@ -8547,20 +8547,20 @@ test "ccs prompt helpers keep app-scoped prompt records" {
 ///|
 async test "ccs prompt file helpers import and read prompt files" {
   assert_eq(
-    ccs_prompt_file_path("codex"),
-    Ok(@pathx.join(ccs_config_dir("codex"), "AGENTS.md")),
+    moon_prompt_file_path("codex"),
+    Ok(@pathx.join(moon_config_dir("codex"), "AGENTS.md")),
   )
   assert_eq(
-    ccs_prompt_file_path("gemini"),
-    Ok(@pathx.join(ccs_config_dir("gemini"), "GEMINI.md")),
+    moon_prompt_file_path("gemini"),
+    Ok(@pathx.join(moon_config_dir("gemini"), "GEMINI.md")),
   )
-  assert_true(ccs_prompt_file_path("claude-desktop") is Err(_))
+  assert_true(moon_prompt_file_path("claude-desktop") is Err(_))
   @fsx.with_temporary_directory("moonstat-prompt-XXXXXX", async fn(tmpdir) {
     let prompt_path = @pathx.join(tmpdir, "AGENTS.md")
     let content = "# Codex prompt\n\nUse MoonBit."
     @fsx.write_to_file(prompt_path, content)
     let body = { "path": Json::string(prompt_path) }.to_json()
-    guard ccs_prompt_file_path_from_request(
+    guard moon_prompt_file_path_from_request(
         "/import_prompt_from_file?app=codex",
         Some(body),
         "codex",
@@ -8570,12 +8570,12 @@ async test "ccs prompt file helpers import and read prompt files" {
     }
     assert_eq(resolved_path, prompt_path)
     let prompts : Map[String, Json] = {}
-    guard ccs_import_prompt_from_file_json(prompts, "codex", prompt_path)
+    guard moon_import_prompt_from_file_json(prompts, "codex", prompt_path)
       is Ok(String(id)) else {
       fail("expected imported id")
     }
     assert_true(id.has_prefix("imported-"))
-    guard prompts.get(ccs_prompt_store_key("codex", id)) is Some(Object(prompt)) else {
+    guard prompts.get(moon_prompt_store_key("codex", id)) is Some(Object(prompt)) else {
       fail("expected stored prompt")
     }
     assert_eq(prompt["content"], Json::string(content))
@@ -8584,11 +8584,11 @@ async test "ccs prompt file helpers import and read prompt files" {
       Json::string("从现有配置文件导入"),
     )
     assert_eq(prompt["enabled"], Json::boolean(false))
-    guard ccs_current_prompt_file_content_json(prompt_path) is Ok(current) else {
+    guard moon_current_prompt_file_content_json(prompt_path) is Ok(current) else {
       fail("expected current prompt content")
     }
     assert_eq(current, Json::string(content))
-    guard ccs_current_prompt_file_content_json(
+    guard moon_current_prompt_file_content_json(
         @pathx.join(tmpdir, "missing.md"),
       )
       is Ok(missing) else {
@@ -8596,7 +8596,7 @@ async test "ccs prompt file helpers import and read prompt files" {
     }
     assert_eq(missing, Json::null())
     assert_true(
-      ccs_import_prompt_from_file_json(
+      moon_import_prompt_from_file_json(
         prompts,
         "codex",
         @pathx.join(tmpdir, "missing.md"),
@@ -8613,49 +8613,49 @@ async test "ccs prompt enable writes prompt file and disables app siblings" {
   ) {
     let prompt_path = @pathx.join(tmpdir, "AGENTS.md")
     let prompts : Map[String, Json] = {}
-    prompts[ccs_prompt_store_key("codex", "first")] = ccs_normalize_prompt(
+    prompts[moon_prompt_store_key("codex", "first")] = moon_normalize_prompt(
       "first",
       {
         "content": Json::string("first content"),
         "enabled": Json::boolean(true),
       }.to_json(),
     )
-    prompts[ccs_prompt_store_key("codex", "second")] = ccs_normalize_prompt(
+    prompts[moon_prompt_store_key("codex", "second")] = moon_normalize_prompt(
       "second",
       {
         "content": Json::string("second content"),
         "enabled": Json::boolean(false),
       }.to_json(),
     )
-    prompts[ccs_prompt_store_key("claude", "first")] = ccs_normalize_prompt(
+    prompts[moon_prompt_store_key("claude", "first")] = moon_normalize_prompt(
       "first",
       {
         "content": Json::string("claude content"),
         "enabled": Json::boolean(true),
       }.to_json(),
     )
-    match ccs_enable_prompt_json(prompts, "codex", "second", prompt_path) {
+    match moon_enable_prompt_json(prompts, "codex", "second", prompt_path) {
       Ok(_) => ()
       Err(error) => fail(error)
     }
     assert_eq(@fsx.read_file(prompt_path), "second content")
-    guard prompts.get(ccs_prompt_store_key("codex", "first"))
+    guard prompts.get(moon_prompt_store_key("codex", "first"))
       is Some(Object(codex_first)) else {
       fail("expected codex first prompt")
     }
     assert_eq(codex_first["enabled"], Json::boolean(false))
-    guard prompts.get(ccs_prompt_store_key("codex", "second"))
+    guard prompts.get(moon_prompt_store_key("codex", "second"))
       is Some(Object(codex_second)) else {
       fail("expected codex second prompt")
     }
     assert_eq(codex_second["enabled"], Json::boolean(true))
-    guard prompts.get(ccs_prompt_store_key("claude", "first"))
+    guard prompts.get(moon_prompt_store_key("claude", "first"))
       is Some(Object(claude_first)) else {
       fail("expected claude first prompt")
     }
     assert_eq(claude_first["enabled"], Json::boolean(true))
     assert_true(
-      ccs_enable_prompt_json(prompts, "codex", "missing", prompt_path) is Err(_),
+      moon_enable_prompt_json(prompts, "codex", "missing", prompt_path) is Err(_),
     )
   })
 }
@@ -8838,7 +8838,7 @@ test "ccs imports missing claude providers into claude desktop namespace" {
 }
 
 ///|
-fn ccs_direct_compatible_claude_desktop_provider(
+fn moon_direct_compatible_claude_desktop_provider(
   provider_type? : String? = Some("anthropic"),
   api_format? : String? = Some("anthropic"),
   is_full_url? : Bool = false,
@@ -8869,28 +8869,28 @@ fn ccs_direct_compatible_claude_desktop_provider(
 ///|
 test "ccs claude desktop direct compatibility filters unsafe providers" {
   assert_true(
-    ccs_direct_compatible_claude_desktop_provider().is_compatible_claude_desktop_direct_provider(),
+    moon_direct_compatible_claude_desktop_provider().is_compatible_claude_desktop_direct_provider(),
   )
   assert_false(
-    ccs_direct_compatible_claude_desktop_provider(
+    moon_direct_compatible_claude_desktop_provider(
       provider_type=Some("official"),
     ).is_compatible_claude_desktop_direct_provider(),
   )
   assert_false(
-    ccs_direct_compatible_claude_desktop_provider(
+    moon_direct_compatible_claude_desktop_provider(
       api_format=Some("openai_chat"),
     ).is_compatible_claude_desktop_direct_provider(),
   )
   assert_false(
-    ccs_direct_compatible_claude_desktop_provider(
+    moon_direct_compatible_claude_desktop_provider(
       provider_type=Some("github_copilot"),
     ).is_compatible_claude_desktop_direct_provider(),
   )
   assert_false(
-    ccs_direct_compatible_claude_desktop_provider(is_full_url=true).is_compatible_claude_desktop_direct_provider(),
+    moon_direct_compatible_claude_desktop_provider(is_full_url=true).is_compatible_claude_desktop_direct_provider(),
   )
   assert_false(
-    ccs_direct_compatible_claude_desktop_provider(token=None).is_compatible_claude_desktop_direct_provider(),
+    moon_direct_compatible_claude_desktop_provider(token=None).is_compatible_claude_desktop_direct_provider(),
   )
 }
 
@@ -8945,7 +8945,7 @@ test "ccs import derives claude desktop routes from claude provider env" {
 
 ///|
 test "ccs skill repo request accepts query and json body shapes" {
-  guard ccs_skill_repo_request_json(
+  guard moon_skill_repo_request_json(
       "/add_skill_repo?owner=vectie&name=moonstat-skills&branch=main&enabled=true",
       Some({}.to_json()),
     )
@@ -8957,7 +8957,7 @@ test "ccs skill repo request accepts query and json body shapes" {
   assert_eq(query_repo["branch"], Json::string("main"))
   assert_eq(query_repo["enabled"], Json::boolean(true))
 
-  guard ccs_skill_repo_request_json(
+  guard moon_skill_repo_request_json(
       "/add_skill_repo",
       Some(
         {

@@ -35,7 +35,7 @@ pub fn CircuitBreakerConfig::default() -> CircuitBreakerConfig {
 }
 
 ///|
-fn ccs_proxy_max_retries_default(app_type : String) -> Int {
+fn moon_proxy_max_retries_default(app_type : String) -> Int {
   match app_type {
     "claude" => 6
     "gemini" => 5
@@ -44,7 +44,7 @@ fn ccs_proxy_max_retries_default(app_type : String) -> Int {
 }
 
 ///|
-fn ccs_proxy_circuit_config_default(app_type : String) -> CircuitBreakerConfig {
+fn moon_proxy_circuit_config_default(app_type : String) -> CircuitBreakerConfig {
   match app_type {
     "claude" =>
       {
@@ -494,7 +494,7 @@ pub fn ProviderRouteTarget::to_json(self : ProviderRouteTarget) -> Json {
 }
 
 ///|
-fn ProviderRouteTarget::to_ccs_provider_json(
+fn ProviderRouteTarget::to_moon_provider_json(
   self : ProviderRouteTarget,
   in_failover_queue : Bool,
   sort_index? : Int? = None,
@@ -855,7 +855,7 @@ fn ProviderRouter::current_provider_id(
 }
 
 ///|
-fn ProviderRouter::current_provider_for_ccs_command(
+fn ProviderRouter::current_provider_for_moon_command(
   self : ProviderRouter,
   app_type : String,
 ) -> String {
@@ -867,7 +867,7 @@ fn ProviderRouter::current_provider_for_ccs_command(
 }
 
 ///|
-fn ProviderRouter::providers_ccs_json(
+fn ProviderRouter::providers_moon_json(
   self : ProviderRouter,
   app_type : String,
 ) -> Json {
@@ -882,7 +882,7 @@ fn ProviderRouter::providers_ccs_json(
       provider_ids.sort_by(fn(left, right) {
         guard providers.get(left) is Some(left_provider) else { return 1 }
         guard providers.get(right) is Some(right_provider) else { return -1 }
-        provider_ccs_sort_compare(
+        provider_moon_sort_compare(
           left_provider,
           self.provider_sort_index(app_type, left),
           right_provider,
@@ -891,7 +891,7 @@ fn ProviderRouter::providers_ccs_json(
       })
       for provider_id in provider_ids {
         guard providers.get(provider_id) is Some(provider) else { continue }
-        obj[provider_id] = provider.to_ccs_provider_json(
+        obj[provider_id] = provider.to_moon_provider_json(
           queue.contains(provider.provider_id),
           sort_index=self.provider_sort_index(app_type, provider_id),
         )
@@ -903,7 +903,7 @@ fn ProviderRouter::providers_ccs_json(
 }
 
 ///|
-fn provider_ccs_sort_compare(
+fn provider_moon_sort_compare(
   left : ProviderRouteTarget,
   left_sort_index : Int?,
   right : ProviderRouteTarget,
@@ -1008,7 +1008,7 @@ fn ProviderRouter::sync_current_provider_targets(
     }
     match app_providers.get(provider_id) {
       Some(provider) => {
-        if ccs_provider_route_target_has_takeover_placeholder(provider) {
+        if moon_provider_route_target_has_takeover_placeholder(provider) {
           continue
         }
         targets.push(provider)
@@ -1020,11 +1020,11 @@ fn ProviderRouter::sync_current_provider_targets(
 }
 
 ///|
-fn ccs_provider_route_target_has_takeover_placeholder(
+fn moon_provider_route_target_has_takeover_placeholder(
   provider : ProviderRouteTarget,
 ) -> Bool {
   match provider.settings_config {
-    Some(settings) => ccs_settings_has_proxy_managed_placeholder(settings)
+    Some(settings) => moon_settings_has_proxy_managed_placeholder(settings)
     None => false
   }
 }
@@ -1045,7 +1045,7 @@ fn ProviderRouter::default_current_provider_id(
   ids.sort_by(fn(left, right) {
     guard app_providers.get(left) is Some(left_provider) else { return 1 }
     guard app_providers.get(right) is Some(right_provider) else { return -1 }
-    provider_ccs_sort_compare(
+    provider_moon_sort_compare(
       left_provider,
       self.provider_sort_index(app_type, left),
       right_provider,
@@ -1444,7 +1444,7 @@ fn ProviderRouter::max_retries_for_app(
 ) -> Int {
   self.max_retries
   .get(app_type)
-  .unwrap_or(ccs_proxy_max_retries_default(app_type))
+  .unwrap_or(moon_proxy_max_retries_default(app_type))
 }
 
 ///|
@@ -1532,7 +1532,7 @@ fn ProviderRouter::available_failover_providers_json(
       for provider_id in providers.keys() {
         guard providers.get(provider_id) is Some(provider) else { continue }
         if !queue.contains(provider.provider_id) {
-          rows.push(provider.to_ccs_provider_json(false))
+          rows.push(provider.to_moon_provider_json(false))
         }
       }
     None => ()
@@ -1716,7 +1716,7 @@ fn ProviderRouter::circuit_config_for_app(
 ) -> CircuitBreakerConfig {
   self.app_circuit_configs
   .get(app_type)
-  .unwrap_or(ccs_proxy_circuit_config_default(app_type))
+  .unwrap_or(moon_proxy_circuit_config_default(app_type))
 }
 
 ///|

@@ -11,13 +11,13 @@ const CCS_TOOL_LIFECYCLE_TIMEOUT_MS = 600000
 const CCS_TOOL_PROBE_TIMEOUT_MS = 5000
 
 ///|
-priv enum CcsToolLifecycleAction {
+priv enum MoonToolLifecycleAction {
   Install
   Update
 }
 
 ///|
-priv struct CcsToolInstallation {
+priv struct MoonToolInstallation {
   path : String
   real : String
   version : String?
@@ -27,9 +27,9 @@ priv struct CcsToolInstallation {
 }
 
 ///|
-priv struct CcsToolInstallationReport {
+priv struct MoonToolInstallationReport {
   tool : String
-  installs : Array[CcsToolInstallation]
+  installs : Array[MoonToolInstallation]
   is_conflict : Bool
   needs_confirmation : Bool
   command : String
@@ -37,7 +37,7 @@ priv struct CcsToolInstallationReport {
 }
 
 ///|
-fn ccs_normalize_external_url(url : String) -> String {
+fn moon_normalize_external_url(url : String) -> String {
   if url.find("http://") == Some(0) || url.find("https://") == Some(0) {
     url
   } else {
@@ -46,13 +46,13 @@ fn ccs_normalize_external_url(url : String) -> String {
 }
 
 ///|
-fn ccs_tool_names() -> Array[String] {
+fn moon_tool_names() -> Array[String] {
   ["claude", "codex", "gemini", "opencode", "openclaw", "hermes"]
 }
 
 ///|
-fn ccs_requested_tool_names(raw : String?) -> Array[String] {
-  let valid = ccs_tool_names()
+fn moon_requested_tool_names(raw : String?) -> Array[String] {
+  let valid = moon_tool_names()
   let requested : Array[String] = []
   match raw {
     Some(value) =>
@@ -72,7 +72,7 @@ fn ccs_requested_tool_names(raw : String?) -> Array[String] {
 }
 
 ///|
-fn ccs_requested_tool_names_from_json(value : Json?) -> Array[String] {
+fn moon_requested_tool_names_from_json(value : Json?) -> Array[String] {
   match value {
     Some(Array(items)) => {
       let raw : Array[String] = []
@@ -82,15 +82,15 @@ fn ccs_requested_tool_names_from_json(value : Json?) -> Array[String] {
         }
       }
       let joined = raw.join(",")
-      ccs_requested_tool_names(Some(joined))
+      moon_requested_tool_names(Some(joined))
     }
-    Some(String(value)) => ccs_requested_tool_names(Some(value))
-    _ => ccs_requested_tool_names(None)
+    Some(String(value)) => moon_requested_tool_names(Some(value))
+    _ => moon_requested_tool_names(None)
   }
 }
 
 ///|
-fn ccs_tool_lifecycle_action(value : String) -> CcsToolLifecycleAction? {
+fn moon_tool_lifecycle_action(value : String) -> MoonToolLifecycleAction? {
   match value.trim().to_lower() {
     "install" => Some(Install)
     "update" => Some(Update)
@@ -99,32 +99,32 @@ fn ccs_tool_lifecycle_action(value : String) -> CcsToolLifecycleAction? {
 }
 
 ///|
-fn ccs_update_url() -> String {
+fn moon_update_url() -> String {
   CCS_UPDATE_URL
 }
 
 ///|
-fn ccs_init_error_json() -> Json {
+fn moon_init_error_json() -> Json {
   Json::null()
 }
 
 ///|
-fn ccs_migration_result_json() -> Json {
+fn moon_migration_result_json() -> Json {
   Json::boolean(false)
 }
 
 ///|
-fn ccs_skills_migration_result_json() -> Json {
+fn moon_skills_migration_result_json() -> Json {
   Json::null()
 }
 
 ///|
-fn ccs_dialog_result_json() -> Json {
+fn moon_dialog_result_json() -> Json {
   Json::null()
 }
 
 ///|
-async fn ccs_portable_mode() -> Bool {
+async fn moon_portable_mode() -> Bool {
   let exe = @os.executable() catch { _ => return false }
   let marker = @pathx.join(@pathx.dirname(exe), "portable.ini")
   @fsx.exists_as_file(marker) catch {
@@ -133,23 +133,23 @@ async fn ccs_portable_mode() -> Bool {
 }
 
 ///|
-async fn ccs_get_tool_versions_json(tools : String?) -> Json {
+async fn moon_get_tool_versions_json(tools : String?) -> Json {
   let versions : Array[Json] = []
-  for tool in ccs_requested_tool_names(tools) {
-    versions.push(ccs_single_tool_version_json(tool))
+  for tool in moon_requested_tool_names(tools) {
+    versions.push(moon_single_tool_version_json(tool))
   }
   Json::array(versions)
 }
 
 ///|
-async fn ccs_single_tool_version_json(tool : String) -> Json {
+async fn moon_single_tool_version_json(tool : String) -> Json {
   let result = @spawn.spawn(
     tool,
     ["--version"],
     timeout=CCS_TOOL_VERSION_TIMEOUT_MS,
   ) catch {
     err =>
-      return ccs_tool_version_json(
+      return moon_tool_version_json(
         tool,
         None,
         None,
@@ -162,9 +162,9 @@ async fn ccs_single_tool_version_json(tool : String) -> Json {
   } else {
     result.stdout
   }
-  let version = ccs_first_output_line(combined)
+  let version = moon_first_output_line(combined)
   let broken = result.status != 0
-  ccs_tool_version_json(
+  moon_tool_version_json(
     tool,
     version,
     None,
@@ -178,18 +178,18 @@ async fn ccs_single_tool_version_json(tool : String) -> Json {
 }
 
 ///|
-async fn ccs_run_tool_lifecycle_action_json(
+async fn moon_run_tool_lifecycle_action_json(
   tools : Array[String],
   action : String,
 ) -> Result[Json, String] {
-  guard ccs_tool_lifecycle_action(action) is Some(action) else {
+  guard moon_tool_lifecycle_action(action) is Some(action) else {
     return Err("Unsupported tool action: \{action}")
   }
-  let requested = ccs_requested_tool_names(Some(tools.join(",")))
+  let requested = moon_requested_tool_names(Some(tools.join(",")))
   if requested.is_empty() {
     return Err("No supported tools selected")
   }
-  let command = ccs_build_tool_lifecycle_command(requested, action)
+  let command = moon_build_tool_lifecycle_command(requested, action)
   if command.trim().is_empty() {
     return Err("No supported tool command available")
   }
@@ -208,7 +208,7 @@ async fn ccs_run_tool_lifecycle_action_json(
     } else {
       result.stderr.trim()
     }
-    let detail = ccs_last_lines(raw.to_owned(), 8)
+    let detail = moon_last_lines(raw.to_owned(), 8)
     Err(
       if detail.is_empty() {
         "命令执行失败 (exit code: \{result.status})"
@@ -220,22 +220,22 @@ async fn ccs_run_tool_lifecycle_action_json(
 }
 
 ///|
-async fn ccs_probe_tool_installations_json(
+async fn moon_probe_tool_installations_json(
   tools : Array[String],
 ) -> Result[Json, String] {
-  let requested = ccs_requested_tool_names(Some(tools.join(",")))
+  let requested = moon_requested_tool_names(Some(tools.join(",")))
   if requested.is_empty() {
     return Err("No supported tools selected")
   }
   let reports : Array[Json] = []
   for tool in requested {
-    reports.push(ccs_tool_installation_report(tool).to_json())
+    reports.push(moon_tool_installation_report(tool).to_json())
   }
   Ok(Json::array(reports))
 }
 
 ///|
-fn CcsToolInstallation::to_json(self : CcsToolInstallation) -> Json {
+fn MoonToolInstallation::to_json(self : MoonToolInstallation) -> Json {
   {
     "path": Json::string(self.path),
     "real": Json::string(self.real),
@@ -247,7 +247,7 @@ fn CcsToolInstallation::to_json(self : CcsToolInstallation) -> Json {
 }
 
 ///|
-fn CcsToolInstallationReport::to_json(self : CcsToolInstallationReport) -> Json {
+fn MoonToolInstallationReport::to_json(self : MoonToolInstallationReport) -> Json {
   {
     "tool": Json::string(self.tool),
     "installs": Json::array(self.installs.map(fn(item) { item.to_json() })),
@@ -259,55 +259,55 @@ fn CcsToolInstallationReport::to_json(self : CcsToolInstallationReport) -> Json 
 }
 
 ///|
-async fn ccs_tool_installation_report(
+async fn moon_tool_installation_report(
   tool : String,
-) -> CcsToolInstallationReport {
-  let installs = ccs_enumerate_tool_installations(tool)
-  let command = ccs_tool_update_command(tool, installs)
-  CcsToolInstallationReport::{
+) -> MoonToolInstallationReport {
+  let installs = moon_enumerate_tool_installations(tool)
+  let command = moon_tool_update_command(tool, installs)
+  MoonToolInstallationReport::{
     tool,
     installs,
-    is_conflict: ccs_tool_installations_conflict(installs),
+    is_conflict: moon_tool_installations_conflict(installs),
     needs_confirmation: installs.length() >= 2,
     command,
-    anchored: ccs_default_installation(installs) is Some(_),
+    anchored: moon_default_installation(installs) is Some(_),
   }
 }
 
 ///|
-async fn ccs_enumerate_tool_installations(
+async fn moon_enumerate_tool_installations(
   tool : String,
-) -> Array[CcsToolInstallation] {
-  let installs : Array[CcsToolInstallation] = []
+) -> Array[MoonToolInstallation] {
+  let installs : Array[MoonToolInstallation] = []
   let seen : Map[String, Bool] = {}
-  match ccs_command_path(tool) {
+  match moon_command_path(tool) {
     Some(path) => {
       let real = @fsx.resolve(path) catch { _ => path }
-      installs.push(CcsToolInstallation::{
+      installs.push(MoonToolInstallation::{
         path,
         real,
-        version: ccs_probe_tool_version_at(path),
+        version: moon_probe_tool_version_at(path),
         runnable: true,
-        source: ccs_install_source(path),
+        source: moon_install_source(path),
         is_path_default: true,
       })
       seen[path] = true
     }
     None => ()
   }
-  for path in ccs_common_tool_paths(tool) {
+  for path in moon_common_tool_paths(tool) {
     if seen.get(path) is Some(_) {
       continue
     }
     let exists = @fsx.exists_as_file(path) catch { _ => false }
     if exists {
       let real = @fsx.resolve(path) catch { _ => path }
-      installs.push(CcsToolInstallation::{
+      installs.push(MoonToolInstallation::{
         path,
         real,
-        version: ccs_probe_tool_version_at(path),
+        version: moon_probe_tool_version_at(path),
         runnable: true,
-        source: ccs_install_source(path),
+        source: moon_install_source(path),
         is_path_default: false,
       })
       seen[path] = true
@@ -317,10 +317,10 @@ async fn ccs_enumerate_tool_installations(
 }
 
 ///|
-async fn ccs_command_path(tool : String) -> String? {
+async fn moon_command_path(tool : String) -> String? {
   let result = @spawn.spawn(
     "bash",
-    ["-lc", "command -v \{ccs_shell_single_quote(tool)}"],
+    ["-lc", "command -v \{moon_shell_single_quote(tool)}"],
     timeout=CCS_TOOL_PROBE_TIMEOUT_MS,
   ) catch {
     _ => return None
@@ -328,11 +328,11 @@ async fn ccs_command_path(tool : String) -> String? {
   if result.status != 0 {
     return None
   }
-  ccs_first_output_line(result.stdout)
+  moon_first_output_line(result.stdout)
 }
 
 ///|
-async fn ccs_probe_tool_version_at(path : String) -> String? {
+async fn moon_probe_tool_version_at(path : String) -> String? {
   let result = @spawn.spawn(
     path,
     ["--version"],
@@ -348,11 +348,11 @@ async fn ccs_probe_tool_version_at(path : String) -> String? {
   } else {
     result.stdout
   }
-  ccs_first_output_line(output)
+  moon_first_output_line(output)
 }
 
 ///|
-fn ccs_common_tool_paths(tool : String) -> Array[String] {
+fn moon_common_tool_paths(tool : String) -> Array[String] {
   let paths : Array[String] = []
   let home = @os.home() catch { _ => "" }
   for
@@ -371,7 +371,7 @@ fn ccs_common_tool_paths(tool : String) -> Array[String] {
 }
 
 ///|
-fn ccs_install_source(path : String) -> String {
+fn moon_install_source(path : String) -> String {
   let lower = path.to_lower()
   if lower.contains("/.volta/") {
     "volta"
@@ -393,9 +393,9 @@ fn ccs_install_source(path : String) -> String {
 }
 
 ///|
-fn ccs_default_installation(
-  installs : Array[CcsToolInstallation],
-) -> CcsToolInstallation? {
+fn moon_default_installation(
+  installs : Array[MoonToolInstallation],
+) -> MoonToolInstallation? {
   for install in installs {
     if install.is_path_default {
       return Some(install)
@@ -408,8 +408,8 @@ fn ccs_default_installation(
 }
 
 ///|
-fn ccs_tool_installations_conflict(
-  installs : Array[CcsToolInstallation],
+fn moon_tool_installations_conflict(
+  installs : Array[MoonToolInstallation],
 ) -> Bool {
   if installs.length() < 2 {
     return false
@@ -429,18 +429,18 @@ fn ccs_tool_installations_conflict(
 }
 
 ///|
-async fn ccs_build_tool_lifecycle_command(
+async fn moon_build_tool_lifecycle_command(
   tools : Array[String],
-  action : CcsToolLifecycleAction,
+  action : MoonToolLifecycleAction,
 ) -> String {
   let lines : Array[String] = ["set -e", "set -o pipefail"]
   for tool in tools {
-    lines.push("echo ========== \{ccs_tool_display_name(tool)} ==========")
+    lines.push("echo ========== \{moon_tool_display_name(tool)} ==========")
     lines.push(
       match action {
-        Install => ccs_tool_install_command(tool)
+        Install => moon_tool_install_command(tool)
         Update =>
-          ccs_tool_update_command(tool, ccs_enumerate_tool_installations(tool))
+          moon_tool_update_command(tool, moon_enumerate_tool_installations(tool))
       },
     )
     lines.push("")
@@ -449,7 +449,7 @@ async fn ccs_build_tool_lifecycle_command(
 }
 
 ///|
-fn ccs_tool_display_name(tool : String) -> String {
+fn moon_tool_display_name(tool : String) -> String {
   match tool {
     "claude" => "Claude Code"
     "codex" => "Codex"
@@ -462,17 +462,17 @@ fn ccs_tool_display_name(tool : String) -> String {
 }
 
 ///|
-fn ccs_tool_install_command(tool : String) -> String {
+fn moon_tool_install_command(tool : String) -> String {
   match tool {
     "claude" =>
-      ccs_chain_commands(
+      moon_chain_commands(
         "bash -c 'tmp=$(mktemp) && curl -fsSL https://claude.ai/install.sh -o $tmp && bash $tmp; status=$?; rm -f $tmp; exit $status'",
         "npm i -g @anthropic-ai/claude-code@latest",
       )
     "codex" => "npm i -g @openai/codex@latest"
     "gemini" => "npm i -g @google/gemini-cli@latest"
     "opencode" =>
-      ccs_chain_commands(
+      moon_chain_commands(
         "bash -c 'tmp=$(mktemp) && curl -fsSL https://opencode.ai/install -o $tmp && bash $tmp; status=$?; rm -f $tmp; exit $status'",
         "npm i -g opencode-ai@latest",
       )
@@ -484,35 +484,35 @@ fn ccs_tool_install_command(tool : String) -> String {
 }
 
 ///|
-fn ccs_tool_update_command(
+fn moon_tool_update_command(
   tool : String,
-  installs : Array[CcsToolInstallation],
+  installs : Array[MoonToolInstallation],
 ) -> String {
-  match ccs_default_installation(installs) {
+  match moon_default_installation(installs) {
     Some(install) =>
-      match ccs_anchored_tool_update_command(tool, install) {
+      match moon_anchored_tool_update_command(tool, install) {
         Some(command) => command
-        None => ccs_static_tool_update_command(tool)
+        None => moon_static_tool_update_command(tool)
       }
-    None => ccs_static_tool_update_command(tool)
+    None => moon_static_tool_update_command(tool)
   }
 }
 
 ///|
-fn ccs_anchored_tool_update_command(
+fn moon_anchored_tool_update_command(
   tool : String,
-  install : CcsToolInstallation,
+  install : MoonToolInstallation,
 ) -> String? {
-  let quoted = ccs_quote_path_if_needed(install.path)
+  let quoted = moon_quote_path_if_needed(install.path)
   match tool {
     "claude" | "codex" | "openclaw" => Some("\{quoted} update")
     "opencode" => Some("\{quoted} upgrade")
     "hermes" => Some("\{quoted} update")
     "gemini" =>
-      match ccs_sibling_bin(install.path, "npm") {
+      match moon_sibling_bin(install.path, "npm") {
         Some(npm) =>
           Some(
-            "\{ccs_quote_path_if_needed(npm)} i -g @google/gemini-cli@latest",
+            "\{moon_quote_path_if_needed(npm)} i -g @google/gemini-cli@latest",
           )
         None => None
       }
@@ -521,21 +521,21 @@ fn ccs_anchored_tool_update_command(
 }
 
 ///|
-fn ccs_static_tool_update_command(tool : String) -> String {
+fn moon_static_tool_update_command(tool : String) -> String {
   match tool {
     "claude" =>
-      ccs_chain_commands(
+      moon_chain_commands(
         "claude update", "npm i -g @anthropic-ai/claude-code@latest",
       )
     "codex" =>
-      ccs_chain_commands("codex update", "npm i -g @openai/codex@latest")
+      moon_chain_commands("codex update", "npm i -g @openai/codex@latest")
     "gemini" => "npm i -g @google/gemini-cli@latest"
     "opencode" =>
-      ccs_chain_commands("opencode upgrade", "npm i -g opencode-ai@latest")
+      moon_chain_commands("opencode upgrade", "npm i -g opencode-ai@latest")
     "openclaw" =>
-      ccs_chain_commands("openclaw update --yes", "npm i -g openclaw@latest")
+      moon_chain_commands("openclaw update --yes", "npm i -g openclaw@latest")
     "hermes" =>
-      ccs_chain_commands(
+      moon_chain_commands(
         "hermes update", "bash -c 'tmp=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh -o $tmp && bash $tmp; status=$?; rm -f $tmp; exit $status'",
       )
     _ => ""
@@ -543,7 +543,7 @@ fn ccs_static_tool_update_command(tool : String) -> String {
 }
 
 ///|
-fn ccs_chain_commands(primary : String, fallback : String) -> String {
+fn moon_chain_commands(primary : String, fallback : String) -> String {
   if fallback.trim().is_empty() {
     primary
   } else {
@@ -552,7 +552,7 @@ fn ccs_chain_commands(primary : String, fallback : String) -> String {
 }
 
 ///|
-fn ccs_sibling_bin(path : String, exe : String) -> String? {
+fn moon_sibling_bin(path : String, exe : String) -> String? {
   let dir = @pathx.dirname(path)
   if dir.is_empty() {
     None
@@ -562,28 +562,28 @@ fn ccs_sibling_bin(path : String, exe : String) -> String? {
 }
 
 ///|
-fn ccs_shell_single_quote(value : String) -> String {
+fn moon_shell_single_quote(value : String) -> String {
   "'" + value.replace_all(old="'", new="'\\''") + "'"
 }
 
 ///|
-fn ccs_quote_path_if_needed(path : String) -> String {
+fn moon_quote_path_if_needed(path : String) -> String {
   if path.contains(" ") || path.contains("'") || path.contains("\"") {
-    ccs_shell_single_quote(path)
+    moon_shell_single_quote(path)
   } else {
     path
   }
 }
 
 ///|
-fn ccs_last_lines(text : String, n : Int) -> String {
+fn moon_last_lines(text : String, n : Int) -> String {
   let lines = text.split("\n").map(fn(line) { line.to_owned() })
   let start = if lines.length() > n { lines.length() - n } else { 0 }
   lines[start:].join("\n")
 }
 
 ///|
-fn ccs_first_output_line(output : String) -> String? {
+fn moon_first_output_line(output : String) -> String? {
   for line_view in output.split("\n") {
     let line = line_view.to_owned().trim().to_owned()
     if !line.is_empty() {
@@ -594,7 +594,7 @@ fn ccs_first_output_line(output : String) -> String? {
 }
 
 ///|
-fn ccs_tool_version_json(
+fn moon_tool_version_json(
   name : String,
   version : String?,
   latest_version : String?,

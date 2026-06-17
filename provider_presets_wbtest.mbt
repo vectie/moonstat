@@ -1,6 +1,6 @@
 ///|
 test "ccs provider presets include Unity2 across suite apps" {
-  guard ccs_provider_presets_json("/get_provider_presets") is Array(presets) else {
+  guard moon_provider_presets_json("/get_provider_presets") is Array(presets) else {
     fail("expected presets")
   }
   assert_eq(presets.length(), 354)
@@ -31,38 +31,38 @@ test "ccs provider presets include Unity2 across suite apps" {
 ///|
 test "ccs provider presets mirror visible ccs app counts" {
   assert_eq(
-    ccs_visible_provider_presets(Some("claude"), "", "original").length(),
+    moon_visible_provider_presets(Some("claude"), "", "original").length(),
     63,
   )
   assert_eq(
-    ccs_visible_provider_presets(Some("claude-desktop"), "", "original").length(),
+    moon_visible_provider_presets(Some("claude-desktop"), "", "original").length(),
     60,
   )
   assert_eq(
-    ccs_visible_provider_presets(Some("codex"), "", "original").length(),
+    moon_visible_provider_presets(Some("codex"), "", "original").length(),
     54,
   )
   assert_eq(
-    ccs_visible_provider_presets(Some("gemini"), "", "original").length(),
+    moon_visible_provider_presets(Some("gemini"), "", "original").length(),
     19,
   )
   assert_eq(
-    ccs_visible_provider_presets(Some("opencode"), "", "original").length(),
+    moon_visible_provider_presets(Some("opencode"), "", "original").length(),
     52,
   )
   assert_eq(
-    ccs_visible_provider_presets(Some("openclaw"), "", "original").length(),
+    moon_visible_provider_presets(Some("openclaw"), "", "original").length(),
     53,
   )
   assert_eq(
-    ccs_visible_provider_presets(Some("hermes"), "", "original").length(),
+    moon_visible_provider_presets(Some("hermes"), "", "original").length(),
     53,
   )
 }
 
 ///|
 test "ccs provider presets filter by app and search text" {
-  guard ccs_provider_presets_json(
+  guard moon_provider_presets_json(
       "/get_provider_presets?appType=gemini&query=unity2",
     )
     is Array(presets) else {
@@ -85,20 +85,20 @@ test "ccs provider presets filter by app and search text" {
 
 ///|
 test "ccs provider presets name sort keeps full visible set" {
-  let entries = ccs_visible_provider_presets(None, "", "nameAsc")
+  let entries = moon_visible_provider_presets(None, "", "nameAsc")
   assert_eq(entries.length(), 354)
-  assert_eq(ccs_provider_preset_name(entries[0]), "自定义")
+  assert_eq(moon_provider_preset_name(entries[0]), "自定义")
   assert_eq(
-    ccs_provider_preset_name(entries[entries.length() - 1]),
+    moon_provider_preset_name(entries[entries.length() - 1]),
     "Xiaomi MiMo Token Plan (China)",
   )
 }
 
 ///|
 test "ccs provider presets search across generated ccs catalog" {
-  let pateway = ccs_visible_provider_presets(None, "pateway", "original")
+  let pateway = moon_visible_provider_presets(None, "pateway", "original")
   assert_eq(pateway.length(), 3)
-  let official = ccs_visible_provider_presets(None, "official", "nameAsc")
+  let official = moon_visible_provider_presets(None, "official", "nameAsc")
   assert_true(official.length() >= 3)
   let mut found_official_category = false
   for preset in official {

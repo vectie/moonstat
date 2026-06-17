@@ -600,7 +600,7 @@ fn suite_routes_include_path(routes : Array[Json], path : String) -> Bool {
 }
 
 ///|
-fn ccs_tauri_command_surface() -> Array[String] {
+fn moon_tauri_command_surface() -> Array[String] {
   [
     "get_providers", "get_current_provider", "add_provider", "update_provider", "delete_provider",
     "remove_provider_from_live_config", "switch_provider", "import_default_config",
@@ -692,9 +692,9 @@ test "suite manifest covers current CCS Tauri command surface" {
   )
   guard manifest is Object(obj) else { fail("expected manifest object") }
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
-  let ccs_commands = ccs_tauri_command_surface()
-  assert_eq(ccs_commands.length(), 274)
-  for command in ccs_commands {
+  let moon_commands = moon_tauri_command_surface()
+  assert_eq(moon_commands.length(), 274)
+  for command in moon_commands {
     assert_true(suite_routes_include_path(routes, "/\{command}"))
   }
 }
@@ -713,9 +713,9 @@ fn gateway_source_registers_path(source : String, path : String) -> Bool {
 ///|
 async test "gateway registers current CCS Tauri command handlers" {
   let source = @fsx.read_file("gateway.mbt")
-  let ccs_commands = ccs_tauri_command_surface()
-  assert_eq(ccs_commands.length(), 274)
-  for command in ccs_commands {
+  let moon_commands = moon_tauri_command_surface()
+  assert_eq(moon_commands.length(), 274)
+  for command in moon_commands {
     assert_true(gateway_source_registers_path(source, "/\{command}"))
   }
 }

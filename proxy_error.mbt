@@ -1,14 +1,14 @@
 ///|
-pub let ccs_fwd_provider_failed_retry : String = "FWD-001"
+pub let moon_fwd_provider_failed_retry : String = "FWD-001"
 
 ///|
-pub let ccs_fwd_all_providers_failed : String = "FWD-002"
+pub let moon_fwd_all_providers_failed : String = "FWD-002"
 
 ///|
-pub let ccs_fwd_single_provider_failed : String = "FWD-003"
+pub let moon_fwd_single_provider_failed : String = "FWD-003"
 
 ///|
-pub enum CcsProxyError {
+pub enum MoonProxyError {
   AlreadyRunning
   NotRunning
   UpstreamError(status~ : Int, body~ : String?)
@@ -29,7 +29,7 @@ pub enum CcsProxyError {
 }
 
 ///|
-pub fn CcsProxyError::to_string(self : CcsProxyError) -> String {
+pub fn MoonProxyError::to_string(self : MoonProxyError) -> String {
   match self {
     AlreadyRunning => "proxy already running"
     NotRunning => "proxy not running"
@@ -56,7 +56,7 @@ pub fn CcsProxyError::to_string(self : CcsProxyError) -> String {
 }
 
 ///|
-pub fn ccs_map_proxy_error_to_status(error : CcsProxyError) -> Int {
+pub fn moon_map_proxy_error_to_status(error : MoonProxyError) -> Int {
   match error {
     AlreadyRunning => @status.Conflict
     NotRunning => @status.ServiceUnavailable
@@ -77,7 +77,7 @@ pub fn ccs_map_proxy_error_to_status(error : CcsProxyError) -> Int {
 }
 
 ///|
-pub fn ccs_proxy_error_message(error : CcsProxyError) -> String {
+pub fn moon_proxy_error_message(error : MoonProxyError) -> String {
   match error {
     UpstreamError(status~, body~) =>
       match body {
@@ -98,54 +98,54 @@ pub fn ccs_proxy_error_message(error : CcsProxyError) -> String {
 }
 
 ///|
-fn ccs_build_retryable_failure_log(
+fn moon_build_retryable_failure_log(
   provider_name : String,
   attempted_providers : Int,
   total_providers : Int,
-  error : CcsProxyError,
+  error : MoonProxyError,
 ) -> (String, String) {
-  let error_summary = ccs_summarize_proxy_error(error)
+  let error_summary = moon_summarize_proxy_error(error)
   if total_providers <= 1 {
     (
-      ccs_fwd_single_provider_failed,
+      moon_fwd_single_provider_failed,
       "Provider \{provider_name} 请求失败: \{error_summary}",
     )
   } else {
     (
-      ccs_fwd_provider_failed_retry,
+      moon_fwd_provider_failed_retry,
       "Provider \{provider_name} 失败，继续尝试下一个 (\{attempted_providers}/\{total_providers}): \{error_summary}",
     )
   }
 }
 
 ///|
-fn ccs_build_terminal_failure_log(
+fn moon_build_terminal_failure_log(
   attempted_providers : Int,
   total_providers : Int,
-  last_error : CcsProxyError?,
+  last_error : MoonProxyError?,
 ) -> (String, String)? {
   if total_providers <= 1 {
     return None
   }
   let error_summary = match last_error {
-    Some(error) => ccs_summarize_proxy_error(error)
+    Some(error) => moon_summarize_proxy_error(error)
     None => "未知错误"
   }
   Some(
     (
-      ccs_fwd_all_providers_failed,
+      moon_fwd_all_providers_failed,
       "已尝试 \{attempted_providers}/\{total_providers} 个 Provider，均失败。最后错误: \{error_summary}",
     ),
   )
 }
 
 ///|
-fn ccs_summarize_proxy_error(error : CcsProxyError) -> String {
+fn moon_summarize_proxy_error(error : MoonProxyError) -> String {
   match error {
     UpstreamError(status~, body~) =>
       match body {
         Some(body) => {
-          let summary = ccs_summarize_upstream_body(body)
+          let summary = moon_summarize_upstream_body(body)
           if summary.is_empty() {
             "上游 HTTP \{status}"
           } else {
@@ -155,32 +155,32 @@ fn ccs_summarize_proxy_error(error : CcsProxyError) -> String {
         None => "上游 HTTP \{status}"
       }
     Timeout(message) =>
-      "请求超时: \{ccs_summarize_text_for_log(message, 180)}"
+      "请求超时: \{moon_summarize_text_for_log(message, 180)}"
     ForwardFailed(message) =>
-      "请求转发失败: \{ccs_summarize_text_for_log(message, 180)}"
+      "请求转发失败: \{moon_summarize_text_for_log(message, 180)}"
     TransformError(message) =>
-      "响应转换失败: \{ccs_summarize_text_for_log(message, 180)}"
+      "响应转换失败: \{moon_summarize_text_for_log(message, 180)}"
     ConfigError(message) =>
-      "配置错误: \{ccs_summarize_text_for_log(message, 180)}"
+      "配置错误: \{moon_summarize_text_for_log(message, 180)}"
     AuthError(message) =>
-      "认证失败: \{ccs_summarize_text_for_log(message, 180)}"
-    _ => ccs_summarize_text_for_log(error.to_string(), 180)
+      "认证失败: \{moon_summarize_text_for_log(message, 180)}"
+    _ => moon_summarize_text_for_log(error.to_string(), 180)
   }
 }
 
 ///|
-fn ccs_summarize_upstream_body(body : String) -> String {
+fn moon_summarize_upstream_body(body : String) -> String {
   let json_body = @json.parse(body) catch {
-    _ => return ccs_summarize_text_for_log(body, 180)
+    _ => return moon_summarize_text_for_log(body, 180)
   }
-  match ccs_json_error_message(json_body) {
-    Some(message) => ccs_summarize_text_for_log(message, 180)
-    None => ccs_summarize_text_for_log(json_body.stringify(), 180)
+  match moon_json_error_message(json_body) {
+    Some(message) => moon_summarize_text_for_log(message, 180)
+    None => moon_summarize_text_for_log(json_body.stringify(), 180)
   }
 }
 
 ///|
-fn ccs_json_error_message(body : Json) -> String? {
+fn moon_json_error_message(body : Json) -> String? {
   match body {
     Object(obj) => {
       match obj.get("error") {
@@ -207,8 +207,8 @@ fn ccs_json_error_message(body : Json) -> String? {
 }
 
 ///|
-fn ccs_summarize_text_for_log(text : String, max_chars : Int) -> String {
-  let normalized = ccs_collapse_ascii_whitespace(text).trim()
+fn moon_summarize_text_for_log(text : String, max_chars : Int) -> String {
+  let normalized = moon_collapse_ascii_whitespace(text).trim()
   if normalized.length() <= max_chars {
     normalized.to_owned()
   } else {
@@ -217,12 +217,12 @@ fn ccs_summarize_text_for_log(text : String, max_chars : Int) -> String {
 }
 
 ///|
-fn ccs_collapse_ascii_whitespace(text : String) -> String {
+fn moon_collapse_ascii_whitespace(text : String) -> String {
   let buffer = StringBuilder::new()
   let mut in_whitespace = false
   let mut has_output = false
   for ch in text {
-    if ccs_is_ascii_whitespace(ch) {
+    if moon_is_ascii_whitespace(ch) {
       in_whitespace = true
     } else {
       if in_whitespace && has_output {
@@ -237,6 +237,6 @@ fn ccs_collapse_ascii_whitespace(text : String) -> String {
 }
 
 ///|
-fn ccs_is_ascii_whitespace(ch : Char) -> Bool {
+fn moon_is_ascii_whitespace(ch : Char) -> Bool {
   ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t'
 }

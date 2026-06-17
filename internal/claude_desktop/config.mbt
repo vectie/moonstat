@@ -550,7 +550,7 @@ fn claude_desktop_paths() -> ClaudeDesktopPaths {
 
 ///|
 fn moonstat_dir() -> String {
-  @pathx.join(home_dir(), ".moonstat")
+  @pathx.join(home_dir(), ".moonsuite")
 }
 
 ///|

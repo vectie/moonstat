@@ -231,7 +231,7 @@ pub fn default_moonstat_suite_status_path() -> String {
 ///|
 fn default_moonstat_dir() -> String {
   let home = @os.home() catch { _ => "." }
-  @pathx.join(home, ".moonstat")
+  @pathx.join(home, ".moonsuite")
 }
 
 ///|

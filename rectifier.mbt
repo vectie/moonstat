@@ -32,7 +32,7 @@ priv struct BudgetRectifyResult {
 }
 
 ///|
-priv struct CcsRectifierRetry {
+priv struct MoonRectifierRetry {
   body : Json
   kind : String
   summary : String
@@ -333,10 +333,10 @@ fn budget_snapshot_equal(
 }
 
 ///|
-fn ccs_rectifier_retry_body(
+fn moon_rectifier_retry_body(
   response_body : String,
   upstream_body : Json,
-) -> CcsRectifierRetry? {
+) -> MoonRectifierRetry? {
   let config = moonstat_rectifier_config_from_env()
   ignore(config.request_media_fallback || config.request_media_heuristic)
   let error_message = Some(response_body)

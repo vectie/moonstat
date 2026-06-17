@@ -13,7 +13,7 @@ test "ccs provider terminal env extracts app-specific fields" {
       }.to_json(),
     ),
   )
-  let env = ccs_provider_terminal_env(provider, "codex")
+  let env = moon_provider_terminal_env(provider, "codex")
   assert_eq(env["OPENAI_API_KEY"], "sk-test")
   assert_eq(env["OPENAI_BASE_URL"], "https://api.example.test/v1")
   assert_eq(env["EXTRA_FLAG"], "1")
@@ -25,7 +25,7 @@ test "ccs provider terminal command quotes cwd and env values" {
     "GOOD_KEY": "value with space",
     "BAD-KEY": "skip",
   }
-  let command = ccs_provider_terminal_command(env, Some("/tmp/project O'Brien"))
+  let command = moon_provider_terminal_command(env, Some("/tmp/project O'Brien"))
   assert_true(command.contains("tell application \"Terminal\""))
   assert_true(command.contains("project O"))
   assert_true(command.contains("Brien"))
@@ -52,7 +52,7 @@ test "ccs import default config accepts clean live provider settings" {
     ),
   )
   router.set_current_provider("claude", "clean")
-  match ccs_import_default_config_json(router, "claude") {
+  match moon_import_default_config_json(router, "claude") {
     Ok(value) => assert_eq(value, Json::boolean(true))
     Err(error) => fail("unexpected import error: \{error}")
   }
@@ -79,7 +79,7 @@ test "ccs import default config rejects takeover placeholder residue" {
   )
   router.set_current_provider("claude", "polluted")
   assert_true(
-    ccs_settings_has_proxy_managed_placeholder(
+    moon_settings_has_proxy_managed_placeholder(
       {
         "nested": Json::array([
           Json::string("real-token"),
@@ -88,7 +88,7 @@ test "ccs import default config rejects takeover placeholder residue" {
       }.to_json(),
     ),
   )
-  match ccs_import_default_config_json(router, "claude") {
+  match moon_import_default_config_json(router, "claude") {
     Err(error) => assert_eq(error, "live_taken_over")
     Ok(_) => fail("expected live takeover guard")
   }

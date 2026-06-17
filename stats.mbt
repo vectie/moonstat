@@ -855,7 +855,7 @@ pub fn TrafficStats::request_logs_json(
   let bounded_limit = if limit < 0 { 0 } else { limit }
   let start = max_int(len - bounded_limit, 0)
   for i in start..<len {
-    logs.push(effective_logs[i].to_ccs_request_log_detail_json())
+    logs.push(effective_logs[i].to_moon_request_log_detail_json())
   }
   Json::array(logs)
 }
@@ -937,7 +937,7 @@ fn TrafficStats::usage_logs_paginated_json(
   let end = request_log_min_int(start + page_size, total)
   if start < total {
     for i in start..<end {
-      data.push(rows[i].to_ccs_request_log_detail_json())
+      data.push(rows[i].to_moon_request_log_detail_json())
     }
   }
   {
@@ -1200,7 +1200,7 @@ fn TrafficStats::request_detail_json_with_pricing(
   while i >= 0 {
     let log = self.request_logs[i]
     if log.request_id == request_id {
-      return Some(log.to_ccs_request_log_detail_json())
+      return Some(log.to_moon_request_log_detail_json())
     }
     i -= 1
   }
@@ -1625,7 +1625,7 @@ fn request_log_matches_filters(
   }
   match filters.provider_name {
     Some(filter) =>
-      if !request_log_provider_name_matches_ccs_filter(log, filter) {
+      if !request_log_provider_name_matches_moon_filter(log, filter) {
         return false
       }
     _ => ()
@@ -1656,7 +1656,7 @@ fn request_log_text_contains(value : String, needle : String) -> Bool {
 }
 
 ///|
-fn request_log_provider_name_matches_ccs_filter(
+fn request_log_provider_name_matches_moon_filter(
   log : RequestLog,
   needle : String,
 ) -> Bool {
@@ -1676,7 +1676,7 @@ fn request_log_min_int(left : Int, right : Int) -> Int {
 }
 
 ///|
-fn RequestLog::to_ccs_request_log_detail_json(self : RequestLog) -> Json {
+fn RequestLog::to_moon_request_log_detail_json(self : RequestLog) -> Json {
   let obj : Map[String, Json] = {
     "requestId": Json::string(self.request_id),
     "providerId": Json::string(self.provider_id),

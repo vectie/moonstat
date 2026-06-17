@@ -6,13 +6,13 @@ test "ccs codex session parser extracts metadata and messages" {
     "{\"timestamp\":\"2026-03-06T21:50:14Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"shell\"}}",
     "{\"timestamp\":\"2026-03-06T21:50:15Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call_output\",\"output\":\"ok\"}}",
   ]
-  let meta = ccs_parse_codex_session_lines(lines, "/tmp/codex-s1.jsonl").unwrap()
+  let meta = moon_parse_codex_session_lines(lines, "/tmp/codex-s1.jsonl").unwrap()
   assert_eq(meta.provider_id, "codex")
   assert_eq(meta.session_id, "codex-s1")
   assert_eq(meta.project_dir, Some("/tmp/project"))
   assert_eq(meta.title, Some("hello codex"))
   assert_eq(meta.resume_command, Some("codex resume codex-s1"))
-  let messages = ccs_load_codex_messages(lines.join("\n"))
+  let messages = moon_load_codex_messages(lines.join("\n"))
   assert_eq(messages.length(), 3)
   assert_eq(messages[0].role, "user")
   assert_eq(messages[1].content, "[Tool: shell]")
@@ -27,15 +27,15 @@ test "ccs claude session parser reclassifies tool result messages" {
     "{\"timestamp\":\"2026-03-06T21:50:14Z\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"content\":\"file contents\"}]}}",
     "{\"type\":\"custom-title\",\"customTitle\":\"Custom Claude Title\",\"timestamp\":\"2026-03-06T21:50:15Z\"}",
   ].join("\n")
-  let meta = ccs_parse_claude_session_lines(
-    ccs_nonempty_lines_from_content(content),
+  let meta = moon_parse_claude_session_lines(
+    moon_nonempty_lines_from_content(content),
     "/tmp/claude-s1.jsonl",
   ).unwrap()
   assert_eq(meta.provider_id, "claude")
   assert_eq(meta.session_id, "claude-s1")
   assert_eq(meta.title, Some("Custom Claude Title"))
   assert_eq(meta.resume_command, Some("claude --resume claude-s1"))
-  let messages = ccs_load_claude_messages(content)
+  let messages = moon_load_claude_messages(content)
   assert_eq(messages.length(), 3)
   assert_eq(messages[0].role, "user")
   assert_eq(messages[1].content, "[Tool: Read]")
@@ -49,9 +49,9 @@ test "ccs delete sessions parser accepts raw arrays and items wrapper" {
     "sessionId": Json::string("s1"),
     "sourcePath": Json::string("/tmp/s1.jsonl"),
   }.to_json()
-  let raw = ccs_delete_session_requests_from_json(Some(Json::array([item])))
+  let raw = moon_delete_session_requests_from_json(Some(Json::array([item])))
   assert_eq(raw.unwrap().length(), 1)
-  let wrapped = ccs_delete_session_requests_from_json(
+  let wrapped = moon_delete_session_requests_from_json(
     Some({ "items": Json::array([item]) }.to_json()),
   )
   assert_eq(wrapped.unwrap()[0].provider_id, "codex")
@@ -73,19 +73,19 @@ async test "ccs opencode sqlite sessions scan load and delete" {
     let created = @spawn.spawn("sqlite3", [db_path, setup], timeout=10000)
     assert_eq(created.status, 0)
 
-    let rows = ccs_sqlite_json_rows(
+    let rows = moon_sqlite_json_rows(
       db_path,
       "SELECT id, title, directory, time_created, time_updated FROM session ORDER BY time_updated DESC",
       read_only=true,
     ).unwrap()
-    let sessions = ccs_opencode_sqlite_rows_to_sessions(db_path, rows)
+    let sessions = moon_opencode_sqlite_rows_to_sessions(db_path, rows)
     assert_eq(sessions.length(), 1)
     assert_eq(sessions[0].session_id, "ses_1")
     assert_eq(sessions[0].title, Some("open project"))
     assert_eq(sessions[0].source_path, Some("sqlite:\{db_path}:ses_1"))
     assert_eq(sessions[0].resume_command, Some("opencode session resume ses_1"))
 
-    let messages = ccs_load_session_messages(
+    let messages = moon_load_session_messages(
       "opencode",
       "sqlite:\{db_path}:ses_1",
     ).unwrap()
@@ -94,19 +94,19 @@ async test "ccs opencode sqlite sessions scan load and delete" {
     assert_eq(messages[0].content, "hello\n[Tool: Bash]")
 
     assert_eq(
-      ccs_delete_opencode_sqlite_session_with_expected(
+      moon_delete_opencode_sqlite_session_with_expected(
         "ses_1",
         "sqlite:\{db_path}:ses_1",
         db_path,
       ),
       Ok(true),
     )
-    let after = ccs_sqlite_json_rows(
+    let after = moon_sqlite_json_rows(
       db_path,
       "SELECT id, title, directory, time_created, time_updated FROM session ORDER BY time_updated DESC",
       read_only=true,
     ).unwrap()
-    assert_eq(ccs_opencode_sqlite_rows_to_sessions(db_path, after).length(), 0)
+    assert_eq(moon_opencode_sqlite_rows_to_sessions(db_path, after).length(), 0)
   })
 }
 
@@ -123,51 +123,51 @@ async test "ccs hermes sqlite sessions scan load and delete" {
     let created = @spawn.spawn("sqlite3", [db_path, setup], timeout=10000)
     assert_eq(created.status, 0)
 
-    let rows = ccs_sqlite_json_rows(
+    let rows = moon_sqlite_json_rows(
       db_path,
       "SELECT * FROM sessions ORDER BY rowid DESC LIMIT 500",
       read_only=true,
     ).unwrap()
-    let sessions = ccs_hermes_sqlite_rows_to_sessions(db_path, rows)
+    let sessions = moon_hermes_sqlite_rows_to_sessions(db_path, rows)
     assert_eq(sessions.length(), 1)
     assert_eq(sessions[0].session_id, "h1")
     assert_eq(sessions[0].title, Some("Hermes title"))
     assert_eq(sessions[0].source_path, Some("sqlite:\{db_path}#h1"))
 
-    let messages = ccs_load_session_messages("hermes", "sqlite:\{db_path}#h1").unwrap()
+    let messages = moon_load_session_messages("hermes", "sqlite:\{db_path}#h1").unwrap()
     assert_eq(messages.length(), 2)
     assert_eq(messages[0].role, "user")
     assert_eq(messages[1].content, "hello hermes")
 
     assert_eq(
-      ccs_delete_hermes_sqlite_session_with_expected(
+      moon_delete_hermes_sqlite_session_with_expected(
         "h1",
         "sqlite:\{db_path}#h1",
         db_path,
       ),
       Ok(true),
     )
-    let after = ccs_sqlite_json_rows(
+    let after = moon_sqlite_json_rows(
       db_path,
       "SELECT * FROM sessions ORDER BY rowid DESC LIMIT 500",
       read_only=true,
     ).unwrap()
-    assert_eq(ccs_hermes_sqlite_rows_to_sessions(db_path, after).length(), 0)
+    assert_eq(moon_hermes_sqlite_rows_to_sessions(db_path, after).length(), 0)
   })
 }
 
 ///|
 test "ccs session terminal target follows CCS preferred terminal aliases" {
-  assert_eq(ccs_session_terminal_target(None), "terminal")
-  assert_eq(ccs_session_terminal_target(Some("iterm2")), "iterm")
-  assert_eq(ccs_session_terminal_target(Some(" Ghostty ")), "ghostty")
+  assert_eq(moon_session_terminal_target(None), "terminal")
+  assert_eq(moon_session_terminal_target(Some("iterm2")), "iterm")
+  assert_eq(moon_session_terminal_target(Some(" Ghostty ")), "ghostty")
   let settings = { "preferredTerminal": Json::string("wezterm") }.to_json()
-  assert_eq(ccs_session_terminal_from_settings(settings), Some("wezterm"))
+  assert_eq(moon_session_terminal_from_settings(settings), Some("wezterm"))
 }
 
 ///|
 async test "ccs session terminal app launch quotes cwd in applescript" {
-  let launch = ccs_session_terminal_launch(
+  let launch = moon_session_terminal_launch(
     "terminal",
     "claude --resume abc-123",
     Some("/tmp/project dir"),
@@ -184,7 +184,7 @@ async test "ccs session terminal app launch quotes cwd in applescript" {
 
 ///|
 async test "ccs session wezterm launch uses cwd argument and shell command" {
-  let launch = ccs_session_terminal_launch(
+  let launch = moon_session_terminal_launch(
     "wezterm",
     "claude --resume abc-123",
     Some("/tmp/project dir"),
@@ -200,7 +200,7 @@ async test "ccs session wezterm launch uses cwd argument and shell command" {
 
 ///|
 async test "ccs session custom terminal expands command and cwd" {
-  let launch = ccs_session_terminal_launch(
+  let launch = moon_session_terminal_launch(
     "custom",
     "codex resume s1",
     Some("/tmp/work"),
@@ -211,14 +211,14 @@ async test "ccs session custom terminal expands command and cwd" {
     "-c", "echo /tmp/work; run codex resume s1; again codex resume s1",
   ])
   assert_true(
-    ccs_session_terminal_launch("custom", "cmd", None, None) is Err(_),
+    moon_session_terminal_launch("custom", "cmd", None, None) is Err(_),
   )
 }
 
 ///|
 async test "ccs session warp launch writes self removing script and URL" {
   @fsx.with_temporary_directory("moonstat-warp-session-XXXXXX", tmpdir => {
-    let launch = ccs_session_terminal_launch(
+    let launch = moon_session_terminal_launch(
       "warp",
       "claude --resume warp-1",
       Some(tmpdir),
@@ -231,11 +231,11 @@ async test "ccs session warp launch writes self removing script and URL" {
     assert_true(launch.args[2].contains("%2F"))
     let entries = @fsx.list_directory(tmpdir)
     assert_eq(entries.length(), 1)
-    assert_true(entries[0].name.has_prefix(".moonstat-warp-"))
+    assert_true(entries[0].name.has_prefix(".moonsuite-warp-"))
     assert_true(entries[0].name.has_suffix(".sh"))
     let script = @fsx.read_file(entries[0].path)
     assert_true(script.contains("rm -- \"$0\""))
     assert_true(script.contains("exec claude --resume warp-1"))
   })
-  assert_true(ccs_session_terminal_launch("warp", "cmd", None, None) is Err(_))
+  assert_true(moon_session_terminal_launch("warp", "cmd", None, None) is Err(_))
 }

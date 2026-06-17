@@ -190,7 +190,7 @@ test "traffic stats writes request logs from request context" {
   assert_eq(log.provider_type, None)
   assert_false(log.is_streaming)
   json_inspect(stats.usage_logs_json(limit=1), content={
-    "data": [log.to_ccs_request_log_detail_json()],
+    "data": [log.to_moon_request_log_detail_json()],
     "total": 1,
     "limit": 1,
     "source": "memory",
@@ -304,7 +304,7 @@ test "traffic stats leaves ccs error pricing model empty" {
   assert_eq(log.status_code, 502)
   assert_eq(log.error_message, Some("upstream_error"))
   assert_eq(log.total_cost_usd, "0")
-  guard log.to_ccs_request_log_detail_json() is Object(obj) else {
+  guard log.to_moon_request_log_detail_json() is Object(obj) else {
     fail("expected request detail object")
   }
   assert_eq(obj["model"], Json::string("client-alias"))
@@ -392,7 +392,7 @@ test "request log default created_at uses ccs unix seconds" {
   assert_true(log.created_at >= before)
   assert_true(log.created_at <= after)
   assert_true(log.created_at > 1_700_000_000)
-  guard log.to_ccs_request_log_detail_json() is Object(obj) else {
+  guard log.to_moon_request_log_detail_json() is Object(obj) else {
     fail("expected request log object")
   }
   assert_eq(obj["createdAt"], Json::number(log.created_at.to_double()))
@@ -775,7 +775,7 @@ test "usage summary excludes partial rollup boundary days like ccs" {
   with_test_timezone("UTC", fn() raise {
     let stats = TrafficStats::new()
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-01-01",
         request_count=10,
         success_count=10,
@@ -786,7 +786,7 @@ test "usage summary excludes partial rollup boundary days like ccs" {
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-01-02",
         request_count=20,
         success_count=19,
@@ -797,7 +797,7 @@ test "usage summary excludes partial rollup boundary days like ccs" {
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-01-03",
         request_count=30,
         success_count=29,
@@ -827,7 +827,7 @@ test "usage summary includes end day rollup for minute precision end time like c
   with_test_timezone("UTC", fn() raise {
     let stats = TrafficStats::new()
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-01-01",
         request_count=10,
         success_count=10,
@@ -837,7 +837,7 @@ test "usage summary includes end day rollup for minute precision end time like c
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-01-02",
         request_count=20,
         success_count=19,
@@ -864,7 +864,7 @@ test "provider stats exclude partial rollup boundary days like ccs" {
   with_test_timezone("UTC", fn() raise {
     let stats = TrafficStats::new()
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-02-01",
         provider_id="p-rollup",
         request_count=5,
@@ -876,7 +876,7 @@ test "provider stats exclude partial rollup boundary days like ccs" {
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-02-02",
         provider_id="p-rollup",
         request_count=8,
@@ -888,7 +888,7 @@ test "provider stats exclude partial rollup boundary days like ccs" {
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-02-03",
         provider_id="p-rollup",
         request_count=12,
@@ -947,7 +947,7 @@ test "usage trends combine boundary details with full-day rollups like ccs" {
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-03-02",
         request_count=4,
         success_count=4,
@@ -984,7 +984,7 @@ test "model stats exclude partial rollup boundary days like ccs" {
   with_test_timezone("UTC", fn() raise {
     let stats = TrafficStats::new()
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-04-01",
         model="claude-3",
         request_count=3,
@@ -995,7 +995,7 @@ test "model stats exclude partial rollup boundary days like ccs" {
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-04-02",
         model="claude-3",
         request_count=6,
@@ -1006,7 +1006,7 @@ test "model stats exclude partial rollup boundary days like ccs" {
       ),
     )
     stats.daily_rollups.push(
-      ccs_test_rollup(
+      moon_test_rollup(
         "2024-04-03",
         model="claude-3",
         request_count=9,
@@ -1387,7 +1387,7 @@ test "usage aggregates deduplicate ccs session imports against proxy logs" {
   assert_true(stats.request_log_is_effective(proxy_log))
 
   json_inspect(stats.usage_logs_json(limit=10), content={
-    "data": [proxy_log.to_ccs_request_log_detail_json()],
+    "data": [proxy_log.to_moon_request_log_detail_json()],
     "total": 1,
     "limit": 10,
     "source": "memory",
@@ -1611,7 +1611,7 @@ fn[T] with_test_timezone(zone : String, f : () -> T raise) -> T raise {
 }
 
 ///|
-fn ccs_test_rollup(
+fn moon_test_rollup(
   date : String,
   provider_id? : String = "p1",
   provider_name? : String? = None,

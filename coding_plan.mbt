@@ -5,7 +5,7 @@ const CCS_CODING_PLAN_TOOL = "coding_plan"
 const CCS_TIER_WEEKLY_LIMIT = "weekly_limit"
 
 ///|
-priv enum CcsCodingPlanProvider {
+priv enum MoonCodingPlanProvider {
   Kimi
   ZhipuCn
   ZhipuEn
@@ -15,117 +15,117 @@ priv enum CcsCodingPlanProvider {
 }
 
 ///|
-priv enum CcsZhipuWindow {
+priv enum MoonZhipuWindow {
   FiveHour
   Weekly
 }
 
 ///|
-priv struct CcsZhipuEntry {
+priv struct MoonZhipuEntry {
   reset_ms : Int64?
   percentage : Double
   resets_at : String?
 }
 
 ///|
-fn ccs_detect_coding_plan_provider(base_url : String) -> CcsCodingPlanProvider? {
+fn moon_detect_coding_plan_provider(base_url : String) -> MoonCodingPlanProvider? {
   let url = base_url.to_lower()
   if url.contains("api.kimi.com/coding") {
-    Some(CcsCodingPlanProvider::Kimi)
+    Some(MoonCodingPlanProvider::Kimi)
   } else if url.contains("open.bigmodel.cn") || url.contains("bigmodel.cn") {
-    Some(CcsCodingPlanProvider::ZhipuCn)
+    Some(MoonCodingPlanProvider::ZhipuCn)
   } else if url.contains("api.z.ai") {
-    Some(CcsCodingPlanProvider::ZhipuEn)
+    Some(MoonCodingPlanProvider::ZhipuEn)
   } else if url.contains("api.minimaxi.com") {
-    Some(CcsCodingPlanProvider::MiniMaxCn)
+    Some(MoonCodingPlanProvider::MiniMaxCn)
   } else if url.contains("api.minimax.io") {
-    Some(CcsCodingPlanProvider::MiniMaxEn)
+    Some(MoonCodingPlanProvider::MiniMaxEn)
   } else if url.contains("zenmux") {
-    Some(CcsCodingPlanProvider::ZenMux)
+    Some(MoonCodingPlanProvider::ZenMux)
   } else {
     None
   }
 }
 
 ///|
-async fn ccs_get_coding_plan_quota(
+async fn moon_get_coding_plan_quota(
   base_url : String,
   api_key : String,
 ) -> SubscriptionQuota {
   if api_key.trim().is_empty() {
     return SubscriptionQuota::not_found(CCS_CODING_PLAN_TOOL)
   }
-  match ccs_detect_coding_plan_provider(base_url) {
-    Some(Kimi) => ccs_query_kimi_coding_plan(api_key)
+  match moon_detect_coding_plan_provider(base_url) {
+    Some(Kimi) => moon_query_kimi_coding_plan(api_key)
     Some(ZhipuCn) | Some(ZhipuEn) =>
-      ccs_query_zhipu_coding_plan(base_url, api_key)
-    Some(MiniMaxCn) => ccs_query_minimax_coding_plan(api_key, true)
-    Some(MiniMaxEn) => ccs_query_minimax_coding_plan(api_key, false)
-    Some(ZenMux) => ccs_query_zenmux_coding_plan(base_url, api_key)
+      moon_query_zhipu_coding_plan(base_url, api_key)
+    Some(MiniMaxCn) => moon_query_minimax_coding_plan(api_key, true)
+    Some(MiniMaxEn) => moon_query_minimax_coding_plan(api_key, false)
+    Some(ZenMux) => moon_query_zenmux_coding_plan(base_url, api_key)
     None => SubscriptionQuota::not_found(CCS_CODING_PLAN_TOOL)
   }
 }
 
 ///|
-fn ccs_coding_plan_error(message : String) -> SubscriptionQuota {
-  ccs_quota_error(CCS_CODING_PLAN_TOOL, CredentialStatus::Valid, message)
+fn moon_coding_plan_error(message : String) -> SubscriptionQuota {
+  moon_quota_error(CCS_CODING_PLAN_TOOL, CredentialStatus::Valid, message)
 }
 
 ///|
-fn ccs_coding_plan_auth_error(status_code : Int) -> SubscriptionQuota {
+fn moon_coding_plan_auth_error(status_code : Int) -> SubscriptionQuota {
   SubscriptionQuota::new(
     CCS_CODING_PLAN_TOOL,
     credential_status=CredentialStatus::Expired,
     credential_message=Some("Invalid API key"),
     success=false,
     error=Some("Authentication failed (HTTP \{status_code})"),
-    queried_at=Some(ccs_quota_now_millis()),
+    queried_at=Some(moon_quota_now_millis()),
   )
 }
 
 ///|
-async fn ccs_query_kimi_coding_plan(api_key : String) -> SubscriptionQuota {
+async fn moon_query_kimi_coding_plan(api_key : String) -> SubscriptionQuota {
   match
-    ccs_fetch_json_get(
+    moon_fetch_json_get(
       "https://api.kimi.com/coding/v1/usages",
       { "Authorization": "Bearer \{api_key}", "Accept": "application/json" },
       expired_message="Authentication failed",
     ) {
     Err(error) =>
       if error.status == CredentialStatus::Expired {
-        ccs_coding_plan_auth_error(ccs_status_code_from_message(error.message))
+        moon_coding_plan_auth_error(moon_status_code_from_message(error.message))
       } else {
-        ccs_coding_plan_error(error.message)
+        moon_coding_plan_error(error.message)
       }
-    Ok(body) => ccs_parse_kimi_coding_plan(body)
+    Ok(body) => moon_parse_kimi_coding_plan(body)
   }
 }
 
 ///|
-fn ccs_parse_kimi_coding_plan(body : Json) -> SubscriptionQuota {
+fn moon_parse_kimi_coding_plan(body : Json) -> SubscriptionQuota {
   let tiers : Array[Json] = []
   guard body is Object(obj) else {
-    return ccs_coding_plan_error("Failed to parse response: expected object")
+    return moon_coding_plan_error("Failed to parse response: expected object")
   }
   match obj.get("limits") {
     Some(Array(limits)) =>
       for item in limits {
         guard item is Object(limit_item) else { continue }
         guard limit_item.get("detail") is Some(Object(detail)) else { continue }
-        let limit = ccs_json_double_from_map(detail, "limit").unwrap_or(1.0)
-        let remaining = ccs_json_double_from_map(detail, "remaining").unwrap_or(
+        let limit = moon_json_double_from_map(detail, "limit").unwrap_or(1.0)
+        let remaining = moon_json_double_from_map(detail, "remaining").unwrap_or(
           0.0,
         )
         let used = (limit - remaining).max(0.0)
         tiers.push(
-          ccs_quota_tier_json(
+          moon_quota_tier_json(
             CCS_TIER_FIVE_HOUR,
             if limit > 0.0 {
               used / limit * 100.0
             } else {
               0.0
             },
-            resets_at=ccs_extract_reset_time(detail.get("resetTime")),
+            resets_at=moon_extract_reset_time(detail.get("resetTime")),
           ),
         )
       }
@@ -133,20 +133,20 @@ fn ccs_parse_kimi_coding_plan(body : Json) -> SubscriptionQuota {
   }
   match obj.get("usage") {
     Some(Object(usage)) => {
-      let limit = ccs_json_double_from_map(usage, "limit").unwrap_or(1.0)
-      let remaining = ccs_json_double_from_map(usage, "remaining").unwrap_or(
+      let limit = moon_json_double_from_map(usage, "limit").unwrap_or(1.0)
+      let remaining = moon_json_double_from_map(usage, "remaining").unwrap_or(
         0.0,
       )
       let used = (limit - remaining).max(0.0)
       tiers.push(
-        ccs_quota_tier_json(
+        moon_quota_tier_json(
           CCS_TIER_WEEKLY_LIMIT,
           if limit > 0.0 {
             used / limit * 100.0
           } else {
             0.0
           },
-          resets_at=ccs_extract_reset_time(usage.get("resetTime")),
+          resets_at=moon_extract_reset_time(usage.get("resetTime")),
         ),
       )
     }
@@ -155,18 +155,18 @@ fn ccs_parse_kimi_coding_plan(body : Json) -> SubscriptionQuota {
   SubscriptionQuota::new(
     CCS_CODING_PLAN_TOOL,
     tiers~,
-    queried_at=Some(ccs_quota_now_millis()),
+    queried_at=Some(moon_quota_now_millis()),
   )
 }
 
 ///|
-async fn ccs_query_zhipu_coding_plan(
+async fn moon_query_zhipu_coding_plan(
   base_url : String,
   api_key : String,
 ) -> SubscriptionQuota {
-  let url = "\{ccs_zhipu_quota_base(base_url)}/api/monitor/usage/quota/limit"
+  let url = "\{moon_zhipu_quota_base(base_url)}/api/monitor/usage/quota/limit"
   match
-    ccs_fetch_json_get(
+    moon_fetch_json_get(
       url,
       {
         "Authorization": api_key,
@@ -177,16 +177,16 @@ async fn ccs_query_zhipu_coding_plan(
     ) {
     Err(error) =>
       if error.status == CredentialStatus::Expired {
-        ccs_coding_plan_auth_error(ccs_status_code_from_message(error.message))
+        moon_coding_plan_auth_error(moon_status_code_from_message(error.message))
       } else {
-        ccs_coding_plan_error(error.message)
+        moon_coding_plan_error(error.message)
       }
-    Ok(body) => ccs_parse_zhipu_coding_plan(body)
+    Ok(body) => moon_parse_zhipu_coding_plan(body)
   }
 }
 
 ///|
-fn ccs_zhipu_quota_base(base_url : String) -> String {
+fn moon_zhipu_quota_base(base_url : String) -> String {
   if base_url.to_lower().contains("bigmodel.cn") {
     "https://open.bigmodel.cn"
   } else {
@@ -195,19 +195,19 @@ fn ccs_zhipu_quota_base(base_url : String) -> String {
 }
 
 ///|
-fn ccs_parse_zhipu_coding_plan(body : Json) -> SubscriptionQuota {
+fn moon_parse_zhipu_coding_plan(body : Json) -> SubscriptionQuota {
   guard body is Object(obj) else {
-    return ccs_coding_plan_error("Failed to parse response: expected object")
+    return moon_coding_plan_error("Failed to parse response: expected object")
   }
   match obj.get("success") {
     Some(False) => {
       let msg = json_string_from_map(obj, "msg").unwrap_or("Unknown error")
-      return ccs_coding_plan_error("API error: \{msg}")
+      return moon_coding_plan_error("API error: \{msg}")
     }
     _ => ()
   }
   guard obj.get("data") is Some(data) else {
-    return ccs_coding_plan_error("Missing 'data' field in response")
+    return moon_coding_plan_error("Missing 'data' field in response")
   }
   let level = match data {
     Object(data_obj) => json_string_from_map(data_obj, "level")
@@ -216,16 +216,16 @@ fn ccs_parse_zhipu_coding_plan(body : Json) -> SubscriptionQuota {
   SubscriptionQuota::new(
     CCS_CODING_PLAN_TOOL,
     credential_message=level,
-    tiers=ccs_parse_zhipu_token_tiers(data),
-    queried_at=Some(ccs_quota_now_millis()),
+    tiers=moon_parse_zhipu_token_tiers(data),
+    queried_at=Some(moon_quota_now_millis()),
   )
 }
 
 ///|
-fn ccs_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
-  let mut five_hour : CcsZhipuEntry? = None
-  let mut weekly : CcsZhipuEntry? = None
-  let unclassified : Array[CcsZhipuEntry] = []
+fn moon_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
+  let mut five_hour : MoonZhipuEntry? = None
+  let mut weekly : MoonZhipuEntry? = None
+  let unclassified : Array[MoonZhipuEntry] = []
   guard data is Object(data_obj) else { return [] }
   match data_obj.get("limits") {
     Some(Array(limits)) =>
@@ -236,9 +236,9 @@ fn ccs_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
           continue
         }
         let reset_ms = json_int64_from_map(limit_item, "nextResetTime")
-        let entry : CcsZhipuEntry = {
+        let entry : MoonZhipuEntry = {
           reset_ms,
-          percentage: ccs_json_double_from_map(limit_item, "percentage").unwrap_or(
+          percentage: moon_json_double_from_map(limit_item, "percentage").unwrap_or(
             0.0,
           ),
           resets_at: match reset_ms {
@@ -246,7 +246,7 @@ fn ccs_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
             None => None
           },
         }
-        match ccs_classify_zhipu_window(limit_item) {
+        match moon_classify_zhipu_window(limit_item) {
           Some(FiveHour) if five_hour is None => five_hour = Some(entry)
           Some(Weekly) if weekly is None => weekly = Some(entry)
           _ => unclassified.push(entry)
@@ -254,7 +254,7 @@ fn ccs_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
       }
     _ => ()
   }
-  ccs_sort_zhipu_entries(unclassified)
+  moon_sort_zhipu_entries(unclassified)
   for entry in unclassified {
     if five_hour is None {
       five_hour = Some(entry)
@@ -266,7 +266,7 @@ fn ccs_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
   match five_hour {
     Some(entry) =>
       tiers.push(
-        ccs_quota_tier_json(
+        moon_quota_tier_json(
           CCS_TIER_FIVE_HOUR,
           entry.percentage,
           resets_at=entry.resets_at,
@@ -277,7 +277,7 @@ fn ccs_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
   match weekly {
     Some(entry) =>
       tiers.push(
-        ccs_quota_tier_json(
+        moon_quota_tier_json(
           CCS_TIER_WEEKLY_LIMIT,
           entry.percentage,
           resets_at=entry.resets_at,
@@ -289,16 +289,16 @@ fn ccs_parse_zhipu_token_tiers(data : Json) -> Array[Json] {
 }
 
 ///|
-fn ccs_classify_zhipu_window(item : Map[String, Json]) -> CcsZhipuWindow? {
+fn moon_classify_zhipu_window(item : Map[String, Json]) -> MoonZhipuWindow? {
   match json_int64_from_map(item, "unit") {
-    Some(3L) => Some(CcsZhipuWindow::FiveHour)
-    Some(6L) => Some(CcsZhipuWindow::Weekly)
+    Some(3L) => Some(MoonZhipuWindow::FiveHour)
+    Some(6L) => Some(MoonZhipuWindow::Weekly)
     _ => None
   }
 }
 
 ///|
-fn ccs_zhipu_entry_sort_key(entry : CcsZhipuEntry) -> Int64 {
+fn moon_zhipu_entry_sort_key(entry : MoonZhipuEntry) -> Int64 {
   match entry.reset_ms {
     Some(ms) => ms
     None => -9223372036854775808L
@@ -306,13 +306,13 @@ fn ccs_zhipu_entry_sort_key(entry : CcsZhipuEntry) -> Int64 {
 }
 
 ///|
-fn ccs_sort_zhipu_entries(entries : Array[CcsZhipuEntry]) -> Unit {
+fn moon_sort_zhipu_entries(entries : Array[MoonZhipuEntry]) -> Unit {
   let mut i = 0
   while i < entries.length() {
     let mut j = i + 1
     while j < entries.length() {
-      if ccs_zhipu_entry_sort_key(entries[j]) <
-        ccs_zhipu_entry_sort_key(entries[i]) {
+      if moon_zhipu_entry_sort_key(entries[j]) <
+        moon_zhipu_entry_sort_key(entries[i]) {
         let current = entries[i]
         entries[i] = entries[j]
         entries[j] = current
@@ -324,13 +324,13 @@ fn ccs_sort_zhipu_entries(entries : Array[CcsZhipuEntry]) -> Unit {
 }
 
 ///|
-async fn ccs_query_minimax_coding_plan(
+async fn moon_query_minimax_coding_plan(
   api_key : String,
   is_cn : Bool,
 ) -> SubscriptionQuota {
   let domain = if is_cn { "api.minimaxi.com" } else { "api.minimax.io" }
   match
-    ccs_fetch_json_get(
+    moon_fetch_json_get(
       "https://\{domain}/v1/api/openplatform/coding_plan/remains",
       {
         "Authorization": "Bearer \{api_key}",
@@ -340,18 +340,18 @@ async fn ccs_query_minimax_coding_plan(
     ) {
     Err(error) =>
       if error.status == CredentialStatus::Expired {
-        ccs_coding_plan_auth_error(ccs_status_code_from_message(error.message))
+        moon_coding_plan_auth_error(moon_status_code_from_message(error.message))
       } else {
-        ccs_coding_plan_error(error.message)
+        moon_coding_plan_error(error.message)
       }
-    Ok(body) => ccs_parse_minimax_coding_plan(body)
+    Ok(body) => moon_parse_minimax_coding_plan(body)
   }
 }
 
 ///|
-fn ccs_parse_minimax_coding_plan(body : Json) -> SubscriptionQuota {
+fn moon_parse_minimax_coding_plan(body : Json) -> SubscriptionQuota {
   guard body is Object(obj) else {
-    return ccs_coding_plan_error("Failed to parse response: expected object")
+    return moon_coding_plan_error("Failed to parse response: expected object")
   }
   match obj.get("base_resp") {
     Some(Object(base_resp)) => {
@@ -362,20 +362,20 @@ fn ccs_parse_minimax_coding_plan(body : Json) -> SubscriptionQuota {
         let msg = json_string_from_map(base_resp, "status_msg").unwrap_or(
           "Unknown error",
         )
-        return ccs_coding_plan_error("API error (code \{status_code}): \{msg}")
+        return moon_coding_plan_error("API error (code \{status_code}): \{msg}")
       }
     }
     _ => ()
   }
   SubscriptionQuota::new(
     CCS_CODING_PLAN_TOOL,
-    tiers=ccs_parse_minimax_tiers(body),
-    queried_at=Some(ccs_quota_now_millis()),
+    tiers=moon_parse_minimax_tiers(body),
+    queried_at=Some(moon_quota_now_millis()),
   )
 }
 
 ///|
-fn ccs_parse_minimax_tiers(body : Json) -> Array[Json] {
+fn moon_parse_minimax_tiers(body : Json) -> Array[Json] {
   guard body is Object(obj) else { return [] }
   guard obj.get("model_remains") is Some(Array(model_remains)) else {
     return []
@@ -390,10 +390,10 @@ fn ccs_parse_minimax_tiers(body : Json) -> Array[Json] {
   }
   guard general is Some(item) else { return [] }
   let tiers : Array[Json] = []
-  match ccs_json_double_from_map(item, "current_interval_remaining_percent") {
+  match moon_json_double_from_map(item, "current_interval_remaining_percent") {
     Some(remain_pct) =>
       tiers.push(
-        ccs_quota_tier_json(
+        moon_quota_tier_json(
           CCS_TIER_FIVE_HOUR,
           100.0 - remain_pct,
           resets_at=match json_int64_from_map(item, "end_time") {
@@ -405,10 +405,10 @@ fn ccs_parse_minimax_tiers(body : Json) -> Array[Json] {
     None => ()
   }
   if json_int64_from_map(item, "current_weekly_status") == Some(1L) {
-    match ccs_json_double_from_map(item, "current_weekly_remaining_percent") {
+    match moon_json_double_from_map(item, "current_weekly_remaining_percent") {
       Some(remain_pct) =>
         tiers.push(
-          ccs_quota_tier_json(
+          moon_quota_tier_json(
             CCS_TIER_WEEKLY_LIMIT,
             100.0 - remain_pct,
             resets_at=match json_int64_from_map(item, "weekly_end_time") {
@@ -424,49 +424,49 @@ fn ccs_parse_minimax_tiers(body : Json) -> Array[Json] {
 }
 
 ///|
-async fn ccs_query_zenmux_coding_plan(
+async fn moon_query_zenmux_coding_plan(
   base_url : String,
   api_key : String,
 ) -> SubscriptionQuota {
   match
-    ccs_fetch_json_get(
+    moon_fetch_json_get(
       base_url,
       { "Authorization": "Bearer \{api_key}", "Accept": "application/json" },
       expired_message="Authentication failed",
     ) {
     Err(error) =>
       if error.status == CredentialStatus::Expired {
-        ccs_coding_plan_auth_error(ccs_status_code_from_message(error.message))
+        moon_coding_plan_auth_error(moon_status_code_from_message(error.message))
       } else {
-        ccs_coding_plan_error(error.message)
+        moon_coding_plan_error(error.message)
       }
-    Ok(body) => ccs_parse_zenmux_coding_plan(body)
+    Ok(body) => moon_parse_zenmux_coding_plan(body)
   }
 }
 
 ///|
-fn ccs_parse_zenmux_coding_plan(body : Json) -> SubscriptionQuota {
+fn moon_parse_zenmux_coding_plan(body : Json) -> SubscriptionQuota {
   guard body is Object(obj) else {
-    return ccs_coding_plan_error("Failed to parse response: expected object")
+    return moon_coding_plan_error("Failed to parse response: expected object")
   }
   if obj.get("success") != Some(Json::boolean(true)) {
     let msg = json_string_from_map(obj, "message").unwrap_or("Unknown error")
-    return ccs_coding_plan_error("API error: \{msg}")
+    return moon_coding_plan_error("API error: \{msg}")
   }
   guard obj.get("data") is Some(Object(data)) else {
-    return ccs_coding_plan_error("Missing 'data' field in response")
+    return moon_coding_plan_error("Missing 'data' field in response")
   }
   let tiers : Array[Json] = []
   match data.get("quota_5_hour") {
     Some(Object(row)) =>
       tiers.push(
-        ccs_quota_tier_json(
+        moon_quota_tier_json(
           CCS_TIER_FIVE_HOUR,
-          ccs_json_double_from_map(row, "usage_percentage").unwrap_or(0.0) *
+          moon_json_double_from_map(row, "usage_percentage").unwrap_or(0.0) *
           100.0,
           resets_at=json_string_from_map(row, "resets_at"),
-          used_value_usd=ccs_json_double_from_map(row, "used_value_usd"),
-          max_value_usd=ccs_json_double_from_map(row, "max_value_usd"),
+          used_value_usd=moon_json_double_from_map(row, "used_value_usd"),
+          max_value_usd=moon_json_double_from_map(row, "max_value_usd"),
         ),
       )
     _ => ()
@@ -474,13 +474,13 @@ fn ccs_parse_zenmux_coding_plan(body : Json) -> SubscriptionQuota {
   match data.get("quota_7_day") {
     Some(Object(row)) =>
       tiers.push(
-        ccs_quota_tier_json(
+        moon_quota_tier_json(
           CCS_TIER_WEEKLY_LIMIT,
-          ccs_json_double_from_map(row, "usage_percentage").unwrap_or(0.0) *
+          moon_json_double_from_map(row, "usage_percentage").unwrap_or(0.0) *
           100.0,
           resets_at=json_string_from_map(row, "resets_at"),
-          used_value_usd=ccs_json_double_from_map(row, "used_value_usd"),
-          max_value_usd=ccs_json_double_from_map(row, "max_value_usd"),
+          used_value_usd=moon_json_double_from_map(row, "used_value_usd"),
+          max_value_usd=moon_json_double_from_map(row, "max_value_usd"),
         ),
       )
     _ => ()
@@ -501,12 +501,12 @@ fn ccs_parse_zenmux_coding_plan(body : Json) -> SubscriptionQuota {
     CCS_CODING_PLAN_TOOL,
     credential_message=if plan_info.is_empty() { None } else { Some(plan_info) },
     tiers~,
-    queried_at=Some(ccs_quota_now_millis()),
+    queried_at=Some(moon_quota_now_millis()),
   )
 }
 
 ///|
-fn ccs_extract_reset_time(value : Json?) -> String? {
+fn moon_extract_reset_time(value : Json?) -> String? {
   match value {
     Some(String(s)) => Some(s)
     Some(Number(n, ..)) => {
@@ -519,7 +519,7 @@ fn ccs_extract_reset_time(value : Json?) -> String? {
 }
 
 ///|
-fn ccs_status_code_from_message(message : String) -> Int {
+fn moon_status_code_from_message(message : String) -> Int {
   if message.contains("HTTP 401") {
     401
   } else if message.contains("HTTP 403") {

@@ -1,40 +1,40 @@
 ///|
 test "ccs balance provider detection mirrors native command" {
   assert_true(
-    ccs_detect_balance_provider("https://api.deepseek.com/v1") is Some(DeepSeek),
+    moon_detect_balance_provider("https://api.deepseek.com/v1") is Some(DeepSeek),
   )
   assert_true(
-    ccs_detect_balance_provider("https://api.stepfun.ai/v1") is Some(StepFun),
+    moon_detect_balance_provider("https://api.stepfun.ai/v1") is Some(StepFun),
   )
   assert_true(
-    ccs_detect_balance_provider("https://api.siliconflow.cn/v1")
+    moon_detect_balance_provider("https://api.siliconflow.cn/v1")
     is Some(SiliconFlow),
   )
   assert_true(
-    ccs_detect_balance_provider("https://api.siliconflow.com/v1")
+    moon_detect_balance_provider("https://api.siliconflow.com/v1")
     is Some(SiliconFlowEn),
   )
   assert_true(
-    ccs_detect_balance_provider("https://openrouter.ai/api/v1")
+    moon_detect_balance_provider("https://openrouter.ai/api/v1")
     is Some(OpenRouter),
   )
   assert_true(
-    ccs_detect_balance_provider("https://api.novita.ai/v3") is Some(NovitaAI),
+    moon_detect_balance_provider("https://api.novita.ai/v3") is Some(NovitaAI),
   )
-  assert_true(ccs_detect_balance_provider("https://example.com") is None)
+  assert_true(moon_detect_balance_provider("https://example.com") is None)
 }
 
 ///|
 test "ccs balance deterministic errors match UsageResult shape" {
   assert_eq(
-    ccs_balance_error("Unknown balance provider").to_json(),
+    moon_balance_error("Unknown balance provider").to_json(),
     {
       "success": Json::boolean(false),
       "error": Json::string("Unknown balance provider"),
     }.to_json(),
   )
   assert_eq(
-    ccs_balance_auth_error(401).to_json(),
+    moon_balance_auth_error(401).to_json(),
     {
       "success": Json::boolean(false),
       "data": Json::array([
@@ -51,7 +51,7 @@ test "ccs balance deterministic errors match UsageResult shape" {
 ///|
 test "ccs balance parsers keep provider-specific fields" {
   assert_eq(
-    ccs_parse_openrouter_balance(
+    moon_parse_openrouter_balance(
       {
         "data": {
           "total_credits": Json::number(10.0),
@@ -74,7 +74,7 @@ test "ccs balance parsers keep provider-specific fields" {
     }.to_json(),
   )
   assert_eq(
-    ccs_parse_novita_balance(
+    moon_parse_novita_balance(
       { "availableBalance": Json::string("12500") }.to_json(),
     ).to_json(),
     {

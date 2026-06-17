@@ -97,15 +97,15 @@ pub fn Gateway::new(
     mcp_servers: Map([], capacity=16),
     prompts: Map([], capacity=16),
     auth_device_user_codes: Map([], capacity=8),
-    app_settings: ccs_default_app_settings_json(),
+    app_settings: moon_default_app_settings_json(),
     lightweight_mode: false,
     window_theme: "system",
     app_config_dir_override: None,
     auto_launch_enabled: false,
-    rectifier_config_json: ccs_default_rectifier_config_json(),
-    optimizer_config_json: ccs_default_optimizer_config_json(),
-    copilot_optimizer_config_json: ccs_default_copilot_optimizer_config_json(),
-    log_config_json: ccs_default_log_config_json(),
+    rectifier_config_json: moon_default_rectifier_config_json(),
+    optimizer_config_json: moon_default_optimizer_config_json(),
+    copilot_optimizer_config_json: moon_default_copilot_optimizer_config_json(),
+    log_config_json: moon_default_log_config_json(),
     claude_plugin_config: None,
     claude_plugin_applied: false,
     claude_onboarding_skipped: false,
@@ -118,7 +118,7 @@ pub fn Gateway::new(
 ///|
 fn moonstat_default_provider_router() -> ProviderRouter {
   let router = ProviderRouter::new()
-  let claude_model_mapping = ccs_model_mapping_from_env()
+  let claude_model_mapping = moon_model_mapping_from_env()
   let mut claude_current_provider = "codex-oauth"
   let mut claude_desktop_current_provider = "codex-oauth"
   router.upsert_provider(
@@ -300,7 +300,7 @@ fn Gateway::activate_next_provider_after_upstream_status(
   if !attempted_provider_ids.contains(provider_id) {
     attempted_provider_ids.push(provider_id)
   }
-  if ccs_upstream_status_retryable(status_code) {
+  if moon_upstream_status_retryable(status_code) {
     self.provider_router.record_result(
       provider_id,
       app_type,
@@ -323,7 +323,7 @@ fn Gateway::activate_next_provider_after_upstream_status(
 }
 
 ///|
-fn ccs_upstream_status_retryable(status_code : Int) -> Bool {
+fn moon_upstream_status_retryable(status_code : Int) -> Bool {
   match status_code {
     400 | 405 | 406 | 413 | 414 | 415 | 422 | 501 => false
     _ => true
@@ -490,7 +490,7 @@ async fn Gateway::record_upstream_error_status(
   response_bytes : Int,
   status_code : Int,
 ) -> Unit {
-  if ccs_upstream_status_retryable(status_code) {
+  if moon_upstream_status_retryable(status_code) {
     self.record_provider_result(false)
   } else {
     self.release_provider_permit_neutral()
@@ -555,7 +555,7 @@ async fn Gateway::record_success_stream_usage(
 }
 
 ///|
-fn ccs_first_stream_event_ms(current : Int?, started_at_ms : Int?) -> Int? {
+fn moon_first_stream_event_ms(current : Int?, started_at_ms : Int?) -> Int? {
   match current {
     Some(_) => current
     None =>
@@ -1285,7 +1285,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_proxy_circuit_breaker_stats(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_circuit_breaker_stats", (_, w) => {
-    self.handle_proxy_circuit_breaker_stats_ccs_alias(w)
+    self.handle_proxy_circuit_breaker_stats_moon_alias(w)
   })
   router.add_handler(@httpx.Method::Post, "/proxy/reset-circuit-breaker", (r, w) => {
     self.handle_proxy_reset_circuit_breaker(r, w)
@@ -2041,7 +2041,7 @@ async fn Gateway::handle_codex_responses(
       let stream = json_bool_field(json, "stream").unwrap_or(false)
       self.stats.record_stream_mode(stream)
       let request = normalize_codex_oauth_request(json)
-      let client_format = ccs_client_format_for_request(
+      let client_format = moon_client_format_for_request(
         r.path.to_owned(),
         Some(json),
       ).to_string()
@@ -2100,7 +2100,7 @@ async fn Gateway::handle_chat_completions(
       let response_model = openai_chat_model(json).unwrap_or(self.model)
       let stream = json_bool_field(json, "stream").unwrap_or(false)
       self.stats.record_stream_mode(stream)
-      let client_format = ccs_client_format_for_request(
+      let client_format = moon_client_format_for_request(
         r.path.to_owned(),
         Some(json),
       ).to_string()
@@ -2522,7 +2522,7 @@ async fn Gateway::forward_streaming_chat_completion(
           let data = rest.trim().to_owned()
           if data != "[DONE]" {
             if push_sse_json_event(stream_events, data) {
-              first_token_ms = ccs_first_stream_event_ms(
+              first_token_ms = moon_first_stream_event_ms(
                 first_token_ms,
                 self.stats.current_request_started_at_ms,
               )
@@ -2545,7 +2545,7 @@ async fn Gateway::forward_streaming_chat_completion(
             break
           }
           if push_sse_json_event(stream_events, data) {
-            first_token_ms = ccs_first_stream_event_ms(
+            first_token_ms = moon_first_stream_event_ms(
               first_token_ms,
               self.stats.current_request_started_at_ms,
             )
@@ -2933,7 +2933,7 @@ async fn Gateway::forward_streaming_codex_response(
             )
             response_bytes += bytes
             if stream_events.length() > before {
-              first_token_ms = ccs_first_stream_event_ms(
+              first_token_ms = moon_first_stream_event_ms(
                 first_token_ms,
                 self.stats.current_request_started_at_ms,
               )
@@ -2941,7 +2941,7 @@ async fn Gateway::forward_streaming_codex_response(
           } else {
             if data != "[DONE]" {
               if push_sse_json_event(stream_events, data) {
-                first_token_ms = ccs_first_stream_event_ms(
+                first_token_ms = moon_first_stream_event_ms(
                   first_token_ms,
                   self.stats.current_request_started_at_ms,
                 )
@@ -2969,7 +2969,7 @@ async fn Gateway::forward_streaming_codex_response(
             )
             response_bytes += bytes
             if stream_events.length() > before {
-              first_token_ms = ccs_first_stream_event_ms(
+              first_token_ms = moon_first_stream_event_ms(
                 first_token_ms,
                 self.stats.current_request_started_at_ms,
               )
@@ -2983,7 +2983,7 @@ async fn Gateway::forward_streaming_codex_response(
               let data = rest.trim().to_owned()
               if data != "[DONE]" {
                 if push_sse_json_event(stream_events, data) {
-                  first_token_ms = ccs_first_stream_event_ms(
+                  first_token_ms = moon_first_stream_event_ms(
                     first_token_ms,
                     self.stats.current_request_started_at_ms,
                   )
@@ -3167,7 +3167,7 @@ async fn Gateway::post_codex_compatible_provider_json(
     "application/json",
     provider_custom_user_agent(provider),
   )
-  match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
+  match moon_reject_proxy_managed_placeholder_for_upstream(url, headers) {
     Err(message) => return Err(message)
     Ok(_) => ()
   }
@@ -3194,7 +3194,7 @@ async fn Gateway::post_codex_compatible_provider_stream(
     "text/event-stream",
     provider_custom_user_agent(provider),
   )
-  match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
+  match moon_reject_proxy_managed_placeholder_for_upstream(url, headers) {
     Err(message) => return Err(message)
     Ok(_) => ()
   }
@@ -3235,7 +3235,7 @@ async fn Gateway::post_claude_compatible_provider_json(
     provider_type=provider.provider_type,
     extra_headers=copilot_headers,
   )
-  match ccs_reject_proxy_managed_placeholder_for_upstream(url, headers) {
+  match moon_reject_proxy_managed_placeholder_for_upstream(url, headers) {
     Err(message) => return Err(message)
     Ok(_) => ()
   }
@@ -3252,12 +3252,12 @@ const CCS_PROXY_MANAGED_PLACEHOLDER = "PROXY_MANAGED"
 const HERMES_WEB_OFFLINE_ERROR = "hermes_web_offline"
 
 ///|
-fn ccs_reject_proxy_managed_placeholder_for_upstream(
+fn moon_reject_proxy_managed_placeholder_for_upstream(
   url : String,
   headers : Map[String, String],
 ) -> Result[Unit, String] {
-  if !ccs_is_managed_account_upstream_url(url) ||
-    !ccs_headers_contain_proxy_managed_placeholder(headers) {
+  if !moon_is_managed_account_upstream_url(url) ||
+    !moon_headers_contain_proxy_managed_placeholder(headers) {
     return Ok(())
   }
   Err(
@@ -3266,7 +3266,7 @@ fn ccs_reject_proxy_managed_placeholder_for_upstream(
 }
 
 ///|
-fn ccs_is_managed_account_upstream_url(url : String) -> Bool {
+fn moon_is_managed_account_upstream_url(url : String) -> Bool {
   let (origin, path) = split_origin_and_path(url)
   let host = extract_host(origin).to_lower()
   host == "githubcopilot.com" ||
@@ -3275,7 +3275,7 @@ fn ccs_is_managed_account_upstream_url(url : String) -> Bool {
 }
 
 ///|
-fn ccs_headers_contain_proxy_managed_placeholder(
+fn moon_headers_contain_proxy_managed_placeholder(
   headers : Map[String, String],
 ) -> Bool {
   for _, value in headers {
@@ -3301,7 +3301,7 @@ fn claude_compatible_provider_headers(
     "Accept": accept,
   }
   if provider_type == Some("github_copilot") {
-    let request_id = ccs_copilot_random_uuid()
+    let request_id = moon_copilot_random_uuid()
     headers["Authorization"] = "Bearer \{api_key}"
     headers["editor-version"] = COPILOT_EDITOR_VERSION
     headers["editor-plugin-version"] = COPILOT_PLUGIN_VERSION
@@ -3325,7 +3325,7 @@ fn claude_compatible_provider_headers(
       "anthropic" => {
         headers["x-api-key"] = api_key
         headers["anthropic-version"] = "2023-06-01"
-        headers["anthropic-beta"] = ccs_claude_code_beta_header(anthropic_beta)
+        headers["anthropic-beta"] = moon_claude_code_beta_header(anthropic_beta)
       }
       "gemini_native" => {
         headers["x-goog-api-key"] = api_key
@@ -3434,7 +3434,7 @@ fn custom_user_agent_header_value_valid(value : String) -> Bool {
 }
 
 ///|
-fn ccs_claude_code_beta_header(existing_beta : String?) -> String {
+fn moon_claude_code_beta_header(existing_beta : String?) -> String {
   let claude_code_beta = "claude-code-20250219"
   match existing_beta {
     Some(beta) if beta.contains(claude_code_beta) => beta
@@ -3671,7 +3671,7 @@ fn codex_oauth_headers(
 }
 
 ///|
-priv enum CcsClientFormat {
+priv enum MoonClientFormat {
   Claude
   Codex
   OpenAI
@@ -3681,7 +3681,7 @@ priv enum CcsClientFormat {
 } derive(Eq)
 
 ///|
-fn CcsClientFormat::to_string(self : CcsClientFormat) -> String {
+fn MoonClientFormat::to_string(self : MoonClientFormat) -> String {
   match self {
     Claude => "claude"
     Codex => "codex"
@@ -3693,7 +3693,7 @@ fn CcsClientFormat::to_string(self : CcsClientFormat) -> String {
 }
 
 ///|
-fn ccs_client_format_from_path(path : String) -> CcsClientFormat {
+fn moon_client_format_from_path(path : String) -> MoonClientFormat {
   if path.contains("/v1/messages") {
     Claude
   } else if path.contains("/v1/responses") {
@@ -3713,7 +3713,7 @@ fn ccs_client_format_from_path(path : String) -> CcsClientFormat {
 }
 
 ///|
-fn ccs_client_format_from_body(body : Json) -> CcsClientFormat {
+fn moon_client_format_from_body(body : Json) -> MoonClientFormat {
   guard body is Object(obj) else { return Unknown }
   if obj.get("messages") is Some(_) &&
     obj.get("model") is Some(_) &&
@@ -3734,28 +3734,28 @@ fn ccs_client_format_from_body(body : Json) -> CcsClientFormat {
 }
 
 ///|
-fn ccs_client_format_for_request(
+fn moon_client_format_for_request(
   path : String,
   body : Json?,
-) -> CcsClientFormat {
-  let format = ccs_client_format_from_path(path)
+) -> MoonClientFormat {
+  let format = moon_client_format_from_path(path)
   if format != Unknown {
     return format
   }
   match body {
-    Some(body) => ccs_client_format_from_body(body)
+    Some(body) => moon_client_format_from_body(body)
     None => Unknown
   }
 }
 
 ///|
-priv struct CcsClientSession {
+priv struct MoonClientSession {
   session_id : String
   client_provided : Bool
 }
 
 ///|
-fn CcsClientSession::upstream_session_id(self : CcsClientSession) -> String? {
+fn MoonClientSession::upstream_session_id(self : MoonClientSession) -> String? {
   if self.client_provided {
     Some(self.session_id)
   } else {
@@ -3768,15 +3768,15 @@ fn extract_client_session_context(
   headers : Map[String, String],
   body : Json,
   client_format : String,
-) -> CcsClientSession {
+) -> MoonClientSession {
   match extract_client_session_id(headers, body, client_format) {
     Some(session_id) => { session_id, client_provided: true }
-    None => { session_id: generate_ccs_session_id(), client_provided: false }
+    None => { session_id: generate_moon_session_id(), client_provided: false }
   }
 }
 
 ///|
-fn generate_ccs_session_id() -> String {
+fn generate_moon_session_id() -> String {
   let gen = @uuid.generator(@random.Rand::new())
   gen.v4().to_string()
 }
@@ -4069,7 +4069,7 @@ fn claude_provider_from_env(app_type : String) -> ProviderRouteTarget? {
       base_url=Some(base_url),
       api_key=Some(api_key),
       is_full_url=claude_base_is_full_url(),
-      model_mapping=ccs_model_mapping_from_env(),
+      model_mapping=moon_model_mapping_from_env(),
       settings_config=provider_settings_config_from_env([
         "MOONSTAT_CLAUDE_SETTINGS_CONFIG", "ANTHROPIC_SETTINGS_CONFIG",
       ]),
@@ -4252,7 +4252,7 @@ fn claude_base_is_full_url() -> Bool {
 }
 
 ///|
-fn ccs_model_mapping_from_env() -> ModelMapping? {
+fn moon_model_mapping_from_env() -> ModelMapping? {
   let mapping = ModelMapping::new(
     haiku_model=env_first_non_empty([
       "MOONSTAT_ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL",
@@ -4363,15 +4363,15 @@ fn getenv_or_none(key : String) -> String? {
 }
 
 ///|
-fn ccs_config_app_from_request(path : StringView, body : Json?) -> String? {
+fn moon_config_app_from_request(path : StringView, body : Json?) -> String? {
   match proxy_string_request(path, body, ["app", "appType", "app_type"]) {
-    Some(app) => Some(ccs_normalize_app_type(app))
+    Some(app) => Some(moon_normalize_app_type(app))
     None => None
   }
 }
 
 ///|
-fn ccs_normalize_app_type(app : String) -> String {
+fn moon_normalize_app_type(app : String) -> String {
   match app.trim().to_lower() {
     "claude-desktop" | "claude_desktop" => "claude-desktop"
     "codex" => "codex"
@@ -4386,16 +4386,16 @@ fn ccs_normalize_app_type(app : String) -> String {
 }
 
 ///|
-fn ccs_home_dir() -> String {
+fn moon_home_dir() -> String {
   @os.home() catch {
     _ => "."
   }
 }
 
 ///|
-fn ccs_config_dir(app : String) -> String {
-  let home = ccs_home_dir()
-  match ccs_normalize_app_type(app) {
+fn moon_config_dir(app : String) -> String {
+  let home = moon_home_dir()
+  match moon_normalize_app_type(app) {
     "claude" => @pathx.join(home, ".claude")
     "claude-desktop" =>
       @pathx.join(@pathx.join(home, "Library/Application Support"), "Claude")
@@ -4410,9 +4410,9 @@ fn ccs_config_dir(app : String) -> String {
 }
 
 ///|
-fn ccs_config_file_path(app : String) -> String {
-  let dir = ccs_config_dir(app)
-  match ccs_normalize_app_type(app) {
+fn moon_config_file_path(app : String) -> String {
+  let dir = moon_config_dir(app)
+  match moon_normalize_app_type(app) {
     "claude" => @pathx.join(dir, "settings.json")
     "claude-desktop" => @pathx.join(dir, "claude_desktop_config.json")
     "codex" => @pathx.join(dir, "config.toml")
@@ -4425,17 +4425,17 @@ fn ccs_config_file_path(app : String) -> String {
 }
 
 ///|
-fn ccs_app_config_dir() -> String {
-  @pathx.join(ccs_home_dir(), ".cc-switch")
+fn moon_app_config_dir() -> String {
+  @pathx.join(moon_home_dir(), ".moonsuite")
 }
 
 ///|
-fn ccs_app_config_path() -> String {
-  @pathx.join(ccs_app_config_dir(), "config.json")
+fn moon_app_config_path() -> String {
+  @pathx.join(moon_app_config_dir(), "config.json")
 }
 
 ///|
-fn ccs_default_app_settings_json() -> Json {
+fn moon_default_app_settings_json() -> Json {
   {
     "showInTray": Json::boolean(true),
     "minimizeToTrayOnClose": Json::boolean(true),
@@ -4453,7 +4453,7 @@ fn ccs_default_app_settings_json() -> Json {
 }
 
 ///|
-fn ccs_default_rectifier_config_json() -> Json {
+fn moon_default_rectifier_config_json() -> Json {
   {
     "enabled": Json::boolean(true),
     "requestThinkingSignature": Json::boolean(true),
@@ -4464,7 +4464,7 @@ fn ccs_default_rectifier_config_json() -> Json {
 }
 
 ///|
-fn ccs_default_optimizer_config_json() -> Json {
+fn moon_default_optimizer_config_json() -> Json {
   {
     "enabled": Json::boolean(false),
     "thinkingOptimizer": Json::boolean(true),
@@ -4474,7 +4474,7 @@ fn ccs_default_optimizer_config_json() -> Json {
 }
 
 ///|
-fn ccs_default_copilot_optimizer_config_json() -> Json {
+fn moon_default_copilot_optimizer_config_json() -> Json {
   {
     "enabled": Json::boolean(true),
     "requestClassification": Json::boolean(true),
@@ -4489,30 +4489,30 @@ fn ccs_default_copilot_optimizer_config_json() -> Json {
 }
 
 ///|
-fn ccs_default_log_config_json() -> Json {
+fn moon_default_log_config_json() -> Json {
   { "enabled": Json::boolean(true), "level": Json::string("info") }.to_json()
 }
 
 ///|
-fn ccs_claude_plugin_config_path() -> String {
-  @pathx.join(ccs_config_dir("claude"), "config.json")
+fn moon_claude_plugin_config_path() -> String {
+  @pathx.join(moon_config_dir("claude"), "config.json")
 }
 
 ///|
-fn ccs_openclaw_workspace_dir() -> String {
+fn moon_openclaw_workspace_dir() -> String {
   @pathx.join(
-    @pathx.join(@pathx.join(ccs_home_dir(), ".moonstat"), "openclaw"),
+    @pathx.join(@pathx.join(moon_home_dir(), ".moonsuite"), "openclaw"),
     "workspace",
   )
 }
 
 ///|
-fn ccs_openclaw_memory_dir() -> String {
-  @pathx.join(ccs_openclaw_workspace_dir(), "memory")
+fn moon_openclaw_memory_dir() -> String {
+  @pathx.join(moon_openclaw_workspace_dir(), "memory")
 }
 
 ///|
-fn ccs_allowed_workspace_files() -> Array[String] {
+fn moon_allowed_workspace_files() -> Array[String] {
   [
     "AGENTS.md", "SOUL.md", "USER.md", "IDENTITY.md", "TOOLS.md", "MEMORY.md", "HEARTBEAT.md",
     "BOOTSTRAP.md", "BOOT.md",
@@ -4520,40 +4520,40 @@ fn ccs_allowed_workspace_files() -> Array[String] {
 }
 
 ///|
-fn ccs_validate_workspace_filename(filename : String) -> Bool {
-  ccs_allowed_workspace_files().contains(filename)
+fn moon_validate_workspace_filename(filename : String) -> Bool {
+  moon_allowed_workspace_files().contains(filename)
 }
 
 ///|
-fn ccs_validate_daily_memory_filename(filename : String) -> Bool {
+fn moon_validate_daily_memory_filename(filename : String) -> Bool {
   filename.length() == 13 &&
   filename.has_suffix(".md") &&
-  ccs_ascii_digit_at(filename, 0) &&
-  ccs_ascii_digit_at(filename, 1) &&
-  ccs_ascii_digit_at(filename, 2) &&
-  ccs_ascii_digit_at(filename, 3) &&
+  moon_ascii_digit_at(filename, 0) &&
+  moon_ascii_digit_at(filename, 1) &&
+  moon_ascii_digit_at(filename, 2) &&
+  moon_ascii_digit_at(filename, 3) &&
   filename[4] == '-' &&
-  ccs_ascii_digit_at(filename, 5) &&
-  ccs_ascii_digit_at(filename, 6) &&
+  moon_ascii_digit_at(filename, 5) &&
+  moon_ascii_digit_at(filename, 6) &&
   filename[7] == '-' &&
-  ccs_ascii_digit_at(filename, 8) &&
-  ccs_ascii_digit_at(filename, 9) &&
+  moon_ascii_digit_at(filename, 8) &&
+  moon_ascii_digit_at(filename, 9) &&
   filename[10] == '.'
 }
 
 ///|
-fn ccs_daily_memory_list_filename(filename : String) -> Bool {
+fn moon_daily_memory_list_filename(filename : String) -> Bool {
   filename.has_suffix(".md")
 }
 
 ///|
-fn ccs_ascii_digit_at(value : String, index : Int) -> Bool {
+fn moon_ascii_digit_at(value : String, index : Int) -> Bool {
   let ch = value[index]
   ch >= '0' && ch <= '9'
 }
 
 ///|
-fn ccs_daily_memory_date(filename : String) -> String {
+fn moon_daily_memory_date(filename : String) -> String {
   if filename.has_suffix(".md") && filename.length() >= 3 {
     filename[:filename.length() - 3].to_owned()
   } else if filename.length() >= 10 {
@@ -4564,17 +4564,17 @@ fn ccs_daily_memory_date(filename : String) -> String {
 }
 
 ///|
-fn ccs_workspace_file_path(filename : String) -> String {
-  @pathx.join(ccs_openclaw_workspace_dir(), filename)
+fn moon_workspace_file_path(filename : String) -> String {
+  @pathx.join(moon_openclaw_workspace_dir(), filename)
 }
 
 ///|
-fn ccs_daily_memory_file_path(filename : String) -> String {
-  @pathx.join(ccs_openclaw_memory_dir(), filename)
+fn moon_daily_memory_file_path(filename : String) -> String {
+  @pathx.join(moon_openclaw_memory_dir(), filename)
 }
 
 ///|
-async fn ccs_ensure_directory(path : String) -> Bool {
+async fn moon_ensure_directory(path : String) -> Bool {
   @fsx.make_directory(path, recursive=true, exists_ok=true) catch {
     _ => return false
   }
@@ -4582,21 +4582,21 @@ async fn ccs_ensure_directory(path : String) -> Bool {
 }
 
 ///|
-async fn ccs_open_directory_result_json(path : String) -> Result[Json, String] {
-  if !ccs_ensure_directory(path) {
+async fn moon_open_directory_result_json(path : String) -> Result[Json, String] {
+  if !moon_ensure_directory(path) {
     return Err("open_directory_create_failed")
   }
   Ok(Json::boolean(true))
 }
 
 ///|
-fn ccs_file_mtime(path : String) -> Int64 {
+fn moon_file_mtime(path : String) -> Int64 {
   let stat = @fsx.stat(path) catch { _ => return 0L }
   stat.mtime()
 }
 
 ///|
-fn ccs_preview(content : String, limit : Int) -> String {
+fn moon_preview(content : String, limit : Int) -> String {
   if content.length() <= limit {
     content
   } else {
@@ -4605,7 +4605,7 @@ fn ccs_preview(content : String, limit : Int) -> String {
 }
 
 ///|
-fn ccs_search_snippet(content : String, first_pos : Int) -> String {
+fn moon_search_snippet(content : String, first_pos : Int) -> String {
   let start = if first_pos > 50 { first_pos - 50 } else { 0 }
   let end = if first_pos + 70 < content.length() {
     first_pos + 70
@@ -4618,7 +4618,7 @@ fn ccs_search_snippet(content : String, first_pos : Int) -> String {
 }
 
 ///|
-fn ccs_count_case_insensitive_matches(
+fn moon_count_case_insensitive_matches(
   haystack : String,
   needle : String,
 ) -> (Int, Int?) {
@@ -4647,21 +4647,21 @@ fn ccs_count_case_insensitive_matches(
 }
 
 ///|
-async fn ccs_daily_memory_info_json(path : String, filename : String) -> Json {
+async fn moon_daily_memory_info_json(path : String, filename : String) -> Json {
   let content = @fsx.read_file(path) catch { _ => "" }
-  let modified_at = ccs_file_mtime(path)
+  let modified_at = moon_file_mtime(path)
   {
     "filename": Json::string(filename),
-    "date": Json::string(ccs_daily_memory_date(filename)),
+    "date": Json::string(moon_daily_memory_date(filename)),
     "sizeBytes": Json::number(content.length().to_double()),
     "modifiedAt": Json::number(modified_at.to_double()),
-    "preview": Json::string(ccs_preview(content, 200)),
+    "preview": Json::string(moon_preview(content, 200)),
   }.to_json()
 }
 
 ///|
-async fn ccs_list_daily_memory_files_json() -> Json {
-  let memory_dir = ccs_openclaw_memory_dir()
+async fn moon_list_daily_memory_files_json() -> Json {
+  let memory_dir = moon_openclaw_memory_dir()
   if !@fsx.exists(memory_dir) {
     return Json::array([])
   }
@@ -4673,9 +4673,9 @@ async fn ccs_list_daily_memory_files_json() -> Json {
   }
   for entry in entries {
     if entry.kind is @fsx.FileKind::Regular &&
-      ccs_daily_memory_list_filename(entry.name) {
+      moon_daily_memory_list_filename(entry.name) {
       filenames.push(entry.name)
-      rows_by_filename[entry.name] = ccs_daily_memory_info_json(
+      rows_by_filename[entry.name] = moon_daily_memory_info_json(
         entry.path,
         entry.name,
       )
@@ -4695,9 +4695,9 @@ async fn ccs_list_daily_memory_files_json() -> Json {
 }
 
 ///|
-async fn ccs_search_daily_memory_files_json(query : String) -> Json {
+async fn moon_search_daily_memory_files_json(query : String) -> Json {
   let trimmed = query.trim().to_owned()
-  let memory_dir = ccs_openclaw_memory_dir()
+  let memory_dir = moon_openclaw_memory_dir()
   if trimmed.is_empty() || !@fsx.exists(memory_dir) {
     return Json::array([])
   }
@@ -4709,23 +4709,23 @@ async fn ccs_search_daily_memory_files_json(query : String) -> Json {
   }
   for entry in entries {
     if !(entry.kind is @fsx.FileKind::Regular) ||
-      !ccs_daily_memory_list_filename(entry.name) {
+      !moon_daily_memory_list_filename(entry.name) {
       continue
     }
     let content = @fsx.read_file(entry.path) catch { _ => "" }
-    let date = ccs_daily_memory_date(entry.name)
-    let (content_count, first_pos) = ccs_count_case_insensitive_matches(
+    let date = moon_daily_memory_date(entry.name)
+    let (content_count, first_pos) = moon_count_case_insensitive_matches(
       content, trimmed,
     )
-    let (date_count, _) = ccs_count_case_insensitive_matches(date, trimmed)
+    let (date_count, _) = moon_count_case_insensitive_matches(date, trimmed)
     if content_count == 0 && date_count == 0 {
       continue
     }
     let snippet = match first_pos {
-      Some(pos) => ccs_search_snippet(content, pos)
-      None => ccs_preview(content, 120)
+      Some(pos) => moon_search_snippet(content, pos)
+      None => moon_preview(content, 120)
     }
-    let modified_at = ccs_file_mtime(entry.path)
+    let modified_at = moon_file_mtime(entry.path)
     filenames.push(entry.name)
     rows_by_filename[entry.name] = {
       "filename": Json::string(entry.name),
@@ -4750,27 +4750,27 @@ async fn ccs_search_daily_memory_files_json(query : String) -> Json {
 }
 
 ///|
-fn ccs_merge_settings_for_save(incoming : Json, existing : Json) -> Json {
+fn moon_merge_settings_for_save(incoming : Json, existing : Json) -> Json {
   guard incoming is Object(incoming_obj) else { return existing }
   guard existing is Object(existing_obj) else { return incoming }
   let next = incoming_obj
-  ccs_preserve_missing_settings_object(next, existing_obj, "webdavSync")
-  ccs_preserve_missing_settings_object(next, existing_obj, "webdav_sync")
-  ccs_preserve_missing_settings_object(next, existing_obj, "s3Sync")
-  ccs_preserve_missing_settings_object(next, existing_obj, "s3_sync")
-  ccs_preserve_missing_settings_object(next, existing_obj, "localMigrations")
-  ccs_preserve_missing_settings_object(next, existing_obj, "local_migrations")
-  ccs_preserve_secret_if_empty(next, existing_obj, "webdavSync", "password")
-  ccs_preserve_secret_if_empty(next, existing_obj, "webdav_sync", "password")
-  ccs_preserve_secret_if_empty(next, existing_obj, "s3Sync", "secretAccessKey")
-  ccs_preserve_secret_if_empty(
+  moon_preserve_missing_settings_object(next, existing_obj, "webdavSync")
+  moon_preserve_missing_settings_object(next, existing_obj, "webdav_sync")
+  moon_preserve_missing_settings_object(next, existing_obj, "s3Sync")
+  moon_preserve_missing_settings_object(next, existing_obj, "s3_sync")
+  moon_preserve_missing_settings_object(next, existing_obj, "localMigrations")
+  moon_preserve_missing_settings_object(next, existing_obj, "local_migrations")
+  moon_preserve_secret_if_empty(next, existing_obj, "webdavSync", "password")
+  moon_preserve_secret_if_empty(next, existing_obj, "webdav_sync", "password")
+  moon_preserve_secret_if_empty(next, existing_obj, "s3Sync", "secretAccessKey")
+  moon_preserve_secret_if_empty(
     next, existing_obj, "s3_sync", "secret_access_key",
   )
   Json::object(next)
 }
 
 ///|
-fn ccs_preserve_missing_settings_object(
+fn moon_preserve_missing_settings_object(
   incoming : Map[String, Json],
   existing : Map[String, Json],
   key : String,
@@ -4784,7 +4784,7 @@ fn ccs_preserve_missing_settings_object(
 }
 
 ///|
-fn ccs_preserve_secret_if_empty(
+fn moon_preserve_secret_if_empty(
   incoming : Map[String, Json],
   existing : Map[String, Json],
   object_key : String,
@@ -4805,7 +4805,7 @@ fn ccs_preserve_secret_if_empty(
 }
 
 ///|
-fn ccs_settings_with_bool(settings : Json, key : String, value : Bool) -> Json {
+fn moon_settings_with_bool(settings : Json, key : String, value : Bool) -> Json {
   match settings {
     Object(obj) => {
       obj[key] = Json::boolean(value)
@@ -4820,7 +4820,7 @@ fn ccs_settings_with_bool(settings : Json, key : String, value : Bool) -> Json {
 }
 
 ///|
-fn ccs_optional_path_from_request(path : StringView, body : Json?) -> String? {
+fn moon_optional_path_from_request(path : StringView, body : Json?) -> String? {
   match proxy_string_request(path, body, ["path", "appConfigDir"]) {
     Some(value) if !value.trim().is_empty() => return Some(value)
     Some(_) => return None
@@ -4837,7 +4837,7 @@ fn ccs_optional_path_from_request(path : StringView, body : Json?) -> String? {
 }
 
 ///|
-fn ccs_json_config_from_request(
+fn moon_json_config_from_request(
   path : StringView,
   body : Json?,
   current : Json,
@@ -4873,12 +4873,12 @@ fn ccs_json_config_from_request(
 }
 
 ///|
-fn ccs_rectifier_config_from_request(
+fn moon_rectifier_config_from_request(
   path : StringView,
   body : Json?,
   current : Json,
 ) -> Json {
-  ccs_json_config_from_request(path, body, current, [
+  moon_json_config_from_request(path, body, current, [
     ("enabled", ["enabled"], "bool"),
     (
       "requestThinkingSignature",
@@ -4904,12 +4904,12 @@ fn ccs_rectifier_config_from_request(
 }
 
 ///|
-fn ccs_optimizer_config_from_request(
+fn moon_optimizer_config_from_request(
   path : StringView,
   body : Json?,
   current : Json,
 ) -> Json {
-  ccs_json_config_from_request(path, body, current, [
+  moon_json_config_from_request(path, body, current, [
     ("enabled", ["enabled"], "bool"),
     ("thinkingOptimizer", ["thinkingOptimizer", "thinking_optimizer"], "bool"),
     ("cacheInjection", ["cacheInjection", "cache_injection"], "bool"),
@@ -4918,12 +4918,12 @@ fn ccs_optimizer_config_from_request(
 }
 
 ///|
-fn ccs_copilot_optimizer_config_from_request(
+fn moon_copilot_optimizer_config_from_request(
   path : StringView,
   body : Json?,
   current : Json,
 ) -> Json {
-  ccs_json_config_from_request(path, body, current, [
+  moon_json_config_from_request(path, body, current, [
     ("enabled", ["enabled"], "bool"),
     (
       "requestClassification",
@@ -4945,19 +4945,19 @@ fn ccs_copilot_optimizer_config_from_request(
 }
 
 ///|
-fn ccs_log_config_from_request(
+fn moon_log_config_from_request(
   path : StringView,
   body : Json?,
   current : Json,
 ) -> Json {
-  ccs_json_config_from_request(path, body, current, [
+  moon_json_config_from_request(path, body, current, [
     ("enabled", ["enabled"], "bool"),
     ("level", ["level"], "string"),
   ])
 }
 
 ///|
-fn ccs_optimizer_cache_ttl_valid(config : Json) -> Bool {
+fn moon_optimizer_cache_ttl_valid(config : Json) -> Bool {
   guard config is Object(obj) else { return true }
   match json_string_from_map_any(obj, ["cacheTtl", "cache_ttl"]) {
     Some("5m") | Some("1h") | None => true
@@ -4966,7 +4966,7 @@ fn ccs_optimizer_cache_ttl_valid(config : Json) -> Bool {
 }
 
 ///|
-fn ccs_json_primary_api_key_any(content : String) -> Bool {
+fn moon_json_primary_api_key_any(content : String) -> Bool {
   let parsed : Result[Json, Error] = try? @json.parse(content)
   match parsed {
     Ok(Object(obj)) =>
@@ -4979,49 +4979,49 @@ fn ccs_json_primary_api_key_any(content : String) -> Bool {
 }
 
 ///|
-async fn ccs_config_status_json(app : String) -> Json {
-  let normalized = ccs_normalize_app_type(app)
+async fn moon_config_status_json(app : String) -> Json {
+  let normalized = moon_normalize_app_type(app)
   let path = match normalized {
-    "codex" => ccs_config_dir(normalized)
+    "codex" => moon_config_dir(normalized)
     "gemini" | "opencode" | "openclaw" | "hermes" | "claude-desktop" =>
-      ccs_config_dir(normalized)
-    _ => ccs_config_file_path(normalized)
+      moon_config_dir(normalized)
+    _ => moon_config_file_path(normalized)
   }
   {
-    "exists": Json::boolean(ccs_config_exists(normalized)),
+    "exists": Json::boolean(moon_config_exists(normalized)),
     "path": Json::string(path),
   }.to_json()
 }
 
 ///|
-async fn ccs_config_exists(app : String) -> Bool {
-  let normalized = ccs_normalize_app_type(app)
+async fn moon_config_exists(app : String) -> Bool {
+  let normalized = moon_normalize_app_type(app)
   match normalized {
     "codex" =>
-      @fsx.exists_as_file(@pathx.join(ccs_config_dir("codex"), "auth.json")) ||
-      @fsx.exists_as_file(ccs_config_file_path("codex"))
+      @fsx.exists_as_file(@pathx.join(moon_config_dir("codex"), "auth.json")) ||
+      @fsx.exists_as_file(moon_config_file_path("codex"))
     "gemini"
     | "opencode"
     | "openclaw"
     | "hermes"
     | "claude"
-    | "claude-desktop" => @fsx.exists_as_file(ccs_config_file_path(normalized))
-    _ => @fsx.exists_as_file(ccs_config_file_path(normalized))
+    | "claude-desktop" => @fsx.exists_as_file(moon_config_file_path(normalized))
+    _ => @fsx.exists_as_file(moon_config_file_path(normalized))
   }
 }
 
 ///|
-async fn ccs_env_conflicts_json(app : String) -> Json {
-  ccs_env_conflicts_json_with_shell_files(app, ccs_env_shell_config_paths())
+async fn moon_env_conflicts_json(app : String) -> Json {
+  moon_env_conflicts_json_with_shell_files(app, moon_env_shell_config_paths())
 }
 
 ///|
-async fn ccs_env_conflicts_json_with_shell_files(
+async fn moon_env_conflicts_json_with_shell_files(
   app : String,
   shell_files : Array[String],
 ) -> Json {
   let conflicts : Array[Json] = []
-  for key in ccs_env_conflict_keys(ccs_normalize_app_type(app)) {
+  for key in moon_env_conflict_keys(moon_normalize_app_type(app)) {
     match getenv_or_none(key) {
       Some(value) if !value.trim().is_empty() =>
         conflicts.push(
@@ -5036,17 +5036,17 @@ async fn ccs_env_conflicts_json_with_shell_files(
     }
   }
   for file_path in shell_files {
-    ccs_push_shell_env_conflicts(
+    moon_push_shell_env_conflicts(
       conflicts,
       file_path,
-      ccs_env_conflict_keys(ccs_normalize_app_type(app)),
+      moon_env_conflict_keys(moon_normalize_app_type(app)),
     )
   }
   Json::array(conflicts)
 }
 
 ///|
-async fn ccs_push_shell_env_conflicts(
+async fn moon_push_shell_env_conflicts(
   conflicts : Array[Json],
   file_path : String,
   keywords : Array[String],
@@ -5056,14 +5056,14 @@ async fn ccs_push_shell_env_conflicts(
   for line_view in content.split("\n") {
     line_number += 1
     let trimmed = line_view.to_owned().trim().to_owned()
-    guard ccs_env_assignment_line(trimmed) is Some((var_name, var_value)) else {
+    guard moon_env_assignment_line(trimmed) is Some((var_name, var_value)) else {
       continue
     }
-    if ccs_env_name_matches_keywords(var_name, keywords) {
+    if moon_env_name_matches_keywords(var_name, keywords) {
       conflicts.push(
         {
           "varName": Json::string(var_name),
-          "varValue": Json::string(ccs_trim_env_value_quotes(var_value)),
+          "varValue": Json::string(moon_trim_env_value_quotes(var_value)),
           "sourceType": Json::string("file"),
           "sourcePath": Json::string("\{file_path}:\{line_number}"),
         }.to_json(),
@@ -5073,8 +5073,8 @@ async fn ccs_push_shell_env_conflicts(
 }
 
 ///|
-fn ccs_env_shell_config_paths() -> Array[String] {
-  let home = ccs_home_dir()
+fn moon_env_shell_config_paths() -> Array[String] {
+  let home = moon_home_dir()
   [
     @pathx.join(home, ".bashrc"),
     @pathx.join(home, ".bash_profile"),
@@ -5087,7 +5087,7 @@ fn ccs_env_shell_config_paths() -> Array[String] {
 }
 
 ///|
-fn ccs_env_conflict_keys(app : String) -> Array[String] {
+fn moon_env_conflict_keys(app : String) -> Array[String] {
   match app {
     "codex" =>
       ["OPENAI_API_KEY", "OPENAI_BASE_URL", "CODEX_HOME", "CODEX_AUTH_TOKEN"]
@@ -5115,13 +5115,13 @@ fn ccs_env_conflict_keys(app : String) -> Array[String] {
 }
 
 ///|
-fn ccs_env_backup_json(body : Json?) -> Json {
-  let conflicts = ccs_env_conflicts_from_body(body)
+fn moon_env_backup_json(body : Json?) -> Json {
+  let conflicts = moon_env_conflicts_from_body(body)
   let timestamp = @async.now().to_int().to_string()
   {
     "backupPath": Json::string(
       @pathx.join(
-        @pathx.join(ccs_app_config_dir(), "backups"),
+        @pathx.join(moon_app_config_dir(), "backups"),
         "env-backup-\{timestamp}.json",
       ),
     ),
@@ -5131,8 +5131,8 @@ fn ccs_env_backup_json(body : Json?) -> Json {
 }
 
 ///|
-async fn ccs_delete_env_vars_json(body : Json?) -> Result[Json, String] {
-  let backup = ccs_env_backup_json(body)
+async fn moon_delete_env_vars_json(body : Json?) -> Result[Json, String] {
+  let backup = moon_env_backup_json(body)
   guard backup is Object(obj) else { return Err("invalid_backup") }
   guard obj.get("backupPath") is Some(String(backup_path)) else {
     return Err("missing_backup_path")
@@ -5147,8 +5147,8 @@ async fn ccs_delete_env_vars_json(body : Json?) -> Result[Json, String] {
   @fsx.write_to_file(backup_path, backup.stringify(indent=2) + "\n") catch {
     error => return Err("写入备份文件失败: \{error}")
   }
-  for conflict in ccs_env_conflicts_from_body(body) {
-    match ccs_delete_single_env_conflict(conflict) {
+  for conflict in moon_env_conflicts_from_body(body) {
+    match moon_delete_single_env_conflict(conflict) {
       Ok(_) => ()
       Err(error) =>
         return Err(
@@ -5160,16 +5160,16 @@ async fn ccs_delete_env_vars_json(body : Json?) -> Result[Json, String] {
 }
 
 ///|
-async fn ccs_delete_single_env_conflict(
+async fn moon_delete_single_env_conflict(
   conflict : Json,
 ) -> Result[Unit, String] {
   guard conflict is Object(obj) else { return Err("invalid_conflict") }
-  let source_type = ccs_env_conflict_string(obj, "sourceType", "source_type")
-  let var_name = ccs_env_conflict_string(obj, "varName", "var_name")
-  let source_path = ccs_env_conflict_string(obj, "sourcePath", "source_path")
+  let source_type = moon_env_conflict_string(obj, "sourceType", "source_type")
+  let var_name = moon_env_conflict_string(obj, "varName", "var_name")
+  let source_path = moon_env_conflict_string(obj, "sourcePath", "source_path")
   match (source_type, var_name, source_path) {
     (Some("file"), Some(var_name), Some(source_path)) => {
-      let file_path = ccs_env_source_file_path(source_path)
+      let file_path = moon_env_source_file_path(source_path)
       guard !file_path.is_empty() else {
         return Err("无效的文件路径格式")
       }
@@ -5179,7 +5179,7 @@ async fn ccs_delete_single_env_conflict(
       let kept : Array[String] = []
       for line_view in content.split("\n") {
         let line = line_view.to_owned()
-        match ccs_env_assignment_line(line.trim().to_owned()) {
+        match moon_env_assignment_line(line.trim().to_owned()) {
           Some((name, _)) if name == var_name => ()
           _ => kept.push(line)
         }
@@ -5196,7 +5196,7 @@ async fn ccs_delete_single_env_conflict(
 }
 
 ///|
-async fn ccs_restore_env_backup_json(
+async fn moon_restore_env_backup_json(
   backup_path : String?,
 ) -> Result[Json, String] {
   guard backup_path is Some(path) else { return Err("missing_backup_path") }
@@ -5206,8 +5206,8 @@ async fn ccs_restore_env_backup_json(
   let parsed = @json.parse(content) catch {
     error => return Err("解析备份文件失败: \{error}")
   }
-  for conflict in ccs_env_conflicts_from_body(Some(parsed)) {
-    match ccs_restore_single_env_conflict(conflict) {
+  for conflict in moon_env_conflicts_from_body(Some(parsed)) {
+    match moon_restore_single_env_conflict(conflict) {
       Ok(_) => ()
       Err(error) => return Err(error)
     }
@@ -5216,17 +5216,17 @@ async fn ccs_restore_env_backup_json(
 }
 
 ///|
-async fn ccs_restore_single_env_conflict(
+async fn moon_restore_single_env_conflict(
   conflict : Json,
 ) -> Result[Unit, String] {
   guard conflict is Object(obj) else { return Err("invalid_conflict") }
-  let source_type = ccs_env_conflict_string(obj, "sourceType", "source_type")
-  let var_name = ccs_env_conflict_string(obj, "varName", "var_name")
-  let var_value = ccs_env_conflict_string(obj, "varValue", "var_value")
-  let source_path = ccs_env_conflict_string(obj, "sourcePath", "source_path")
+  let source_type = moon_env_conflict_string(obj, "sourceType", "source_type")
+  let var_name = moon_env_conflict_string(obj, "varName", "var_name")
+  let var_value = moon_env_conflict_string(obj, "varValue", "var_value")
+  let source_path = moon_env_conflict_string(obj, "sourcePath", "source_path")
   match (source_type, var_name, var_value, source_path) {
     (Some("file"), Some(var_name), Some(var_value), Some(source_path)) => {
-      let file_path = ccs_env_source_file_path(source_path)
+      let file_path = moon_env_source_file_path(source_path)
       guard !file_path.is_empty() else {
         return Err("无效的文件路径格式")
       }
@@ -5248,7 +5248,7 @@ async fn ccs_restore_single_env_conflict(
 }
 
 ///|
-fn ccs_env_conflicts_from_body(body : Json?) -> Array[Json] {
+fn moon_env_conflicts_from_body(body : Json?) -> Array[Json] {
   match body {
     Some(Array(items)) => items
     Some(Object(obj)) =>
@@ -5261,7 +5261,7 @@ fn ccs_env_conflicts_from_body(body : Json?) -> Array[Json] {
 }
 
 ///|
-fn ccs_env_conflict_string(
+fn moon_env_conflict_string(
   obj : Map[String, Json],
   key : String,
   alt : String,
@@ -5277,7 +5277,7 @@ fn ccs_env_conflict_string(
 }
 
 ///|
-fn ccs_env_source_file_path(source_path : String) -> String {
+fn moon_env_source_file_path(source_path : String) -> String {
   match source_path.find(":") {
     Some(index) => source_path[:index].to_owned()
     None => source_path
@@ -5285,7 +5285,7 @@ fn ccs_env_source_file_path(source_path : String) -> String {
 }
 
 ///|
-fn ccs_env_assignment_line(line : String) -> (String, String)? {
+fn moon_env_assignment_line(line : String) -> (String, String)? {
   if line.is_empty() || line.has_prefix("#") {
     return None
   }
@@ -5309,7 +5309,7 @@ fn ccs_env_assignment_line(line : String) -> (String, String)? {
 }
 
 ///|
-fn ccs_env_name_matches_keywords(
+fn moon_env_name_matches_keywords(
   var_name : String,
   keywords : Array[String],
 ) -> Bool {
@@ -5323,7 +5323,7 @@ fn ccs_env_name_matches_keywords(
 }
 
 ///|
-fn ccs_trim_env_value_quotes(value : String) -> String {
+fn moon_trim_env_value_quotes(value : String) -> String {
   let trimmed = value.trim().to_owned()
   if trimmed.length() >= 2 {
     if (trimmed.has_prefix("\"") && trimmed.has_suffix("\"")) ||
@@ -5335,14 +5335,14 @@ fn ccs_trim_env_value_quotes(value : String) -> String {
 }
 
 ///|
-fn ccs_json_request(
+fn moon_json_request(
   path : StringView,
   body : Json?,
   keys : Array[String],
 ) -> Json? {
   for key in keys {
     match usage_query_value(path, key) {
-      Some(value) => return Some(ccs_json_value_from_string(value))
+      Some(value) => return Some(moon_json_value_from_string(value))
       None => ()
     }
   }
@@ -5360,7 +5360,7 @@ fn ccs_json_request(
 }
 
 ///|
-fn ccs_json_value_from_string(value : String) -> Json {
+fn moon_json_value_from_string(value : String) -> Json {
   try @json.parse(value) catch {
     _ => Json::string(value)
   } noraise {
@@ -5369,7 +5369,7 @@ fn ccs_json_value_from_string(value : String) -> Json {
 }
 
 ///|
-fn ccs_mcp_apps_json(app : String, enabled? : Bool = true) -> Json {
+fn moon_mcp_apps_json(app : String, enabled? : Bool = true) -> Json {
   let apps = {
     "claude": Json::boolean(false),
     "claude-desktop": Json::boolean(false),
@@ -5379,15 +5379,15 @@ fn ccs_mcp_apps_json(app : String, enabled? : Bool = true) -> Json {
     "openclaw": Json::boolean(false),
     "hermes": Json::boolean(false),
   }
-  apps[ccs_normalize_app_type(app)] = Json::boolean(enabled)
+  apps[moon_normalize_app_type(app)] = Json::boolean(enabled)
   Json::object(apps)
 }
 
 ///|
-fn ccs_mcp_app_enabled(server : Json, app : String) -> Bool {
+fn moon_mcp_app_enabled(server : Json, app : String) -> Bool {
   guard server is Object(obj) else { return false }
   guard obj.get("apps") is Some(Object(apps)) else { return false }
-  match apps.get(ccs_normalize_app_type(app)) {
+  match apps.get(moon_normalize_app_type(app)) {
     Some(true) => true
     Some(false) => false
     _ => false
@@ -5395,15 +5395,15 @@ fn ccs_mcp_app_enabled(server : Json, app : String) -> Bool {
 }
 
 ///|
-fn ccs_mcp_server_with_app(server : Json, app : String, enabled : Bool) -> Json {
-  let normalized = ccs_normalize_app_type(app)
+fn moon_mcp_server_with_app(server : Json, app : String, enabled : Bool) -> Json {
+  let normalized = moon_normalize_app_type(app)
   match server {
     Object(obj) => {
       let next = obj
       let apps = match obj.get("apps") {
         Some(Object(existing)) => existing
         _ =>
-          match ccs_mcp_apps_json("claude", enabled=false) {
+          match moon_mcp_apps_json("claude", enabled=false) {
             Object(empty) => empty
             _ => {}
           }
@@ -5417,19 +5417,19 @@ fn ccs_mcp_server_with_app(server : Json, app : String, enabled : Bool) -> Json 
 }
 
 ///|
-fn ccs_mcp_server_from_request(
+fn moon_mcp_server_from_request(
   path : StringView,
   body : Json?,
   default_app : String,
 ) -> (String, Json)? {
-  match ccs_json_request(path, body, ["server"]) {
+  match moon_json_request(path, body, ["server"]) {
     Some(Object(server)) =>
       match json_string_from_map_any(server, ["id", "serverId", "server_id"]) {
         Some(id) =>
           return Some(
             (
               id,
-              ccs_mcp_normalize_server(id, Json::object(server), default_app),
+              moon_mcp_normalize_server(id, Json::object(server), default_app),
             ),
           )
         None => ()
@@ -5440,14 +5440,14 @@ fn ccs_mcp_server_from_request(
     is Some(id) else {
     return None
   }
-  let spec = ccs_json_request(path, body, ["spec", "server"]).unwrap_or(
+  let spec = moon_json_request(path, body, ["spec", "server"]).unwrap_or(
     Json::object({}),
   )
-  Some((id, ccs_mcp_server_from_spec(id, spec, default_app)))
+  Some((id, moon_mcp_server_from_spec(id, spec, default_app)))
 }
 
 ///|
-fn ccs_mcp_server_from_spec(id : String, spec : Json, app : String) -> Json {
+fn moon_mcp_server_from_spec(id : String, spec : Json, app : String) -> Json {
   let name = match spec {
     Object(obj) => json_string_from_map_any(obj, ["name"]).unwrap_or(id)
     _ => id
@@ -5456,7 +5456,7 @@ fn ccs_mcp_server_from_spec(id : String, spec : Json, app : String) -> Json {
     "id": Json::string(id),
     "name": Json::string(name),
     "server": spec,
-    "apps": ccs_mcp_apps_json(app),
+    "apps": moon_mcp_apps_json(app),
     "description": Json::null(),
     "homepage": Json::null(),
     "docs": Json::null(),
@@ -5465,7 +5465,7 @@ fn ccs_mcp_server_from_spec(id : String, spec : Json, app : String) -> Json {
 }
 
 ///|
-fn ccs_mcp_normalize_server(
+fn moon_mcp_normalize_server(
   id : String,
   server : Json,
   default_app : String,
@@ -5483,19 +5483,19 @@ fn ccs_mcp_normalize_server(
         next["server"] = Json::object({})
       }
       if next.get("apps") is None {
-        next["apps"] = ccs_mcp_apps_json(default_app)
+        next["apps"] = moon_mcp_apps_json(default_app)
       }
       if next.get("tags") is None {
         next["tags"] = Json::array([])
       }
       Json::object(next)
     }
-    _ => ccs_mcp_server_from_spec(id, Json::object({}), default_app)
+    _ => moon_mcp_server_from_spec(id, Json::object({}), default_app)
   }
 }
 
 ///|
-fn ccs_mcp_servers_object_for_app(
+fn moon_mcp_servers_object_for_app(
   servers : Map[String, Json],
   app : String?,
 ) -> Json {
@@ -5504,7 +5504,7 @@ fn ccs_mcp_servers_object_for_app(
     guard servers.get(id) is Some(server) else { continue }
     match app {
       Some(app_type) =>
-        if ccs_mcp_app_enabled(server, app_type) {
+        if moon_mcp_app_enabled(server, app_type) {
           result[id] = server
         }
       None => result[id] = server
@@ -5514,7 +5514,7 @@ fn ccs_mcp_servers_object_for_app(
 }
 
 ///|
-fn ccs_mcp_config_text(servers : Map[String, Json]) -> String? {
+fn moon_mcp_config_text(servers : Map[String, Json]) -> String? {
   if servers.is_empty() {
     return None
   }
@@ -5534,7 +5534,7 @@ fn ccs_mcp_config_text(servers : Map[String, Json]) -> String? {
 }
 
 ///|
-fn ccs_mcp_valid_server_spec(spec : Json) -> Bool {
+fn moon_mcp_valid_server_spec(spec : Json) -> Bool {
   guard spec is Object(obj) else { return false }
   let typ = json_string_from_map_any(obj, ["type"]).unwrap_or("stdio")
   match typ {
@@ -5547,8 +5547,8 @@ fn ccs_mcp_valid_server_spec(spec : Json) -> Bool {
 }
 
 ///|
-fn ccs_mcp_import_spec_for_app(app : String, spec : Json) -> Json {
-  let normalized = ccs_normalize_app_type(app)
+fn moon_mcp_import_spec_for_app(app : String, spec : Json) -> Json {
+  let normalized = moon_normalize_app_type(app)
   if normalized != "gemini" {
     return spec
   }
@@ -5577,7 +5577,7 @@ fn ccs_mcp_import_spec_for_app(app : String, spec : Json) -> Json {
 }
 
 ///|
-fn ccs_import_mcp_servers_map(
+fn moon_import_mcp_servers_map(
   servers : Map[String, Json],
   app : String,
   mcp_servers : Map[String, Json],
@@ -5585,18 +5585,18 @@ fn ccs_import_mcp_servers_map(
   let mut changed = 0
   for id in mcp_servers.keys() {
     guard mcp_servers.get(id) is Some(spec) else { continue }
-    let import_spec = ccs_mcp_import_spec_for_app(app, spec)
-    if !ccs_mcp_valid_server_spec(import_spec) {
+    let import_spec = moon_mcp_import_spec_for_app(app, spec)
+    if !moon_mcp_valid_server_spec(import_spec) {
       continue
     }
     match servers.get(id) {
       Some(existing) =>
-        if !ccs_mcp_app_enabled(existing, app) {
-          servers[id] = ccs_mcp_server_with_app(existing, app, true)
+        if !moon_mcp_app_enabled(existing, app) {
+          servers[id] = moon_mcp_server_with_app(existing, app, true)
           changed += 1
         }
       None => {
-        servers[id] = ccs_mcp_server_from_spec(id, import_spec, app)
+        servers[id] = moon_mcp_server_from_spec(id, import_spec, app)
         changed += 1
       }
     }
@@ -5605,18 +5605,18 @@ fn ccs_import_mcp_servers_map(
 }
 
 ///|
-fn ccs_import_mcp_from_root_json(
+fn moon_import_mcp_from_root_json(
   servers : Map[String, Json],
   app : String,
   root : Json,
 ) -> Int {
   guard root is Object(obj) else { return 0 }
   guard obj.get("mcpServers") is Some(Object(mcp_servers)) else { return 0 }
-  ccs_import_mcp_servers_map(servers, app, mcp_servers)
+  moon_import_mcp_servers_map(servers, app, mcp_servers)
 }
 
 ///|
-fn ccs_import_mcp_from_codex_toml_text(
+fn moon_import_mcp_from_codex_toml_text(
   servers : Map[String, Json],
   content : String,
 ) -> Int {
@@ -5624,13 +5624,13 @@ fn ccs_import_mcp_from_codex_toml_text(
   let mut current_id : String? = None
   let mut current_table = ""
   for line_view in content.split("\n") {
-    let line = ccs_toml_strip_comment(line_view.to_owned()).trim().to_owned()
+    let line = moon_toml_strip_comment(line_view.to_owned()).trim().to_owned()
     if line.is_empty() {
       continue
     }
     if line.has_prefix("[") && line.has_suffix("]") {
       let section = line[1:line.length() - 1].trim().to_owned()
-      match ccs_codex_mcp_section(section) {
+      match moon_codex_mcp_section(section) {
         Some((id, table)) => {
           current_id = Some(id)
           current_table = table
@@ -5646,10 +5646,10 @@ fn ccs_import_mcp_from_codex_toml_text(
       continue
     }
     guard current_id is Some(id) else { continue }
-    guard ccs_toml_assignment(line) is Some((key, raw_value)) else { continue }
-    let spec = ccs_codex_raw_mcp_spec(raw_specs, id)
+    guard moon_toml_assignment(line) is Some((key, raw_value)) else { continue }
+    let spec = moon_codex_raw_mcp_spec(raw_specs, id)
     if current_table.is_empty() {
-      match ccs_toml_value(raw_value) {
+      match moon_toml_value(raw_value) {
         Some(value) => spec[key] = value
         None => ()
       }
@@ -5667,7 +5667,7 @@ fn ccs_import_mcp_from_codex_toml_text(
           obj
         }
       }
-      match ccs_toml_value(raw_value) {
+      match moon_toml_value(raw_value) {
         Some(String(value)) => nested[key] = Json::string(value)
         _ => ()
       }
@@ -5677,13 +5677,13 @@ fn ccs_import_mcp_from_codex_toml_text(
   let normalized : Map[String, Json] = {}
   for id in raw_specs.keys() {
     guard raw_specs.get(id) is Some(raw_spec) else { continue }
-    normalized[id] = ccs_codex_mcp_unified_spec(raw_spec)
+    normalized[id] = moon_codex_mcp_unified_spec(raw_spec)
   }
-  ccs_import_mcp_servers_map(servers, "codex", normalized)
+  moon_import_mcp_servers_map(servers, "codex", normalized)
 }
 
 ///|
-fn ccs_codex_raw_mcp_spec(
+fn moon_codex_raw_mcp_spec(
   specs : Map[String, Json],
   id : String,
 ) -> Map[String, Json] {
@@ -5698,7 +5698,7 @@ fn ccs_codex_raw_mcp_spec(
 }
 
 ///|
-fn ccs_codex_mcp_section(section : String) -> (String, String)? {
+fn moon_codex_mcp_section(section : String) -> (String, String)? {
   let rest = if section.has_prefix("mcp_servers.") {
     section["mcp_servers.".length():].to_owned()
   } else if section.has_prefix("mcp.servers.") {
@@ -5722,7 +5722,7 @@ fn ccs_codex_mcp_section(section : String) -> (String, String)? {
 }
 
 ///|
-fn ccs_codex_mcp_unified_spec(raw_spec : Json) -> Json {
+fn moon_codex_mcp_unified_spec(raw_spec : Json) -> Json {
   guard raw_spec is Object(raw) else { return Json::object({}) }
   let typ = json_string_from_map_any(raw, ["type"]).unwrap_or("stdio")
   let spec : Map[String, Json] = { "type": Json::string(typ) }
@@ -5763,7 +5763,7 @@ fn ccs_codex_mcp_unified_spec(raw_spec : Json) -> Json {
     _ => ()
   }
   for key in raw.keys() {
-    if ccs_codex_mcp_core_field(typ, key) {
+    if moon_codex_mcp_core_field(typ, key) {
       continue
     }
     guard raw.get(key) is Some(value) else { continue }
@@ -5773,7 +5773,7 @@ fn ccs_codex_mcp_unified_spec(raw_spec : Json) -> Json {
 }
 
 ///|
-fn ccs_codex_mcp_core_field(typ : String, key : String) -> Bool {
+fn moon_codex_mcp_core_field(typ : String, key : String) -> Bool {
   match typ {
     "stdio" =>
       key == "type" ||
@@ -5788,7 +5788,7 @@ fn ccs_codex_mcp_core_field(typ : String, key : String) -> Bool {
 }
 
 ///|
-fn ccs_toml_strip_comment(line : String) -> String {
+fn moon_toml_strip_comment(line : String) -> String {
   let mut in_quote = false
   let mut quote = 0
   let mut escaped = false
@@ -5813,7 +5813,7 @@ fn ccs_toml_strip_comment(line : String) -> String {
 }
 
 ///|
-fn ccs_toml_assignment(line : String) -> (String, String)? {
+fn moon_toml_assignment(line : String) -> (String, String)? {
   guard line.find("=") is Some(index) else { return None }
   let key = line[:index].trim().to_owned()
   let value = line[index + 1:].trim().to_owned()
@@ -5825,15 +5825,15 @@ fn ccs_toml_assignment(line : String) -> (String, String)? {
 }
 
 ///|
-fn ccs_toml_value(raw : String) -> Json? {
+fn moon_toml_value(raw : String) -> Json? {
   let value = raw.trim().to_owned()
   if value.is_empty() {
     return None
   }
   if value.has_prefix("[") && value.has_suffix("]") {
     let items : Array[Json] = []
-    for item in ccs_toml_split_csv(value[1:value.length() - 1].to_owned()) {
-      match ccs_toml_value(item) {
+    for item in moon_toml_split_csv(value[1:value.length() - 1].to_owned()) {
+      match moon_toml_value(item) {
         Some(String(text)) => items.push(Json::string(text))
         Some(true) => items.push(Json::boolean(true))
         Some(false) => items.push(Json::boolean(false))
@@ -5845,10 +5845,10 @@ fn ccs_toml_value(raw : String) -> Json? {
   }
   if value.has_prefix("{") && value.has_suffix("}") {
     let obj : Map[String, Json] = {}
-    for item in ccs_toml_split_csv(value[1:value.length() - 1].to_owned()) {
-      match ccs_toml_assignment(item) {
+    for item in moon_toml_split_csv(value[1:value.length() - 1].to_owned()) {
+      match moon_toml_assignment(item) {
         Some((key, nested_raw)) =>
-          match ccs_toml_value(nested_raw) {
+          match moon_toml_value(nested_raw) {
             Some(String(text)) => obj[key] = Json::string(text)
             _ => ()
           }
@@ -5874,7 +5874,7 @@ fn ccs_toml_value(raw : String) -> Json? {
 }
 
 ///|
-fn ccs_toml_split_csv(text : String) -> Array[String] {
+fn moon_toml_split_csv(text : String) -> Array[String] {
   let parts : Array[String] = []
   let mut start = 0
   let mut in_quote = false
@@ -5909,7 +5909,7 @@ fn ccs_toml_split_csv(text : String) -> Array[String] {
 }
 
 ///|
-fn ccs_validate_common_config_snippet(
+fn moon_validate_common_config_snippet(
   app_type : String,
   snippet : String,
 ) -> String? {
@@ -5926,7 +5926,7 @@ fn ccs_validate_common_config_snippet(
       None
     }
     "codex" =>
-      if ccs_validate_codex_toml_snippet(snippet) {
+      if moon_validate_codex_toml_snippet(snippet) {
         None
       } else {
         Some("Invalid TOML format")
@@ -5936,9 +5936,9 @@ fn ccs_validate_common_config_snippet(
 }
 
 ///|
-fn ccs_validate_codex_toml_snippet(snippet : String) -> Bool {
+fn moon_validate_codex_toml_snippet(snippet : String) -> Bool {
   for line_view in snippet.split("\n") {
-    let line = ccs_toml_strip_comment(line_view.to_owned()).trim().to_owned()
+    let line = moon_toml_strip_comment(line_view.to_owned()).trim().to_owned()
     if line.is_empty() {
       continue
     }
@@ -5955,7 +5955,7 @@ fn ccs_validate_codex_toml_snippet(snippet : String) -> Bool {
     if line.has_suffix("]") {
       return false
     }
-    if ccs_toml_assignment(line) is None {
+    if moon_toml_assignment(line) is None {
       return false
     }
   }
@@ -5963,33 +5963,33 @@ fn ccs_validate_codex_toml_snippet(snippet : String) -> Bool {
 }
 
 ///|
-fn ccs_extract_common_config_snippet_from_settings_config(
+fn moon_extract_common_config_snippet_from_settings_config(
   app_type : String,
   settings_config : String,
 ) -> Result[String, String] {
   let parsed = @json.parse(settings_config) catch {
     err => return Err("Invalid JSON format: \{err}")
   }
-  Ok(ccs_extract_common_config_snippet_json(app_type, parsed))
+  Ok(moon_extract_common_config_snippet_json(app_type, parsed))
 }
 
 ///|
-fn ccs_extract_common_config_snippet_json(
+fn moon_extract_common_config_snippet_json(
   app_type : String,
   settings : Json,
 ) -> String {
   match app_type {
-    "claude" => ccs_extract_claude_common_config(settings)
-    "codex" => ccs_extract_codex_common_config(settings)
-    "gemini" => ccs_extract_gemini_common_config(settings)
-    "opencode" => ccs_extract_opencode_common_config(settings)
-    "openclaw" => ccs_extract_openclaw_common_config(settings)
+    "claude" => moon_extract_claude_common_config(settings)
+    "codex" => moon_extract_codex_common_config(settings)
+    "gemini" => moon_extract_gemini_common_config(settings)
+    "opencode" => moon_extract_opencode_common_config(settings)
+    "openclaw" => moon_extract_openclaw_common_config(settings)
     _ => ""
   }
 }
 
 ///|
-fn ccs_extract_claude_common_config(settings : Json) -> String {
+fn moon_extract_claude_common_config(settings : Json) -> String {
   guard settings is Object(config) else { return "{}" }
   match config.get("env") {
     Some(Object(env)) => {
@@ -6021,23 +6021,23 @@ fn ccs_extract_claude_common_config(settings : Json) -> String {
 }
 
 ///|
-fn ccs_extract_codex_common_config(settings : Json) -> String {
+fn moon_extract_codex_common_config(settings : Json) -> String {
   guard settings is Object(config) else { return "" }
   let toml = json_string_from_map_any(config, ["config"]).unwrap_or("")
   if toml.is_empty() {
     return ""
   }
-  ccs_extract_codex_common_config_from_toml(toml)
+  moon_extract_codex_common_config_from_toml(toml)
 }
 
 ///|
-fn ccs_extract_codex_common_config_from_toml(toml : String) -> String {
+fn moon_extract_codex_common_config_from_toml(toml : String) -> String {
   let lines : Array[String] = []
   let mut skip_model_providers = false
   let mut current_section = ""
   for line_view in toml.split("\n") {
     let original = line_view.to_owned()
-    let stripped = ccs_toml_strip_comment(original).trim().to_owned()
+    let stripped = moon_toml_strip_comment(original).trim().to_owned()
     if stripped.has_prefix("[") && stripped.has_suffix("]") {
       let section = stripped[1:stripped.length() - 1].trim().to_owned()
       current_section = section
@@ -6053,7 +6053,7 @@ fn ccs_extract_codex_common_config_from_toml(toml : String) -> String {
       continue
     }
     if current_section.is_empty() {
-      match ccs_toml_assignment(stripped) {
+      match moon_toml_assignment(stripped) {
         Some((key, _)) if key == "model" ||
           key == "model_provider" ||
           key == "base_url" => continue
@@ -6062,11 +6062,11 @@ fn ccs_extract_codex_common_config_from_toml(toml : String) -> String {
     }
     lines.push(original.trim_end().to_owned())
   }
-  ccs_clean_blank_lines(lines).trim().to_owned()
+  moon_clean_blank_lines(lines).trim().to_owned()
 }
 
 ///|
-fn ccs_clean_blank_lines(lines : Array[String]) -> String {
+fn moon_clean_blank_lines(lines : Array[String]) -> String {
   let cleaned : Array[String] = []
   let mut blank_run = 0
   for line in lines {
@@ -6084,7 +6084,7 @@ fn ccs_clean_blank_lines(lines : Array[String]) -> String {
 }
 
 ///|
-fn ccs_extract_gemini_common_config(settings : Json) -> String {
+fn moon_extract_gemini_common_config(settings : Json) -> String {
   guard settings is Object(config) else { return "{}" }
   let snippet : Map[String, Json] = {}
   match config.get("env") {
@@ -6109,7 +6109,7 @@ fn ccs_extract_gemini_common_config(settings : Json) -> String {
 }
 
 ///|
-fn ccs_extract_opencode_common_config(settings : Json) -> String {
+fn moon_extract_opencode_common_config(settings : Json) -> String {
   guard settings is Object(config) else { return "{}" }
   match config.get("options") {
     Some(Object(options)) => {
@@ -6127,7 +6127,7 @@ fn ccs_extract_opencode_common_config(settings : Json) -> String {
 }
 
 ///|
-fn ccs_extract_openclaw_common_config(settings : Json) -> String {
+fn moon_extract_openclaw_common_config(settings : Json) -> String {
   guard settings is Object(config) else { return "{}" }
   config.remove("apiKey")
   config.remove("baseUrl")
@@ -6139,7 +6139,7 @@ fn ccs_extract_openclaw_common_config(settings : Json) -> String {
 }
 
 ///|
-async fn ccs_import_mcp_from_codex_file(
+async fn moon_import_mcp_from_codex_file(
   servers : Map[String, Json],
   file_path : String,
 ) -> Int {
@@ -6147,11 +6147,11 @@ async fn ccs_import_mcp_from_codex_file(
     return 0
   }
   let content = @fsx.read_file(file_path) catch { _ => return 0 }
-  ccs_import_mcp_from_codex_toml_text(servers, content)
+  moon_import_mcp_from_codex_toml_text(servers, content)
 }
 
 ///|
-async fn ccs_import_mcp_from_file(
+async fn moon_import_mcp_from_file(
   servers : Map[String, Json],
   app : String,
   file_path : String,
@@ -6161,31 +6161,31 @@ async fn ccs_import_mcp_from_file(
   }
   let content = @fsx.read_file(file_path) catch { _ => return 0 }
   let root = @json.parse(content) catch { _ => return 0 }
-  ccs_import_mcp_from_root_json(servers, app, root)
+  moon_import_mcp_from_root_json(servers, app, root)
 }
 
 ///|
-async fn ccs_import_mcp_from_apps_count(servers : Map[String, Json]) -> Int {
+async fn moon_import_mcp_from_apps_count(servers : Map[String, Json]) -> Int {
   let mut total = 0
-  total += ccs_import_mcp_from_file(
+  total += moon_import_mcp_from_file(
     servers,
     "claude",
-    @pathx.join(ccs_home_dir(), ".claude.json"),
+    @pathx.join(moon_home_dir(), ".claude.json"),
   )
-  total += ccs_import_mcp_from_codex_file(
+  total += moon_import_mcp_from_codex_file(
     servers,
-    ccs_config_file_path("codex"),
+    moon_config_file_path("codex"),
   )
-  total += ccs_import_mcp_from_file(
+  total += moon_import_mcp_from_file(
     servers,
     "gemini",
-    @pathx.join(ccs_config_dir("gemini"), "settings.json"),
+    @pathx.join(moon_config_dir("gemini"), "settings.json"),
   )
   total
 }
 
 ///|
-fn ccs_validate_mcp_command_name(command : String) -> Bool {
+fn moon_validate_mcp_command_name(command : String) -> Bool {
   let trimmed = command.trim()
   !trimmed.is_empty() &&
   !trimmed.contains("/") &&
@@ -6194,13 +6194,13 @@ fn ccs_validate_mcp_command_name(command : String) -> Bool {
 }
 
 ///|
-fn ccs_prompt_store_key(app : String, id : String) -> String {
-  "\{ccs_normalize_app_type(app)}:\{id}"
+fn moon_prompt_store_key(app : String, id : String) -> String {
+  "\{moon_normalize_app_type(app)}:\{id}"
 }
 
 ///|
-fn ccs_prompt_file_path(app : String) -> Result[String, String] {
-  let normalized = ccs_normalize_app_type(app)
+fn moon_prompt_file_path(app : String) -> Result[String, String] {
+  let normalized = moon_normalize_app_type(app)
   if normalized == "claude-desktop" {
     return Err("Claude Desktop 暂不支持 Prompts")
   }
@@ -6211,32 +6211,32 @@ fn ccs_prompt_file_path(app : String) -> Result[String, String] {
       "AGENTS.md"
     _ => "CLAUDE.md"
   }
-  Ok(@pathx.join(ccs_config_dir(normalized), filename))
+  Ok(@pathx.join(moon_config_dir(normalized), filename))
 }
 
 ///|
-fn ccs_prompt_file_path_from_request(
+fn moon_prompt_file_path_from_request(
   path : StringView,
   body : Json?,
   app : String,
 ) -> Result[String, String] {
   match proxy_string_request(path, body, ["path", "filePath", "file_path"]) {
     Some(file_path) => Ok(file_path)
-    None => ccs_prompt_file_path(app)
+    None => moon_prompt_file_path(app)
   }
 }
 
 ///|
-fn ccs_prompt_from_request(
+fn moon_prompt_from_request(
   path : StringView,
   body : Json?,
 ) -> (String, String, Json)? {
-  let app = ccs_config_app_from_request(path, body).unwrap_or("claude")
-  match ccs_json_request(path, body, ["prompt"]) {
+  let app = moon_config_app_from_request(path, body).unwrap_or("claude")
+  match moon_json_request(path, body, ["prompt"]) {
     Some(Object(prompt)) =>
       match json_string_from_map_any(prompt, ["id"]) {
         Some(id) =>
-          return Some((app, id, ccs_normalize_prompt(id, Json::object(prompt))))
+          return Some((app, id, moon_normalize_prompt(id, Json::object(prompt))))
         None => ()
       }
     _ => ()
@@ -6266,7 +6266,7 @@ fn ccs_prompt_from_request(
 }
 
 ///|
-async fn ccs_import_prompt_from_file_json(
+async fn moon_import_prompt_from_file_json(
   prompts : Map[String, Json],
   app : String,
   file_path : String,
@@ -6291,12 +6291,12 @@ async fn ccs_import_prompt_from_file_json(
     "createdAt": Json::string(timestamp_text),
     "updatedAt": Json::string(timestamp_text),
   }.to_json()
-  prompts[ccs_prompt_store_key(app, id)] = prompt
+  prompts[moon_prompt_store_key(app, id)] = prompt
   Ok(Json::string(id))
 }
 
 ///|
-async fn ccs_current_prompt_file_content_json(
+async fn moon_current_prompt_file_content_json(
   file_path : String,
 ) -> Result[Json, String] {
   if !(@fsx.exists_as_file(file_path) catch { _ => false }) {
@@ -6309,13 +6309,13 @@ async fn ccs_current_prompt_file_content_json(
 }
 
 ///|
-async fn ccs_enable_prompt_json(
+async fn moon_enable_prompt_json(
   prompts : Map[String, Json],
   app : String,
   id : String,
   file_path : String,
 ) -> Result[Json, String] {
-  let normalized = ccs_normalize_app_type(app)
+  let normalized = moon_normalize_app_type(app)
   let prefix = "\{normalized}:"
   let mut selected_content = ""
   let mut found = false
@@ -6365,7 +6365,7 @@ async fn ccs_enable_prompt_json(
 }
 
 ///|
-fn ccs_normalize_prompt(id : String, prompt : Json) -> Json {
+fn moon_normalize_prompt(id : String, prompt : Json) -> Json {
   match prompt {
     Object(obj) => {
       let next = obj
@@ -6393,11 +6393,11 @@ fn ccs_normalize_prompt(id : String, prompt : Json) -> Json {
 }
 
 ///|
-fn ccs_prompts_object_for_app(
+fn moon_prompts_object_for_app(
   prompts : Map[String, Json],
   app : String,
 ) -> Json {
-  let normalized = ccs_normalize_app_type(app)
+  let normalized = moon_normalize_app_type(app)
   let prefix = "\{normalized}:"
   let result : Map[String, Json] = {}
   for key in prompts.keys() {
@@ -6414,11 +6414,11 @@ fn ccs_prompts_object_for_app(
 
 ///|
 fn gemini_request_is_stream(endpoint : String, body : Json) -> Bool {
-  ccs_streaming_request(endpoint, body, {})
+  moon_streaming_request(endpoint, body, {})
 }
 
 ///|
-fn ccs_streaming_request(
+fn moon_streaming_request(
   endpoint : String,
   body : Json,
   headers : Map[String, String],
@@ -6473,7 +6473,7 @@ async fn Gateway::handle_get_config_status(
   app : String,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_config_status_json(app))
+  write_usage_json(w, moon_config_status_json(app))
 }
 
 ///|
@@ -6484,8 +6484,8 @@ async fn Gateway::handle_get_config_status_request(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  write_usage_json(w, ccs_config_status_json(app))
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  write_usage_json(w, moon_config_status_json(app))
 }
 
 ///|
@@ -6494,7 +6494,7 @@ async fn Gateway::handle_get_claude_code_config_path(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, Json::string(ccs_config_file_path("claude")))
+  write_usage_json(w, Json::string(moon_config_file_path("claude")))
 }
 
 ///|
@@ -6505,8 +6505,8 @@ async fn Gateway::handle_get_config_dir(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  write_usage_json(w, Json::string(ccs_config_dir(app)))
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  write_usage_json(w, Json::string(moon_config_dir(app)))
 }
 
 ///|
@@ -6517,8 +6517,8 @@ async fn Gateway::handle_open_config_folder(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  match ccs_open_directory_result_json(ccs_config_dir(app)) {
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  match moon_open_directory_result_json(moon_config_dir(app)) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -6549,7 +6549,7 @@ async fn Gateway::handle_open_external(
 ) -> Unit {
   let body = proxy_json_body(r)
   let raw_url = proxy_string_request(r.path, body, ["url"]).unwrap_or(
-    ccs_update_url(),
+    moon_update_url(),
   )
   ignore(self.record_external_open(raw_url))
   write_usage_json(w, Json::boolean(true))
@@ -6557,7 +6557,7 @@ async fn Gateway::handle_open_external(
 
 ///|
 fn Gateway::record_external_open(self : Gateway, raw_url : String) -> String {
-  let normalized = ccs_normalize_external_url(raw_url)
+  let normalized = moon_normalize_external_url(raw_url)
   self.last_external_url = Some(normalized)
   normalized
 }
@@ -6579,7 +6579,7 @@ async fn Gateway::handle_check_for_updates(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  ignore(self.record_external_open(ccs_update_url()))
+  ignore(self.record_external_open(moon_update_url()))
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -6589,7 +6589,7 @@ async fn Gateway::handle_update_tray_menu(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_update_tray_menu_result())
+  write_usage_json(w, moon_update_tray_menu_result())
 }
 
 ///|
@@ -6598,7 +6598,7 @@ async fn Gateway::handle_is_portable_mode(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, Json::boolean(ccs_portable_mode()))
+  write_usage_json(w, Json::boolean(moon_portable_mode()))
 }
 
 ///|
@@ -6607,7 +6607,7 @@ async fn Gateway::handle_get_init_error(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_init_error_json())
+  write_usage_json(w, moon_init_error_json())
 }
 
 ///|
@@ -6616,7 +6616,7 @@ async fn Gateway::handle_get_migration_result(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_migration_result_json())
+  write_usage_json(w, moon_migration_result_json())
 }
 
 ///|
@@ -6625,7 +6625,7 @@ async fn Gateway::handle_get_skills_migration_result(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_skills_migration_result_json())
+  write_usage_json(w, moon_skills_migration_result_json())
 }
 
 ///|
@@ -6637,7 +6637,7 @@ async fn Gateway::handle_get_tool_versions(
   ignore(self)
   let body = proxy_json_body(r)
   let tools = proxy_string_request(r.path, body, ["tools"])
-  write_usage_json(w, ccs_get_tool_versions_json(tools))
+  write_usage_json(w, moon_get_tool_versions_json(tools))
 }
 
 ///|
@@ -6649,14 +6649,14 @@ async fn Gateway::handle_run_tool_lifecycle_action(
   ignore(self)
   let body = proxy_json_body(r)
   let tools = match body {
-    Some(Object(obj)) => ccs_requested_tool_names_from_json(obj.get("tools"))
-    _ => ccs_requested_tool_names(proxy_string_request(r.path, body, ["tools"]))
+    Some(Object(obj)) => moon_requested_tool_names_from_json(obj.get("tools"))
+    _ => moon_requested_tool_names(proxy_string_request(r.path, body, ["tools"]))
   }
   guard proxy_string_request(r.path, body, ["action"]) is Some(action) else {
     write_usage_bad_request(w, "missing_action")
     return
   }
-  match ccs_run_tool_lifecycle_action_json(tools, action) {
+  match moon_run_tool_lifecycle_action_json(tools, action) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -6671,10 +6671,10 @@ async fn Gateway::handle_probe_tool_installations(
   ignore(self)
   let body = proxy_json_body(r)
   let tools = match body {
-    Some(Object(obj)) => ccs_requested_tool_names_from_json(obj.get("tools"))
-    _ => ccs_requested_tool_names(proxy_string_request(r.path, body, ["tools"]))
+    Some(Object(obj)) => moon_requested_tool_names_from_json(obj.get("tools"))
+    _ => moon_requested_tool_names(proxy_string_request(r.path, body, ["tools"]))
   }
-  match ccs_probe_tool_installations_json(tools) {
+  match moon_probe_tool_installations_json(tools) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -6728,7 +6728,7 @@ async fn Gateway::handle_save_file_dialog(
   ignore(self)
   let body = proxy_json_body(r)
   ignore(proxy_string_request(r.path, body, ["defaultName", "default_name"]))
-  write_usage_json(w, ccs_dialog_result_json())
+  write_usage_json(w, moon_dialog_result_json())
 }
 
 ///|
@@ -6743,7 +6743,7 @@ async fn Gateway::handle_export_config_to_file(
     write_usage_bad_request(w, "missing_file_path")
     return
   }
-  write_usage_json(w, self.ccs_export_config_to_file_json(file_path))
+  write_usage_json(w, self.moon_export_config_to_file_json(file_path))
 }
 
 ///|
@@ -6758,7 +6758,7 @@ async fn Gateway::handle_import_config_from_file(
     write_usage_bad_request(w, "missing_file_path")
     return
   }
-  write_usage_json(w, self.ccs_import_config_from_file_json(file_path))
+  write_usage_json(w, self.moon_import_config_from_file_json(file_path))
 }
 
 ///|
@@ -6766,7 +6766,7 @@ async fn Gateway::handle_create_db_backup(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.ccs_create_db_backup_json())
+  write_usage_json(w, self.moon_create_db_backup_json())
 }
 
 ///|
@@ -6775,7 +6775,7 @@ async fn Gateway::handle_list_db_backups(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_list_db_backups_json())
+  write_usage_json(w, moon_list_db_backups_json())
 }
 
 ///|
@@ -6790,7 +6790,7 @@ async fn Gateway::handle_restore_db_backup(
     write_usage_bad_request(w, "missing_filename")
     return
   }
-  match self.ccs_restore_db_backup_json(filename) {
+  match self.moon_restore_db_backup_json(filename) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -6816,7 +6816,7 @@ async fn Gateway::handle_rename_db_backup(
     write_usage_bad_request(w, "missing_new_name")
     return
   }
-  match ccs_rename_db_backup_json(old_filename, new_name) {
+  match moon_rename_db_backup_json(old_filename, new_name) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -6835,7 +6835,7 @@ async fn Gateway::handle_delete_db_backup(
     write_usage_bad_request(w, "missing_filename")
     return
   }
-  match ccs_delete_db_backup_json(filename) {
+  match moon_delete_db_backup_json(filename) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -6853,7 +6853,7 @@ async fn Gateway::handle_parse_deeplink(
     write_usage_bad_request(w, "missing_url")
     return
   }
-  match ccs_parse_deeplink_url_json(url) {
+  match moon_parse_deeplink_url_json(url) {
     Some(request) => write_usage_json(w, request)
     None => write_usage_bad_request(w, "invalid_deeplink")
   }
@@ -6867,11 +6867,11 @@ async fn Gateway::handle_merge_deeplink_config(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  guard ccs_deeplink_request_payload(r.path, body) is Some(request) else {
+  guard moon_deeplink_request_payload(r.path, body) is Some(request) else {
     write_usage_bad_request(w, "invalid_deeplink")
     return
   }
-  match ccs_merge_deeplink_config_json(request) {
+  match moon_merge_deeplink_config_json(request) {
     Some(merged) => write_usage_json(w, merged)
     None => write_usage_bad_request(w, "invalid_deeplink_config")
   }
@@ -6885,11 +6885,11 @@ async fn Gateway::handle_import_from_deeplink(
   legacy~ : Bool,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard ccs_deeplink_request_payload(r.path, body) is Some(request) else {
+  guard moon_deeplink_request_payload(r.path, body) is Some(request) else {
     write_usage_bad_request(w, "invalid_deeplink")
     return
   }
-  match self.ccs_import_from_deeplink_json(request) {
+  match self.moon_import_from_deeplink_json(request) {
     Some(Object(obj)) =>
       if legacy {
         match obj.get("id") {
@@ -6916,19 +6916,19 @@ async fn Gateway::handle_webdav_test_connection(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+  guard moon_sync_settings_request(r.path, body) is Some(settings) else {
     write_usage_bad_request(w, "missing_settings")
     return
   }
-  let normalized = ccs_webdav_sync_settings_json(
+  let normalized = moon_webdav_sync_settings_json(
     settings,
-    ccs_app_webdav_sync_json(self.app_settings),
-    ccs_sync_preserve_empty_password_request(r.path, body),
+    moon_app_webdav_sync_json(self.app_settings),
+    moon_sync_preserve_empty_password_request(r.path, body),
   )
-  match ccs_validate_webdav_sync_settings(normalized) {
+  match moon_validate_webdav_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match ccs_webdav_sync_test_connection_json(normalized) {
+      match moon_webdav_sync_test_connection_json(normalized) {
         Ok(result) => write_usage_json(w, result)
         Err(error) => write_usage_bad_request(w, error)
       }
@@ -6942,19 +6942,19 @@ async fn Gateway::handle_webdav_sync_save_settings(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+  guard moon_sync_settings_request(r.path, body) is Some(settings) else {
     write_usage_bad_request(w, "missing_settings")
     return
   }
-  let normalized = ccs_webdav_sync_settings_json(
+  let normalized = moon_webdav_sync_settings_json(
     settings,
-    ccs_app_webdav_sync_json(self.app_settings),
-    !ccs_sync_password_touched_request(r.path, body),
+    moon_app_webdav_sync_json(self.app_settings),
+    !moon_sync_password_touched_request(r.path, body),
   )
-  match ccs_validate_webdav_sync_settings(normalized) {
+  match moon_validate_webdav_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None => {
-      self.app_settings = ccs_app_settings_with_sync(
+      self.app_settings = moon_app_settings_with_sync(
         self.app_settings,
         "webdavSync",
         normalized,
@@ -6970,15 +6970,15 @@ async fn Gateway::handle_webdav_sync_operation(
   w : @httpx.ResponseWriter,
   operation : String,
 ) -> Unit {
-  match ccs_webdav_sync_required_error(self.app_settings) {
+  match moon_webdav_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match ccs_app_webdav_sync_json(self.app_settings) {
+      match moon_app_webdav_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "WebDAV sync is not configured.")
         Some(settings) => {
           let result = match operation {
-            "upload" => self.ccs_webdav_sync_upload_json(settings)
-            "download" => self.ccs_webdav_sync_download_json(settings)
+            "upload" => self.moon_webdav_sync_upload_json(settings)
+            "download" => self.moon_webdav_sync_download_json(settings)
             _ => Err("Unsupported WebDAV sync operation: \{operation}")
           }
           match result {
@@ -6995,13 +6995,13 @@ async fn Gateway::handle_webdav_sync_fetch_remote_info(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match ccs_webdav_sync_required_error(self.app_settings) {
+  match moon_webdav_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match ccs_app_webdav_sync_json(self.app_settings) {
+      match moon_app_webdav_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "WebDAV sync is not configured.")
         Some(settings) =>
-          match ccs_webdav_sync_fetch_remote_info_json(settings) {
+          match moon_webdav_sync_fetch_remote_info_json(settings) {
             Ok(info) => write_usage_json(w, info)
             Err(error) => write_usage_bad_request(w, error)
           }
@@ -7016,19 +7016,19 @@ async fn Gateway::handle_s3_test_connection(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+  guard moon_sync_settings_request(r.path, body) is Some(settings) else {
     write_usage_bad_request(w, "missing_settings")
     return
   }
-  let normalized = ccs_s3_sync_settings_json(
+  let normalized = moon_s3_sync_settings_json(
     settings,
-    ccs_app_s3_sync_json(self.app_settings),
-    ccs_sync_preserve_empty_password_request(r.path, body),
+    moon_app_s3_sync_json(self.app_settings),
+    moon_sync_preserve_empty_password_request(r.path, body),
   )
-  match ccs_validate_s3_sync_settings(normalized) {
+  match moon_validate_s3_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match ccs_s3_sync_test_connection_json(normalized) {
+      match moon_s3_sync_test_connection_json(normalized) {
         Ok(result) => write_usage_json(w, result)
         Err(error) => write_usage_bad_request(w, error)
       }
@@ -7042,19 +7042,19 @@ async fn Gateway::handle_s3_sync_save_settings(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard ccs_sync_settings_request(r.path, body) is Some(settings) else {
+  guard moon_sync_settings_request(r.path, body) is Some(settings) else {
     write_usage_bad_request(w, "missing_settings")
     return
   }
-  let normalized = ccs_s3_sync_settings_json(
+  let normalized = moon_s3_sync_settings_json(
     settings,
-    ccs_app_s3_sync_json(self.app_settings),
-    !ccs_sync_password_touched_request(r.path, body),
+    moon_app_s3_sync_json(self.app_settings),
+    !moon_sync_password_touched_request(r.path, body),
   )
-  match ccs_validate_s3_sync_settings(normalized) {
+  match moon_validate_s3_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None => {
-      self.app_settings = ccs_app_settings_with_sync(
+      self.app_settings = moon_app_settings_with_sync(
         self.app_settings,
         "s3Sync",
         normalized,
@@ -7070,15 +7070,15 @@ async fn Gateway::handle_s3_sync_operation(
   w : @httpx.ResponseWriter,
   operation : String,
 ) -> Unit {
-  match ccs_s3_sync_required_error(self.app_settings) {
+  match moon_s3_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match ccs_app_s3_sync_json(self.app_settings) {
+      match moon_app_s3_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "S3 sync is not configured.")
         Some(settings) => {
           let result = match operation {
-            "upload" => self.ccs_s3_sync_upload_json(settings)
-            "download" => self.ccs_s3_sync_download_json(settings)
+            "upload" => self.moon_s3_sync_upload_json(settings)
+            "download" => self.moon_s3_sync_download_json(settings)
             _ => Err("Unsupported S3 sync operation: \{operation}")
           }
           match result {
@@ -7095,13 +7095,13 @@ async fn Gateway::handle_s3_sync_fetch_remote_info(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match ccs_s3_sync_required_error(self.app_settings) {
+  match moon_s3_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match ccs_app_s3_sync_json(self.app_settings) {
+      match moon_app_s3_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "S3 sync is not configured.")
         Some(settings) =>
-          match ccs_s3_sync_fetch_remote_info_json(settings) {
+          match moon_s3_sync_fetch_remote_info_json(settings) {
             Ok(info) => write_usage_json(w, info)
             Err(error) => write_usage_bad_request(w, error)
           }
@@ -7116,7 +7116,7 @@ async fn Gateway::handle_read_omo_local_file(
   slim~ : Bool,
 ) -> Unit {
   ignore(self)
-  let (data, error) = ccs_read_omo_local_file_json(slim)
+  let (data, error) = moon_read_omo_local_file_json(slim)
   match data {
     Some(data) => write_usage_json(w, data)
     None =>
@@ -7140,7 +7140,7 @@ async fn Gateway::handle_disable_current_omo(
   slim~ : Bool,
 ) -> Unit {
   self.clear_current_omo_provider(slim)
-  match ccs_delete_omo_config_files(slim) {
+  match moon_delete_omo_config_files(slim) {
     Some(error) => write_usage_bad_request(w, error)
     None => write_usage_json(w, Json::null())
   }
@@ -7152,7 +7152,7 @@ async fn Gateway::handle_open_file_dialog(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_dialog_result_json())
+  write_usage_json(w, moon_dialog_result_json())
 }
 
 ///|
@@ -7161,7 +7161,7 @@ async fn Gateway::handle_open_zip_file_dialog(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_dialog_result_json())
+  write_usage_json(w, moon_dialog_result_json())
 }
 
 ///|
@@ -7170,7 +7170,7 @@ async fn Gateway::handle_get_installed_skills(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_get_installed_skills_json())
+  write_usage_json(w, moon_get_installed_skills_json())
 }
 
 ///|
@@ -7179,7 +7179,7 @@ async fn Gateway::handle_get_skill_backups(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_get_skill_backups_json())
+  write_usage_json(w, moon_get_skill_backups_json())
 }
 
 ///|
@@ -7195,7 +7195,7 @@ async fn Gateway::handle_delete_skill_backup(
     write_usage_bad_request(w, "missing_backup_id")
     return
   }
-  write_usage_json(w, ccs_delete_skill_backup_json(backup_id))
+  write_usage_json(w, moon_delete_skill_backup_json(backup_id))
 }
 
 ///|
@@ -7214,7 +7214,7 @@ async fn Gateway::handle_restore_skill_backup(
   let current_app = proxy_string_request(r.path, body, [
     "currentApp", "current_app", "app",
   ]).unwrap_or("claude")
-  write_usage_json(w, ccs_restore_skill_backup_json(backup_id, current_app))
+  write_usage_json(w, moon_restore_skill_backup_json(backup_id, current_app))
 }
 
 ///|
@@ -7225,12 +7225,12 @@ async fn Gateway::handle_install_skill_unified(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  let skill = match ccs_skill_request_payload(body) {
+  let skill = match moon_skill_request_payload(body) {
     Some(skill) => Some(skill)
     None =>
       match proxy_string_request(r.path, body, ["directory", "id", "key"]) {
         Some(directory) => {
-          let install_name = ccs_skill_install_name(directory)
+          let install_name = moon_skill_install_name(directory)
           if install_name.is_empty() {
             None
           } else {
@@ -7262,7 +7262,7 @@ async fn Gateway::handle_install_skill_unified(
   let current_app = proxy_string_request(r.path, body, [
     "currentApp", "current_app", "app",
   ]).unwrap_or("claude")
-  write_usage_json(w, ccs_install_skill_unified_json(skill, current_app))
+  write_usage_json(w, moon_install_skill_unified_json(skill, current_app))
 }
 
 ///|
@@ -7277,7 +7277,7 @@ async fn Gateway::handle_uninstall_skill_unified(
     write_usage_bad_request(w, "missing_skill_id")
     return
   }
-  write_usage_json(w, ccs_uninstall_skill_unified_json(id))
+  write_usage_json(w, moon_uninstall_skill_unified_json(id))
 }
 
 ///|
@@ -7301,7 +7301,7 @@ async fn Gateway::handle_toggle_skill_app(
     write_usage_bad_request(w, "missing_enabled")
     return
   }
-  write_usage_json(w, ccs_toggle_skill_app_json(id, app, enabled))
+  write_usage_json(w, moon_toggle_skill_app_json(id, app, enabled))
 }
 
 ///|
@@ -7310,7 +7310,7 @@ async fn Gateway::handle_scan_unmanaged_skills(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_scan_unmanaged_skills_json())
+  write_usage_json(w, moon_scan_unmanaged_skills_json())
 }
 
 ///|
@@ -7330,7 +7330,7 @@ async fn Gateway::handle_import_skills_from_apps(
     Some(Array(items)) => Json::array(items)
     _ => Json::array([])
   }
-  write_usage_json(w, ccs_import_skills_from_apps_json(imports))
+  write_usage_json(w, moon_import_skills_from_apps_json(imports))
 }
 
 ///|
@@ -7339,7 +7339,7 @@ async fn Gateway::handle_discover_available_skills(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_discover_available_skills_json())
+  write_usage_json(w, moon_discover_available_skills_json())
 }
 
 ///|
@@ -7348,7 +7348,7 @@ async fn Gateway::handle_check_skill_updates(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_check_skill_updates_json())
+  write_usage_json(w, moon_check_skill_updates_json())
 }
 
 ///|
@@ -7363,7 +7363,7 @@ async fn Gateway::handle_update_skill(
     write_usage_bad_request(w, "missing_skill_id")
     return
   }
-  write_usage_json(w, ccs_update_skill_json(id))
+  write_usage_json(w, moon_update_skill_json(id))
 }
 
 ///|
@@ -7378,7 +7378,7 @@ async fn Gateway::handle_migrate_skill_storage(
     write_usage_bad_request(w, "missing_storage_target")
     return
   }
-  write_usage_json(w, ccs_migrate_skill_storage_json(target))
+  write_usage_json(w, moon_migrate_skill_storage_json(target))
 }
 
 ///|
@@ -7392,7 +7392,7 @@ async fn Gateway::handle_search_skills_sh(
   let query = proxy_string_request(r.path, body, ["query", "q"]).unwrap_or("")
   let limit = proxy_int_request(r.path, body, ["limit"]).unwrap_or(20)
   let offset = proxy_int_request(r.path, body, ["offset"]).unwrap_or(0)
-  write_usage_json(w, ccs_search_skills_sh_json(query, limit, offset))
+  write_usage_json(w, moon_search_skills_sh_json(query, limit, offset))
 }
 
 ///|
@@ -7401,7 +7401,7 @@ async fn Gateway::handle_get_skills(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_get_skills_json())
+  write_usage_json(w, moon_get_skills_json())
 }
 
 ///|
@@ -7418,7 +7418,7 @@ async fn Gateway::handle_install_skill_legacy(
     write_usage_bad_request(w, "missing_directory")
     return
   }
-  let install_name = ccs_skill_install_name(directory)
+  let install_name = moon_skill_install_name(directory)
   if install_name.is_empty() {
     write_usage_bad_request(w, "invalid_directory")
     return
@@ -7429,7 +7429,7 @@ async fn Gateway::handle_install_skill_legacy(
     "description": Json::string(""),
     "directory": Json::string(install_name),
   }.to_json()
-  ignore(ccs_install_skill_unified_json(skill, app))
+  ignore(moon_install_skill_unified_json(skill, app))
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -7449,7 +7449,7 @@ async fn Gateway::handle_install_skill_for_app(
     write_usage_bad_request(w, "missing_directory")
     return
   }
-  let install_name = ccs_skill_install_name(directory)
+  let install_name = moon_skill_install_name(directory)
   if install_name.is_empty() {
     write_usage_bad_request(w, "invalid_directory")
     return
@@ -7460,7 +7460,7 @@ async fn Gateway::handle_install_skill_for_app(
     "description": Json::string(""),
     "directory": Json::string(install_name),
   }.to_json()
-  ignore(ccs_install_skill_unified_json(skill, app))
+  ignore(moon_install_skill_unified_json(skill, app))
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -7476,7 +7476,7 @@ async fn Gateway::handle_uninstall_skill_legacy(
     write_usage_bad_request(w, "missing_directory")
     return
   }
-  write_usage_json(w, ccs_uninstall_skill_unified_json(id))
+  write_usage_json(w, moon_uninstall_skill_unified_json(id))
 }
 
 ///|
@@ -7485,7 +7485,7 @@ async fn Gateway::handle_get_skill_repos(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_get_skill_repos_json())
+  write_usage_json(w, moon_get_skill_repos_json())
 }
 
 ///|
@@ -7504,7 +7504,7 @@ async fn Gateway::handle_add_skill_repo(
           if obj.get("owner") is Some(_) && obj.get("name") is Some(_) {
             Json::object(obj)
           } else {
-            match ccs_skill_repo_request_json(r.path, body) {
+            match moon_skill_repo_request_json(r.path, body) {
               Some(repo) => repo
               None => {
                 write_usage_bad_request(w, "missing_owner_or_name")
@@ -7514,7 +7514,7 @@ async fn Gateway::handle_add_skill_repo(
           }
       }
     _ =>
-      match ccs_skill_repo_request_json(r.path, body) {
+      match moon_skill_repo_request_json(r.path, body) {
         Some(repo) => repo
         None => {
           write_usage_bad_request(w, "missing_owner_or_name")
@@ -7522,11 +7522,11 @@ async fn Gateway::handle_add_skill_repo(
         }
       }
   }
-  write_usage_json(w, ccs_add_skill_repo_json(repo))
+  write_usage_json(w, moon_add_skill_repo_json(repo))
 }
 
 ///|
-fn ccs_skill_repo_request_json(path : StringView, body : Json?) -> Json? {
+fn moon_skill_repo_request_json(path : StringView, body : Json?) -> Json? {
   guard proxy_string_request(path, body, ["owner"]) is Some(owner) else {
     return None
   }
@@ -7563,7 +7563,7 @@ async fn Gateway::handle_remove_skill_repo(
     write_usage_bad_request(w, "missing_name")
     return
   }
-  write_usage_json(w, ccs_remove_skill_repo_json(owner, name))
+  write_usage_json(w, moon_remove_skill_repo_json(owner, name))
 }
 
 ///|
@@ -7582,7 +7582,7 @@ async fn Gateway::handle_install_skills_from_zip(
   let current_app = proxy_string_request(r.path, body, [
     "currentApp", "current_app", "app",
   ]).unwrap_or("claude")
-  write_usage_json(w, ccs_install_skills_from_zip_json(file_path, current_app))
+  write_usage_json(w, moon_install_skills_from_zip_json(file_path, current_app))
 }
 
 ///|
@@ -7591,7 +7591,7 @@ async fn Gateway::handle_get_app_config_path(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, Json::string(ccs_app_config_path()))
+  write_usage_json(w, Json::string(moon_app_config_path()))
 }
 
 ///|
@@ -7600,7 +7600,7 @@ async fn Gateway::handle_open_app_config_folder(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  match ccs_open_directory_result_json(ccs_app_config_dir()) {
+  match moon_open_directory_result_json(moon_app_config_dir()) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -7622,7 +7622,7 @@ async fn Gateway::handle_save_settings(
 ) -> Unit {
   match proxy_json_body(r) {
     Some(settings) => {
-      self.app_settings = ccs_merge_settings_for_save(
+      self.app_settings = moon_merge_settings_for_save(
         settings,
         self.app_settings,
       )
@@ -7681,7 +7681,7 @@ async fn Gateway::handle_set_app_config_dir_override(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.app_config_dir_override = ccs_optional_path_from_request(r.path, body)
+  self.app_config_dir_override = moon_optional_path_from_request(r.path, body)
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -7697,7 +7697,7 @@ async fn Gateway::handle_set_auto_launch(
     return
   }
   self.auto_launch_enabled = enabled
-  self.app_settings = ccs_settings_with_bool(
+  self.app_settings = moon_settings_with_bool(
     self.app_settings,
     "launchOnStartup",
     enabled,
@@ -7728,7 +7728,7 @@ async fn Gateway::handle_set_rectifier_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.rectifier_config_json = ccs_rectifier_config_from_request(
+  self.rectifier_config_json = moon_rectifier_config_from_request(
     r.path,
     body,
     self.rectifier_config_json,
@@ -7751,12 +7751,12 @@ async fn Gateway::handle_set_optimizer_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let config = ccs_optimizer_config_from_request(
+  let config = moon_optimizer_config_from_request(
     r.path,
     body,
     self.optimizer_config_json,
   )
-  if !ccs_optimizer_cache_ttl_valid(config) {
+  if !moon_optimizer_cache_ttl_valid(config) {
     write_usage_bad_request(w, "invalid_optimizer_cache_ttl")
     return
   }
@@ -7779,7 +7779,7 @@ async fn Gateway::handle_set_copilot_optimizer_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.copilot_optimizer_config_json = ccs_copilot_optimizer_config_from_request(
+  self.copilot_optimizer_config_json = moon_copilot_optimizer_config_from_request(
     r.path,
     body,
     self.copilot_optimizer_config_json,
@@ -7802,7 +7802,7 @@ async fn Gateway::handle_set_log_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.log_config_json = ccs_log_config_from_request(
+  self.log_config_json = moon_log_config_from_request(
     r.path,
     body,
     self.log_config_json,
@@ -7829,7 +7829,7 @@ async fn Gateway::handle_get_common_config_snippet_request(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app_type = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app_type = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   self.handle_get_common_config_snippet(w, app_type)
 }
 
@@ -7844,7 +7844,7 @@ async fn Gateway::handle_set_common_config_snippet(
   let snippet = proxy_string_request(r.path, body, [
     "snippet", "content", "value",
   ]).unwrap_or("")
-  match ccs_validate_common_config_snippet(app_type, snippet) {
+  match moon_validate_common_config_snippet(app_type, snippet) {
     Some(error) => {
       write_usage_bad_request(w, error)
       return
@@ -7866,11 +7866,11 @@ async fn Gateway::handle_set_common_config_snippet_request(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app_type = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app_type = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   let snippet = proxy_string_request(r.path, body, [
     "snippet", "content", "value",
   ]).unwrap_or("")
-  match ccs_validate_common_config_snippet(app_type, snippet) {
+  match moon_validate_common_config_snippet(app_type, snippet) {
     Some(error) => {
       write_usage_bad_request(w, error)
       return
@@ -7892,12 +7892,12 @@ async fn Gateway::handle_extract_common_config_snippet(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app_type = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app_type = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   match
     proxy_string_request(r.path, body, ["settingsConfig", "settings_config"]) {
     Some(settings_config) =>
       match
-        ccs_extract_common_config_snippet_from_settings_config(
+        moon_extract_common_config_snippet_from_settings_config(
           app_type, settings_config,
         ) {
         Ok(snippet) => write_usage_json(w, Json::string(snippet))
@@ -7919,8 +7919,8 @@ async fn Gateway::handle_check_env_conflicts(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  write_usage_json(w, ccs_env_conflicts_json(app))
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  write_usage_json(w, moon_env_conflicts_json(app))
 }
 
 ///|
@@ -7931,7 +7931,7 @@ async fn Gateway::handle_delete_env_vars(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  match ccs_delete_env_vars_json(body) {
+  match moon_delete_env_vars_json(body) {
     Ok(backup) => write_usage_json(w, backup)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -7948,7 +7948,7 @@ async fn Gateway::handle_restore_env_backup(
   let backup_path = proxy_string_request(r.path, body, [
     "backupPath", "backup_path",
   ])
-  match ccs_restore_env_backup_json(backup_path) {
+  match moon_restore_env_backup_json(backup_path) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -7963,10 +7963,10 @@ async fn Gateway::handle_get_claude_mcp_status(
     w,
     {
       "userConfigPath": Json::string(
-        @pathx.join(ccs_home_dir(), ".claude.json"),
+        @pathx.join(moon_home_dir(), ".claude.json"),
       ),
       "userConfigExists": Json::boolean(
-        @fsx.exists_as_file(@pathx.join(ccs_home_dir(), ".claude.json")),
+        @fsx.exists_as_file(@pathx.join(moon_home_dir(), ".claude.json")),
       ),
       "serverCount": Json::number(self.mcp_servers.length().to_double()),
     }.to_json(),
@@ -7978,7 +7978,7 @@ async fn Gateway::handle_read_claude_mcp_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match ccs_mcp_config_text(self.mcp_servers) {
+  match moon_mcp_config_text(self.mcp_servers) {
     Some(content) => write_usage_json(w, Json::string(content))
     None => write_usage_json(w, Json::null())
   }
@@ -7991,9 +7991,9 @@ async fn Gateway::handle_upsert_claude_mcp_server(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  match ccs_mcp_server_from_request(r.path, body, "claude") {
+  match moon_mcp_server_from_request(r.path, body, "claude") {
     Some((id, server)) => {
-      self.mcp_servers[id] = ccs_mcp_server_with_app(server, "claude", true)
+      self.mcp_servers[id] = moon_mcp_server_with_app(server, "claude", true)
       write_usage_json(w, Json::boolean(true))
     }
     None => write_usage_json(w, Json::boolean(false))
@@ -8028,7 +8028,7 @@ async fn Gateway::handle_validate_mcp_command(
   let command = proxy_string_request(r.path, body, ["cmd", "command"]).unwrap_or(
     "",
   )
-  write_usage_json(w, Json::boolean(ccs_validate_mcp_command_name(command)))
+  write_usage_json(w, Json::boolean(moon_validate_mcp_command_name(command)))
 }
 
 ///|
@@ -8038,12 +8038,12 @@ async fn Gateway::handle_get_mcp_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   write_usage_json(
     w,
     {
-      "configPath": Json::string(ccs_app_config_path()),
-      "servers": ccs_mcp_servers_object_for_app(self.mcp_servers, Some(app)),
+      "configPath": Json::string(moon_app_config_path()),
+      "servers": moon_mcp_servers_object_for_app(self.mcp_servers, Some(app)),
     }.to_json(),
   )
 }
@@ -8055,20 +8055,20 @@ async fn Gateway::handle_upsert_mcp_server_in_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  match ccs_mcp_server_from_request(r.path, body, app) {
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  match moon_mcp_server_from_request(r.path, body, app) {
     Some((id, server)) => {
       let sync_other = proxy_bool_request(r.path, body, [
         "syncOtherSide", "sync_other_side",
       ]).unwrap_or(false)
       let next = if sync_other {
-        let synced = ccs_mcp_server_with_app(server, "claude", true)
-        let synced = ccs_mcp_server_with_app(synced, "codex", true)
-        let synced = ccs_mcp_server_with_app(synced, "gemini", true)
-        let synced = ccs_mcp_server_with_app(synced, "opencode", true)
-        ccs_mcp_server_with_app(synced, "hermes", true)
+        let synced = moon_mcp_server_with_app(server, "claude", true)
+        let synced = moon_mcp_server_with_app(synced, "codex", true)
+        let synced = moon_mcp_server_with_app(synced, "gemini", true)
+        let synced = moon_mcp_server_with_app(synced, "opencode", true)
+        moon_mcp_server_with_app(synced, "hermes", true)
       } else {
-        ccs_mcp_server_with_app(server, app, true)
+        moon_mcp_server_with_app(server, app, true)
       }
       self.mcp_servers[id] = next
       write_usage_json(w, Json::boolean(true))
@@ -8084,13 +8084,13 @@ async fn Gateway::handle_set_mcp_enabled(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   let enabled = proxy_bool_request(r.path, body, ["enabled"]).unwrap_or(true)
   match proxy_string_request(r.path, body, ["id", "serverId", "server_id"]) {
     Some(id) =>
       match self.mcp_servers.get(id) {
         Some(server) => {
-          self.mcp_servers[id] = ccs_mcp_server_with_app(server, app, enabled)
+          self.mcp_servers[id] = moon_mcp_server_with_app(server, app, enabled)
           write_usage_json(w, Json::boolean(true))
         }
         None => write_usage_json(w, Json::boolean(false))
@@ -8104,7 +8104,7 @@ async fn Gateway::handle_get_mcp_servers(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, ccs_mcp_servers_object_for_app(self.mcp_servers, None))
+  write_usage_json(w, moon_mcp_servers_object_for_app(self.mcp_servers, None))
 }
 
 ///|
@@ -8114,7 +8114,7 @@ async fn Gateway::handle_upsert_mcp_server(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  match ccs_mcp_server_from_request(r.path, body, "claude") {
+  match moon_mcp_server_from_request(r.path, body, "claude") {
     Some((id, server)) => {
       self.mcp_servers[id] = server
       write_usage_json(w, Json::null())
@@ -8130,13 +8130,13 @@ async fn Gateway::handle_toggle_mcp_app(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   let enabled = proxy_bool_request(r.path, body, ["enabled"]).unwrap_or(true)
   match proxy_string_request(r.path, body, ["serverId", "server_id", "id"]) {
     Some(id) =>
       match self.mcp_servers.get(id) {
         Some(server) => {
-          self.mcp_servers[id] = ccs_mcp_server_with_app(server, app, enabled)
+          self.mcp_servers[id] = moon_mcp_server_with_app(server, app, enabled)
           write_usage_json(w, Json::null())
         }
         None => write_usage_json(w, Json::null())
@@ -8150,7 +8150,7 @@ async fn Gateway::handle_import_mcp_from_apps(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let imported = ccs_import_mcp_from_apps_count(self.mcp_servers)
+  let imported = moon_import_mcp_from_apps_count(self.mcp_servers)
   write_usage_json(w, Json::number(imported.to_double()))
 }
 
@@ -8161,8 +8161,8 @@ async fn Gateway::handle_get_prompts(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  write_usage_json(w, ccs_prompts_object_for_app(self.prompts, app))
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  write_usage_json(w, moon_prompts_object_for_app(self.prompts, app))
 }
 
 ///|
@@ -8172,9 +8172,9 @@ async fn Gateway::handle_upsert_prompt(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  match ccs_prompt_from_request(r.path, body) {
+  match moon_prompt_from_request(r.path, body) {
     Some((app, id, prompt)) =>
-      self.prompts[ccs_prompt_store_key(app, id)] = prompt
+      self.prompts[moon_prompt_store_key(app, id)] = prompt
     None => ()
   }
   write_usage_json(w, Json::null())
@@ -8187,9 +8187,9 @@ async fn Gateway::handle_delete_prompt(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   match proxy_string_request(r.path, body, ["id", "promptId", "prompt_id"]) {
-    Some(id) => self.prompts.remove(ccs_prompt_store_key(app, id))
+    Some(id) => self.prompts.remove(moon_prompt_store_key(app, id))
     None => ()
   }
   write_usage_json(w, Json::null())
@@ -8202,12 +8202,12 @@ async fn Gateway::handle_enable_prompt(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   match proxy_string_request(r.path, body, ["id", "promptId", "prompt_id"]) {
     Some(id) =>
-      match ccs_prompt_file_path_from_request(r.path, body, app) {
+      match moon_prompt_file_path_from_request(r.path, body, app) {
         Ok(file_path) =>
-          match ccs_enable_prompt_json(self.prompts, app, id, file_path) {
+          match moon_enable_prompt_json(self.prompts, app, id, file_path) {
             Ok(result) => write_usage_json(w, result)
             Err(error) => write_usage_bad_request(w, error)
           }
@@ -8224,10 +8224,10 @@ async fn Gateway::handle_import_prompt_from_file(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  match ccs_prompt_file_path_from_request(r.path, body, app) {
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  match moon_prompt_file_path_from_request(r.path, body, app) {
     Ok(file_path) =>
-      match ccs_import_prompt_from_file_json(self.prompts, app, file_path) {
+      match moon_import_prompt_from_file_json(self.prompts, app, file_path) {
         Ok(result) => write_usage_json(w, result)
         Err(error) => write_usage_bad_request(w, error)
       }
@@ -8243,10 +8243,10 @@ async fn Gateway::handle_get_current_prompt_file_content(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  let app = ccs_config_app_from_request(r.path, body).unwrap_or("claude")
-  match ccs_prompt_file_path_from_request(r.path, body, app) {
+  let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
+  match moon_prompt_file_path_from_request(r.path, body, app) {
     Ok(file_path) =>
-      match ccs_current_prompt_file_content_json(file_path) {
+      match moon_current_prompt_file_content_json(file_path) {
         Ok(result) => write_usage_json(w, result)
         Err(error) => write_usage_bad_request(w, error)
       }
@@ -8299,15 +8299,15 @@ async fn Gateway::handle_proxy_stop_server(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   if self.proxy_takeover_active() {
-    write_usage_bad_request(w, ccs_stop_proxy_takeover_error())
+    write_usage_bad_request(w, moon_stop_proxy_takeover_error())
     return
   }
   self.proxy_enabled = false
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
-fn ccs_stop_proxy_takeover_error() -> String {
+fn moon_stop_proxy_takeover_error() -> String {
   "仍有应用处于代理接管状态，请先在设置中关闭对应应用接管后再停止本地路由。"
 }
 
@@ -8319,7 +8319,7 @@ async fn Gateway::handle_proxy_stop_with_restore(
   self.proxy_enabled = false
   self.proxy_clear_takeover()
   self.proxy_clear_enabled_apps_for_manual_stop()
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -8338,13 +8338,13 @@ fn Gateway::proxy_config_json(self : Gateway) -> Json {
   let app_type = "claude"
   let streaming_first_byte_timeout = self.proxy_streaming_first_byte_timeout
     .get(app_type)
-    .unwrap_or(ccs_proxy_streaming_first_byte_timeout_default(app_type))
+    .unwrap_or(moon_proxy_streaming_first_byte_timeout_default(app_type))
   let streaming_idle_timeout = self.proxy_streaming_idle_timeout
     .get(app_type)
-    .unwrap_or(ccs_proxy_streaming_idle_timeout_default(app_type))
+    .unwrap_or(moon_proxy_streaming_idle_timeout_default(app_type))
   let non_streaming_timeout = self.proxy_non_streaming_timeout
     .get(app_type)
-    .unwrap_or(ccs_proxy_non_streaming_timeout_default(app_type))
+    .unwrap_or(moon_proxy_non_streaming_timeout_default(app_type))
   {
     "listen_address": Json::string(self.proxy_listen_address),
     "listen_port": Json::number(self.proxy_listen_port.to_double()),
@@ -8363,7 +8363,7 @@ fn Gateway::proxy_config_json(self : Gateway) -> Json {
 }
 
 ///|
-fn ccs_proxy_streaming_first_byte_timeout_default(app_type : String) -> Int {
+fn moon_proxy_streaming_first_byte_timeout_default(app_type : String) -> Int {
   match app_type {
     "claude" => 90
     _ => 60
@@ -8371,7 +8371,7 @@ fn ccs_proxy_streaming_first_byte_timeout_default(app_type : String) -> Int {
 }
 
 ///|
-fn ccs_proxy_streaming_idle_timeout_default(app_type : String) -> Int {
+fn moon_proxy_streaming_idle_timeout_default(app_type : String) -> Int {
   match app_type {
     "claude" => 180
     _ => 120
@@ -8379,7 +8379,7 @@ fn ccs_proxy_streaming_idle_timeout_default(app_type : String) -> Int {
 }
 
 ///|
-fn ccs_proxy_non_streaming_timeout_default(_app_type : String) -> Int {
+fn moon_proxy_non_streaming_timeout_default(_app_type : String) -> Int {
   600
 }
 
@@ -8390,7 +8390,7 @@ async fn Gateway::handle_proxy_update_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   match self.apply_proxy_global_config_request(r, legacy=true) {
-    true => write_usage_json(w, ccs_unit_success_json())
+    true => write_usage_json(w, moon_unit_success_json())
     false => write_usage_bad_request(w, "invalid_proxy_config")
   }
 }
@@ -8420,7 +8420,7 @@ async fn Gateway::handle_proxy_update_global_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   match self.apply_proxy_global_config_request(r) {
-    true => write_usage_json(w, ccs_unit_success_json())
+    true => write_usage_json(w, moon_unit_success_json())
     false => write_usage_bad_request(w, "invalid_global_proxy_config")
   }
 }
@@ -8495,7 +8495,7 @@ async fn Gateway::handle_scan_local_proxies(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_scan_local_proxies_json())
+  write_usage_json(w, moon_scan_local_proxies_json())
 }
 
 ///|
@@ -8507,7 +8507,7 @@ fn upstream_proxy_url_is_valid(url : String) -> Bool {
 }
 
 ///|
-fn ccs_local_proxy_ports() -> Array[(Int, String, Bool)] {
+fn moon_local_proxy_ports() -> Array[(Int, String, Bool)] {
   [
     (7890, "http", true),
     (7891, "socks5", false),
@@ -8521,7 +8521,7 @@ fn ccs_local_proxy_ports() -> Array[(Int, String, Bool)] {
 }
 
 ///|
-fn ccs_detected_proxy_json(port : Int, proxy_type : String) -> Json {
+fn moon_detected_proxy_json(port : Int, proxy_type : String) -> Json {
   {
     "url": Json::string("\{proxy_type}://127.0.0.1:\{port}"),
     "proxyType": Json::string(proxy_type),
@@ -8530,27 +8530,27 @@ fn ccs_detected_proxy_json(port : Int, proxy_type : String) -> Json {
 }
 
 ///|
-fn ccs_detected_proxy_entries_json(
+fn moon_detected_proxy_entries_json(
   port : Int,
   primary_type : String,
   is_mixed : Bool,
 ) -> Array[Json] {
-  let entries = [ccs_detected_proxy_json(port, primary_type)]
+  let entries = [moon_detected_proxy_json(port, primary_type)]
   if is_mixed {
     let alt_type = if primary_type == "http" { "socks5" } else { "http" }
-    entries.push(ccs_detected_proxy_json(port, alt_type))
+    entries.push(moon_detected_proxy_json(port, alt_type))
   }
   entries
 }
 
 ///|
-fn ccs_scan_local_proxies_json() -> Json {
+fn moon_scan_local_proxies_json() -> Json {
   let found : Array[Json] = []
-  for item in ccs_local_proxy_ports() {
+  for item in moon_local_proxy_ports() {
     let (port, primary_type, is_mixed) = item
     if @net.localhost_port_open(port, timeout_ms=100) {
       found.append(
-        ccs_detected_proxy_entries_json(port, primary_type, is_mixed),
+        moon_detected_proxy_entries_json(port, primary_type, is_mixed),
       )
     }
   }
@@ -8605,13 +8605,13 @@ fn Gateway::proxy_app_config_json(self : Gateway, app_type : String) -> Json {
   let max_retries = self.provider_router.max_retries_for_app(app_type)
   let streaming_first_byte_timeout = self.proxy_streaming_first_byte_timeout
     .get(app_type)
-    .unwrap_or(ccs_proxy_streaming_first_byte_timeout_default(app_type))
+    .unwrap_or(moon_proxy_streaming_first_byte_timeout_default(app_type))
   let streaming_idle_timeout = self.proxy_streaming_idle_timeout
     .get(app_type)
-    .unwrap_or(ccs_proxy_streaming_idle_timeout_default(app_type))
+    .unwrap_or(moon_proxy_streaming_idle_timeout_default(app_type))
   let non_streaming_timeout = self.proxy_non_streaming_timeout
     .get(app_type)
-    .unwrap_or(ccs_proxy_non_streaming_timeout_default(app_type))
+    .unwrap_or(moon_proxy_non_streaming_timeout_default(app_type))
   {
     "appType": Json::string(app_type),
     "app_type": Json::string(app_type),
@@ -8658,7 +8658,7 @@ async fn Gateway::handle_proxy_update_app_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   match self.apply_proxy_app_config_request(r) {
-    Some(_) => write_usage_json(w, ccs_unit_success_json())
+    Some(_) => write_usage_json(w, moon_unit_success_json())
     None => write_usage_bad_request(w, "invalid_app_proxy_config")
   }
 }
@@ -8702,7 +8702,7 @@ async fn Gateway::handle_proxy_set_default_cost_multiplier(
   }
   let trimmed = value.trim().to_owned()
   self.proxy_default_cost_multipliers.set(app_type, trimmed)
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -8768,7 +8768,7 @@ async fn Gateway::handle_proxy_set_pricing_model_source(
   }
   let trimmed = value.trim().to_owned()
   self.proxy_pricing_model_sources.set(app_type, trimmed)
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9029,7 +9029,7 @@ async fn Gateway::handle_proxy_update_circuit_breaker_config(
     return
   }
   self.provider_router.update_all_configs(config)
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9055,16 +9055,16 @@ async fn Gateway::handle_proxy_circuit_breaker_stats(
 }
 
 ///|
-async fn Gateway::handle_proxy_circuit_breaker_stats_ccs_alias(
+async fn Gateway::handle_proxy_circuit_breaker_stats_moon_alias(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_circuit_breaker_stats_command_json())
+  write_usage_json(w, moon_circuit_breaker_stats_command_json())
 }
 
 ///|
-fn ccs_circuit_breaker_stats_command_json() -> Json {
+fn moon_circuit_breaker_stats_command_json() -> Json {
   Json::null()
 }
 
@@ -9086,7 +9086,7 @@ async fn Gateway::handle_proxy_reset_circuit_breaker(
     app_enabled~,
     proxy_running=self.proxy_enabled,
   )
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9132,7 +9132,7 @@ async fn Gateway::handle_proxy_add_failover_queue(
     return
   }
   self.provider_router.add_to_failover_queue(query.app_type, query.provider_id)
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9150,7 +9150,7 @@ async fn Gateway::handle_proxy_remove_failover_queue(
     query.app_type,
     query.provider_id,
   )
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9193,7 +9193,7 @@ async fn Gateway::handle_proxy_set_auto_failover_enabled(
     write_usage_bad_request(w, "auto_failover_unavailable")
     return
   }
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9224,7 +9224,7 @@ async fn Gateway::handle_proxy_set_takeover_for_app(
     return
   }
   self.proxy_takeover_enabled.set(app_type, enabled)
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9267,7 +9267,7 @@ async fn Gateway::handle_proxy_switch_provider(
     provider.provider_id,
     provider.provider_name,
   )
-  write_usage_json(w, ccs_unit_success_json())
+  write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
@@ -9281,7 +9281,7 @@ async fn Gateway::handle_get_providers(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  write_usage_json(w, self.provider_router.providers_ccs_json(app_type))
+  write_usage_json(w, self.provider_router.providers_moon_json(app_type))
 }
 
 ///|
@@ -9298,7 +9298,7 @@ async fn Gateway::handle_get_current_provider(
   write_usage_json(
     w,
     Json::string(
-      self.provider_router.current_provider_for_ccs_command(app_type),
+      self.provider_router.current_provider_for_moon_command(app_type),
     ),
   )
 }
@@ -9314,7 +9314,7 @@ async fn Gateway::handle_import_default_config(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  match ccs_import_default_config_json(self.provider_router, app_type) {
+  match moon_import_default_config_json(self.provider_router, app_type) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -9513,7 +9513,7 @@ async fn Gateway::handle_open_provider_terminal(
   }
   let cwd = proxy_string_request(r.path, body, ["cwd"])
   match
-    ccs_open_provider_terminal_json(
+    moon_open_provider_terminal_json(
       self.provider_router,
       app_type,
       provider_id,
@@ -9708,7 +9708,7 @@ fn Gateway::ensure_claude_desktop_official_provider(self : Gateway) -> Bool {
       provider_id="codex-oauth",
       provider_name="Codex OAuth",
       provider_type=Some("codex_oauth"),
-      model_mapping=ccs_model_mapping_from_env(),
+      model_mapping=moon_model_mapping_from_env(),
     ),
   )
   if self.provider_router.current_provider_id("claude-desktop") is None {
@@ -10066,9 +10066,9 @@ async fn Gateway::handle_get_claude_plugin_status(
     {
       "exists": Json::boolean(
         self.claude_plugin_config is Some(_) ||
-        @fsx.exists_as_file(ccs_claude_plugin_config_path()),
+        @fsx.exists_as_file(moon_claude_plugin_config_path()),
       ),
-      "path": Json::string(ccs_claude_plugin_config_path()),
+      "path": Json::string(moon_claude_plugin_config_path()),
     }.to_json(),
   )
 }
@@ -10081,8 +10081,8 @@ async fn Gateway::handle_read_claude_plugin_config(
   match self.claude_plugin_config {
     Some(content) => write_usage_json(w, Json::string(content))
     None =>
-      if @fsx.exists_as_file(ccs_claude_plugin_config_path()) {
-        let content = @fsx.read_file(ccs_claude_plugin_config_path()) catch {
+      if @fsx.exists_as_file(moon_claude_plugin_config_path()) {
+        let content = @fsx.read_file(moon_claude_plugin_config_path()) catch {
           _ => {
             write_usage_json(w, Json::null())
             return
@@ -10120,10 +10120,10 @@ async fn Gateway::handle_is_claude_plugin_applied(
 ) -> Unit {
   match self.claude_plugin_config {
     Some(content) =>
-      write_usage_json(w, Json::boolean(ccs_json_primary_api_key_any(content)))
+      write_usage_json(w, Json::boolean(moon_json_primary_api_key_any(content)))
     None =>
-      if @fsx.exists_as_file(ccs_claude_plugin_config_path()) {
-        let content = @fsx.read_file(ccs_claude_plugin_config_path()) catch {
+      if @fsx.exists_as_file(moon_claude_plugin_config_path()) {
+        let content = @fsx.read_file(moon_claude_plugin_config_path()) catch {
           _ => {
             write_usage_json(w, Json::boolean(false))
             return
@@ -10131,7 +10131,7 @@ async fn Gateway::handle_is_claude_plugin_applied(
         }
         write_usage_json(
           w,
-          Json::boolean(ccs_json_primary_api_key_any(content)),
+          Json::boolean(moon_json_primary_api_key_any(content)),
         )
       } else {
         write_usage_json(w, Json::boolean(self.claude_plugin_applied))
@@ -10145,7 +10145,7 @@ async fn Gateway::handle_apply_claude_onboarding_skip(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   self.claude_onboarding_skipped = true
-  self.app_settings = ccs_settings_with_bool(
+  self.app_settings = moon_settings_with_bool(
     self.app_settings,
     "skipClaudeOnboarding",
     true,
@@ -10159,7 +10159,7 @@ async fn Gateway::handle_clear_claude_onboarding_skip(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   self.claude_onboarding_skipped = false
-  self.app_settings = ccs_settings_with_bool(
+  self.app_settings = moon_settings_with_bool(
     self.app_settings,
     "skipClaudeOnboarding",
     false,
@@ -10173,7 +10173,7 @@ async fn Gateway::handle_list_daily_memory_files(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_list_daily_memory_files_json())
+  write_usage_json(w, moon_list_daily_memory_files_json())
 }
 
 ///|
@@ -10185,11 +10185,11 @@ async fn Gateway::handle_read_daily_memory_file(
   ignore(self)
   let body = proxy_json_body(r)
   guard proxy_string_request(r.path, body, ["filename"]) is Some(filename) &&
-    ccs_validate_daily_memory_filename(filename) else {
+    moon_validate_daily_memory_filename(filename) else {
     write_usage_bad_request(w, "invalid_daily_memory_filename")
     return
   }
-  let path = ccs_daily_memory_file_path(filename)
+  let path = moon_daily_memory_file_path(filename)
   if !@fsx.exists_as_file(path) {
     write_usage_json(w, Json::null())
     return
@@ -10212,16 +10212,16 @@ async fn Gateway::handle_write_daily_memory_file(
   ignore(self)
   let body = proxy_json_body(r)
   guard proxy_string_request(r.path, body, ["filename"]) is Some(filename) &&
-    ccs_validate_daily_memory_filename(filename) else {
+    moon_validate_daily_memory_filename(filename) else {
     write_usage_bad_request(w, "invalid_daily_memory_filename")
     return
   }
   let content = proxy_string_request(r.path, body, ["content"]).unwrap_or("")
-  if !ccs_ensure_directory(ccs_openclaw_memory_dir()) {
+  if !moon_ensure_directory(moon_openclaw_memory_dir()) {
     write_usage_bad_request(w, "daily_memory_directory_failed")
     return
   }
-  @fsx.write_to_file(ccs_daily_memory_file_path(filename), content) catch {
+  @fsx.write_to_file(moon_daily_memory_file_path(filename), content) catch {
     _ => {
       write_usage_bad_request(w, "daily_memory_write_failed")
       return
@@ -10239,7 +10239,7 @@ async fn Gateway::handle_search_daily_memory_files(
   ignore(self)
   let body = proxy_json_body(r)
   let query = proxy_string_request(r.path, body, ["query"]).unwrap_or("")
-  write_usage_json(w, ccs_search_daily_memory_files_json(query))
+  write_usage_json(w, moon_search_daily_memory_files_json(query))
 }
 
 ///|
@@ -10251,11 +10251,11 @@ async fn Gateway::handle_delete_daily_memory_file(
   ignore(self)
   let body = proxy_json_body(r)
   guard proxy_string_request(r.path, body, ["filename"]) is Some(filename) &&
-    ccs_validate_daily_memory_filename(filename) else {
+    moon_validate_daily_memory_filename(filename) else {
     write_usage_bad_request(w, "invalid_daily_memory_filename")
     return
   }
-  let path = ccs_daily_memory_file_path(filename)
+  let path = moon_daily_memory_file_path(filename)
   if @fsx.exists_as_file(path) {
     @fsx.remove(path) catch {
       _ => {
@@ -10276,11 +10276,11 @@ async fn Gateway::handle_read_workspace_file(
   ignore(self)
   let body = proxy_json_body(r)
   guard proxy_string_request(r.path, body, ["filename"]) is Some(filename) &&
-    ccs_validate_workspace_filename(filename) else {
+    moon_validate_workspace_filename(filename) else {
     write_usage_bad_request(w, "invalid_workspace_filename")
     return
   }
-  let path = ccs_workspace_file_path(filename)
+  let path = moon_workspace_file_path(filename)
   if !@fsx.exists_as_file(path) {
     write_usage_json(w, Json::null())
     return
@@ -10303,16 +10303,16 @@ async fn Gateway::handle_write_workspace_file(
   ignore(self)
   let body = proxy_json_body(r)
   guard proxy_string_request(r.path, body, ["filename"]) is Some(filename) &&
-    ccs_validate_workspace_filename(filename) else {
+    moon_validate_workspace_filename(filename) else {
     write_usage_bad_request(w, "invalid_workspace_filename")
     return
   }
   let content = proxy_string_request(r.path, body, ["content"]).unwrap_or("")
-  if !ccs_ensure_directory(ccs_openclaw_workspace_dir()) {
+  if !moon_ensure_directory(moon_openclaw_workspace_dir()) {
     write_usage_bad_request(w, "workspace_directory_failed")
     return
   }
-  @fsx.write_to_file(ccs_workspace_file_path(filename), content) catch {
+  @fsx.write_to_file(moon_workspace_file_path(filename), content) catch {
     _ => {
       write_usage_bad_request(w, "workspace_file_write_failed")
       return
@@ -10333,11 +10333,11 @@ async fn Gateway::handle_open_workspace_directory(
     "workspace",
   )
   let target = if subdir == "memory" {
-    ccs_openclaw_memory_dir()
+    moon_openclaw_memory_dir()
   } else {
-    ccs_openclaw_workspace_dir()
+    moon_openclaw_workspace_dir()
   }
-  if !ccs_ensure_directory(target) {
+  if !moon_ensure_directory(target) {
     write_usage_bad_request(w, "workspace_directory_failed")
     return
   }
@@ -10693,7 +10693,7 @@ async fn Gateway::handle_get_provider_presets(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_provider_presets_json(r.path))
+  write_usage_json(w, moon_provider_presets_json(r.path))
 }
 
 ///|
@@ -11094,8 +11094,8 @@ async fn Gateway::query_provider_usage_standalone(
   }
   match self.provider_router.provider_by_id(app_type, provider_id) {
     Some(provider) =>
-      match ccs_provider_balance_query_credentials(provider) {
-        Some((base_url, api_key)) => return ccs_get_balance(base_url, api_key)
+      match moon_provider_balance_query_credentials(provider) {
+        Some((base_url, api_key)) => return moon_get_balance(base_url, api_key)
         None => ()
       }
     None => ()
@@ -11104,11 +11104,11 @@ async fn Gateway::query_provider_usage_standalone(
 }
 
 ///|
-fn ccs_provider_balance_query_credentials(
+fn moon_provider_balance_query_credentials(
   provider : ProviderRouteTarget,
 ) -> (String, String)? {
   guard provider.base_url is Some(base_url) else { return None }
-  guard ccs_detect_balance_provider(base_url) is Some(_) else { return None }
+  guard moon_detect_balance_provider(base_url) is Some(_) else { return None }
   Some((base_url, provider.api_key.unwrap_or("")))
 }
 
@@ -11130,7 +11130,7 @@ async fn Gateway::handle_get_balance(
     write_usage_bad_request(w, "missing_api_key")
     return
   }
-  write_usage_json(w, ccs_get_balance(base_url, api_key).to_json())
+  write_usage_json(w, moon_get_balance(base_url, api_key).to_json())
 }
 
 ///|
@@ -11147,7 +11147,7 @@ async fn Gateway::handle_get_subscription_quota(
     write_usage_bad_request(w, "missing_tool")
     return
   }
-  let quota = ccs_get_subscription_quota(tool)
+  let quota = moon_get_subscription_quota(tool)
   self.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }
@@ -11162,7 +11162,7 @@ async fn Gateway::handle_get_codex_oauth_quota(
   let account_id = proxy_string_request(r.path, body, [
     "accountId", "account_id", "account",
   ])
-  let quota = ccs_get_codex_oauth_quota(account_id)
+  let quota = moon_get_codex_oauth_quota(account_id)
   self.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }
@@ -11178,7 +11178,7 @@ async fn Gateway::handle_get_codex_oauth_models(
   let account_id = proxy_string_request(r.path, body, [
     "accountId", "account_id", "account",
   ])
-  match ccs_get_codex_oauth_models(account_id) {
+  match moon_get_codex_oauth_models(account_id) {
     Ok(models) => write_usage_json(w, fetched_models_to_json(models))
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -11553,7 +11553,7 @@ async fn Gateway::handle_get_coding_plan_quota(
     write_usage_bad_request(w, "missing_api_key")
     return
   }
-  let quota = ccs_get_coding_plan_quota(base_url, api_key)
+  let quota = moon_get_coding_plan_quota(base_url, api_key)
   self.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }
@@ -11638,7 +11638,7 @@ async fn Gateway::handle_list_sessions(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
-  write_usage_json(w, ccs_list_sessions_json())
+  write_usage_json(w, moon_list_sessions_json())
 }
 
 ///|
@@ -11659,7 +11659,7 @@ async fn Gateway::handle_get_session_messages(
     write_usage_bad_request(w, "missing_source_path")
     return
   }
-  match ccs_get_session_messages_json(provider_id, source_path) {
+  match moon_get_session_messages_json(provider_id, source_path) {
     Ok(messages) => write_usage_json(w, messages)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -11681,11 +11681,11 @@ async fn Gateway::handle_launch_session_terminal(
     "customConfig", "custom_config",
   ])
   match
-    ccs_launch_session_terminal_json(
+    moon_launch_session_terminal_json(
       command,
       cwd,
       custom_config,
-      ccs_session_terminal_from_settings(self.app_settings),
+      moon_session_terminal_from_settings(self.app_settings),
     ) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
@@ -11715,7 +11715,7 @@ async fn Gateway::handle_delete_session(
     write_usage_bad_request(w, "missing_source_path")
     return
   }
-  match ccs_delete_session_json(provider_id, session_id, source_path) {
+  match moon_delete_session_json(provider_id, session_id, source_path) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -11729,11 +11729,11 @@ async fn Gateway::handle_delete_sessions(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  guard ccs_delete_session_requests_from_json(body) is Some(items) else {
+  guard moon_delete_session_requests_from_json(body) is Some(items) else {
     write_usage_bad_request(w, "missing_items")
     return
   }
-  write_usage_json(w, ccs_delete_sessions_json(items))
+  write_usage_json(w, moon_delete_sessions_json(items))
 }
 
 ///|
@@ -12235,12 +12235,12 @@ async fn write_usage_json(w : @httpx.ResponseWriter, body : Json) -> Unit {
 }
 
 ///|
-fn ccs_unit_success_json() -> Json {
+fn moon_unit_success_json() -> Json {
   Json::null()
 }
 
 ///|
-fn ccs_update_tray_menu_result() -> Json {
+fn moon_update_tray_menu_result() -> Json {
   Json::boolean(false)
 }
 
@@ -13778,15 +13778,15 @@ fn provider_endpoint_latency_result_json(raw_url : String) -> Json {
       "url": Json::string(trimmed),
       "latency": Json::null(),
       "status": Json::null(),
-      "error": Json::string(ccs_endpoint_invalid_url_error(trimmed)),
+      "error": Json::string(moon_endpoint_invalid_url_error(trimmed)),
     }.to_json()
   }
-  if ccs_endpoint_url_missing_host(trimmed) {
+  if moon_endpoint_url_missing_host(trimmed) {
     return {
       "url": Json::string(trimmed),
       "latency": Json::null(),
       "status": Json::null(),
-      "error": Json::string(ccs_endpoint_invalid_url_error(trimmed)),
+      "error": Json::string(moon_endpoint_invalid_url_error(trimmed)),
     }.to_json()
   }
   {
@@ -13798,9 +13798,9 @@ fn provider_endpoint_latency_result_json(raw_url : String) -> Json {
 }
 
 ///|
-fn ccs_endpoint_invalid_url_error(url : String) -> String {
+fn moon_endpoint_invalid_url_error(url : String) -> String {
   if url.has_prefix("http://") || url.has_prefix("https://") {
-    if ccs_endpoint_url_missing_host(url) {
+    if moon_endpoint_url_missing_host(url) {
       "URL 无效: empty host"
     } else {
       "URL 无效"
@@ -13811,7 +13811,7 @@ fn ccs_endpoint_invalid_url_error(url : String) -> String {
 }
 
 ///|
-fn ccs_endpoint_url_missing_host(url : String) -> Bool {
+fn moon_endpoint_url_missing_host(url : String) -> Bool {
   match endpoint_url_host_start(url) {
     Some(start) => {
       if url.length() <= start {
@@ -14454,18 +14454,18 @@ async fn test_usage_script_template_result(
   match template_type {
     "github_copilot" =>
       match copilot_get_usage(copilot_account_id_request(path, body)) {
-        Ok(usage) => Some(ccs_copilot_usage_result_from_json(usage))
+        Ok(usage) => Some(moon_copilot_usage_result_from_json(usage))
         Err(error) => Some(UsageResult::new(false, error=Some(error)))
       }
     "balance" => {
       guard proxy_string_request(path, body, ["baseUrl", "base_url"])
         is Some(base_url) else {
-        return Some(ccs_balance_error("Base URL is empty"))
+        return Some(moon_balance_error("Base URL is empty"))
       }
       let api_key = proxy_string_request(path, body, ["apiKey", "api_key"]).unwrap_or(
         "",
       )
-      Some(ccs_get_balance(base_url, api_key))
+      Some(moon_get_balance(base_url, api_key))
     }
     "token_plan" => {
       let base_url = proxy_string_request(path, body, ["baseUrl", "base_url"]).unwrap_or(
@@ -14475,8 +14475,8 @@ async fn test_usage_script_template_result(
         "",
       )
       Some(
-        ccs_token_plan_usage_result_from_quota(
-          ccs_get_coding_plan_quota(base_url, api_key),
+        moon_token_plan_usage_result_from_quota(
+          moon_get_coding_plan_quota(base_url, api_key),
         ),
       )
     }
@@ -14485,8 +14485,8 @@ async fn test_usage_script_template_result(
         "app", "appType", "app_type", "tool",
       ]).unwrap_or("")
       Some(
-        ccs_subscription_usage_result_from_quota(
-          ccs_get_subscription_quota(app_type),
+        moon_subscription_usage_result_from_quota(
+          moon_get_subscription_quota(app_type),
         ),
       )
     }
@@ -14495,7 +14495,7 @@ async fn test_usage_script_template_result(
 }
 
 ///|
-fn ccs_copilot_usage_result_from_json(usage : Json) -> UsageResult {
+fn moon_copilot_usage_result_from_json(usage : Json) -> UsageResult {
   guard usage is Object(obj) else {
     return UsageResult::new(
       false,
@@ -14514,13 +14514,13 @@ fn ccs_copilot_usage_result_from_json(usage : Json) -> UsageResult {
       error=Some("Failed to parse Copilot usage response"),
     )
   }
-  guard ccs_json_double_from_map(premium, "entitlement") is Some(total) else {
+  guard moon_json_double_from_map(premium, "entitlement") is Some(total) else {
     return UsageResult::new(
       false,
       error=Some("Failed to parse Copilot usage response"),
     )
   }
-  guard ccs_json_double_from_map(premium, "remaining") is Some(remaining) else {
+  guard moon_json_double_from_map(premium, "remaining") is Some(remaining) else {
     return UsageResult::new(
       false,
       error=Some("Failed to parse Copilot usage response"),
@@ -14545,7 +14545,7 @@ fn ccs_copilot_usage_result_from_json(usage : Json) -> UsageResult {
 }
 
 ///|
-fn ccs_subscription_usage_result_from_quota(
+fn moon_subscription_usage_result_from_quota(
   quota : SubscriptionQuota,
 ) -> UsageResult {
   if !quota.success {
@@ -14560,7 +14560,7 @@ fn ccs_subscription_usage_result_from_quota(
   let data : Array[UsageData] = []
   for tier in quota.tiers {
     guard tier is Object(obj) else { continue }
-    let used = ccs_json_double_from_map(obj, "utilization").unwrap_or(0.0)
+    let used = moon_json_double_from_map(obj, "utilization").unwrap_or(0.0)
     data.push(
       UsageData::new(
         plan_name=json_string_from_map(obj, "name"),
@@ -14577,7 +14577,7 @@ fn ccs_subscription_usage_result_from_quota(
 }
 
 ///|
-fn ccs_token_plan_usage_result_from_quota(
+fn moon_token_plan_usage_result_from_quota(
   quota : SubscriptionQuota,
 ) -> UsageResult {
   if !quota.success {
@@ -14585,14 +14585,14 @@ fn ccs_token_plan_usage_result_from_quota(
   }
   let data : Array[UsageData] = []
   let has_usd = match quota.tiers.get(0) {
-    Some(tier) => ccs_token_plan_tier_has_usd(tier)
+    Some(tier) => moon_token_plan_tier_has_usd(tier)
     None => false
   }
-  let plan_label = ccs_token_plan_label(quota.credential_message)
+  let plan_label = moon_token_plan_label(quota.credential_message)
   let mut first_tier = true
   for tier in quota.tiers {
     guard tier is Object(obj) else { continue }
-    let used = ccs_json_double_from_map(obj, "utilization").unwrap_or(0.0)
+    let used = moon_json_double_from_map(obj, "utilization").unwrap_or(0.0)
     data.push(
       UsageData::new(
         plan_name=json_string_from_map(obj, "name"),
@@ -14601,7 +14601,7 @@ fn ccs_token_plan_usage_result_from_quota(
         used=Some(used),
         unit=Some("%"),
         is_valid=Some(true),
-        extra=ccs_token_plan_usage_extra(
+        extra=moon_token_plan_usage_extra(
           obj,
           has_usd~,
           first_tier~,
@@ -14615,13 +14615,13 @@ fn ccs_token_plan_usage_result_from_quota(
 }
 
 ///|
-fn ccs_token_plan_tier_has_usd(tier : Json) -> Bool {
+fn moon_token_plan_tier_has_usd(tier : Json) -> Bool {
   guard tier is Object(obj) else { return false }
   obj.contains("usedValueUsd")
 }
 
 ///|
-fn ccs_token_plan_label(message : String?) -> String? {
+fn moon_token_plan_label(message : String?) -> String? {
   guard message is Some(value) else { return None }
   for part in value.split(" ") {
     let tier = part.trim()
@@ -14633,7 +14633,7 @@ fn ccs_token_plan_label(message : String?) -> String? {
 }
 
 ///|
-fn ccs_token_plan_usage_extra(
+fn moon_token_plan_usage_extra(
   tier : Map[String, Json],
   has_usd~ : Bool,
   first_tier~ : Bool,
@@ -14648,11 +14648,11 @@ fn ccs_token_plan_usage_extra(
       None => Json::null()
     },
   }
-  match ccs_json_double_from_map(tier, "usedValueUsd") {
+  match moon_json_double_from_map(tier, "usedValueUsd") {
     Some(value) => extra["usedValueUsd"] = Json::number(value)
     None => ()
   }
-  match ccs_json_double_from_map(tier, "maxValueUsd") {
+  match moon_json_double_from_map(tier, "maxValueUsd") {
     Some(value) => extra["maxValueUsd"] = Json::number(value)
     None => ()
   }
@@ -14874,7 +14874,7 @@ async fn Gateway::handle_models(
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
   w.write(
-    ccs_models_endpoint_response_json(@codex_config.active_model_catalog_json()).stringify(),
+    moon_models_endpoint_response_json(@codex_config.active_model_catalog_json()).stringify(),
   )
   w.flush()
 }
@@ -15366,7 +15366,7 @@ async fn Gateway::handle_messages(
       return
     }
     Ok(json) => {
-      let client_format = ccs_client_format_for_request(
+      let client_format = moon_client_format_for_request(
         r.path.to_owned(),
         Some(json),
       ).to_string()
@@ -15576,7 +15576,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
       let mut response_code = response.code
       let mut final_response_body = response_body
       let mut final_response_headers = response.headers
-      if ccs_media_retry_should_trigger(
+      if moon_media_retry_should_trigger(
           response_code, final_response_body, upstream_body,
         ) {
         let retry_body = replace_image_blocks_with_marker(upstream_body)
@@ -15606,7 +15606,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
         }
       }
       if !(response_code is (200..=299)) {
-        match ccs_rectifier_retry_body(final_response_body, upstream_body) {
+        match moon_rectifier_retry_body(final_response_body, upstream_body) {
           Some(rectifier_retry) => {
             self.logger.info(
               "CCS rectifier retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
@@ -15984,7 +15984,7 @@ fn body_diagnostics_suffix(
 }
 
 ///|
-fn ccs_hop_by_hop_response_header_names() -> Array[String] {
+fn moon_hop_by_hop_response_header_names() -> Array[String] {
   [
     "connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "proxy-connection",
     "te", "trailer", "trailers", "transfer-encoding", "upgrade",
@@ -15992,7 +15992,7 @@ fn ccs_hop_by_hop_response_header_names() -> Array[String] {
 }
 
 ///|
-fn ccs_connection_listed_response_headers(
+fn moon_connection_listed_response_headers(
   headers : Map[String, String],
 ) -> Array[String] {
   let result : Array[String] = []
@@ -16010,11 +16010,11 @@ fn ccs_connection_listed_response_headers(
 }
 
 ///|
-pub fn ccs_strip_hop_by_hop_response_headers(
+pub fn moon_strip_hop_by_hop_response_headers(
   headers : Map[String, String],
 ) -> Map[String, String] {
-  let hop_by_hop = ccs_hop_by_hop_response_header_names()
-  let connection_listed = ccs_connection_listed_response_headers(headers)
+  let hop_by_hop = moon_hop_by_hop_response_header_names()
+  let connection_listed = moon_connection_listed_response_headers(headers)
   let result : Map[String, String] = {}
   for key, value in headers {
     let normalized = key.to_lower()
@@ -16027,7 +16027,7 @@ pub fn ccs_strip_hop_by_hop_response_headers(
 }
 
 ///|
-pub fn ccs_strip_entity_headers_for_rebuilt_body(
+pub fn moon_strip_entity_headers_for_rebuilt_body(
   headers : Map[String, String],
 ) -> Map[String, String] {
   let result : Map[String, String] = {}
@@ -16943,7 +16943,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   let response = client.post(path, outbound)
   if response.code != 200 {
     let error_body = client.read_all().text()
-    if ccs_media_retry_should_trigger(response.code, error_body, upstream_body) {
+    if moon_media_retry_should_trigger(response.code, error_body, upstream_body) {
       let retry_body = replace_image_blocks_with_marker(upstream_body)
       if retry_body.count > 0 {
         let retry_outbound = self.claude_provider_outbound_body(
@@ -17017,7 +17017,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
         return
       }
     }
-    match ccs_rectifier_retry_body(error_body, upstream_body) {
+    match moon_rectifier_retry_body(error_body, upstream_body) {
       Some(rectifier_retry) => {
         self.logger.info(
           "CCS rectifier stream retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
@@ -17177,7 +17177,7 @@ async fn Gateway::forward_successful_claude_compatible_stream(
     let reader = CodexStreamReader::new(client, request_model)
     let mut first_token_ms : Int? = None
     while reader.read() is Some(event) {
-      first_token_ms = ccs_first_stream_event_ms(
+      first_token_ms = moon_first_stream_event_ms(
         first_token_ms,
         self.stats.current_request_started_at_ms,
       )
@@ -17256,7 +17256,7 @@ fn prepare_upstream_request(
   let filtered = filter_private_params_for_upstream(body, None, [])
   let copilot_optimization = match copilot_config_json {
     Some(config) =>
-      apply_ccs_copilot_optimizer_for_provider(
+      apply_moon_copilot_optimizer_for_provider(
         filtered,
         provider,
         config,
@@ -17265,7 +17265,7 @@ fn prepare_upstream_request(
       )
     None => { body: filtered, headers: {} }
   }
-  let optimized = apply_ccs_optimizer_for_provider(
+  let optimized = apply_moon_optimizer_for_provider(
     copilot_optimization.body,
     provider,
   )
@@ -17564,12 +17564,12 @@ fn json_bool_from_map_any(
 }
 
 ///|
-fn ccs_media_retry_should_trigger(
+fn moon_media_retry_should_trigger(
   status_code : Int,
   response_body : String,
   request_body : Json,
 ) -> Bool {
-  ccs_media_retry_should_trigger_with_config(
+  moon_media_retry_should_trigger_with_config(
     status_code,
     response_body,
     request_body,
@@ -17578,7 +17578,7 @@ fn ccs_media_retry_should_trigger(
 }
 
 ///|
-fn ccs_media_retry_should_trigger_with_config(
+fn moon_media_retry_should_trigger_with_config(
   status_code : Int,
   response_body : String,
   request_body : Json,
@@ -17911,7 +17911,7 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
-    first_token_ms = ccs_first_stream_event_ms(
+    first_token_ms = moon_first_stream_event_ms(
       first_token_ms,
       self.stats.current_request_started_at_ms,
     )
@@ -17945,7 +17945,7 @@ async fn Gateway::forward_anthropic_sse_passthrough(
       let parsed = @json.parse(data) catch { _ => Json::null() }
       if parsed != Json::null() {
         events.push(parsed)
-        first_token_ms = ccs_first_stream_event_ms(
+        first_token_ms = moon_first_stream_event_ms(
           first_token_ms,
           self.stats.current_request_started_at_ms,
         )
@@ -17984,7 +17984,7 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
-    first_token_ms = ccs_first_stream_event_ms(
+    first_token_ms = moon_first_stream_event_ms(
       first_token_ms,
       self.stats.current_request_started_at_ms,
     )
@@ -19013,7 +19013,7 @@ async fn Gateway::handle_streaming_request(
   self.record_provider_result(true)
   let mut first_token_ms : Int? = None
   while reader.read() is Some(event) {
-    first_token_ms = ccs_first_stream_event_ms(
+    first_token_ms = moon_first_stream_event_ms(
       first_token_ms,
       self.stats.current_request_started_at_ms,
     )

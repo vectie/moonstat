@@ -827,7 +827,7 @@ test "top level ccs settings command names build settings paths" {
     Some("/set_auto_launch?enabled=true"),
   )
   assert_eq(
-    ccs_json_config_path(
+    moon_json_config_path(
       [
         "moonstat", "set_rectifier_config", "--requestThinkingSignature", "false",
       ],
@@ -837,7 +837,7 @@ test "top level ccs settings command names build settings paths" {
     Some("/set_rectifier_config?requestThinkingSignature=false"),
   )
   assert_eq(
-    ccs_json_config_path(
+    moon_json_config_path(
       ["moonstat", "set_optimizer_config", "--config", "{\"cacheTtl\":\"5m\"}"],
       "/set_optimizer_config",
       "--config",
@@ -845,7 +845,7 @@ test "top level ccs settings command names build settings paths" {
     Some("/set_optimizer_config?config=%7B%22cacheTtl%22%3A%225m%22%7D"),
   )
   assert_eq(
-    ccs_json_config_path(
+    moon_json_config_path(
       [
         "moonstat", "set_copilot_optimizer_config", "--warmupModel", "gpt-5-mini",
         "--stripThinking", "true",

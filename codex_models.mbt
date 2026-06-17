@@ -22,14 +22,14 @@ fn ascii_lex_compare(left : String, right : String) -> Int {
 }
 
 ///|
-fn ccs_empty_models_catalog_json() -> Json {
+fn moon_empty_models_catalog_json() -> Json {
   { "models": Json::array([]) }.to_json()
 }
 
 ///|
-fn ccs_models_endpoint_response_json(active_catalog : Json?) -> Json {
+fn moon_models_endpoint_response_json(active_catalog : Json?) -> Json {
   match active_catalog {
     Some(catalog) => catalog
-    None => ccs_empty_models_catalog_json()
+    None => moon_empty_models_catalog_json()
   }
 }

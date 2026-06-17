@@ -1,6 +1,6 @@
 ///|
-fn ccs_omo_config_candidates(slim : Bool) -> Array[String] {
-  let dir = ccs_config_dir("opencode")
+fn moon_omo_config_candidates(slim : Bool) -> Array[String] {
+  let dir = moon_config_dir("opencode")
   if slim {
     [
       @pathx.join(dir, "oh-my-opencode-slim.jsonc"),
@@ -17,7 +17,7 @@ fn ccs_omo_config_candidates(slim : Bool) -> Array[String] {
 }
 
 ///|
-fn ccs_omo_category(slim : Bool) -> String {
+fn moon_omo_category(slim : Bool) -> String {
   if slim {
     "omo-slim"
   } else {
@@ -26,8 +26,8 @@ fn ccs_omo_category(slim : Bool) -> String {
 }
 
 ///|
-async fn ccs_omo_existing_config_path(slim : Bool) -> String? {
-  for path in ccs_omo_config_candidates(slim) {
+async fn moon_omo_existing_config_path(slim : Bool) -> String? {
+  for path in moon_omo_config_candidates(slim) {
     if @fsx.exists(path) {
       return Some(path)
     }
@@ -36,18 +36,18 @@ async fn ccs_omo_existing_config_path(slim : Bool) -> String? {
 }
 
 ///|
-async fn ccs_read_omo_local_file_json(slim : Bool) -> (Json?, String?) {
-  guard ccs_omo_existing_config_path(slim) is Some(path) else {
+async fn moon_read_omo_local_file_json(slim : Bool) -> (Json?, String?) {
+  guard moon_omo_existing_config_path(slim) is Some(path) else {
     return (None, Some("OMO 配置文件不存在"))
   }
   let content = @fsx.read_file(path) catch {
     err => return (None, Some("IO 错误: \{path}: \{err}"))
   }
   match
-    ccs_omo_local_file_data_json_from_content(
+    moon_omo_local_file_data_json_from_content(
       slim,
       path,
-      ccs_omo_last_modified_json(path),
+      moon_omo_last_modified_json(path),
       content,
     ) {
     Some(data) => (Some(data), None)
@@ -56,26 +56,26 @@ async fn ccs_read_omo_local_file_json(slim : Bool) -> (Json?, String?) {
 }
 
 ///|
-fn ccs_omo_last_modified_json(path : String) -> Json {
+fn moon_omo_last_modified_json(path : String) -> Json {
   let stat = @fsx.stat(path) catch { _ => return Json::null() }
   Json::string(@os.local_rfc3339(stat.mtime()))
 }
 
 ///|
-fn ccs_omo_local_file_data_json_from_content(
+fn moon_omo_local_file_data_json_from_content(
   slim : Bool,
   path : String,
   last_modified : Json,
   content : String,
 ) -> Json? {
-  let cleaned = ccs_omo_strip_jsonc_comments(content)
+  let cleaned = moon_omo_strip_jsonc_comments(content)
   let parsed = @json.parse(cleaned) catch { _ => return None }
   guard parsed is Object(obj) else { return None }
-  Some(ccs_omo_local_file_data_json(slim, obj, path, last_modified))
+  Some(moon_omo_local_file_data_json(slim, obj, path, last_modified))
 }
 
 ///|
-fn ccs_omo_local_file_data_json(
+fn moon_omo_local_file_data_json(
   slim : Bool,
   obj : Map[String, Json],
   path : String,
@@ -106,7 +106,7 @@ fn ccs_omo_local_file_data_json(
 }
 
 ///|
-fn ccs_omo_strip_jsonc_comments(input : String) -> String {
+fn moon_omo_strip_jsonc_comments(input : String) -> String {
   let chars = input.to_array()
   let out = StringBuilder::new()
   let mut i = 0
@@ -161,7 +161,7 @@ fn ccs_omo_strip_jsonc_comments(input : String) -> String {
 
 ///|
 fn Gateway::current_omo_provider_id(self : Gateway, slim : Bool) -> String {
-  let category = ccs_omo_category(slim)
+  let category = moon_omo_category(slim)
   let current = self.provider_router
     .current_provider_id("opencode")
     .unwrap_or("")
@@ -178,7 +178,7 @@ fn Gateway::current_omo_provider_id(self : Gateway, slim : Bool) -> String {
 
 ///|
 fn Gateway::clear_current_omo_provider(self : Gateway, slim : Bool) -> Unit {
-  let category = ccs_omo_category(slim)
+  let category = moon_omo_category(slim)
   let current = self.provider_router
     .current_provider_id("opencode")
     .unwrap_or("")
@@ -192,8 +192,8 @@ fn Gateway::clear_current_omo_provider(self : Gateway, slim : Bool) -> Unit {
 }
 
 ///|
-async fn ccs_delete_omo_config_files(slim : Bool) -> String? {
-  for path in ccs_omo_config_candidates(slim) {
+async fn moon_delete_omo_config_files(slim : Bool) -> String? {
+  for path in moon_omo_config_candidates(slim) {
     if @fsx.exists(path) {
       @fsx.remove(path) catch {
         err => return Some("IO 错误: \{path}: \{err}")

@@ -96,10 +96,10 @@ fn env_cache_ttl_default(keys : Array[String], default : String) -> String {
 }
 
 ///|
-fn ccs_copilot_optimizer_runtime_config(
+fn moon_copilot_optimizer_runtime_config(
   config : Json,
 ) -> CopilotOptimizerConfig {
-  let defaults = ccs_default_copilot_optimizer_config_json()
+  let defaults = moon_default_copilot_optimizer_config_json()
   let current = match config {
     Object(_) => config
     _ => defaults
@@ -147,7 +147,7 @@ fn ccs_copilot_optimizer_runtime_config(
 }
 
 ///|
-fn apply_ccs_optimizer_for_provider(
+fn apply_moon_optimizer_for_provider(
   body : Json,
   provider : ProviderRouteTarget?,
 ) -> Json {
@@ -157,55 +157,55 @@ fn apply_ccs_optimizer_for_provider(
   }
   let mut optimized = body
   if config.thinking_optimizer {
-    optimized = optimize_ccs_thinking(optimized)
+    optimized = optimize_moon_thinking(optimized)
   }
   if config.cache_injection {
-    optimized = inject_ccs_cache_breakpoints(optimized, config.cache_ttl)
+    optimized = inject_moon_cache_breakpoints(optimized, config.cache_ttl)
   }
   optimized
 }
 
 ///|
-fn apply_ccs_copilot_optimizer_for_provider(
+fn apply_moon_copilot_optimizer_for_provider(
   body : Json,
   provider : ProviderRouteTarget?,
   config_json : Json,
   has_anthropic_beta : Bool,
   client_session_id? : String? = None,
 ) -> CopilotOptimizationResult {
-  let config = ccs_copilot_optimizer_runtime_config(config_json)
-  if !config.enabled || !ccs_copilot_optimizer_provider_enabled(provider) {
+  let config = moon_copilot_optimizer_runtime_config(config_json)
+  if !config.enabled || !moon_copilot_optimizer_provider_enabled(provider) {
     return { body, headers: {} }
   }
-  let classification = classify_ccs_copilot_request(
+  let classification = classify_moon_copilot_request(
     body,
     has_anthropic_beta,
     config.compact_detection,
     config.subagent_detection,
   )
-  let mut optimized = sanitize_ccs_copilot_orphan_tool_results(body)
+  let mut optimized = sanitize_moon_copilot_orphan_tool_results(body)
   if config.tool_result_merging {
-    optimized = merge_ccs_copilot_tool_results(optimized)
+    optimized = merge_moon_copilot_tool_results(optimized)
   }
   if config.strip_thinking {
-    optimized = strip_ccs_copilot_thinking_blocks(optimized)
+    optimized = strip_moon_copilot_thinking_blocks(optimized)
   }
   if config.warmup_downgrade && classification.is_warmup {
-    optimized = ccs_copilot_body_with_model(optimized, config.warmup_model)
+    optimized = moon_copilot_body_with_model(optimized, config.warmup_model)
   }
   {
     body: optimized,
-    headers: ccs_copilot_optimizer_headers(
+    headers: moon_copilot_optimizer_headers(
       optimized,
       classification,
       config,
-      ccs_copilot_session_id(body, client_session_id),
+      moon_copilot_session_id(body, client_session_id),
     ),
   }
 }
 
 ///|
-fn ccs_copilot_optimizer_headers(
+fn moon_copilot_optimizer_headers(
   body : Json,
   classification : CopilotClassification,
   config : CopilotOptimizerConfig,
@@ -221,11 +221,11 @@ fn ccs_copilot_optimizer_headers(
     headers["x-interaction-type"] = "conversation-agent"
   }
   if config.deterministic_request_id {
-    let request_id = ccs_copilot_deterministic_request_id(body, session_id)
+    let request_id = moon_copilot_deterministic_request_id(body, session_id)
     headers["x-request-id"] = request_id
     headers["x-agent-task-id"] = request_id
   }
-  match ccs_copilot_deterministic_interaction_id(session_id) {
+  match moon_copilot_deterministic_interaction_id(session_id) {
     Some(interaction_id) => headers["x-interaction-id"] = interaction_id
     None => ()
   }
@@ -233,7 +233,7 @@ fn ccs_copilot_optimizer_headers(
 }
 
 ///|
-fn ccs_copilot_optimizer_provider_enabled(
+fn moon_copilot_optimizer_provider_enabled(
   provider : ProviderRouteTarget?,
 ) -> Bool {
   guard provider is Some(provider) else { return false }
@@ -242,14 +242,14 @@ fn ccs_copilot_optimizer_provider_enabled(
 }
 
 ///|
-fn classify_ccs_copilot_request(
+fn classify_moon_copilot_request(
   body : Json,
   has_anthropic_beta : Bool,
   compact_detection : Bool,
   subagent_detection : Bool,
 ) -> CopilotClassification {
-  let is_compact = compact_detection && ccs_copilot_is_compact_request(body)
-  let is_subagent = subagent_detection && ccs_copilot_detect_subagent(body)
+  let is_compact = compact_detection && moon_copilot_is_compact_request(body)
+  let is_subagent = subagent_detection && moon_copilot_detect_subagent(body)
   let messages = match body {
     Object(obj) =>
       match obj.get("messages") {
@@ -257,7 +257,7 @@ fn classify_ccs_copilot_request(
         _ =>
           return {
             initiator: "user",
-            is_warmup: ccs_copilot_is_warmup_request(
+            is_warmup: moon_copilot_is_warmup_request(
               body, has_anthropic_beta, false,
             ),
             is_compact: false,
@@ -267,7 +267,7 @@ fn classify_ccs_copilot_request(
     _ =>
       return {
         initiator: "user",
-        is_warmup: ccs_copilot_is_warmup_request(
+        is_warmup: moon_copilot_is_warmup_request(
           body, has_anthropic_beta, false,
         ),
         is_compact: false,
@@ -307,14 +307,14 @@ fn classify_ccs_copilot_request(
   {
     initiator,
     is_warmup: initiator == "user" &&
-    ccs_copilot_is_warmup_request(body, has_anthropic_beta, is_compact),
+    moon_copilot_is_warmup_request(body, has_anthropic_beta, is_compact),
     is_compact,
     is_subagent,
   }
 }
 
 ///|
-fn ccs_copilot_is_warmup_request(
+fn moon_copilot_is_warmup_request(
   body : Json,
   has_anthropic_beta : Bool,
   is_compact : Bool,
@@ -330,8 +330,8 @@ fn ccs_copilot_is_warmup_request(
 }
 
 ///|
-fn ccs_copilot_is_compact_request(body : Json) -> Bool {
-  if ccs_copilot_extract_system_text(body).has_prefix(
+fn moon_copilot_is_compact_request(body : Json) -> Bool {
+  if moon_copilot_extract_system_text(body).has_prefix(
       "You are a helpful AI assistant tasked with summarizing conversations",
     ) {
     return true
@@ -345,14 +345,14 @@ fn ccs_copilot_is_compact_request(body : Json) -> Bool {
   if json_string_from_map(last_obj, "role") != Some("user") {
     return false
   }
-  let text = ccs_copilot_extract_text_from_message(Json::object(last_obj))
+  let text = moon_copilot_extract_text_from_message(Json::object(last_obj))
   text.contains("CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.") ||
   (text.contains("Pending Tasks:") && text.contains("Current Work:"))
 }
 
 ///|
-fn ccs_copilot_detect_subagent(body : Json) -> Bool {
-  if ccs_copilot_extract_system_text(body).contains("__SUBAGENT_MARKER__") {
+fn moon_copilot_detect_subagent(body : Json) -> Bool {
+  if moon_copilot_extract_system_text(body).contains("__SUBAGENT_MARKER__") {
     return true
   }
   if body is Object(obj) {
@@ -361,7 +361,7 @@ fn ccs_copilot_detect_subagent(body : Json) -> Bool {
         for message in messages {
           if message is Object(message_obj) &&
             json_string_from_map(message_obj, "role") == Some("user") &&
-            ccs_copilot_extract_text_from_message(message).contains(
+            moon_copilot_extract_text_from_message(message).contains(
               "__SUBAGENT_MARKER__",
             ) {
             return true
@@ -382,7 +382,7 @@ fn ccs_copilot_detect_subagent(body : Json) -> Bool {
 }
 
 ///|
-fn sanitize_ccs_copilot_orphan_tool_results(body : Json) -> Json {
+fn sanitize_moon_copilot_orphan_tool_results(body : Json) -> Json {
   let copied = copy_json(body)
   guard copied is Object(obj) else { return copied }
   guard obj.get("messages") is Some(Array(messages)) else {
@@ -396,7 +396,7 @@ fn sanitize_ccs_copilot_orphan_tool_results(body : Json) -> Json {
     if json_string_from_map(message, "role") != Some("user") {
       continue
     }
-    let previous_ids = ccs_copilot_previous_tool_use_ids(messages[index - 1])
+    let previous_ids = moon_copilot_previous_tool_use_ids(messages[index - 1])
     guard message.get("content") is Some(Array(content)) else { continue }
     let sanitized : Array[Json] = []
     for block in content {
@@ -406,7 +406,7 @@ fn sanitize_ccs_copilot_orphan_tool_results(body : Json) -> Json {
           "",
         )
         if tool_use_id.is_empty() || !previous_ids.contains(tool_use_id) {
-          sanitized.push(ccs_copilot_orphan_tool_result_text(block_obj))
+          sanitized.push(moon_copilot_orphan_tool_result_text(block_obj))
         } else {
           sanitized.push(block)
         }
@@ -422,7 +422,7 @@ fn sanitize_ccs_copilot_orphan_tool_results(body : Json) -> Json {
 }
 
 ///|
-fn ccs_copilot_previous_tool_use_ids(message : Json) -> Array[String] {
+fn moon_copilot_previous_tool_use_ids(message : Json) -> Array[String] {
   guard message is Object(obj) else { return [] }
   if json_string_from_map(obj, "role") != Some("assistant") {
     return []
@@ -442,9 +442,9 @@ fn ccs_copilot_previous_tool_use_ids(message : Json) -> Array[String] {
 }
 
 ///|
-fn ccs_copilot_orphan_tool_result_text(block : Map[String, Json]) -> Json {
+fn moon_copilot_orphan_tool_result_text(block : Map[String, Json]) -> Json {
   let tool_use_id = json_string_from_map(block, "tool_use_id").unwrap_or("")
-  let content_text = ccs_copilot_tool_result_content_text(block.get("content"))
+  let content_text = moon_copilot_tool_result_content_text(block.get("content"))
   Json::object({
     "type": Json::string("text"),
     "text": Json::string("[Tool result for \{tool_use_id}]: \{content_text}"),
@@ -452,7 +452,7 @@ fn ccs_copilot_orphan_tool_result_text(block : Map[String, Json]) -> Json {
 }
 
 ///|
-fn ccs_copilot_tool_result_content_text(content : Json?) -> String {
+fn moon_copilot_tool_result_content_text(content : Json?) -> String {
   match content {
     Some(String(text)) => text
     Some(Array(blocks)) => {
@@ -471,7 +471,7 @@ fn ccs_copilot_tool_result_content_text(content : Json?) -> String {
 }
 
 ///|
-fn merge_ccs_copilot_tool_results(body : Json) -> Json {
+fn merge_moon_copilot_tool_results(body : Json) -> Json {
   let copied = copy_json(body)
   guard copied is Object(obj) else { return copied }
   guard obj.get("messages") is Some(Array(messages)) else {
@@ -483,20 +483,20 @@ fn merge_ccs_copilot_tool_results(body : Json) -> Json {
       continue
     }
     guard message.get("content") is Some(Array(content)) else { continue }
-    let merged = merge_ccs_copilot_intra_message_blocks(content)
+    let merged = merge_moon_copilot_intra_message_blocks(content)
     if merged is Some(blocks) {
       message["content"] = Json::array(blocks)
       messages[index] = Json::object(message)
     }
   }
   obj["messages"] = Json::array(
-    merge_ccs_copilot_consecutive_tool_messages(messages),
+    merge_moon_copilot_consecutive_tool_messages(messages),
   )
   Json::object(obj)
 }
 
 ///|
-fn merge_ccs_copilot_intra_message_blocks(
+fn merge_moon_copilot_intra_message_blocks(
   content : Array[Json],
 ) -> Array[Json]? {
   let tool_results : Array[Json] = []
@@ -512,11 +512,11 @@ fn merge_ccs_copilot_intra_message_blocks(
   if tool_results.is_empty() || text_blocks.is_empty() {
     return None
   }
-  Some(ccs_copilot_merge_texts_into_tool_results(tool_results, text_blocks))
+  Some(moon_copilot_merge_texts_into_tool_results(tool_results, text_blocks))
 }
 
 ///|
-fn ccs_copilot_merge_texts_into_tool_results(
+fn moon_copilot_merge_texts_into_tool_results(
   tool_results : Array[Json],
   text_blocks : Array[Json],
 ) -> Array[Json] {
@@ -528,9 +528,9 @@ fn ccs_copilot_merge_texts_into_tool_results(
       continue
     }
     if text_index < text_blocks.length() {
-      let extra = ccs_copilot_text_block_text(text_blocks[text_index])
+      let extra = moon_copilot_text_block_text(text_blocks[text_index])
       if !extra.is_empty() {
-        let original = ccs_copilot_tool_result_content_text(
+        let original = moon_copilot_tool_result_content_text(
           tool_obj.get("content"),
         )
         tool_obj["content"] = Json::string(
@@ -546,9 +546,9 @@ fn ccs_copilot_merge_texts_into_tool_results(
     result.push(Json::object(tool_obj))
   }
   while text_index < text_blocks.length() && !result.is_empty() {
-    let extra = ccs_copilot_text_block_text(text_blocks[text_index])
+    let extra = moon_copilot_text_block_text(text_blocks[text_index])
     if !extra.is_empty() && result[result.length() - 1] is Object(last) {
-      let original = ccs_copilot_tool_result_content_text(last.get("content"))
+      let original = moon_copilot_tool_result_content_text(last.get("content"))
       last["content"] = Json::string(
         if original.is_empty() {
           extra
@@ -564,7 +564,7 @@ fn ccs_copilot_merge_texts_into_tool_results(
 }
 
 ///|
-fn ccs_copilot_text_block_text(block : Json) -> String {
+fn moon_copilot_text_block_text(block : Json) -> String {
   match block {
     Object(obj) => json_string_from_map(obj, "text").unwrap_or("")
     _ => ""
@@ -572,7 +572,7 @@ fn ccs_copilot_text_block_text(block : Json) -> String {
 }
 
 ///|
-fn merge_ccs_copilot_consecutive_tool_messages(
+fn merge_moon_copilot_consecutive_tool_messages(
   messages : Array[Json],
 ) -> Array[Json] {
   if messages.length() <= 1 {
@@ -581,10 +581,10 @@ fn merge_ccs_copilot_consecutive_tool_messages(
   let merged : Array[Json] = []
   let mut index = 0
   while index < messages.length() {
-    if ccs_copilot_is_tool_result_only_message(messages[index]) {
+    if moon_copilot_is_tool_result_only_message(messages[index]) {
       let combined : Array[Json] = []
       while index < messages.length() &&
-            ccs_copilot_is_tool_result_only_message(messages[index]) {
+            moon_copilot_is_tool_result_only_message(messages[index]) {
         if messages[index] is Object(message) &&
           message.get("content") is Some(Array(content)) {
           for block in content {
@@ -610,7 +610,7 @@ fn merge_ccs_copilot_consecutive_tool_messages(
 }
 
 ///|
-fn ccs_copilot_is_tool_result_only_message(message : Json) -> Bool {
+fn moon_copilot_is_tool_result_only_message(message : Json) -> Bool {
   guard message is Object(obj) else { return false }
   if json_string_from_map(obj, "role") != Some("user") {
     return false
@@ -624,7 +624,7 @@ fn ccs_copilot_is_tool_result_only_message(message : Json) -> Bool {
 }
 
 ///|
-fn strip_ccs_copilot_thinking_blocks(body : Json) -> Json {
+fn strip_moon_copilot_thinking_blocks(body : Json) -> Json {
   let copied = copy_json(body)
   guard copied is Object(obj) else { return copied }
   guard obj.get("messages") is Some(Array(messages)) else {
@@ -655,7 +655,7 @@ fn strip_ccs_copilot_thinking_blocks(body : Json) -> Json {
 }
 
 ///|
-fn ccs_copilot_body_with_model(body : Json, model : String) -> Json {
+fn moon_copilot_body_with_model(body : Json, model : String) -> Json {
   let copied = copy_json(body)
   guard copied is Object(obj) else { return copied }
   obj["model"] = Json::string(model)
@@ -663,7 +663,7 @@ fn ccs_copilot_body_with_model(body : Json, model : String) -> Json {
 }
 
 ///|
-fn ccs_copilot_session_id(body : Json, client_session_id : String?) -> String {
+fn moon_copilot_session_id(body : Json, client_session_id : String?) -> String {
   guard body is Object(obj) else { return client_session_id.unwrap_or("") }
   guard obj.get("metadata") is Some(Object(metadata)) else {
     return client_session_id.unwrap_or("")
@@ -672,7 +672,7 @@ fn ccs_copilot_session_id(body : Json, client_session_id : String?) -> String {
   match json_string_from_map(metadata, "user_id") {
     Some(user_id) => {
       raw_user_id = Some(user_id)
-      match ccs_copilot_parse_session_from_user_id(user_id) {
+      match moon_copilot_parse_session_from_user_id(user_id) {
         Some(session_id) => return session_id
         None => ()
       }
@@ -690,7 +690,7 @@ fn ccs_copilot_session_id(body : Json, client_session_id : String?) -> String {
 }
 
 ///|
-fn ccs_copilot_parse_session_from_user_id(user_id : String) -> String? {
+fn moon_copilot_parse_session_from_user_id(user_id : String) -> String? {
   match user_id.find("_session_") {
     Some(index) => {
       let start = index + "_session_".length()
@@ -706,26 +706,26 @@ fn ccs_copilot_parse_session_from_user_id(user_id : String) -> String? {
 }
 
 ///|
-fn ccs_copilot_deterministic_request_id(
+fn moon_copilot_deterministic_request_id(
   body : Json,
   session_id : String,
 ) -> String {
-  match ccs_copilot_last_user_content_for_id(body) {
-    Some(content) => ccs_copilot_uuid_from_sha256("\{session_id}\{content}")
-    None => ccs_copilot_random_uuid()
+  match moon_copilot_last_user_content_for_id(body) {
+    Some(content) => moon_copilot_uuid_from_sha256("\{session_id}\{content}")
+    None => moon_copilot_random_uuid()
   }
 }
 
 ///|
-fn ccs_copilot_deterministic_interaction_id(session_id : String) -> String? {
+fn moon_copilot_deterministic_interaction_id(session_id : String) -> String? {
   if session_id.is_empty() {
     return None
   }
-  Some(ccs_copilot_uuid_from_sha256("interaction:\{session_id}"))
+  Some(moon_copilot_uuid_from_sha256("interaction:\{session_id}"))
 }
 
 ///|
-fn ccs_copilot_uuid_from_sha256(input : String) -> String {
+fn moon_copilot_uuid_from_sha256(input : String) -> String {
   let digest = @crypto.sha256(@encoding/utf8.encode(input))
   let bytes : FixedArray[Byte] = FixedArray::make(16, 0)
   for i in 0..<16 {
@@ -737,13 +737,13 @@ fn ccs_copilot_uuid_from_sha256(input : String) -> String {
 }
 
 ///|
-fn ccs_copilot_random_uuid() -> String {
+fn moon_copilot_random_uuid() -> String {
   let gen = @uuid.generator(@random.Rand::new())
   gen.v4().to_string()
 }
 
 ///|
-fn ccs_copilot_last_user_content_for_id(body : Json) -> String? {
+fn moon_copilot_last_user_content_for_id(body : Json) -> String? {
   guard body is Object(obj) else { return None }
   guard obj.get("messages") is Some(Array(messages)) else { return None }
   let mut index = messages.length() - 1
@@ -783,7 +783,7 @@ fn ccs_copilot_last_user_content_for_id(body : Json) -> String? {
 }
 
 ///|
-fn ccs_copilot_extract_system_text(body : Json) -> String {
+fn moon_copilot_extract_system_text(body : Json) -> String {
   guard body is Object(obj) else { return "" }
   match obj.get("system") {
     Some(String(text)) => text
@@ -803,7 +803,7 @@ fn ccs_copilot_extract_system_text(body : Json) -> String {
 }
 
 ///|
-fn ccs_copilot_extract_text_from_message(message : Json) -> String {
+fn moon_copilot_extract_text_from_message(message : Json) -> String {
   guard message is Object(obj) else { return "" }
   match obj.get("content") {
     Some(String(text)) => text
@@ -831,7 +831,7 @@ fn provider_is_bedrock(provider : ProviderRouteTarget?) -> Bool {
 }
 
 ///|
-fn optimize_ccs_thinking(body : Json) -> Json {
+fn optimize_moon_thinking(body : Json) -> Json {
   let copied = copy_json(body)
   guard copied is Object(obj) else { return copied }
   let model = match json_string_from_map(obj, "model") {
@@ -841,10 +841,10 @@ fn optimize_ccs_thinking(body : Json) -> Json {
   if model.contains("haiku") {
     return Json::object(obj)
   }
-  if ccs_model_uses_adaptive_thinking(model) {
+  if moon_model_uses_adaptive_thinking(model) {
     obj["thinking"] = Json::object({ "type": Json::string("adaptive") })
     obj["output_config"] = Json::object({ "effort": Json::string("max") })
-    append_ccs_anthropic_beta(obj, "context-1m-2025-08-07")
+    append_moon_anthropic_beta(obj, "context-1m-2025-08-07")
     return Json::object(obj)
   }
   let max_tokens = json_int_from_map(obj, "max_tokens").unwrap_or(16384)
@@ -859,7 +859,7 @@ fn optimize_ccs_thinking(body : Json) -> Json {
         "type": Json::string("enabled"),
         "budget_tokens": Json::number(budget_target.to_double()),
       })
-      append_ccs_anthropic_beta(obj, "interleaved-thinking-2025-05-14")
+      append_moon_anthropic_beta(obj, "interleaved-thinking-2025-05-14")
     }
     Some("enabled") => {
       let current_budget = match obj.get("thinking") {
@@ -872,15 +872,15 @@ fn optimize_ccs_thinking(body : Json) -> Json {
         thinking["budget_tokens"] = Json::number(budget_target.to_double())
         obj["thinking"] = Json::object(thinking)
       }
-      append_ccs_anthropic_beta(obj, "interleaved-thinking-2025-05-14")
+      append_moon_anthropic_beta(obj, "interleaved-thinking-2025-05-14")
     }
-    Some(_) => append_ccs_anthropic_beta(obj, "interleaved-thinking-2025-05-14")
+    Some(_) => append_moon_anthropic_beta(obj, "interleaved-thinking-2025-05-14")
   }
   Json::object(obj)
 }
 
 ///|
-fn ccs_model_uses_adaptive_thinking(model : String) -> Bool {
+fn moon_model_uses_adaptive_thinking(model : String) -> Bool {
   let normalized = model.replace_all(old=".", new="-")
   ["opus-4-8", "opus-4-7", "opus-4-6", "sonnet-4-6"].any(needle => {
     normalized.contains(needle)
@@ -888,7 +888,7 @@ fn ccs_model_uses_adaptive_thinking(model : String) -> Bool {
 }
 
 ///|
-fn append_ccs_anthropic_beta(obj : Map[String, Json], beta : String) -> Unit {
+fn append_moon_anthropic_beta(obj : Map[String, Json], beta : String) -> Unit {
   match obj.get("anthropic_beta") {
     Some(Array(values)) => {
       for value in values {
@@ -914,11 +914,11 @@ fn json_int_from_map(obj : Map[String, Json], key : String) -> Int? {
 }
 
 ///|
-fn inject_ccs_cache_breakpoints(body : Json, cache_ttl : String) -> Json {
+fn inject_moon_cache_breakpoints(body : Json, cache_ttl : String) -> Json {
   let copied = copy_json(body)
   guard copied is Object(result) else { return copied }
-  upgrade_existing_ccs_cache_ttl(result, cache_ttl)
-  let existing = count_ccs_cache_breakpoints(Json::object(result))
+  upgrade_existing_moon_cache_ttl(result, cache_ttl)
+  let existing = count_moon_cache_breakpoints(Json::object(result))
   let mut budget = 4 - existing
   if budget <= 0 {
     return Json::object(result)
@@ -937,7 +937,7 @@ fn inject_ccs_cache_breakpoints(body : Json, cache_ttl : String) -> Json {
 }
 
 ///|
-fn ccs_cache_control(cache_ttl : String) -> Json {
+fn moon_cache_control(cache_ttl : String) -> Json {
   let obj : Map[String, Json] = { "type": Json::string("ephemeral") }
   if cache_ttl != "5m" {
     obj["ttl"] = Json::string(cache_ttl)
@@ -946,7 +946,7 @@ fn ccs_cache_control(cache_ttl : String) -> Json {
 }
 
 ///|
-fn count_ccs_cache_breakpoints(body : Json) -> Int {
+fn count_moon_cache_breakpoints(body : Json) -> Int {
   guard body is Object(obj) else { return 0 }
   let mut count = 0
   match obj.get("tools") {
@@ -1015,7 +1015,7 @@ fn copy_json(value : Json) -> Json {
 }
 
 ///|
-fn upgrade_existing_ccs_cache_ttl(
+fn upgrade_existing_moon_cache_ttl(
   obj : Map[String, Json],
   cache_ttl : String,
 ) -> Unit {
@@ -1076,7 +1076,7 @@ fn inject_cache_on_last_tool(
   let index = tools.length() - 1
   guard tools[index] is Object(tool) else { return false }
   guard tool.get("cache_control") is None else { return false }
-  tool["cache_control"] = ccs_cache_control(cache_ttl)
+  tool["cache_control"] = moon_cache_control(cache_ttl)
   tools[index] = Json::object(tool)
   obj["tools"] = Json::array(tools)
   true
@@ -1105,7 +1105,7 @@ fn inject_cache_on_last_system_block(
   let index = system.length() - 1
   guard system[index] is Object(block) else { return false }
   guard block.get("cache_control") is None else { return false }
-  block["cache_control"] = ccs_cache_control(cache_ttl)
+  block["cache_control"] = moon_cache_control(cache_ttl)
   system[index] = Json::object(block)
   obj["system"] = Json::array(system)
   true
@@ -1149,7 +1149,7 @@ fn inject_cache_on_last_non_thinking_block(
       continue
     }
     guard block.get("cache_control") is None else { return false }
-    block["cache_control"] = ccs_cache_control(cache_ttl)
+    block["cache_control"] = moon_cache_control(cache_ttl)
     content[index] = Json::object(block)
     message_obj["content"] = Json::array(content)
     return true

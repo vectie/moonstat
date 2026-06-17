@@ -5,32 +5,32 @@ const CCS_SKILLS_STATE_FILE = "skills_state.json"
 const CCS_SKILLS_BACKUP_RETAIN_COUNT = 20
 
 ///|
-fn ccs_skill_supported_apps() -> Array[String] {
+fn moon_skill_supported_apps() -> Array[String] {
   ["claude", "codex", "gemini", "opencode", "hermes"]
 }
 
 ///|
-fn ccs_skill_state_path() -> String {
-  @pathx.join(ccs_app_config_dir(), CCS_SKILLS_STATE_FILE)
+fn moon_skill_state_path() -> String {
+  @pathx.join(moon_app_config_dir(), CCS_SKILLS_STATE_FILE)
 }
 
 ///|
-fn ccs_skill_backup_dir() -> String {
-  @pathx.join(ccs_app_config_dir(), "skill-backups")
+fn moon_skill_backup_dir() -> String {
+  @pathx.join(moon_app_config_dir(), "skill-backups")
 }
 
 ///|
-fn ccs_skill_default_repos_json() -> Array[Json] {
+fn moon_skill_default_repos_json() -> Array[Json] {
   [
-    ccs_skill_repo_json("anthropics", "skills", "main", true),
-    ccs_skill_repo_json("ComposioHQ", "awesome-claude-skills", "master", true),
-    ccs_skill_repo_json("cexll", "myclaude", "master", true),
-    ccs_skill_repo_json("JimLiu", "baoyu-skills", "main", true),
+    moon_skill_repo_json("anthropics", "skills", "main", true),
+    moon_skill_repo_json("ComposioHQ", "awesome-claude-skills", "master", true),
+    moon_skill_repo_json("cexll", "myclaude", "master", true),
+    moon_skill_repo_json("JimLiu", "baoyu-skills", "main", true),
   ]
 }
 
 ///|
-fn ccs_skill_repo_json(
+fn moon_skill_repo_json(
   owner : String,
   name : String,
   branch : String,
@@ -45,15 +45,15 @@ fn ccs_skill_repo_json(
 }
 
 ///|
-fn ccs_skill_apps_json(app? : String? = None) -> Json {
+fn moon_skill_apps_json(app? : String? = None) -> Json {
   let apps : Map[String, Json] = Map([], capacity=0)
-  for name in ccs_skill_supported_apps() {
+  for name in moon_skill_supported_apps() {
     apps[name] = Json::boolean(false)
   }
   match app {
     Some(value) => {
-      let normalized = ccs_normalize_app_type(value)
-      if ccs_skill_supported_apps().contains(normalized) {
+      let normalized = moon_normalize_app_type(value)
+      if moon_skill_supported_apps().contains(normalized) {
         apps[normalized] = Json::boolean(true)
       }
     }
@@ -63,26 +63,26 @@ fn ccs_skill_apps_json(app? : String? = None) -> Json {
 }
 
 ///|
-fn ccs_skill_state_default_json() -> Json {
+fn moon_skill_state_default_json() -> Json {
   {
     "installed": Json::array([]),
-    "repos": Json::array(ccs_skill_default_repos_json()),
+    "repos": Json::array(moon_skill_default_repos_json()),
     "backups": Json::array([]),
     "skillStorageLocation": Json::string("cc_switch"),
   }.to_json()
 }
 
 ///|
-async fn ccs_skill_state_load(path? : String = ccs_skill_state_path()) -> Json {
+async fn moon_skill_state_load(path? : String = moon_skill_state_path()) -> Json {
   let content = @fs.read_file(path).text() catch {
-    _ => return ccs_skill_state_default_json()
+    _ => return moon_skill_state_default_json()
   }
   let parsed = @json.parse(content) catch {
-    _ => return ccs_skill_state_default_json()
+    _ => return moon_skill_state_default_json()
   }
-  guard parsed is Object(obj) else { return ccs_skill_state_default_json() }
+  guard parsed is Object(obj) else { return moon_skill_state_default_json() }
   if obj.get("repos") is None {
-    obj["repos"] = Json::array(ccs_skill_default_repos_json())
+    obj["repos"] = Json::array(moon_skill_default_repos_json())
   }
   if obj.get("installed") is None {
     obj["installed"] = Json::array([])
@@ -97,11 +97,11 @@ async fn ccs_skill_state_load(path? : String = ccs_skill_state_path()) -> Json {
 }
 
 ///|
-async fn ccs_skill_state_save(
+async fn moon_skill_state_save(
   state : Json,
-  path? : String = ccs_skill_state_path(),
+  path? : String = moon_skill_state_path(),
 ) -> Bool {
-  ccs_skill_make_directory(@pathx.dirname(path).to_owned()) catch {
+  moon_skill_make_directory(@pathx.dirname(path).to_owned()) catch {
     _ => return false
   }
   @fs.write_file(
@@ -116,7 +116,7 @@ async fn ccs_skill_state_save(
 }
 
 ///|
-async fn ccs_skill_make_directory(path : String) -> Unit {
+async fn moon_skill_make_directory(path : String) -> Unit {
   let dirs : Array[String] = []
   for dir = path {
     if dir == "." || dir == "" || @fs.exists(dir) {
@@ -134,23 +134,23 @@ async fn ccs_skill_make_directory(path : String) -> Unit {
 }
 
 ///|
-async fn ccs_get_skill_repos_json(
-  path? : String = ccs_skill_state_path(),
+async fn moon_get_skill_repos_json(
+  path? : String = moon_skill_state_path(),
 ) -> Json {
-  guard ccs_skill_state_load(path~) is Object(obj) else {
-    return Json::array(ccs_skill_default_repos_json())
+  guard moon_skill_state_load(path~) is Object(obj) else {
+    return Json::array(moon_skill_default_repos_json())
   }
   match obj.get("repos") {
     Some(Array(repos)) => Json::array(repos)
-    _ => Json::array(ccs_skill_default_repos_json())
+    _ => Json::array(moon_skill_default_repos_json())
   }
 }
 
 ///|
-async fn ccs_get_installed_skills_json(
-  path? : String = ccs_skill_state_path(),
+async fn moon_get_installed_skills_json(
+  path? : String = moon_skill_state_path(),
 ) -> Json {
-  guard ccs_skill_state_load(path~) is Object(obj) else {
+  guard moon_skill_state_load(path~) is Object(obj) else {
     return Json::array([])
   }
   match obj.get("installed") {
@@ -160,10 +160,10 @@ async fn ccs_get_installed_skills_json(
 }
 
 ///|
-async fn ccs_get_skill_backups_json(
-  path? : String = ccs_skill_state_path(),
+async fn moon_get_skill_backups_json(
+  path? : String = moon_skill_state_path(),
 ) -> Json {
-  guard ccs_skill_state_load(path~) is Object(obj) else {
+  guard moon_skill_state_load(path~) is Object(obj) else {
     return Json::array([])
   }
   match obj.get("backups") {
@@ -173,18 +173,18 @@ async fn ccs_get_skill_backups_json(
 }
 
 ///|
-async fn ccs_add_skill_repo_json(
+async fn moon_add_skill_repo_json(
   repo : Json,
-  path? : String = ccs_skill_state_path(),
+  path? : String = moon_skill_state_path(),
 ) -> Json {
-  guard ccs_skill_repo_from_json(repo) is Some(normalized) else {
+  guard moon_skill_repo_from_json(repo) is Some(normalized) else {
     return Json::boolean(false)
   }
-  let state = ccs_skill_state_load(path~)
+  let state = moon_skill_state_load(path~)
   guard state is Object(obj) else { return Json::boolean(false) }
   let repos : Array[Json] = match obj.get("repos") {
     Some(Array(items)) => items
-    _ => ccs_skill_default_repos_json()
+    _ => moon_skill_default_repos_json()
   }
   guard normalized is Object(repo_obj) else { return Json::boolean(false) }
   let owner = store_json_string_or_default(repo_obj, "owner", "")
@@ -205,20 +205,20 @@ async fn ccs_add_skill_repo_json(
     next.push(normalized)
   }
   obj["repos"] = Json::array(next)
-  Json::boolean(ccs_skill_state_save(Json::object(obj), path~))
+  Json::boolean(moon_skill_state_save(Json::object(obj), path~))
 }
 
 ///|
-async fn ccs_remove_skill_repo_json(
+async fn moon_remove_skill_repo_json(
   owner : String,
   name : String,
-  path? : String = ccs_skill_state_path(),
+  path? : String = moon_skill_state_path(),
 ) -> Json {
-  let state = ccs_skill_state_load(path~)
+  let state = moon_skill_state_load(path~)
   guard state is Object(obj) else { return Json::boolean(false) }
   let repos : Array[Json] = match obj.get("repos") {
     Some(Array(items)) => items
-    _ => ccs_skill_default_repos_json()
+    _ => moon_skill_default_repos_json()
   }
   let next : Array[Json] = []
   for item in repos {
@@ -230,11 +230,11 @@ async fn ccs_remove_skill_repo_json(
     next.push(item)
   }
   obj["repos"] = Json::array(next)
-  Json::boolean(ccs_skill_state_save(Json::object(obj), path~))
+  Json::boolean(moon_skill_state_save(Json::object(obj), path~))
 }
 
 ///|
-fn ccs_skill_repo_from_json(json : Json) -> Json? {
+fn moon_skill_repo_from_json(json : Json) -> Json? {
   guard json is Object(obj) else { return None }
   let owner = store_json_string_or_default(obj, "owner", "").trim().to_owned()
   let name = store_json_string_or_default(obj, "name", "").trim().to_owned()
@@ -248,7 +248,7 @@ fn ccs_skill_repo_from_json(json : Json) -> Json? {
     _ => true
   }
   Some(
-    ccs_skill_repo_json(
+    moon_skill_repo_json(
       owner,
       name,
       if branch.is_empty() {
@@ -262,13 +262,13 @@ fn ccs_skill_repo_from_json(json : Json) -> Json? {
 }
 
 ///|
-fn ccs_skill_json_from_discoverable(
+fn moon_skill_json_from_discoverable(
   skill : Json,
   current_app : String,
   installed_at? : Int = @os.unix_seconds(),
 ) -> Json? {
   guard skill is Object(obj) else { return None }
-  let directory = ccs_skill_install_name(
+  let directory = moon_skill_install_name(
     store_json_string_or_default(obj, "directory", ""),
   )
   if directory.is_empty() {
@@ -290,7 +290,7 @@ fn ccs_skill_json_from_discoverable(
   let repo_branch = store_json_optional_string(obj, "repoBranch")
   let readme_url = store_json_optional_string(obj, "readmeUrl")
   Some(
-    ccs_installed_skill_json(
+    moon_installed_skill_json(
       id=key,
       name~,
       description~,
@@ -299,7 +299,7 @@ fn ccs_skill_json_from_discoverable(
       repo_name=if repo_name.is_empty() { None } else { Some(repo_name) },
       repo_branch~,
       readme_url~,
-      apps=ccs_skill_apps_json(app=Some(current_app)),
+      apps=moon_skill_apps_json(app=Some(current_app)),
       installed_at~,
       content_hash=None,
       updated_at=0,
@@ -308,7 +308,7 @@ fn ccs_skill_json_from_discoverable(
 }
 
 ///|
-fn ccs_skill_request_payload(body : Json?) -> Json? {
+fn moon_skill_request_payload(body : Json?) -> Json? {
   match body {
     Some(Object(obj)) =>
       match obj.get("skill") {
@@ -320,7 +320,7 @@ fn ccs_skill_request_payload(body : Json?) -> Json? {
 }
 
 ///|
-fn ccs_installed_skill_json(
+fn moon_installed_skill_json(
   id~ : String,
   name~ : String,
   description~ : String?,
@@ -364,23 +364,23 @@ fn ccs_installed_skill_json(
 }
 
 ///|
-async fn ccs_install_skill_unified_json(
+async fn moon_install_skill_unified_json(
   skill : Json,
   current_app : String,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  guard ccs_skill_json_from_discoverable(skill, current_app) is Some(installed) else {
+  guard moon_skill_json_from_discoverable(skill, current_app) is Some(installed) else {
     return Json::null()
   }
-  ccs_upsert_installed_skill_json(installed, state_path~)
+  moon_upsert_installed_skill_json(installed, state_path~)
 }
 
 ///|
-async fn ccs_upsert_installed_skill_json(
+async fn moon_upsert_installed_skill_json(
   installed : Json,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let state = ccs_skill_state_load(path=state_path)
+  let state = moon_skill_state_load(path=state_path)
   guard state is Object(obj) else { return installed }
   guard installed is Object(installed_obj) else { return installed }
   let id = store_json_string_or_default(installed_obj, "id", "")
@@ -398,7 +398,7 @@ async fn ccs_upsert_installed_skill_json(
     let same_dir = !directory.is_empty() &&
       store_json_string_or_default(item_obj, "directory", "") == directory
     if same_id || same_dir {
-      next.push(ccs_merge_installed_skill_apps(item, installed))
+      next.push(moon_merge_installed_skill_apps(item, installed))
       replaced = true
     } else {
       next.push(item)
@@ -408,7 +408,7 @@ async fn ccs_upsert_installed_skill_json(
     next.push(installed)
   }
   obj["installed"] = Json::array(next)
-  ignore(ccs_skill_state_save(Json::object(obj), path=state_path))
+  ignore(moon_skill_state_save(Json::object(obj), path=state_path))
   if replaced {
     for item in next {
       guard item is Object(item_obj) else { continue }
@@ -422,10 +422,10 @@ async fn ccs_upsert_installed_skill_json(
 }
 
 ///|
-fn ccs_merge_installed_skill_apps(old : Json, incoming : Json) -> Json {
+fn moon_merge_installed_skill_apps(old : Json, incoming : Json) -> Json {
   guard old is Object(old_obj) else { return incoming }
   guard incoming is Object(new_obj) else { return old }
-  let apps = ccs_merge_skill_apps_json(old_obj.get("apps"), new_obj.get("apps"))
+  let apps = moon_merge_skill_apps_json(old_obj.get("apps"), new_obj.get("apps"))
   for key, value in new_obj {
     old_obj[key] = value
   }
@@ -434,21 +434,21 @@ fn ccs_merge_installed_skill_apps(old : Json, incoming : Json) -> Json {
 }
 
 ///|
-fn ccs_merge_skill_apps_json(old : Json?, incoming : Json?) -> Json {
+fn moon_merge_skill_apps_json(old : Json?, incoming : Json?) -> Json {
   let merged : Map[String, Json] = Map([], capacity=0)
-  for name in ccs_skill_supported_apps() {
-    let enabled = ccs_skill_app_enabled_json(old, name) ||
-      ccs_skill_app_enabled_json(incoming, name)
+  for name in moon_skill_supported_apps() {
+    let enabled = moon_skill_app_enabled_json(old, name) ||
+      moon_skill_app_enabled_json(incoming, name)
     merged[name] = Json::boolean(enabled)
   }
   Json::object(merged)
 }
 
 ///|
-fn ccs_skill_app_enabled_json(apps : Json?, app : String) -> Bool {
+fn moon_skill_app_enabled_json(apps : Json?, app : String) -> Bool {
   match apps {
     Some(Object(obj)) =>
-      match obj.get(ccs_normalize_app_type(app)) {
+      match obj.get(moon_normalize_app_type(app)) {
         Some(True) => true
         _ => false
       }
@@ -457,17 +457,17 @@ fn ccs_skill_app_enabled_json(apps : Json?, app : String) -> Bool {
 }
 
 ///|
-async fn ccs_toggle_skill_app_json(
+async fn moon_toggle_skill_app_json(
   id : String,
   app : String,
   enabled : Bool,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let normalized = ccs_normalize_app_type(app)
-  if !ccs_skill_supported_apps().contains(normalized) {
+  let normalized = moon_normalize_app_type(app)
+  if !moon_skill_supported_apps().contains(normalized) {
     return Json::boolean(false)
   }
-  let state = ccs_skill_state_load(path=state_path)
+  let state = moon_skill_state_load(path=state_path)
   guard state is Object(obj) else { return Json::boolean(false) }
   let existing : Array[Json] = match obj.get("installed") {
     Some(Array(items)) => items
@@ -480,7 +480,7 @@ async fn ccs_toggle_skill_app_json(
     let matches = store_json_string_or_default(item_obj, "id", "") == id ||
       store_json_string_or_default(item_obj, "directory", "") == id
     if matches {
-      let apps = ccs_skill_apps_with_enabled(
+      let apps = moon_skill_apps_with_enabled(
         item_obj.get("apps"),
         normalized,
         enabled,
@@ -494,30 +494,30 @@ async fn ccs_toggle_skill_app_json(
   }
   obj["installed"] = Json::array(next)
   Json::boolean(
-    changed && ccs_skill_state_save(Json::object(obj), path=state_path),
+    changed && moon_skill_state_save(Json::object(obj), path=state_path),
   )
 }
 
 ///|
-fn ccs_skill_apps_with_enabled(
+fn moon_skill_apps_with_enabled(
   apps : Json?,
   app : String,
   enabled : Bool,
 ) -> Json {
   let obj : Map[String, Json] = Map([], capacity=0)
-  for name in ccs_skill_supported_apps() {
-    obj[name] = Json::boolean(ccs_skill_app_enabled_json(apps, name))
+  for name in moon_skill_supported_apps() {
+    obj[name] = Json::boolean(moon_skill_app_enabled_json(apps, name))
   }
   obj[app] = Json::boolean(enabled)
   Json::object(obj)
 }
 
 ///|
-async fn ccs_uninstall_skill_unified_json(
+async fn moon_uninstall_skill_unified_json(
   id : String,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let state = ccs_skill_state_load(path=state_path)
+  let state = moon_skill_state_load(path=state_path)
   guard state is Object(obj) else { return Json::null() }
   let existing : Array[Json] = match obj.get("installed") {
     Some(Array(items)) => items
@@ -537,8 +537,8 @@ async fn ccs_uninstall_skill_unified_json(
   obj["installed"] = Json::array(next)
   let backup_path = match removed {
     Some(skill) => {
-      let entry = ccs_skill_backup_entry_json(skill)
-      obj["backups"] = ccs_skill_prepend_backup(obj.get("backups"), entry)
+      let entry = moon_skill_backup_entry_json(skill)
+      obj["backups"] = moon_skill_prepend_backup(obj.get("backups"), entry)
       match entry {
         Object(entry_obj) => store_json_optional_string(entry_obj, "backupPath")
         _ => None
@@ -546,7 +546,7 @@ async fn ccs_uninstall_skill_unified_json(
     }
     None => None
   }
-  ignore(ccs_skill_state_save(Json::object(obj), path=state_path))
+  ignore(moon_skill_state_save(Json::object(obj), path=state_path))
   {
     "backupPath": match backup_path {
       Some(path) => Json::string(path)
@@ -556,7 +556,7 @@ async fn ccs_uninstall_skill_unified_json(
 }
 
 ///|
-fn ccs_skill_backup_entry_json(skill : Json) -> Json {
+fn moon_skill_backup_entry_json(skill : Json) -> Json {
   let now = @os.unix_seconds()
   let directory = match skill {
     Object(obj) => store_json_string_or_default(obj, "directory", "skill")
@@ -565,14 +565,14 @@ fn ccs_skill_backup_entry_json(skill : Json) -> Json {
   let backup_id = "\{directory}-\{now}"
   {
     "backupId": Json::string(backup_id),
-    "backupPath": Json::string(@pathx.join(ccs_skill_backup_dir(), backup_id)),
+    "backupPath": Json::string(@pathx.join(moon_skill_backup_dir(), backup_id)),
     "createdAt": Json::number(now.to_double()),
     "skill": skill,
   }.to_json()
 }
 
 ///|
-fn ccs_skill_prepend_backup(existing : Json?, entry : Json) -> Json {
+fn moon_skill_prepend_backup(existing : Json?, entry : Json) -> Json {
   let backups : Array[Json] = [entry]
   match existing {
     Some(Array(items)) =>
@@ -587,11 +587,11 @@ fn ccs_skill_prepend_backup(existing : Json?, entry : Json) -> Json {
 }
 
 ///|
-async fn ccs_delete_skill_backup_json(
+async fn moon_delete_skill_backup_json(
   backup_id : String,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let state = ccs_skill_state_load(path=state_path)
+  let state = moon_skill_state_load(path=state_path)
   guard state is Object(obj) else { return Json::boolean(false) }
   let existing : Array[Json] = match obj.get("backups") {
     Some(Array(items)) => items
@@ -609,17 +609,17 @@ async fn ccs_delete_skill_backup_json(
   }
   obj["backups"] = Json::array(next)
   Json::boolean(
-    removed && ccs_skill_state_save(Json::object(obj), path=state_path),
+    removed && moon_skill_state_save(Json::object(obj), path=state_path),
   )
 }
 
 ///|
-async fn ccs_restore_skill_backup_json(
+async fn moon_restore_skill_backup_json(
   backup_id : String,
   current_app : String,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let backups = ccs_get_skill_backups_json(path=state_path)
+  let backups = moon_get_skill_backups_json(path=state_path)
   guard backups is Array(items) else { return Json::null() }
   for item in items {
     guard item is Object(item_obj) else { continue }
@@ -627,12 +627,12 @@ async fn ccs_restore_skill_backup_json(
       guard item_obj.get("skill") is Some(Object(skill_obj)) else {
         return Json::null()
       }
-      skill_obj["apps"] = ccs_skill_apps_with_enabled(
+      skill_obj["apps"] = moon_skill_apps_with_enabled(
         skill_obj.get("apps"),
-        ccs_normalize_app_type(current_app),
+        moon_normalize_app_type(current_app),
         true,
       )
-      return ccs_upsert_installed_skill_json(
+      return moon_upsert_installed_skill_json(
         Json::object(skill_obj),
         state_path~,
       )
@@ -642,61 +642,61 @@ async fn ccs_restore_skill_backup_json(
 }
 
 ///|
-fn ccs_check_skill_updates_json() -> Json {
+fn moon_check_skill_updates_json() -> Json {
   Json::array([])
 }
 
 ///|
-async fn ccs_update_skill_json(
+async fn moon_update_skill_json(
   id : String,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let installed = ccs_get_installed_skills_json(path=state_path)
+  let installed = moon_get_installed_skills_json(path=state_path)
   guard installed is Array(items) else { return Json::null() }
   for item in items {
     guard item is Object(obj) else { continue }
     if store_json_string_or_default(obj, "id", "") == id ||
       store_json_string_or_default(obj, "directory", "") == id {
       obj["updatedAt"] = Json::number(@os.unix_seconds().to_double())
-      return ccs_upsert_installed_skill_json(Json::object(obj), state_path~)
+      return moon_upsert_installed_skill_json(Json::object(obj), state_path~)
     }
   }
   Json::null()
 }
 
 ///|
-async fn ccs_migrate_skill_storage_json(
+async fn moon_migrate_skill_storage_json(
   target : String,
-  state_path? : String = ccs_skill_state_path(),
-  cc_switch_dir? : String = ccs_cc_switch_skills_dir(),
-  unified_dir? : String = ccs_unified_skills_dir(),
+  state_path? : String = moon_skill_state_path(),
+  cc_switch_dir? : String = moon_cc_switch_skills_dir(),
+  unified_dir? : String = moon_unified_skills_dir(),
 ) -> Json {
-  guard ccs_normalize_skill_storage_location(target) is Some(target_location) else {
-    return ccs_skill_migration_result_json(0, 0, [
+  guard moon_normalize_skill_storage_location(target) is Some(target_location) else {
+    return moon_skill_migration_result_json(0, 0, [
       Json::string("invalid target storage location: \{target}"),
     ])
   }
-  let state = ccs_skill_state_load(path=state_path)
+  let state = moon_skill_state_load(path=state_path)
   guard state is Object(obj) else {
-    return ccs_skill_migration_result_json(0, 0, [
+    return moon_skill_migration_result_json(0, 0, [
       Json::string("failed to load skill state"),
     ])
   }
-  let current_location = ccs_normalize_skill_storage_location(
+  let current_location = moon_normalize_skill_storage_location(
     store_json_string_or_default(obj, "skillStorageLocation", "cc_switch"),
   ).unwrap_or("cc_switch")
   if current_location == target_location {
-    return ccs_skill_migration_result_json(0, 0, [])
+    return moon_skill_migration_result_json(0, 0, [])
   }
-  let source_dir = ccs_skill_storage_dir(
+  let source_dir = moon_skill_storage_dir(
     current_location, cc_switch_dir, unified_dir,
   )
-  let dest_dir = ccs_skill_storage_dir(
+  let dest_dir = moon_skill_storage_dir(
     target_location, cc_switch_dir, unified_dir,
   )
-  ccs_skill_make_directory(dest_dir) catch {
+  moon_skill_make_directory(dest_dir) catch {
     err =>
-      return ccs_skill_migration_result_json(0, 0, [
+      return moon_skill_migration_result_json(0, 0, [
         Json::string("failed to create target directory: \{err}"),
       ])
   }
@@ -712,7 +712,7 @@ async fn ccs_migrate_skill_storage_json(
       skipped_count = skipped_count + 1
       continue
     }
-    let directory = ccs_skill_install_name(
+    let directory = moon_skill_install_name(
       store_json_string_or_default(skill, "directory", ""),
     )
     if directory.is_empty() {
@@ -729,7 +729,7 @@ async fn ccs_migrate_skill_storage_json(
       skipped_count = skipped_count + 1
       continue
     }
-    match ccs_copy_skill_directory(source_path, dest_path) {
+    match moon_copy_skill_directory(source_path, dest_path) {
       Ok(_) => {
         @fs.rmdir(source_path, recursive=true) catch {
           err =>
@@ -745,12 +745,12 @@ async fn ccs_migrate_skill_storage_json(
     }
   }
   obj["skillStorageLocation"] = Json::string(target_location)
-  ignore(ccs_skill_state_save(Json::object(obj), path=state_path))
-  ccs_skill_migration_result_json(migrated_count, skipped_count, errors)
+  ignore(moon_skill_state_save(Json::object(obj), path=state_path))
+  moon_skill_migration_result_json(migrated_count, skipped_count, errors)
 }
 
 ///|
-fn ccs_normalize_skill_storage_location(value : String) -> String? {
+fn moon_normalize_skill_storage_location(value : String) -> String? {
   match value.trim().to_owned().to_lower() {
     "cc_switch" | "cc-switch" | "ccswitch" => Some("cc_switch")
     "unified" => Some("unified")
@@ -759,17 +759,17 @@ fn ccs_normalize_skill_storage_location(value : String) -> String? {
 }
 
 ///|
-fn ccs_cc_switch_skills_dir() -> String {
-  @pathx.join(ccs_app_config_dir(), "skills")
+fn moon_cc_switch_skills_dir() -> String {
+  @pathx.join(moon_app_config_dir(), "skills")
 }
 
 ///|
-fn ccs_unified_skills_dir() -> String {
-  @pathx.join(ccs_home_dir(), ".agents/skills")
+fn moon_unified_skills_dir() -> String {
+  @pathx.join(moon_home_dir(), ".agents/skills")
 }
 
 ///|
-fn ccs_skill_storage_dir(
+fn moon_skill_storage_dir(
   location : String,
   cc_switch_dir : String,
   unified_dir : String,
@@ -782,7 +782,7 @@ fn ccs_skill_storage_dir(
 }
 
 ///|
-async fn ccs_copy_skill_directory(
+async fn moon_copy_skill_directory(
   source_path : String,
   dest_path : String,
 ) -> Result[Unit, String] {
@@ -790,14 +790,14 @@ async fn ccs_copy_skill_directory(
     let kind = @fs.kind(source_path, follow_symlink=false)
     match kind {
       @fs.FileKind::Directory => {
-        ccs_skill_make_directory(dest_path)
+        moon_skill_make_directory(dest_path)
         let entries = @fsx.list_directory(source_path)
         for entry in entries {
           let child_source = entry.path
           let child_dest = @pathx.join(dest_path, entry.name)
           match entry.kind {
             @fsx.FileKind::Directory =>
-              match ccs_copy_skill_directory(child_source, child_dest) {
+              match moon_copy_skill_directory(child_source, child_dest) {
                 Ok(_) => ()
                 Err(message) => return Err(message)
               }
@@ -810,7 +810,7 @@ async fn ccs_copy_skill_directory(
         }
       }
       @fs.FileKind::Regular | @fs.FileKind::SymLink => {
-        ccs_skill_make_directory(@pathx.dirname(dest_path).to_owned())
+        moon_skill_make_directory(@pathx.dirname(dest_path).to_owned())
         let bytes = @fs.read_file(source_path)
         @fs.write_file(dest_path, bytes, create=0o644, truncate=true)
       }
@@ -823,7 +823,7 @@ async fn ccs_copy_skill_directory(
 }
 
 ///|
-fn ccs_skill_migration_result_json(
+fn moon_skill_migration_result_json(
   migrated_count : Int,
   skipped_count : Int,
   errors : Array[Json],
@@ -836,11 +836,11 @@ fn ccs_skill_migration_result_json(
 }
 
 ///|
-fn ccs_search_skills_sh_json(query : String, limit : Int, offset : Int) -> Json {
+fn moon_search_skills_sh_json(query : String, limit : Int, offset : Int) -> Json {
   ignore(offset)
   let skills : Array[Json] = []
   if query.trim().length() >= 2 {
-    for repo in ccs_skill_default_repos_json() {
+    for repo in moon_skill_default_repos_json() {
       guard repo is Object(repo_obj) else { continue }
       if skills.length() >= limit {
         break
@@ -872,10 +872,10 @@ fn ccs_search_skills_sh_json(query : String, limit : Int, offset : Int) -> Json 
 }
 
 ///|
-async fn ccs_discover_available_skills_json(
-  state_path? : String = ccs_skill_state_path(),
+async fn moon_discover_available_skills_json(
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let repos = ccs_get_skill_repos_json(path=state_path)
+  let repos = moon_get_skill_repos_json(path=state_path)
   guard repos is Array(items) else { return Json::array([]) }
   let skills : Array[Json] = []
   for item in items {
@@ -908,10 +908,10 @@ async fn ccs_discover_available_skills_json(
 }
 
 ///|
-async fn ccs_get_skills_json(
-  state_path? : String = ccs_skill_state_path(),
+async fn moon_get_skills_json(
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
-  let installed = ccs_get_installed_skills_json(path=state_path)
+  let installed = moon_get_installed_skills_json(path=state_path)
   let installed_dirs : Array[String] = []
   if installed is Array(items) {
     for item in items {
@@ -919,7 +919,7 @@ async fn ccs_get_skills_json(
       installed_dirs.push(store_json_string_or_default(obj, "directory", ""))
     }
   }
-  let discovered = ccs_discover_available_skills_json(state_path~)
+  let discovered = moon_discover_available_skills_json(state_path~)
   guard discovered is Array(items) else { return Json::array([]) }
   let result : Array[Json] = []
   for item in items {
@@ -947,10 +947,10 @@ async fn ccs_get_skills_json(
 }
 
 ///|
-async fn ccs_scan_unmanaged_skills_json() -> Json {
+async fn moon_scan_unmanaged_skills_json() -> Json {
   let result : Array[Json] = []
-  for app in ccs_skill_supported_apps() {
-    let dir = ccs_app_skills_dir(app)
+  for app in moon_skill_supported_apps() {
+    let dir = moon_app_skills_dir(app)
     if !@fs.exists(dir) {
       continue
     }
@@ -962,7 +962,7 @@ async fn ccs_scan_unmanaged_skills_json() -> Json {
       if !@fs.exists(skill_file) {
         continue
       }
-      let (skill_name, description) = ccs_skill_metadata_from_file(skill_file)
+      let (skill_name, description) = moon_skill_metadata_from_file(skill_file)
       result.push(
         {
           "directory": Json::string(entry_name),
@@ -981,15 +981,15 @@ async fn ccs_scan_unmanaged_skills_json() -> Json {
 }
 
 ///|
-async fn ccs_import_skills_from_apps_json(
+async fn moon_import_skills_from_apps_json(
   imports : Json,
-  state_path? : String = ccs_skill_state_path(),
+  state_path? : String = moon_skill_state_path(),
 ) -> Json {
   let imported : Array[Json] = []
   guard imports is Array(items) else { return Json::array(imported) }
   for item in items {
     guard item is Object(obj) else { continue }
-    let directory = ccs_skill_install_name(
+    let directory = moon_skill_install_name(
       store_json_string_or_default(obj, "directory", ""),
     )
     if directory.is_empty() {
@@ -997,9 +997,9 @@ async fn ccs_import_skills_from_apps_json(
     }
     let apps = match obj.get("apps") {
       Some(apps) => apps
-      None => ccs_skill_apps_json()
+      None => moon_skill_apps_json()
     }
-    let skill = ccs_installed_skill_json(
+    let skill = moon_installed_skill_json(
       id="local:\{directory}",
       name=directory,
       description=None,
@@ -1013,25 +1013,25 @@ async fn ccs_import_skills_from_apps_json(
       content_hash=None,
       updated_at=0,
     )
-    imported.push(ccs_upsert_installed_skill_json(skill, state_path~))
+    imported.push(moon_upsert_installed_skill_json(skill, state_path~))
   }
   Json::array(imported)
 }
 
 ///|
-async fn ccs_install_skills_from_zip_json(
+async fn moon_install_skills_from_zip_json(
   file_path : String,
   current_app : String,
-  state_path? : String = ccs_skill_state_path(),
-  cc_switch_dir? : String = ccs_cc_switch_skills_dir(),
-  unified_dir? : String = ccs_unified_skills_dir(),
-  app_dir? : String = ccs_app_skills_dir(current_app),
+  state_path? : String = moon_skill_state_path(),
+  cc_switch_dir? : String = moon_cc_switch_skills_dir(),
+  unified_dir? : String = moon_unified_skills_dir(),
+  app_dir? : String = moon_app_skills_dir(current_app),
 ) -> Json {
   if !@fs.exists(file_path) {
     return Json::array([])
   }
-  if ccs_path_is_directory(file_path) {
-    return ccs_install_skills_from_extracted_dir_json(
+  if moon_path_is_directory(file_path) {
+    return moon_install_skills_from_extracted_dir_json(
       file_path,
       current_app,
       state_path~,
@@ -1043,10 +1043,10 @@ async fn ccs_install_skills_from_zip_json(
   }
 
   @fsx.with_temporary_directory("moonstat-skills-zip-XXXXXX", async fn(tmpdir) {
-    if !ccs_extract_local_zip(file_path, tmpdir) {
+    if !moon_extract_local_zip(file_path, tmpdir) {
       return Json::array([])
     }
-    ccs_install_skills_from_extracted_dir_json(
+    moon_install_skills_from_extracted_dir_json(
       tmpdir,
       current_app,
       state_path~,
@@ -1059,22 +1059,22 @@ async fn ccs_install_skills_from_zip_json(
 }
 
 ///|
-async fn ccs_install_skills_from_extracted_dir_json(
+async fn moon_install_skills_from_extracted_dir_json(
   root_dir : String,
   current_app : String,
-  state_path? : String = ccs_skill_state_path(),
-  cc_switch_dir? : String = ccs_cc_switch_skills_dir(),
-  unified_dir? : String = ccs_unified_skills_dir(),
-  app_dir? : String = ccs_app_skills_dir(current_app),
+  state_path? : String = moon_skill_state_path(),
+  cc_switch_dir? : String = moon_cc_switch_skills_dir(),
+  unified_dir? : String = moon_unified_skills_dir(),
+  app_dir? : String = moon_app_skills_dir(current_app),
   source_name? : String = @pathx.basename(root_dir).to_owned(),
 ) -> Json {
-  let skill_dirs = ccs_scan_skill_dirs_in_dir(root_dir)
+  let skill_dirs = moon_scan_skill_dirs_in_dir(root_dir)
   if skill_dirs.is_empty() {
     return Json::array([])
   }
-  let state = ccs_skill_state_load(path=state_path)
+  let state = moon_skill_state_load(path=state_path)
   guard state is Object(state_obj) else { return Json::array([]) }
-  let storage_dir = ccs_skill_storage_dir_for_state(
+  let storage_dir = moon_skill_storage_dir_for_state(
     Json::object(state_obj),
     cc_switch_dir,
     unified_dir,
@@ -1085,14 +1085,14 @@ async fn ccs_install_skills_from_extracted_dir_json(
   }
   let installed : Array[Json] = []
   for skill_dir in skill_dirs {
-    let (name, description) = ccs_skill_metadata_from_file(
+    let (name, description) = moon_skill_metadata_from_file(
       @pathx.join(skill_dir, "SKILL.md"),
     )
-    guard ccs_skill_zip_install_name(skill_dir, root_dir, name, source_name~)
+    guard moon_skill_zip_install_name(skill_dir, root_dir, name, source_name~)
       is Some(directory) else {
       continue
     }
-    if ccs_installed_skill_directory_exists(existing, directory) {
+    if moon_installed_skill_directory_exists(existing, directory) {
       continue
     }
     let dest = @pathx.join(storage_dir, directory)
@@ -1101,7 +1101,7 @@ async fn ccs_install_skills_from_extracted_dir_json(
         _ => ()
       }
     }
-    match ccs_copy_skill_directory(skill_dir, dest) {
+    match moon_copy_skill_directory(skill_dir, dest) {
       Ok(_) => ()
       Err(_) => continue
     }
@@ -1112,9 +1112,9 @@ async fn ccs_install_skills_from_extracted_dir_json(
           _ => ()
         }
       }
-      ignore(ccs_copy_skill_directory(dest, app_dest))
+      ignore(moon_copy_skill_directory(dest, app_dest))
     }
-    let skill = ccs_installed_skill_json(
+    let skill = moon_installed_skill_json(
       id="local:\{directory}",
       name=name.unwrap_or(directory),
       description~,
@@ -1123,18 +1123,18 @@ async fn ccs_install_skills_from_extracted_dir_json(
       repo_name=None,
       repo_branch=None,
       readme_url=None,
-      apps=ccs_skill_apps_json(app=Some(current_app)),
+      apps=moon_skill_apps_json(app=Some(current_app)),
       installed_at=@os.unix_seconds(),
-      content_hash=ccs_skill_dir_hash(dest),
+      content_hash=moon_skill_dir_hash(dest),
       updated_at=0,
     )
-    installed.push(ccs_upsert_installed_skill_json(skill, state_path~))
+    installed.push(moon_upsert_installed_skill_json(skill, state_path~))
   }
   Json::array(installed)
 }
 
 ///|
-async fn ccs_extract_local_zip(zip_path : String, dest_dir : String) -> Bool {
+async fn moon_extract_local_zip(zip_path : String, dest_dir : String) -> Bool {
   let result = @spawn.spawn(
     "unzip",
     ["-qq", "-o", zip_path, "-d", dest_dir],
@@ -1146,19 +1146,19 @@ async fn ccs_extract_local_zip(zip_path : String, dest_dir : String) -> Bool {
 }
 
 ///|
-async fn ccs_scan_skill_dirs_in_dir(root_dir : String) -> Array[String] {
+async fn moon_scan_skill_dirs_in_dir(root_dir : String) -> Array[String] {
   let result : Array[String] = []
-  ccs_scan_skill_dirs_recursive(root_dir, result, depth=0)
+  moon_scan_skill_dirs_recursive(root_dir, result, depth=0)
   result
 }
 
 ///|
-async fn ccs_scan_skill_dirs_recursive(
+async fn moon_scan_skill_dirs_recursive(
   dir : String,
   result : Array[String],
   depth~ : Int,
 ) -> Unit {
-  if depth > 16 || !ccs_path_is_directory(dir) {
+  if depth > 16 || !moon_path_is_directory(dir) {
     return
   }
   if @fs.exists(@pathx.join(dir, "SKILL.md")) {
@@ -1170,13 +1170,13 @@ async fn ccs_scan_skill_dirs_recursive(
       continue
     }
     if entry.kind is @fsx.FileKind::Directory {
-      ccs_scan_skill_dirs_recursive(entry.path, result, depth=depth + 1)
+      moon_scan_skill_dirs_recursive(entry.path, result, depth=depth + 1)
     }
   }
 }
 
 ///|
-fn ccs_skill_zip_install_name(
+fn moon_skill_zip_install_name(
   skill_dir : String,
   root_dir : String,
   skill_name : String?,
@@ -1186,18 +1186,18 @@ fn ccs_skill_zip_install_name(
   if skill_dir == root_dir || dir_name.is_empty() || dir_name.has_prefix(".") {
     match skill_name {
       Some(name) =>
-        match ccs_skill_install_name(name) {
-          "" => ccs_skill_install_name_optional(source_name)
+        match moon_skill_install_name(name) {
+          "" => moon_skill_install_name_optional(source_name)
           value => Some(value)
         }
-      None => ccs_skill_install_name_optional(source_name)
+      None => moon_skill_install_name_optional(source_name)
     }
   } else {
-    match ccs_skill_install_name(dir_name) {
+    match moon_skill_install_name(dir_name) {
       "" =>
         match skill_name {
-          Some(name) => ccs_skill_install_name_optional(name)
-          None => ccs_skill_install_name_optional(source_name)
+          Some(name) => moon_skill_install_name_optional(name)
+          None => moon_skill_install_name_optional(source_name)
         }
       value => Some(value)
     }
@@ -1205,15 +1205,15 @@ fn ccs_skill_zip_install_name(
 }
 
 ///|
-fn ccs_skill_install_name_optional(value : String) -> String? {
-  match ccs_skill_install_name(value) {
+fn moon_skill_install_name_optional(value : String) -> String? {
+  match moon_skill_install_name(value) {
     "" => None
     normalized => Some(normalized)
   }
 }
 
 ///|
-fn ccs_installed_skill_directory_exists(
+fn moon_installed_skill_directory_exists(
   installed : Array[Json],
   directory : String,
 ) -> Bool {
@@ -1228,22 +1228,22 @@ fn ccs_installed_skill_directory_exists(
 }
 
 ///|
-fn ccs_skill_storage_dir_for_state(
+fn moon_skill_storage_dir_for_state(
   state : Json,
   cc_switch_dir : String,
   unified_dir : String,
 ) -> String {
   guard state is Object(obj) else { return cc_switch_dir }
-  let location = ccs_normalize_skill_storage_location(
+  let location = moon_normalize_skill_storage_location(
     store_json_string_or_default(obj, "skillStorageLocation", "cc_switch"),
   ).unwrap_or("cc_switch")
-  ccs_skill_storage_dir(location, cc_switch_dir, unified_dir)
+  moon_skill_storage_dir(location, cc_switch_dir, unified_dir)
 }
 
 ///|
-async fn ccs_skill_dir_hash(dir : String) -> String? {
+async fn moon_skill_dir_hash(dir : String) -> String? {
   let files : Array[String] = []
-  ccs_collect_skill_hash_files(dir, dir, files, depth=0)
+  moon_collect_skill_hash_files(dir, dir, files, depth=0)
   files.sort()
   let bytes : Array[Byte] = []
   for relative in files {
@@ -1259,11 +1259,11 @@ async fn ccs_skill_dir_hash(dir : String) -> String? {
     }
     bytes.push(0)
   }
-  Some(ccs_skill_sha256_hex(Bytes::from_array(bytes)))
+  Some(moon_skill_sha256_hex(Bytes::from_array(bytes)))
 }
 
 ///|
-async fn ccs_collect_skill_hash_files(
+async fn moon_collect_skill_hash_files(
   base_dir : String,
   current_dir : String,
   files : Array[String],
@@ -1279,21 +1279,21 @@ async fn ccs_collect_skill_hash_files(
     }
     match entry.kind {
       @fsx.FileKind::Directory =>
-        ccs_collect_skill_hash_files(
+        moon_collect_skill_hash_files(
           base_dir,
           entry.path,
           files,
           depth=depth + 1,
         )
       @fsx.FileKind::Regular | @fsx.FileKind::SymLink =>
-        files.push(ccs_relative_path(base_dir, entry.path))
+        files.push(moon_relative_path(base_dir, entry.path))
       _ => ()
     }
   }
 }
 
 ///|
-fn ccs_relative_path(base_dir : String, path : String) -> String {
+fn moon_relative_path(base_dir : String, path : String) -> String {
   let prefix = if base_dir.has_suffix("/") { base_dir } else { "\{base_dir}/" }
   if path.has_prefix(prefix) {
     path[prefix.length():].to_owned()
@@ -1303,19 +1303,19 @@ fn ccs_relative_path(base_dir : String, path : String) -> String {
 }
 
 ///|
-fn ccs_skill_sha256_hex(bytes : Bytes) -> String {
+fn moon_skill_sha256_hex(bytes : Bytes) -> String {
   let digest = @crypto.sha256(bytes)
   let builder = StringBuilder::new()
   for byte in digest {
     let value = byte.to_int()
-    builder.write_char(ccs_skill_hex_digit(value / 16))
-    builder.write_char(ccs_skill_hex_digit(value % 16))
+    builder.write_char(moon_skill_hex_digit(value / 16))
+    builder.write_char(moon_skill_hex_digit(value % 16))
   }
   builder.to_string()
 }
 
 ///|
-fn ccs_skill_hex_digit(n : Int) -> Char {
+fn moon_skill_hex_digit(n : Int) -> Char {
   if n < 10 {
     ('0'.to_int() + n).unsafe_to_char()
   } else {
@@ -1324,14 +1324,14 @@ fn ccs_skill_hex_digit(n : Int) -> Char {
 }
 
 ///|
-async fn ccs_path_is_directory(path : String) -> Bool {
+async fn moon_path_is_directory(path : String) -> Bool {
   (@fs.kind(path, follow_symlink=false) is @fs.FileKind::Directory) catch {
     _ => false
   }
 }
 
 ///|
-async fn ccs_skill_metadata_from_file(path : String) -> (String?, String?) {
+async fn moon_skill_metadata_from_file(path : String) -> (String?, String?) {
   let content = @fs.read_file(path).text() catch { _ => return (None, None) }
   let mut name : String? = None
   let mut description : String? = None
@@ -1349,16 +1349,16 @@ async fn ccs_skill_metadata_from_file(path : String) -> (String?, String?) {
       continue
     }
     if line.has_prefix("name:") {
-      name = Some(ccs_yaml_scalar(line[5:]))
+      name = Some(moon_yaml_scalar(line[5:]))
     } else if line.has_prefix("description:") {
-      description = Some(ccs_yaml_scalar(line[12:]))
+      description = Some(moon_yaml_scalar(line[12:]))
     }
   }
   (name, description)
 }
 
 ///|
-fn ccs_yaml_scalar(value : StringView) -> String {
+fn moon_yaml_scalar(value : StringView) -> String {
   let trimmed = value.to_owned().trim().to_owned()
   if trimmed.length() >= 2 &&
     (
@@ -1372,7 +1372,7 @@ fn ccs_yaml_scalar(value : StringView) -> String {
 }
 
 ///|
-fn ccs_skill_install_name(directory : String) -> String {
+fn moon_skill_install_name(directory : String) -> String {
   let normalized = directory.replace(old="\\", new="/").trim().to_owned()
   let base = @pathx.basename(normalized).to_owned().trim().to_owned()
   if base == "." || base == ".." || base.has_prefix(".") || base.contains("/") {
@@ -1383,6 +1383,6 @@ fn ccs_skill_install_name(directory : String) -> String {
 }
 
 ///|
-fn ccs_app_skills_dir(app : String) -> String {
-  @pathx.join(ccs_config_dir(app), "skills")
+fn moon_app_skills_dir(app : String) -> String {
+  @pathx.join(moon_config_dir(app), "skills")
 }

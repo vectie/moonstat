@@ -394,8 +394,8 @@ test "provider route target serializes ccs claude desktop model routes" {
   assert_eq(sonnet["model"], Json::string("deepseek-v4-flash [1M]"))
   assert_eq(sonnet["labelOverride"], Json::string("DeepSeek V4 Flash"))
   assert_eq(sonnet["supports1m"], Json::boolean(true))
-  let ccs_provider = target.to_ccs_provider_json(false)
-  guard ccs_provider is Object(provider) else {
+  let moon_provider = target.to_moon_provider_json(false)
+  guard moon_provider is Object(provider) else {
     fail("expected ccs provider object")
   }
   guard provider["meta"] is Object(meta) else { fail("expected provider meta") }
@@ -405,7 +405,7 @@ test "provider route target serializes ccs claude desktop model routes" {
     fail("expected ccs route metadata")
   }
   assert_true(meta_routes.get("claude-sonnet-4-6") is Some(_))
-  let serialized = ccs_provider.stringify()
+  let serialized = moon_provider.stringify()
   assert_false(serialized.contains("apiKey"))
   assert_false(serialized.contains("sk-hidden"))
 }
@@ -713,7 +713,7 @@ test "provider router exposes ccs provider map and current id" {
   router.set_current_provider("codex", "a")
   router.set_failover_queue("codex", ["b"])
   assert_eq(router.current_provider_id("codex"), Some("a"))
-  guard router.providers_ccs_json("codex") is Object(providers) else {
+  guard router.providers_moon_json("codex") is Object(providers) else {
     fail("expected providers object")
   }
   guard providers["a"] is Object(provider_a) else {
@@ -780,7 +780,7 @@ test "provider router delete additive current provider follows ccs mode" {
   router.set_current_provider("opencode", "a")
   assert_true(router.delete_provider("opencode", "a"))
   assert_eq(router.current_provider_id("opencode"), None)
-  guard router.providers_ccs_json("opencode") is Object(providers) else {
+  guard router.providers_moon_json("opencode") is Object(providers) else {
     fail("expected providers object")
   }
   assert_true(providers.get("a") is None)
@@ -791,11 +791,11 @@ test "provider router current provider command mirrors ccs additive mode" {
   let router = ProviderRouter::new()
   router.set_current_provider("opencode", "a")
   router.set_current_provider("claude", "b")
-  assert_eq(router.current_provider_for_ccs_command("opencode"), "")
-  assert_eq(router.current_provider_for_ccs_command("openclaw"), "")
-  assert_eq(router.current_provider_for_ccs_command("hermes"), "")
-  assert_eq(router.current_provider_for_ccs_command("claude"), "b")
-  assert_eq(router.current_provider_for_ccs_command("codex"), "")
+  assert_eq(router.current_provider_for_moon_command("opencode"), "")
+  assert_eq(router.current_provider_for_moon_command("openclaw"), "")
+  assert_eq(router.current_provider_for_moon_command("hermes"), "")
+  assert_eq(router.current_provider_for_moon_command("claude"), "b")
+  assert_eq(router.current_provider_for_moon_command("codex"), "")
 }
 
 ///|
@@ -819,7 +819,7 @@ test "provider router remove live config preserves stored additive provider" {
   router.set_failover_queue("opencode", ["a"])
   assert_true(router.remove_provider_from_live_config("opencode", "a"))
   assert_eq(router.current_provider_id("opencode"), Some("b"))
-  guard router.providers_ccs_json("opencode") is Object(providers) else {
+  guard router.providers_moon_json("opencode") is Object(providers) else {
     fail("expected providers object")
   }
   assert_true(providers.get("a") is Some(_))
@@ -914,7 +914,7 @@ test "provider router mirrors ccs live settings and sort updates" {
       { id: "a", sort_index: 1 },
     ]),
   )
-  guard router.providers_ccs_json("codex") is Object(providers) else {
+  guard router.providers_moon_json("codex") is Object(providers) else {
     fail("expected providers object")
   }
   guard providers["a"] is Object(provider_a) else {
@@ -1020,7 +1020,7 @@ test "provider router syncs universal providers into app providers" {
   json_inspect(router.live_provider_ids_json("codex"), content=[
     "universal-codex-u1",
   ])
-  guard router.providers_ccs_json("codex") is Object(codex_providers) else {
+  guard router.providers_moon_json("codex") is Object(codex_providers) else {
     fail("expected codex providers")
   }
   guard codex_providers["universal-codex-u1"] is Object(codex_provider) else {

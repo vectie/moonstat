@@ -16,20 +16,6 @@ pub fn build_models_url_candidates(String, Bool, String?) -> Result[Array[String
 
 pub fn calculate_cost_for_app(String, TokenUsage, ModelPricing, cost_multiplier? : String) -> CostBreakdown
 
-pub let ccs_fwd_all_providers_failed : String
-
-pub let ccs_fwd_provider_failed_retry : String
-
-pub let ccs_fwd_single_provider_failed : String
-
-pub fn ccs_map_proxy_error_to_status(CcsProxyError) -> Int
-
-pub fn ccs_proxy_error_message(CcsProxyError) -> String
-
-pub fn ccs_strip_entity_headers_for_rebuilt_body(Map[String, String]) -> Map[String, String]
-
-pub fn ccs_strip_hop_by_hop_response_headers(Map[String, String]) -> Map[String, String]
-
 pub fn convert_anthropic_to_codex(AnthropicRequest, String) -> CodexInput
 
 pub async fn copilot_get_auth_status() -> Json
@@ -111,6 +97,20 @@ pub async fn managed_auth_set_default_account(String, String) -> Result[Json, St
 pub async fn managed_auth_start_login(String, github_domain? : String?) -> Result[Json, String]
 
 pub fn managed_auth_status_json(String, @codex.Credentials?, migration_error? : String) -> Json
+
+pub let moon_fwd_all_providers_failed : String
+
+pub let moon_fwd_provider_failed_retry : String
+
+pub let moon_fwd_single_provider_failed : String
+
+pub fn moon_map_proxy_error_to_status(MoonProxyError) -> Int
+
+pub fn moon_proxy_error_message(MoonProxyError) -> String
+
+pub fn moon_strip_entity_headers_for_rebuilt_body(Map[String, String]) -> Map[String, String]
+
+pub fn moon_strip_hop_by_hop_response_headers(Map[String, String]) -> Map[String, String]
 
 pub fn moonstat_moonclaw_providers_file_json(host? : String, port? : Int, model? : String) -> Json
 
@@ -248,27 +248,6 @@ pub struct AnthropicUsage {
   cache_creation_input_tokens : Int?
 } derive(Show, @json.FromJson)
 pub impl ToJson for AnthropicUsage
-
-pub enum CcsProxyError {
-  AlreadyRunning
-  NotRunning
-  UpstreamError(status~ : Int, body~ : String?)
-  Timeout(String)
-  StreamIdleTimeout(Int)
-  ForwardFailed(String)
-  NoAvailableProvider
-  AllProvidersCircuitOpenError
-  NoProvidersConfiguredError
-  MaxRetriesExceeded
-  ProviderUnhealthy(String)
-  ConfigError(String)
-  InvalidRequest(String)
-  AuthError(String)
-  DatabaseError(String)
-  TransformError(String)
-  Unknown(String)
-}
-pub fn CcsProxyError::to_string(Self) -> String
 
 pub struct CircuitBreaker {
   mut state : CircuitState
@@ -466,6 +445,27 @@ pub struct ModelPricing {
   cache_read_cost_per_million : String
   cache_creation_cost_per_million : String
 }
+
+pub enum MoonProxyError {
+  AlreadyRunning
+  NotRunning
+  UpstreamError(status~ : Int, body~ : String?)
+  Timeout(String)
+  StreamIdleTimeout(Int)
+  ForwardFailed(String)
+  NoAvailableProvider
+  AllProvidersCircuitOpenError
+  NoProvidersConfiguredError
+  MaxRetriesExceeded
+  ProviderUnhealthy(String)
+  ConfigError(String)
+  InvalidRequest(String)
+  AuthError(String)
+  DatabaseError(String)
+  TransformError(String)
+  Unknown(String)
+}
+pub fn MoonProxyError::to_string(Self) -> String
 
 pub struct ProviderLimitConfig {
   daily_limit_usd : String?

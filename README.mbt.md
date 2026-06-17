@@ -63,7 +63,7 @@ moon run cmd/main -- suite write-status
 MoonBook, Moontown, Moondesk, or any other local probe. They expose the
 gateway URLs, status file, capabilities, and command map needed by suite
 launchers. `suite write-status` writes the same status contract to
-`~/.moonstat/suite-status.json` by default. The contract also includes a
+`~/.moonsuite/suite-status.json` by default. The contract also includes a
 machine-readable `suite_integrations` object:
 
 - MoonClaw gets local OpenAI/Anthropic base URLs, env names, a
@@ -443,7 +443,7 @@ conflict commands are mirrored by `/get_config_status`, `/get_config_dir`,
 `/extract_common_config_snippet`, `/check_env_conflicts`, `/delete_env_vars`,
 and `/restore_env_backup`; standalone folder open/pick and env delete/restore
 routes keep CCS-compatible shapes. File-sourced env conflicts are backed up under
-`.cc-switch/backups`, removed from shell config files, and restored from that
+`.moonsuite/backups`, removed from shell config files, and restored from that
 backup JSON; process environment conflicts remain non-destructive like CCS Unix
 system entries. Snippets are kept in gateway memory.
 CCS settings and Claude plugin commands are mirrored by `/get_settings`,
@@ -461,7 +461,7 @@ CCS OpenClaw workspace commands are mirrored by `list_daily_memory_files`,
 `read_workspace_file`, `write_workspace_file`, and
 `open_workspace_directory`. Standalone mode stores the same whitelisted
 workspace files and `memory/YYYY-MM-DD.md` daily memory files under
-`~/.moonstat/openclaw/workspace`, returns CCS camelCase metadata, and keeps
+`~/.moonsuite/openclaw/workspace`, returns CCS camelCase metadata, and keeps
 directory opening non-destructive while still ensuring the target directory
 exists.
 CCS MCP and prompt commands are mirrored by `/get_mcp_config`,
@@ -486,9 +486,9 @@ newest-first listing, and best-effort last-used updates.
 recent `proxy_request_logs` rows with ccs-style provider/app/model, token,
 cache-token, cost, latency, status, session, streaming, and data-source fields.
 Gateway startup loads file-backed usage state from
-`~/.moonstat/proxy_request_logs.jsonl` and session sync offsets from
-`~/.moonstat/session_log_sync.jsonl`; editable ccs-style model pricing is stored
-in `~/.moonstat/model_pricing.jsonl`. Manual `moonstat usage sync` saves usage
+`~/.moonsuite/proxy_request_logs.jsonl` and session sync offsets from
+`~/.moonsuite/session_log_sync.jsonl`; editable ccs-style model pricing is stored
+in `~/.moonsuite/model_pricing.jsonl`. Manual `moonstat usage sync` saves usage
 state after importing Claude, Codex, Gemini, and OpenCode-compatible session logs.
 OpenCode sync reads `opencode.db` directly when `sqlite3` is available, honoring
 `OPENCODE_DB` and `XDG_DATA_HOME` like ccs. It also accepts JSONL rows exported
@@ -511,9 +511,9 @@ model-list command against `chatgpt.com/backend-api/codex/models`, returning the
 same fetched model array shape as provider model fetch. The `auth_*` endpoints
 mirror CCS managed auth for `codex_oauth`: status/list expose the local
 Moonstat Codex account, start/poll use OpenAI's device-code flow, and
-remove/logout clear `~/.moonstat/codex-credentials.json`. For
+remove/logout clear `~/.moonsuite/codex-credentials.json`. For
 `github_copilot`, the same `auth_*` surface delegates to the CCS-style Copilot
-device-code flow and `~/.moonstat/copilot-credentials.json`; the dedicated
+device-code flow and `~/.moonsuite/copilot-credentials.json`; the dedicated
 `copilot_*` endpoints mirror CCS Copilot account, token, model, and usage
 commands against GitHub/Copilot APIs. `/get_coding_plan_quota`
 mirrors the CCS coding-plan quota command for Kimi, Zhipu CN/EN, MiniMax CN/EN,
@@ -529,7 +529,7 @@ ccs database dependency.
 For Claude Desktop standalone setup, run
 `moonstat claude-desktop install --port 15721`. Moonstat writes the same gateway
 profile shape as ccs under Claude Desktop's `Claude-3p/configLibrary`, stores a
-local token at `~/.moonstat/claude_desktop_gateway_token`, and the gateway reads
+local token at `~/.moonsuite/claude_desktop_gateway_token`, and the gateway reads
 that token automatically. Use `moonstat claude-desktop uninstall` to restore the
 profile mode.
 

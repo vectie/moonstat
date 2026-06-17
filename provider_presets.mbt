@@ -1,43 +1,43 @@
 ///|
-fn ccs_provider_presets_json(path : StringView) -> Json {
+fn moon_provider_presets_json(path : StringView) -> Json {
   let app_type = usage_query_value_any(path, "app_type", "appType")
   let query = usage_query_value(path, "query").unwrap_or("")
   let sort_mode = usage_query_value_any(path, "sort_mode", "sortMode").unwrap_or(
     "original",
   )
-  let presets = ccs_visible_provider_presets(app_type, query, sort_mode)
+  let presets = moon_visible_provider_presets(app_type, query, sort_mode)
   Json::array(presets)
 }
 
 ///|
-fn ccs_visible_provider_presets(
+fn moon_visible_provider_presets(
   app_type : String?,
   query : String,
   sort_mode : String,
 ) -> Array[Json] {
   let filtered : Array[Json] = []
   let normalized_query = query.trim().to_lower()
-  for preset in ccs_provider_preset_catalog() {
+  for preset in moon_provider_preset_catalog() {
     guard preset is Object(obj) else { continue }
     match app_type {
       Some(app) if json_string_from_map(obj, "appType") != Some(app) => continue
       _ => ()
     }
     if normalized_query.is_empty() ||
-      ccs_provider_preset_search_text(obj).contains(normalized_query) {
+      moon_provider_preset_search_text(obj).contains(normalized_query) {
       filtered.push(preset)
     }
   }
   if sort_mode == "nameAsc" {
     filtered.sort_by(fn(left, right) {
-      ccs_provider_preset_name(left).compare(ccs_provider_preset_name(right))
+      moon_provider_preset_name(left).compare(moon_provider_preset_name(right))
     })
   }
   filtered
 }
 
 ///|
-fn ccs_provider_preset_name(preset : Json) -> String {
+fn moon_provider_preset_name(preset : Json) -> String {
   match preset {
     Object(obj) => json_string_from_map(obj, "name").unwrap_or("")
     _ => ""
@@ -45,7 +45,7 @@ fn ccs_provider_preset_name(preset : Json) -> String {
 }
 
 ///|
-fn ccs_provider_preset_search_text(obj : Map[String, Json]) -> String {
+fn moon_provider_preset_search_text(obj : Map[String, Json]) -> String {
   [
     json_string_from_map(obj, "name").unwrap_or(""),
     json_string_from_map(obj, "websiteUrl").unwrap_or(""),
@@ -58,24 +58,24 @@ fn ccs_provider_preset_search_text(obj : Map[String, Json]) -> String {
 }
 
 ///|
-fn ccs_provider_preset_catalog() -> Array[Json] {
+fn moon_provider_preset_catalog() -> Array[Json] {
   let presets = [
-    ccs_unity2_claude_preset_json("claude"),
-    ccs_unity2_claude_desktop_preset_json(),
-    ccs_unity2_codex_preset_json(),
-    ccs_unity2_gemini_preset_json(),
-    ccs_unity2_opencode_preset_json(),
-    ccs_unity2_openclaw_preset_json(),
-    ccs_unity2_hermes_preset_json(),
+    moon_unity2_claude_preset_json("claude"),
+    moon_unity2_claude_desktop_preset_json(),
+    moon_unity2_codex_preset_json(),
+    moon_unity2_gemini_preset_json(),
+    moon_unity2_opencode_preset_json(),
+    moon_unity2_openclaw_preset_json(),
+    moon_unity2_hermes_preset_json(),
   ]
-  for preset in ccs_provider_preset_summary_catalog() {
+  for preset in moon_provider_preset_summary_catalog() {
     presets.push(preset)
   }
   presets
 }
 
 ///|
-fn ccs_provider_preset_summary_json(
+fn moon_provider_preset_summary_json(
   app_type : String,
   name : String,
   name_key : String,
@@ -89,7 +89,7 @@ fn ccs_provider_preset_summary_json(
 ) -> Json {
   let obj : Map[String, Json] = {
     "appType": Json::string(app_type),
-    "id": Json::string("\{app_type}:\{ccs_provider_summary_slug(name)}"),
+    "id": Json::string("\{app_type}:\{moon_provider_summary_slug(name)}"),
     "name": Json::string(name),
     "settingsConfig": Json::object({}),
   }
@@ -121,7 +121,7 @@ fn ccs_provider_preset_summary_json(
 }
 
 ///|
-fn ccs_provider_summary_slug(name : String) -> String {
+fn moon_provider_summary_slug(name : String) -> String {
   let out = StringBuilder::new()
   let lower = name.to_lower()
   let mut last_dash = false
@@ -145,7 +145,7 @@ fn ccs_provider_summary_slug(name : String) -> String {
 }
 
 ///|
-fn ccs_unity2_base_preset(
+fn moon_unity2_base_preset(
   app_type : String,
   settings_config : Json,
 ) -> Map[String, Json] {
@@ -164,8 +164,8 @@ fn ccs_unity2_base_preset(
 }
 
 ///|
-fn ccs_unity2_claude_preset_json(app_type : String) -> Json {
-  let obj = ccs_unity2_base_preset(
+fn moon_unity2_claude_preset_json(app_type : String) -> Json {
+  let obj = moon_unity2_base_preset(
     app_type,
     {
       "env": {
@@ -178,17 +178,17 @@ fn ccs_unity2_claude_preset_json(app_type : String) -> Json {
 }
 
 ///|
-fn ccs_unity2_claude_desktop_preset_json() -> Json {
-  let obj = ccs_unity2_base_preset("claude-desktop", Json::object({}))
+fn moon_unity2_claude_desktop_preset_json() -> Json {
+  let obj = moon_unity2_base_preset("claude-desktop", Json::object({}))
   obj["baseUrl"] = Json::string("https://api.unity2.ai")
   obj["mode"] = Json::string("direct")
   obj["apiFormat"] = Json::string("anthropic")
-  obj["modelRoutes"] = ccs_unity2_claude_desktop_routes_json()
+  obj["modelRoutes"] = moon_unity2_claude_desktop_routes_json()
   Json::object(obj)
 }
 
 ///|
-fn ccs_unity2_claude_desktop_routes_json() -> Json {
+fn moon_unity2_claude_desktop_routes_json() -> Json {
   {
     "claude-sonnet-4-6": {
       "model": Json::string("claude-sonnet-4-6"),
@@ -206,8 +206,8 @@ fn ccs_unity2_claude_desktop_routes_json() -> Json {
 }
 
 ///|
-fn ccs_unity2_codex_preset_json() -> Json {
-  let obj = ccs_unity2_base_preset("codex", Json::object({}))
+fn moon_unity2_codex_preset_json() -> Json {
+  let obj = moon_unity2_base_preset("codex", Json::object({}))
   obj["auth"] = { "OPENAI_API_KEY": Json::string("") }.to_json()
   obj["config"] = Json::string(
     "model_provider = \"custom\"\nmodel = \"gpt-5.5\"\nmodel_reasoning_effort = \"high\"\ndisable_response_storage = true\n\n[model_providers.custom]\nname = \"unity2\"\nbase_url = \"https://api.unity2.ai\"\nwire_api = \"responses\"\nrequires_openai_auth = true",
@@ -219,8 +219,8 @@ fn ccs_unity2_codex_preset_json() -> Json {
 }
 
 ///|
-fn ccs_unity2_gemini_preset_json() -> Json {
-  let obj = ccs_unity2_base_preset(
+fn moon_unity2_gemini_preset_json() -> Json {
+  let obj = moon_unity2_base_preset(
     "gemini",
     {
       "env": {
@@ -236,8 +236,8 @@ fn ccs_unity2_gemini_preset_json() -> Json {
 }
 
 ///|
-fn ccs_unity2_opencode_preset_json() -> Json {
-  let obj = ccs_unity2_base_preset(
+fn moon_unity2_opencode_preset_json() -> Json {
+  let obj = moon_unity2_base_preset(
     "opencode",
     {
       "npm": Json::string("@ai-sdk/openai-compatible"),
@@ -250,13 +250,13 @@ fn ccs_unity2_opencode_preset_json() -> Json {
       "models": { "gpt-5.5": { "name": Json::string("GPT-5.5") }.to_json() }.to_json(),
     }.to_json(),
   )
-  obj["templateValues"] = ccs_api_key_template_values_json()
+  obj["templateValues"] = moon_api_key_template_values_json()
   Json::object(obj)
 }
 
 ///|
-fn ccs_unity2_openclaw_preset_json() -> Json {
-  let obj = ccs_unity2_base_preset(
+fn moon_unity2_openclaw_preset_json() -> Json {
+  let obj = moon_unity2_base_preset(
     "openclaw",
     {
       "baseUrl": Json::string("https://api.unity2.ai/v1"),
@@ -272,7 +272,7 @@ fn ccs_unity2_openclaw_preset_json() -> Json {
       ]),
     }.to_json(),
   )
-  obj["templateValues"] = ccs_api_key_template_values_json()
+  obj["templateValues"] = moon_api_key_template_values_json()
   obj["suggestedDefaults"] = {
     "model": { "primary": Json::string("unity2/gpt-5.5") }.to_json(),
     "modelCatalog": {
@@ -283,8 +283,8 @@ fn ccs_unity2_openclaw_preset_json() -> Json {
 }
 
 ///|
-fn ccs_unity2_hermes_preset_json() -> Json {
-  let obj = ccs_unity2_base_preset(
+fn moon_unity2_hermes_preset_json() -> Json {
+  let obj = moon_unity2_base_preset(
     "hermes",
     {
       "name": Json::string("unity2"),
@@ -310,7 +310,7 @@ fn ccs_unity2_hermes_preset_json() -> Json {
 }
 
 ///|
-fn ccs_api_key_template_values_json() -> Json {
+fn moon_api_key_template_values_json() -> Json {
   {
     "apiKey": {
       "label": Json::string("API Key"),

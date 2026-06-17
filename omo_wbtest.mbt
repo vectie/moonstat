@@ -8,7 +8,7 @@ test "ccs omo local file data parses jsonc and preserves other fields" {
     #|  "theme": "dark",
     #|  "url": "https://example.com//not-comment"
     #|}
-  guard ccs_omo_local_file_data_json_from_content(
+  guard moon_omo_local_file_data_json_from_content(
       false,
       "/tmp/oh-my-openagent.jsonc",
       Json::string("2026-06-14T00:00:00+00:00"),
@@ -50,7 +50,7 @@ test "ccs omo slim local file omits categories" {
     #|  "agents": {"slim": {}},
     #|  "categories": ["ignored"]
     #|}
-  guard ccs_omo_local_file_data_json_from_content(
+  guard moon_omo_local_file_data_json_from_content(
       true,
       "/tmp/oh-my-opencode-slim.jsonc",
       Json::null(),

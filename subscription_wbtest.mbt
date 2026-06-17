@@ -1,6 +1,6 @@
 ///|
 test "ccs subscription claude parser preserves known and unknown tiers" {
-  guard ccs_parse_claude_quota(
+  guard moon_parse_claude_quota(
       {
         "five_hour": {
           "utilization": Json::number(25.0),
@@ -51,7 +51,7 @@ test "ccs subscription claude parser preserves known and unknown tiers" {
 
 ///|
 test "ccs subscription codex parser maps wham windows to tier names" {
-  guard ccs_parse_codex_quota(
+  guard moon_parse_codex_quota(
       {
         "rate_limit": {
           "primary_window": {
@@ -83,7 +83,7 @@ test "ccs subscription codex parser maps wham windows to tier names" {
 
 ///|
 test "ccs subscription gemini parser groups buckets by model family" {
-  guard ccs_parse_gemini_quota(
+  guard moon_parse_gemini_quota(
       {
         "buckets": Json::array([
           {
@@ -125,17 +125,17 @@ test "ccs subscription gemini parser groups buckets by model family" {
 
 ///|
 test "ccs subscription credential parsers report deterministic status" {
-  let missing_claude = ccs_parse_claude_credentials_json("{}")
+  let missing_claude = moon_parse_claude_credentials_json("{}")
   assert_true(missing_claude.status == CredentialStatus::ParseError)
   assert_eq(missing_claude.message, Some("No OAuth entry found in credentials"))
   let codex_api_key_json =
     #|{"auth_mode":"apikey","tokens":{"access_token":"sk"}}
-  let codex_api_key = ccs_parse_codex_credentials_json(codex_api_key_json)
+  let codex_api_key = moon_parse_codex_credentials_json(codex_api_key_json)
   assert_true(codex_api_key.status == CredentialStatus::NotFound)
   assert_eq(codex_api_key.message, Some("Codex not using OAuth mode"))
   let gemini_json =
     #|{"access_token":"gem-token","refresh_token":"rt","expiry_date":9999999999999}
-  let gemini = ccs_parse_gemini_file_json(gemini_json)
+  let gemini = moon_parse_gemini_file_json(gemini_json)
   assert_true(gemini.status == CredentialStatus::Valid)
   assert_eq(gemini.token, Some("gem-token"))
   assert_eq(gemini.refresh_token, Some("rt"))
@@ -144,21 +144,21 @@ test "ccs subscription credential parsers report deterministic status" {
 ///|
 test "ccs codex oauth account resolver matches tauri command fallback" {
   assert_eq(
-    ccs_resolve_codex_oauth_account(
+    moon_resolve_codex_oauth_account(
       Some(" acct-explicit "),
       Some("acct-default"),
     ),
     Some("acct-explicit"),
   )
   assert_eq(
-    ccs_resolve_codex_oauth_account(Some("   "), Some("acct-default")),
+    moon_resolve_codex_oauth_account(Some("   "), Some("acct-default")),
     Some("acct-default"),
   )
   assert_eq(
-    ccs_resolve_codex_oauth_account(None, Some("acct-default")),
+    moon_resolve_codex_oauth_account(None, Some("acct-default")),
     Some("acct-default"),
   )
-  assert_true(ccs_resolve_codex_oauth_account(Some("   "), None) is None)
+  assert_true(moon_resolve_codex_oauth_account(Some("   "), None) is None)
 }
 
 ///|
@@ -185,7 +185,7 @@ test "ccs subscription gemini oauth client comes from env" {
     "test-client-secret",
     overwrite=true,
   )
-  guard ccs_gemini_oauth_client() is Some(client) else {
+  guard moon_gemini_oauth_client() is Some(client) else {
     fail("expected env-provided gemini oauth client")
   }
   assert_eq(client.client_id, "test-client-id")
