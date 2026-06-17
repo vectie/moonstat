@@ -105,10 +105,10 @@ async test "gateway completion records are persisted automatically" {
     "moonstat-store-gateway-live-\{@async.now().to_int()}",
   )
   let gateway = Gateway::new(port=0)
-  gateway.stats.enable_persistent_store(storage_dir=dir)
-  gateway.stats.record_inbound(32)
-  gateway.stats.set_active_target("codex", "codex-oauth", "Codex OAuth")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.enable_persistent_store(storage_dir=dir)
+  gateway.usage.stats.record_inbound(32)
+  gateway.usage.stats.set_active_target("codex", "codex-oauth", "Codex OAuth")
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5.5",
     session_id=Some("live-session"),
@@ -124,9 +124,9 @@ async test "gateway completion records are persisted automatically" {
     128,
   )
 
-  gateway.stats.record_inbound(12)
-  gateway.stats.set_active_target("gemini", "gemini-api-key", "Gemini API Key")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_inbound(12)
+  gateway.usage.stats.set_active_target("gemini", "gemini-api-key", "Gemini API Key")
+  gateway.usage.stats.record_request_context(
     "gemini",
     "gemini-2.5-pro",
     provider_type=Some("gemini"),

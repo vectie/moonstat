@@ -4,54 +4,21 @@ pub struct Gateway {
   host : String
   port : Int
   model : String
-  mut credentials : @codex.Credentials?
-  stats : TrafficStats
-  provider_router : ProviderRouter
-  gemini_shadow : GeminiShadowStore
-  codex_chat_history : CodexChatHistoryStore
-  usage_cache : UsageCache
-  pricing_overrides : Map[String, ModelPricing]
-  pricing_deleted_model_ids : Map[String, Bool]
-  mut proxy_enabled : Bool
-  mut proxy_listen_address : String
-  mut proxy_listen_port : Int
-  mut proxy_enable_logging : Bool
-  proxy_takeover_enabled : Map[String, Bool]
-  proxy_app_enabled : Map[String, Bool]
-  proxy_streaming_first_byte_timeout : Map[String, Int]
-  proxy_streaming_idle_timeout : Map[String, Int]
-  proxy_non_streaming_timeout : Map[String, Int]
-  proxy_default_cost_multipliers : Map[String, String]
-  proxy_pricing_model_sources : Map[String, String]
-  mut upstream_proxy_url : String?
-  mut last_external_url : String?
-  mut openclaw_default_model : Json?
-  mut openclaw_model_catalog : Json?
-  mut openclaw_agents_defaults : Json?
-  mut openclaw_env : Json
-  mut openclaw_tools : Json
-  hermes_model_config : Json?
-  hermes_memory : Map[String, String]
-  hermes_memory_enabled : Map[String, Bool]
-  config_snippets : Map[String, String]
-  mcp_servers : Map[String, Json]
-  prompts : Map[String, Json]
-  auth_device_user_codes : Map[String, String]
-  mut app_settings : Json
-  mut lightweight_mode : Bool
-  mut window_theme : String
-  mut app_config_dir_override : String?
-  mut auto_launch_enabled : Bool
-  mut rectifier_config_json : Json
-  mut optimizer_config_json : Json
-  mut copilot_optimizer_config_json : Json
-  mut log_config_json : Json
-  mut claude_plugin_config : String?
-  mut claude_plugin_applied : Bool
-  mut claude_onboarding_skipped : Bool
-  mut stream_check_config : StreamCheckConfig
   logger : @pino.Logger
   started_at_ms : Int
+  gemini_shadow : GeminiShadowStore
+  /// Auth
+  auth : AuthService
+  /// Proxy routing and circuit breakers
+  proxy : ProxyService
+  /// Usage tracking and cost calculation
+  usage : UsageService
+  /// App configuration and settings
+  config : ConfigService
+  /// Session management
+  session : SessionService
+  /// OpenClaw and Hermes provider config
+  openclaw : OpenClawService
 }
 
 
@@ -67,54 +34,15 @@ pub fn Gateway::new(
     host,
     port,
     model,
-    credentials: None,
-    stats: TrafficStats::new(),
-    provider_router: moonstat_default_provider_router(),
-    gemini_shadow: GeminiShadowStore::new(),
-    codex_chat_history: CodexChatHistoryStore::new(),
-    usage_cache: UsageCache::new(),
-    pricing_overrides: Map([], capacity=0),
-    pricing_deleted_model_ids: Map([], capacity=0),
-    proxy_enabled: true,
-    proxy_listen_address: host,
-    proxy_listen_port: port,
-    proxy_enable_logging: true,
-    proxy_takeover_enabled: Map([], capacity=0),
-    proxy_app_enabled: Map([], capacity=0),
-    proxy_streaming_first_byte_timeout: Map([], capacity=0),
-    proxy_streaming_idle_timeout: Map([], capacity=0),
-    proxy_non_streaming_timeout: Map([], capacity=0),
-    proxy_default_cost_multipliers: Map([], capacity=0),
-    proxy_pricing_model_sources: Map([], capacity=0),
-    upstream_proxy_url: None,
-    last_external_url: None,
-    openclaw_default_model: None,
-    openclaw_model_catalog: None,
-    openclaw_agents_defaults: None,
-    openclaw_env: Json::object({}),
-    openclaw_tools: openclaw_default_tools_json(),
-    hermes_model_config: None,
-    hermes_memory: Map([], capacity=2),
-    hermes_memory_enabled: Map([("memory", true), ("user", true)], capacity=2),
-    config_snippets: Map([], capacity=8),
-    mcp_servers: Map([], capacity=16),
-    prompts: Map([], capacity=16),
-    auth_device_user_codes: Map([], capacity=8),
-    app_settings: moon_default_app_settings_json(),
-    lightweight_mode: false,
-    window_theme: "system",
-    app_config_dir_override: None,
-    auto_launch_enabled: false,
-    rectifier_config_json: moon_default_rectifier_config_json(),
-    optimizer_config_json: moon_default_optimizer_config_json(),
-    copilot_optimizer_config_json: moon_default_copilot_optimizer_config_json(),
-    log_config_json: moon_default_log_config_json(),
-    claude_plugin_config: None,
-    claude_plugin_applied: false,
-    claude_onboarding_skipped: false,
-    stream_check_config: StreamCheckConfig::default(),
     logger,
     started_at_ms: @async.now().to_int(),
+    gemini_shadow: GeminiShadowStore::new(),
+    auth: AuthService::new(),
+    proxy: ProxyService::new(host, port),
+    usage: UsageService::new(),
+    config: ConfigService::new(),
+    session: SessionService::new(),
+    openclaw: OpenClawService::new(),
   }
 }
 
@@ -193,8 +121,8 @@ pub fn Gateway::port(self : Gateway) -> Int {
 
 async fn Gateway::record_bad_request(self : Gateway) -> Unit {
   self.release_provider_permit_neutral()
-  self.stats.record_bad_request()
-  self.stats.save_persistent_store()
+  self.usage.stats.record_bad_request()
+  self.usage.stats.save_persistent_store()
 }
 
 
@@ -210,8 +138,8 @@ async fn Gateway::record_upstream_error_status(
   } else {
     self.release_provider_permit_neutral()
   }
-  self.stats.record_upstream_error_status(response_bytes, status_code)
-  self.stats.save_persistent_store()
+  self.usage.stats.record_upstream_error_status(response_bytes, status_code)
+  self.usage.stats.save_persistent_store()
 }
 
 
@@ -219,8 +147,8 @@ async fn Gateway::record_upstream_error_status(
 
 async fn Gateway::record_internal_error(self : Gateway) -> Unit {
   self.release_provider_permit_neutral()
-  self.stats.record_internal_error()
-  self.stats.save_persistent_store()
+  self.usage.stats.record_internal_error()
+  self.usage.stats.save_persistent_store()
 }
 
 
@@ -259,12 +187,12 @@ async fn Gateway::handle_health(
 ) -> Unit {
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
-  let has_creds = self.credentials is Some(_)
+  let has_creds = self.auth.credentials is Some(_)
   let response : Map[String, Json] = {
     "status": Json::string("healthy"),
     "timestamp": Json::string(@async.now().to_string()),
     "credentials_loaded": Json::boolean(has_creds),
-    "stats": self.stats.to_json(),
+    "stats": self.usage.stats.to_json(),
   }
   w.write(response.to_json().stringify())
   w.flush()
@@ -281,9 +209,9 @@ async fn Gateway::handle_codex_responses(
 ) -> Unit {
   let body = r.body.read_all()
   let body_str = body.text()
-  self.stats.record_inbound(body_str.length())
+  self.usage.stats.record_inbound(body_str.length())
   let _ = self.activate_provider("codex")
-  self.stats.record_request_context("codex", self.model)
+  self.usage.stats.record_request_context("codex", self.model)
   let json_result : Result[Json, Error] = try? @json.parse(body_str)
   match json_result {
     Err(_) => {
@@ -298,7 +226,7 @@ async fn Gateway::handle_codex_responses(
     }
     Ok(json) => {
       let stream = json_bool_field(json, "stream").unwrap_or(false)
-      self.stats.record_stream_mode(stream)
+      self.usage.stats.record_stream_mode(stream)
       let request = normalize_codex_oauth_request(json)
       let client_format = moon_client_format_for_request(
         r.path.to_owned(),
@@ -310,7 +238,7 @@ async fn Gateway::handle_codex_responses(
         client_format,
       )
       let upstream_session_id = session.upstream_session_id()
-      self.stats.record_request_context(
+      self.usage.stats.record_request_context(
         "codex",
         json_string_field(json, "model").unwrap_or(self.model),
         session_id=Some(session.session_id),
@@ -342,9 +270,9 @@ async fn Gateway::handle_chat_completions(
 ) -> Unit {
   let body = r.body.read_all()
   let body_str = body.text()
-  self.stats.record_inbound(body_str.length())
+  self.usage.stats.record_inbound(body_str.length())
   let _ = self.activate_provider("codex")
-  self.stats.record_request_context("codex", self.model)
+  self.usage.stats.record_request_context("codex", self.model)
   let json_result : Result[Json, Error] = try? @json.parse(body_str)
   match json_result {
     Err(_) => {
@@ -360,7 +288,7 @@ async fn Gateway::handle_chat_completions(
     Ok(json) => {
       let response_model = openai_chat_model(json).unwrap_or(self.model)
       let stream = json_bool_field(json, "stream").unwrap_or(false)
-      self.stats.record_stream_mode(stream)
+      self.usage.stats.record_stream_mode(stream)
       let client_format = moon_client_format_for_request(
         r.path.to_owned(),
         Some(json),
@@ -371,7 +299,7 @@ async fn Gateway::handle_chat_completions(
         client_format,
       )
       let upstream_session_id = session.upstream_session_id()
-      self.stats.record_request_context(
+      self.usage.stats.record_request_context(
         "codex",
         response_model,
         session_id=Some(session.session_id),
@@ -410,9 +338,9 @@ async fn Gateway::handle_gemini(
 ) -> Unit {
   let body = r.body.read_all()
   let body_str = body.text()
-  self.stats.record_inbound(body_str.length())
+  self.usage.stats.record_inbound(body_str.length())
   let _ = self.activate_provider("gemini")
-  self.stats.record_request_context("gemini", "gemini")
+  self.usage.stats.record_request_context("gemini", "gemini")
   let request_json : Json = if body_str.is_empty() {
     Json::null()
   } else {
@@ -430,11 +358,11 @@ async fn Gateway::handle_gemini(
     }
   }
   let endpoint = normalize_gemini_endpoint(r.path)
-  self.stats.record_request_context(
+  self.usage.stats.record_request_context(
     "gemini",
     gemini_model_from_endpoint(endpoint),
   )
-  self.stats.record_stream_mode(
+  self.usage.stats.record_stream_mode(
     gemini_request_is_stream(endpoint, request_json),
   )
   let url = match gemini_proxy_url(endpoint) {
@@ -550,7 +478,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let selection = self.provider_router.select_providers("codex")
+  let selection = self.proxy.provider_router.select_providers("codex")
   if provider_selection_is_all_circuits_open(selection) {
     self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
     return
@@ -585,11 +513,11 @@ async fn Gateway::forward_non_streaming_chat_completion(
               if next is Some(_) {
                 continue
               }
-              self.stats.record_upstream_error_status(
+              self.usage.stats.record_upstream_error_status(
                 error_body.length(),
                 @status.BadGateway,
               )
-              self.stats.save_persistent_store()
+              self.usage.stats.save_persistent_store()
             } else {
               self.record_upstream_error_status(
                 error_body.length(),
@@ -604,7 +532,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
           }
         }
       _ => {
-        guard self.credentials is Some(creds) else {
+        guard self.auth.credentials is Some(creds) else {
           self.record_unauthorized()
           w.header().set("Content-Type", "application/json")
           w.write_header(@status.Unauthorized)
@@ -629,7 +557,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
       let parsed : Result[Json, Error] = try? @json.parse(response_body)
       match parsed {
         Ok(json) => {
-          ignore(self.codex_chat_history.record_response(json))
+          ignore(self.session.codex_chat_history.record_response(json))
           let usage = token_usage_or_response_model(
             token_usage_from_codex_response_auto(json),
             json,
@@ -666,11 +594,11 @@ async fn Gateway::forward_non_streaming_chat_completion(
       if next is Some(_) {
         continue
       }
-      self.stats.record_upstream_error_status(
+      self.usage.stats.record_upstream_error_status(
         response_body.length(),
         response.code,
       )
-      self.stats.save_persistent_store()
+      self.usage.stats.save_persistent_store()
     } else {
       self.record_upstream_error_status(response_body.length(), response.code)
     }
@@ -692,7 +620,7 @@ async fn Gateway::forward_streaming_chat_completion(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  guard self.credentials is Some(creds) else {
+  guard self.auth.credentials is Some(creds) else {
     self.record_unauthorized()
     w.header().set("Content-Type", "application/json")
     w.write_header(@status.Unauthorized)
@@ -702,7 +630,7 @@ async fn Gateway::forward_streaming_chat_completion(
     w.flush()
     return
   }
-  let selection = self.provider_router.select_providers("codex")
+  let selection = self.proxy.provider_router.select_providers("codex")
   if provider_selection_is_all_circuits_open(selection) {
     self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
     return
@@ -729,11 +657,11 @@ async fn Gateway::forward_streaming_chat_completion(
         if next is Some(_) {
           continue
         }
-        self.stats.record_upstream_error_status(
+        self.usage.stats.record_upstream_error_status(
           error_body.length(),
           response.code,
         )
-        self.stats.save_persistent_store()
+        self.usage.stats.save_persistent_store()
       } else {
         self.record_upstream_error_status(error_body.length(), response.code)
       }
@@ -757,11 +685,11 @@ async fn Gateway::forward_streaming_chat_completion(
           if next is Some(_) {
             continue
           }
-          self.stats.record_upstream_error_status(
+          self.usage.stats.record_upstream_error_status(
             error_body.length(),
             @status.BadGateway,
           )
-          self.stats.save_persistent_store()
+          self.usage.stats.save_persistent_store()
         } else {
           self.record_upstream_error_status(
             error_body.length(),
@@ -795,7 +723,7 @@ async fn Gateway::forward_streaming_chat_completion(
             if push_sse_json_event(stream_events, data) {
               first_token_ms = moon_first_stream_event_ms(
                 first_token_ms,
-                self.stats.current_request_started_at_ms,
+                self.usage.stats.current_request_started_at_ms,
               )
             }
             if codex_stream_event_to_openai_chat_chunk(
@@ -818,7 +746,7 @@ async fn Gateway::forward_streaming_chat_completion(
           if push_sse_json_event(stream_events, data) {
             first_token_ms = moon_first_stream_event_ms(
               first_token_ms,
-              self.stats.current_request_started_at_ms,
+              self.usage.stats.current_request_started_at_ms,
             )
           }
           if codex_stream_event_to_openai_chat_chunk(
@@ -832,7 +760,7 @@ async fn Gateway::forward_streaming_chat_completion(
           }
         }
         client.close()
-        ignore(self.codex_chat_history.record_stream_events(stream_events))
+        ignore(self.session.codex_chat_history.record_stream_events(stream_events))
         self.record_success_stream_usage(
           token_usage_from_codex_stream_events_auto(stream_events),
           response_bytes,
@@ -857,7 +785,7 @@ async fn Gateway::forward_non_streaming_codex_response(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let selection = self.provider_router.select_providers("codex")
+  let selection = self.proxy.provider_router.select_providers("codex")
   if provider_selection_is_all_circuits_open(selection) {
     self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
     return
@@ -923,11 +851,11 @@ async fn Gateway::forward_non_streaming_codex_response(
               if next is Some(_) {
                 continue
               }
-              self.stats.record_upstream_error_status(
+              self.usage.stats.record_upstream_error_status(
                 error_body.length(),
                 @status.BadGateway,
               )
-              self.stats.save_persistent_store()
+              self.usage.stats.save_persistent_store()
             } else {
               self.record_upstream_error_status(
                 error_body.length(),
@@ -943,7 +871,7 @@ async fn Gateway::forward_non_streaming_codex_response(
         }
       }
       _ => {
-        guard self.credentials is Some(creds) else {
+        guard self.auth.credentials is Some(creds) else {
           self.record_unauthorized()
           w.header().set("Content-Type", "application/json")
           w.write_header(@status.Unauthorized)
@@ -968,7 +896,7 @@ async fn Gateway::forward_non_streaming_codex_response(
       let parsed : Result[Json, Error] = try? @json.parse(response_body)
       let usage = match parsed {
         Ok(json) => {
-          ignore(self.codex_chat_history.record_response(json))
+          ignore(self.session.codex_chat_history.record_response(json))
           token_usage_or_response_model(
             token_usage_from_codex_response_auto(json),
             json,
@@ -994,11 +922,11 @@ async fn Gateway::forward_non_streaming_codex_response(
       if next is Some(_) {
         continue
       }
-      self.stats.record_upstream_error_status(
+      self.usage.stats.record_upstream_error_status(
         response_body.length(),
         response.code,
       )
-      self.stats.save_persistent_store()
+      self.usage.stats.save_persistent_store()
     } else {
       self.record_upstream_error_status(response_body.length(), response.code)
     }
@@ -1028,7 +956,7 @@ async fn Gateway::forward_streaming_codex_response(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let selection = self.provider_router.select_providers("codex")
+  let selection = self.proxy.provider_router.select_providers("codex")
   if provider_selection_is_all_circuits_open(selection) {
     self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
     return
@@ -1079,11 +1007,11 @@ async fn Gateway::forward_streaming_codex_response(
               if next is Some(_) {
                 continue
               }
-              self.stats.record_upstream_error_status(
+              self.usage.stats.record_upstream_error_status(
                 error_body.length(),
                 @status.BadGateway,
               )
-              self.stats.save_persistent_store()
+              self.usage.stats.save_persistent_store()
             } else {
               self.record_upstream_error_status(
                 error_body.length(),
@@ -1099,7 +1027,7 @@ async fn Gateway::forward_streaming_codex_response(
         }
       }
       _ => {
-        guard self.credentials is Some(creds) else {
+        guard self.auth.credentials is Some(creds) else {
           self.record_unauthorized()
           w.header().set("Content-Type", "application/json")
           w.write_header(@status.Unauthorized)
@@ -1131,11 +1059,11 @@ async fn Gateway::forward_streaming_codex_response(
         if next is Some(_) {
           continue
         }
-        self.stats.record_upstream_error_status(
+        self.usage.stats.record_upstream_error_status(
           error_body.length(),
           response.code,
         )
-        self.stats.save_persistent_store()
+        self.usage.stats.save_persistent_store()
       } else {
         self.record_upstream_error_status(error_body.length(), response.code)
       }
@@ -1159,11 +1087,11 @@ async fn Gateway::forward_streaming_codex_response(
           if next is Some(_) {
             continue
           }
-          self.stats.record_upstream_error_status(
+          self.usage.stats.record_upstream_error_status(
             error_body.length(),
             @status.BadGateway,
           )
-          self.stats.save_persistent_store()
+          self.usage.stats.save_persistent_store()
         } else {
           self.record_upstream_error_status(
             error_body.length(),
@@ -1199,7 +1127,7 @@ async fn Gateway::forward_streaming_codex_response(
             if stream_events.length() > before {
               first_token_ms = moon_first_stream_event_ms(
                 first_token_ms,
-                self.stats.current_request_started_at_ms,
+                self.usage.stats.current_request_started_at_ms,
               )
             }
           } else {
@@ -1207,7 +1135,7 @@ async fn Gateway::forward_streaming_codex_response(
               if push_sse_json_event(stream_events, data) {
                 first_token_ms = moon_first_stream_event_ms(
                   first_token_ms,
-                  self.stats.current_request_started_at_ms,
+                  self.usage.stats.current_request_started_at_ms,
                 )
               }
             }
@@ -1235,7 +1163,7 @@ async fn Gateway::forward_streaming_codex_response(
             if stream_events.length() > before {
               first_token_ms = moon_first_stream_event_ms(
                 first_token_ms,
-                self.stats.current_request_started_at_ms,
+                self.usage.stats.current_request_started_at_ms,
               )
             }
             if done {
@@ -1249,7 +1177,7 @@ async fn Gateway::forward_streaming_codex_response(
                 if push_sse_json_event(stream_events, data) {
                   first_token_ms = moon_first_stream_event_ms(
                     first_token_ms,
-                    self.stats.current_request_started_at_ms,
+                    self.usage.stats.current_request_started_at_ms,
                   )
                 }
               }
@@ -1267,7 +1195,7 @@ async fn Gateway::forward_streaming_codex_response(
           response_bytes += bytes
           w.write("data: [DONE]\n\n")
         }
-        ignore(self.codex_chat_history.record_stream_events(stream_events))
+        ignore(self.session.codex_chat_history.record_stream_events(stream_events))
         self.record_success_stream_usage(
           token_usage_from_codex_stream_events_auto(stream_events),
           response_bytes,
@@ -3218,12 +3146,12 @@ async fn Gateway::handle_status(
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
   w.write(
-    self.stats
+    self.usage.stats
     .status_json(
       self.host,
       self.port,
       self.uptime_seconds(),
-      provider_routes=Some(self.provider_router.route_stats_json()),
+      provider_routes=Some(self.proxy.provider_router.route_stats_json()),
     )
     .stringify(indent=2),
   )
@@ -3270,7 +3198,7 @@ async fn Gateway::handle_open_external(
 
 fn Gateway::record_external_open(self : Gateway, raw_url : String) -> String {
   let normalized = moon_normalize_external_url(raw_url)
-  self.last_external_url = Some(normalized)
+  self.proxy.last_external_url = Some(normalized)
   normalized
 }
 
@@ -3421,7 +3349,7 @@ async fn Gateway::handle_set_window_theme(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.window_theme = proxy_string_request(r.path, body, ["theme"]).unwrap_or(
+  self.config.window_theme = proxy_string_request(r.path, body, ["theme"]).unwrap_or(
     "system",
   )
   write_usage_json(w, Json::null())
@@ -3434,7 +3362,7 @@ async fn Gateway::handle_enter_lightweight_mode(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  self.lightweight_mode = true
+  self.config.lightweight_mode = true
   write_usage_json(w, Json::null())
 }
 
@@ -3445,7 +3373,7 @@ async fn Gateway::handle_exit_lightweight_mode(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  self.lightweight_mode = false
+  self.config.lightweight_mode = false
   write_usage_json(w, Json::null())
 }
 
@@ -3456,7 +3384,7 @@ async fn Gateway::handle_is_lightweight_mode(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, Json::boolean(self.lightweight_mode))
+  write_usage_json(w, Json::boolean(self.config.lightweight_mode))
 }
 
 
@@ -3474,7 +3402,7 @@ async fn Gateway::handle_webdav_test_connection(
   }
   let normalized = moon_webdav_sync_settings_json(
     settings,
-    moon_app_webdav_sync_json(self.app_settings),
+    moon_app_webdav_sync_json(self.config.app_settings),
     moon_sync_preserve_empty_password_request(r.path, body),
   )
   match moon_validate_webdav_sync_settings(normalized) {
@@ -3495,10 +3423,10 @@ async fn Gateway::handle_webdav_sync_operation(
   w : @httpx.ResponseWriter,
   operation : String,
 ) -> Unit {
-  match moon_webdav_sync_required_error(self.app_settings) {
+  match moon_webdav_sync_required_error(self.config.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_webdav_sync_json(self.app_settings) {
+      match moon_app_webdav_sync_json(self.config.app_settings) {
         None => write_usage_bad_request(w, "WebDAV sync is not configured.")
         Some(settings) => {
           let result = match operation {
@@ -3522,10 +3450,10 @@ async fn Gateway::handle_webdav_sync_fetch_remote_info(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match moon_webdav_sync_required_error(self.app_settings) {
+  match moon_webdav_sync_required_error(self.config.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_webdav_sync_json(self.app_settings) {
+      match moon_app_webdav_sync_json(self.config.app_settings) {
         None => write_usage_bad_request(w, "WebDAV sync is not configured.")
         Some(settings) =>
           match moon_webdav_sync_fetch_remote_info_json(settings) {
@@ -3551,7 +3479,7 @@ async fn Gateway::handle_s3_test_connection(
   }
   let normalized = moon_s3_sync_settings_json(
     settings,
-    moon_app_s3_sync_json(self.app_settings),
+    moon_app_s3_sync_json(self.config.app_settings),
     moon_sync_preserve_empty_password_request(r.path, body),
   )
   match moon_validate_s3_sync_settings(normalized) {
@@ -3572,10 +3500,10 @@ async fn Gateway::handle_s3_sync_operation(
   w : @httpx.ResponseWriter,
   operation : String,
 ) -> Unit {
-  match moon_s3_sync_required_error(self.app_settings) {
+  match moon_s3_sync_required_error(self.config.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_s3_sync_json(self.app_settings) {
+      match moon_app_s3_sync_json(self.config.app_settings) {
         None => write_usage_bad_request(w, "S3 sync is not configured.")
         Some(settings) => {
           let result = match operation {
@@ -3599,10 +3527,10 @@ async fn Gateway::handle_s3_sync_fetch_remote_info(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match moon_s3_sync_required_error(self.app_settings) {
+  match moon_s3_sync_required_error(self.config.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_s3_sync_json(self.app_settings) {
+      match moon_app_s3_sync_json(self.config.app_settings) {
         None => write_usage_bad_request(w, "S3 sync is not configured.")
         Some(settings) =>
           match moon_s3_sync_fetch_remote_info_json(settings) {
@@ -4080,9 +4008,9 @@ async fn Gateway::handle_set_auto_launch(
     write_usage_bad_request(w, "invalid_auto_launch")
     return
   }
-  self.auto_launch_enabled = enabled
-  self.app_settings = moon_settings_with_bool(
-    self.app_settings,
+  self.config.auto_launch_enabled = enabled
+  self.config.app_settings = moon_settings_with_bool(
+    self.config.app_settings,
     "launchOnStartup",
     enabled,
   )
@@ -4096,7 +4024,7 @@ async fn Gateway::handle_get_auto_launch_status(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, Json::boolean(self.auto_launch_enabled))
+  write_usage_json(w, Json::boolean(self.config.auto_launch_enabled))
 }
 
 
@@ -4145,7 +4073,7 @@ async fn Gateway::handle_get_claude_mcp_status(
       "userConfigExists": Json::boolean(
         @fsx.exists_as_file(@pathx.join(moon_home_dir(), ".claude.json")),
       ),
-      "serverCount": Json::number(self.mcp_servers.length().to_double()),
+      "serverCount": Json::number(self.config.mcp_servers.length().to_double()),
     }.to_json(),
   )
 }
@@ -4161,7 +4089,7 @@ async fn Gateway::handle_upsert_claude_mcp_server(
   let body = proxy_json_body(r)
   match moon_mcp_server_from_request(r.path, body, "claude") {
     Some((id, server)) => {
-      self.mcp_servers[id] = moon_mcp_server_with_app(server, "claude", true)
+      self.config.mcp_servers[id] = moon_mcp_server_with_app(server, "claude", true)
       write_usage_json(w, Json::boolean(true))
     }
     None => write_usage_json(w, Json::boolean(false))
@@ -4179,8 +4107,8 @@ async fn Gateway::handle_delete_mcp_server(
   let body = proxy_json_body(r)
   match proxy_string_request(r.path, body, ["id", "serverId", "server_id"]) {
     Some(id) => {
-      let existed = self.mcp_servers.get(id) is Some(_)
-      self.mcp_servers.remove(id)
+      let existed = self.config.mcp_servers.get(id) is Some(_)
+      self.config.mcp_servers.remove(id)
       write_usage_json(w, Json::boolean(existed))
     }
     None => write_usage_json(w, Json::boolean(false))
@@ -4216,9 +4144,9 @@ async fn Gateway::handle_set_mcp_enabled(
   let enabled = proxy_bool_request(r.path, body, ["enabled"]).unwrap_or(true)
   match proxy_string_request(r.path, body, ["id", "serverId", "server_id"]) {
     Some(id) =>
-      match self.mcp_servers.get(id) {
+      match self.config.mcp_servers.get(id) {
         Some(server) => {
-          self.mcp_servers[id] = moon_mcp_server_with_app(server, app, enabled)
+          self.config.mcp_servers[id] = moon_mcp_server_with_app(server, app, enabled)
           write_usage_json(w, Json::boolean(true))
         }
         None => write_usage_json(w, Json::boolean(false))
@@ -4234,7 +4162,7 @@ async fn Gateway::handle_get_mcp_servers(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, moon_mcp_servers_object_for_app(self.mcp_servers, None))
+  write_usage_json(w, moon_mcp_servers_object_for_app(self.config.mcp_servers, None))
 }
 
 
@@ -4248,7 +4176,7 @@ async fn Gateway::handle_upsert_mcp_server(
   let body = proxy_json_body(r)
   match moon_mcp_server_from_request(r.path, body, "claude") {
     Some((id, server)) => {
-      self.mcp_servers[id] = server
+      self.config.mcp_servers[id] = server
       write_usage_json(w, Json::null())
     }
     None => write_usage_json(w, Json::null())
@@ -4268,9 +4196,9 @@ async fn Gateway::handle_toggle_mcp_app(
   let enabled = proxy_bool_request(r.path, body, ["enabled"]).unwrap_or(true)
   match proxy_string_request(r.path, body, ["serverId", "server_id", "id"]) {
     Some(id) =>
-      match self.mcp_servers.get(id) {
+      match self.config.mcp_servers.get(id) {
         Some(server) => {
-          self.mcp_servers[id] = moon_mcp_server_with_app(server, app, enabled)
+          self.config.mcp_servers[id] = moon_mcp_server_with_app(server, app, enabled)
           write_usage_json(w, Json::null())
         }
         None => write_usage_json(w, Json::null())
@@ -4286,7 +4214,7 @@ async fn Gateway::handle_import_mcp_from_apps(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let imported = moon_import_mcp_from_apps_count(self.mcp_servers)
+  let imported = moon_import_mcp_from_apps_count(self.config.mcp_servers)
   write_usage_json(w, Json::number(imported.to_double()))
 }
 
@@ -4300,7 +4228,7 @@ async fn Gateway::handle_get_prompts(
 ) -> Unit {
   let body = proxy_json_body(r)
   let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
-  write_usage_json(w, moon_prompts_object_for_app(self.prompts, app))
+  write_usage_json(w, moon_prompts_object_for_app(self.config.prompts, app))
 }
 
 
@@ -4314,7 +4242,7 @@ async fn Gateway::handle_upsert_prompt(
   let body = proxy_json_body(r)
   match moon_prompt_from_request(r.path, body) {
     Some((app, id, prompt)) =>
-      self.prompts[moon_prompt_store_key(app, id)] = prompt
+      self.config.prompts[moon_prompt_store_key(app, id)] = prompt
     None => ()
   }
   write_usage_json(w, Json::null())
@@ -4331,7 +4259,7 @@ async fn Gateway::handle_delete_prompt(
   let body = proxy_json_body(r)
   let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   match proxy_string_request(r.path, body, ["id", "promptId", "prompt_id"]) {
-    Some(id) => self.prompts.remove(moon_prompt_store_key(app, id))
+    Some(id) => self.config.prompts.remove(moon_prompt_store_key(app, id))
     None => ()
   }
   write_usage_json(w, Json::null())
@@ -4351,7 +4279,7 @@ async fn Gateway::handle_enable_prompt(
     Some(id) =>
       match moon_prompt_file_path_from_request(r.path, body, app) {
         Ok(file_path) =>
-          match moon_enable_prompt_json(self.prompts, app, id, file_path) {
+          match moon_enable_prompt_json(self.config.prompts, app, id, file_path) {
             Ok(result) => write_usage_json(w, result)
             Err(error) => write_usage_bad_request(w, error)
           }
@@ -4783,7 +4711,7 @@ async fn Gateway::handle_get_claude_plugin_status(
     w,
     {
       "exists": Json::boolean(
-        self.claude_plugin_config is Some(_) ||
+        self.config.claude_plugin_config is Some(_) ||
         @fsx.exists_as_file(moon_claude_plugin_config_path()),
       ),
       "path": Json::string(moon_claude_plugin_config_path()),
@@ -4798,7 +4726,7 @@ async fn Gateway::handle_is_claude_plugin_applied(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match self.claude_plugin_config {
+  match self.config.claude_plugin_config {
     Some(content) =>
       write_usage_json(w, Json::boolean(moon_json_primary_api_key_any(content)))
     None =>
@@ -4814,7 +4742,7 @@ async fn Gateway::handle_is_claude_plugin_applied(
           Json::boolean(moon_json_primary_api_key_any(content)),
         )
       } else {
-        write_usage_json(w, Json::boolean(self.claude_plugin_applied))
+        write_usage_json(w, Json::boolean(self.config.claude_plugin_applied))
       }
   }
 }
@@ -4826,9 +4754,9 @@ async fn Gateway::handle_apply_claude_onboarding_skip(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  self.claude_onboarding_skipped = true
-  self.app_settings = moon_settings_with_bool(
-    self.app_settings,
+  self.config.claude_onboarding_skipped = true
+  self.config.app_settings = moon_settings_with_bool(
+    self.config.app_settings,
     "skipClaudeOnboarding",
     true,
   )
@@ -4842,9 +4770,9 @@ async fn Gateway::handle_clear_claude_onboarding_skip(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  self.claude_onboarding_skipped = false
-  self.app_settings = moon_settings_with_bool(
-    self.app_settings,
+  self.config.claude_onboarding_skipped = false
+  self.config.app_settings = moon_settings_with_bool(
+    self.config.app_settings,
     "skipClaudeOnboarding",
     false,
   )
@@ -4890,7 +4818,7 @@ async fn Gateway::handle_get_custom_endpoints(
   }
   write_usage_json(
     w,
-    self.provider_router.custom_endpoints_json(app_type, provider_id),
+    self.proxy.provider_router.custom_endpoints_json(app_type, provider_id),
   )
 }
 
@@ -4915,7 +4843,7 @@ async fn Gateway::handle_add_custom_endpoint(
     write_usage_bad_request(w, "missing_url")
     return
   }
-  if !self.provider_router.add_custom_endpoint(app_type, provider_id, url) {
+  if !self.proxy.provider_router.add_custom_endpoint(app_type, provider_id, url) {
     write_usage_bad_request(w, "invalid_url")
     return
   }
@@ -4943,7 +4871,7 @@ async fn Gateway::handle_remove_custom_endpoint(
     write_usage_bad_request(w, "missing_url")
     return
   }
-  self.provider_router.remove_custom_endpoint(app_type, provider_id, url)
+  self.proxy.provider_router.remove_custom_endpoint(app_type, provider_id, url)
   write_usage_json(w, Json::null())
 }
 
@@ -4968,7 +4896,7 @@ async fn Gateway::handle_update_endpoint_last_used(
     write_usage_bad_request(w, "missing_url")
     return
   }
-  self.provider_router.update_endpoint_last_used(app_type, provider_id, url)
+  self.proxy.provider_router.update_endpoint_last_used(app_type, provider_id, url)
   write_usage_json(w, Json::null())
 }
 
@@ -5012,7 +4940,7 @@ async fn Gateway::handle_get_subscription_quota(
     return
   }
   let quota = moon_get_subscription_quota(tool)
-  self.usage_cache.put_subscription(quota.tool, quota)
+  self.usage.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }
 
@@ -5036,7 +4964,7 @@ async fn Gateway::handle_get_coding_plan_quota(
     return
   }
   let quota = moon_get_coding_plan_quota(base_url, api_key)
-  self.usage_cache.put_subscription(quota.tool, quota)
+  self.usage.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }
 
@@ -5859,9 +5787,9 @@ async fn Gateway::handle_messages(
   }
   let body = r.body.read_all()
   let body_str = body.text()
-  self.stats.record_inbound(body_str.length())
+  self.usage.stats.record_inbound(body_str.length())
   let active_provider = self.activate_provider(app_type)
-  self.stats.record_request_context(app_type, self.model)
+  self.usage.stats.record_request_context(app_type, self.model)
   if active_provider is None && self.all_provider_circuits_open(app_type) {
     self.write_provider_selection_error(app_type, AllProvidersCircuitOpen, w)
     return
@@ -5914,8 +5842,8 @@ async fn Gateway::handle_messages(
           )
           self.logger.debug("Using Codex model: \{model}")
           let stream = anthropic_request.stream.unwrap_or(false)
-          self.stats.record_stream_mode(stream)
-          self.stats.record_request_context(
+          self.usage.stats.record_stream_mode(stream)
+          self.usage.stats.record_request_context(
             app_type,
             anthropic_request.model,
             outbound_model=Some(model),
@@ -5996,7 +5924,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  self.stats.record_request_context(
+  self.usage.stats.record_request_context(
     app_type,
     request.model,
     outbound_model=Some(upstream_model),
@@ -6009,7 +5937,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
   let prepared_upstream = prepare_upstream_request(
     claude_request_json_for_upstream(request_json, upstream_model),
     provider=Some(provider),
-    copilot_config_json=Some(self.copilot_optimizer_config_json),
+    copilot_config_json=Some(self.config.copilot_optimizer_config_json),
     anthropic_beta~,
     session_id~,
   )
@@ -6162,7 +6090,7 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
           ["model", "modelVersion"],
         )
         if api_format == "openai_responses" {
-          ignore(self.codex_chat_history.record_response(parsed))
+          ignore(self.session.codex_chat_history.record_response(parsed))
         }
         self.record_success_usage(usage, final_response_body.length())
         if api_format == "gemini_native" {
@@ -7301,7 +7229,7 @@ async fn Gateway::handle_non_streaming_request(
     }
     _ => ()
   }
-  guard self.credentials is Some(creds) else {
+  guard self.auth.credentials is Some(creds) else {
     self.record_unauthorized()
     w.header().set("Content-Type", "application/json")
     w.write_header(@status.Unauthorized)
@@ -7326,7 +7254,7 @@ async fn Gateway::handle_non_streaming_request(
       let refresh_result : Result[@codex.Credentials, Error] = try? @codex.refresh_and_save_credentials()
       match refresh_result {
         Ok(new_creds) => {
-          self.credentials = Some(new_creds)
+          self.auth.credentials = Some(new_creds)
           self.logger.info("Credentials refreshed, retrying request")
           self.handle_non_streaming_request(
             request, request_json, model, request_path, active_provider, app_type,
@@ -7350,7 +7278,7 @@ async fn Gateway::handle_non_streaming_request(
   )
   match response_json_result {
     Ok(json) => {
-      ignore(self.codex_chat_history.record_response(json))
+      ignore(self.session.codex_chat_history.record_response(json))
       let usage = token_usage_or_response_model(
         token_usage_from_codex_response_auto(json),
         json,
@@ -7389,7 +7317,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   session_id : String?,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  self.stats.record_request_context(
+  self.usage.stats.record_request_context(
     app_type,
     request.model,
     outbound_model=Some(upstream_model),
@@ -7402,7 +7330,7 @@ async fn Gateway::forward_streaming_claude_compatible_request(
   let prepared_upstream = prepare_upstream_request(
     claude_stream_request_json_for_upstream(request_json, upstream_model),
     provider=Some(provider),
-    copilot_config_json=Some(self.copilot_optimizer_config_json),
+    copilot_config_json=Some(self.config.copilot_optimizer_config_json),
     anthropic_beta~,
     session_id~,
   )
@@ -7690,13 +7618,13 @@ async fn Gateway::forward_successful_claude_compatible_stream(
     while reader.read() is Some(event) {
       first_token_ms = moon_first_stream_event_ms(
         first_token_ms,
-        self.stats.current_request_started_at_ms,
+        self.usage.stats.current_request_started_at_ms,
       )
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
       w.flush()
     }
-    ignore(self.codex_chat_history.record_stream_events(reader.events))
+    ignore(self.session.codex_chat_history.record_stream_events(reader.events))
     self.record_success_stream_usage(
       token_usage_from_codex_stream_events_auto(reader.events),
       0,
@@ -8448,7 +8376,7 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
     events.push(parsed)
     first_token_ms = moon_first_stream_event_ms(
       first_token_ms,
-      self.stats.current_request_started_at_ms,
+      self.usage.stats.current_request_started_at_ms,
     )
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
@@ -8484,7 +8412,7 @@ async fn Gateway::forward_anthropic_sse_passthrough(
         events.push(parsed)
         first_token_ms = moon_first_stream_event_ms(
           first_token_ms,
-          self.stats.current_request_started_at_ms,
+          self.usage.stats.current_request_started_at_ms,
         )
       }
     }
@@ -8525,7 +8453,7 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
     events.push(parsed)
     first_token_ms = moon_first_stream_event_ms(
       first_token_ms,
-      self.stats.current_request_started_at_ms,
+      self.usage.stats.current_request_started_at_ms,
     )
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
@@ -9532,7 +9460,7 @@ async fn Gateway::handle_streaming_request(
     }
     _ => ()
   }
-  guard self.credentials is Some(creds) else {
+  guard self.auth.credentials is Some(creds) else {
     self.record_unauthorized()
     w.header().set("Content-Type", "application/json")
     w.write_header(@status.Unauthorized)
@@ -9557,7 +9485,7 @@ async fn Gateway::handle_streaming_request(
       let refresh_result : Result[@codex.Credentials, Error] = try? @codex.refresh_and_save_credentials()
       match refresh_result {
         Ok(new_creds) => {
-          self.credentials = Some(new_creds)
+          self.auth.credentials = Some(new_creds)
           self.logger.info("Credentials refreshed, retrying request")
           self.handle_streaming_request(
             request, request_json, model, request_path, active_provider, app_type,
@@ -9585,13 +9513,13 @@ async fn Gateway::handle_streaming_request(
   while reader.read() is Some(event) {
     first_token_ms = moon_first_stream_event_ms(
       first_token_ms,
-      self.stats.current_request_started_at_ms,
+      self.usage.stats.current_request_started_at_ms,
     )
     w.write("event: \{event.event_type}\n")
     w.write("data: \{event.data}\n\n")
     w.flush()
   }
-  ignore(self.codex_chat_history.record_stream_events(reader.events))
+  ignore(self.session.codex_chat_history.record_stream_events(reader.events))
   self.record_success_stream_usage(
     token_usage_from_codex_stream_events_auto(reader.events),
     0,

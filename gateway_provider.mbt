@@ -82,7 +82,7 @@ fn Gateway::activate_provider(
   self : Gateway,
   app_type : String,
 ) -> ProviderRouteTarget? {
-  let selected = self.provider_router.select_providers(app_type)
+  let selected = self.proxy.provider_router.select_providers(app_type)
   guard selected.error is None else { return None }
   self.activate_first_available_provider(app_type, selected.providers)
 }
@@ -108,7 +108,7 @@ fn Gateway::activate_first_available_provider_excluding(
   attempted_provider_ids : Array[String],
 ) -> ProviderRouteTarget? {
   let bypass_circuit_breaker = providers.length() == 1
-  let max_attempts = self.provider_router.max_attempts_for_app(app_type)
+  let max_attempts = self.proxy.provider_router.max_attempts_for_app(app_type)
   if attempted_provider_ids.length() >= max_attempts {
     return None
   }
@@ -142,11 +142,11 @@ fn Gateway::activate_provider_target(
   let allow = if bypass_circuit_breaker {
     { allowed: true, used_half_open_permit: false }
   } else {
-    self.provider_router.allow_provider_request(provider.provider_id, app_type)
+    self.proxy.provider_router.allow_provider_request(provider.provider_id, app_type)
   }
   guard allow.allowed else { return false }
-  self.stats.current_request_used_half_open_permit = allow.used_half_open_permit
-  self.stats.set_active_target(
+  self.usage.stats.current_request_used_half_open_permit = allow.used_half_open_permit
+  self.usage.stats.set_active_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
@@ -160,12 +160,12 @@ fn Gateway::activate_provider_target(
 ///|
 
 fn Gateway::record_provider_result(self : Gateway, success : Bool) -> Unit {
-  guard self.stats.current_request_app_type is Some(app_type) else { return }
-  guard self.stats.current_provider_id is Some(provider_id) else { return }
-  self.provider_router.record_result(
+  guard self.usage.stats.current_request_app_type is Some(app_type) else { return }
+  guard self.usage.stats.current_provider_id is Some(provider_id) else { return }
+  self.proxy.provider_router.record_result(
     provider_id,
     app_type,
-    self.stats.current_request_used_half_open_permit,
+    self.usage.stats.current_request_used_half_open_permit,
     success,
   )
 }
@@ -174,12 +174,12 @@ fn Gateway::record_provider_result(self : Gateway, success : Bool) -> Unit {
 ///|
 
 fn Gateway::release_provider_permit_neutral(self : Gateway) -> Unit {
-  guard self.stats.current_request_app_type is Some(app_type) else { return }
-  guard self.stats.current_provider_id is Some(provider_id) else { return }
-  self.provider_router.release_permit_neutral(
+  guard self.usage.stats.current_request_app_type is Some(app_type) else { return }
+  guard self.usage.stats.current_provider_id is Some(provider_id) else { return }
+  self.proxy.provider_router.release_permit_neutral(
     provider_id,
     app_type,
-    self.stats.current_request_used_half_open_permit,
+    self.usage.stats.current_request_used_half_open_permit,
   )
 }
 
@@ -193,28 +193,28 @@ fn Gateway::activate_next_provider_after_upstream_status(
   attempted_provider_ids : Array[String],
   status_code : Int,
 ) -> ProviderRouteTarget? {
-  guard self.stats.current_provider_id is Some(provider_id) else { return None }
+  guard self.usage.stats.current_provider_id is Some(provider_id) else { return None }
   if !attempted_provider_ids.contains(provider_id) {
     attempted_provider_ids.push(provider_id)
   }
   if moon_upstream_status_retryable(status_code) {
-    self.provider_router.record_result(
+    self.proxy.provider_router.record_result(
       provider_id,
       app_type,
-      self.stats.current_request_used_half_open_permit,
+      self.usage.stats.current_request_used_half_open_permit,
       false,
     )
-    self.stats.last_error = Some("upstream_error")
+    self.usage.stats.last_error = Some("upstream_error")
     self.activate_first_available_provider_excluding(
       app_type, providers, attempted_provider_ids,
     )
   } else {
-    self.provider_router.release_permit_neutral(
+    self.proxy.provider_router.release_permit_neutral(
       provider_id,
       app_type,
-      self.stats.current_request_used_half_open_permit,
+      self.usage.stats.current_request_used_half_open_permit,
     )
-    self.stats.last_error = Some("upstream_error")
+    self.usage.stats.last_error = Some("upstream_error")
     None
   }
 }
@@ -285,7 +285,7 @@ async fn Gateway::write_provider_selection_error(
   let status_code = provider_selection_error_status(error)
   let body = provider_selection_error_json(error, app_type).stringify()
   self.record_upstream_error_status(body.length(), status_code)
-  self.stats.last_error = Some(error.to_string())
+  self.usage.stats.last_error = Some(error.to_string())
   w.header().set("Content-Type", "application/json")
   w.write_header(status_code)
   w.write(body)
@@ -302,7 +302,7 @@ fn Gateway::codex_provider_outbound_request(
 ) -> Json {
   match provider {
     Some(provider) if provider.can_use_codex_compatible_upstream() =>
-      self.codex_chat_history.enriched_request(request)
+      self.session.codex_chat_history.enriched_request(request)
     _ => request
   }
 }
@@ -314,7 +314,7 @@ fn Gateway::active_provider_target(
   self : Gateway,
   providers : Array[ProviderRouteTarget],
 ) -> ProviderRouteTarget? {
-  guard self.stats.current_provider_id is Some(provider_id) else {
+  guard self.usage.stats.current_provider_id is Some(provider_id) else {
     match providers.get(0) {
       Some(provider) => return Some(provider)
       None => return None
@@ -724,7 +724,7 @@ async fn Gateway::handle_get_providers(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  write_usage_json(w, self.provider_router.providers_moon_json(app_type))
+  write_usage_json(w, self.proxy.provider_router.providers_moon_json(app_type))
 }
 
 
@@ -743,7 +743,7 @@ async fn Gateway::handle_get_current_provider(
   write_usage_json(
     w,
     Json::string(
-      self.provider_router.current_provider_for_moon_command(app_type),
+      self.proxy.provider_router.current_provider_for_moon_command(app_type),
     ),
   )
 }
@@ -784,10 +784,10 @@ fn Gateway::add_provider_target_ccs(
   ignore(add_to_live)
   let provider_id = target.provider_id
   self.sync_provider_limits_from_target(target)
-  self.provider_router.upsert_provider(target)
+  self.proxy.provider_router.upsert_provider(target)
   if !provider_app_is_additive(app_type) {
-    if self.provider_router.current_provider_id(app_type) is None {
-      self.provider_router.set_current_provider(app_type, provider_id)
+    if self.proxy.provider_router.current_provider_id(app_type) is None {
+      self.proxy.provider_router.set_current_provider(app_type, provider_id)
     }
   }
 }
@@ -829,29 +829,29 @@ fn Gateway::update_provider_target_ccs(
 ) -> Result[Unit, String] {
   let provider_id = target.provider_id
   let original_provider_id = original_id.unwrap_or(provider_id)
-  let was_current = self.provider_router.current_provider_id(app_type) ==
+  let was_current = self.proxy.provider_router.current_provider_id(app_type) ==
     Some(original_provider_id)
   if original_provider_id != provider_id {
     if !provider_app_is_additive(app_type) {
       return Err("Only additive-mode providers support changing provider key")
     }
-    if self.provider_router.provider_by_id(app_type, original_provider_id)
+    if self.proxy.provider_router.provider_by_id(app_type, original_provider_id)
       is None {
       return Err(
         "Original provider '\{original_provider_id}' does not exist in app '\{app_type}'",
       )
     }
-    if self.provider_router.provider_by_id(app_type, provider_id) is Some(_) {
+    if self.proxy.provider_router.provider_by_id(app_type, provider_id) is Some(_) {
       return Err(
         "Provider '\{provider_id}' already exists in app '\{app_type}'",
       )
     }
-    ignore(self.provider_router.delete_provider(app_type, original_provider_id))
+    ignore(self.proxy.provider_router.delete_provider(app_type, original_provider_id))
   }
   self.sync_provider_limits_from_target(target)
-  self.provider_router.upsert_provider(target)
+  self.proxy.provider_router.upsert_provider(target)
   if was_current {
-    self.provider_router.set_current_provider(app_type, provider_id)
+    self.proxy.provider_router.set_current_provider(app_type, provider_id)
   }
   Ok(())
 }
@@ -873,7 +873,7 @@ async fn Gateway::handle_delete_provider(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  if !self.provider_router.delete_provider(app_type, provider_id) {
+  if !self.proxy.provider_router.delete_provider(app_type, provider_id) {
     write_usage_bad_request(w, "provider_not_found")
     return
   }
@@ -897,7 +897,7 @@ async fn Gateway::handle_remove_provider_from_live_config(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  if !self.provider_router.remove_provider_from_live_config(
+  if !self.proxy.provider_router.remove_provider_from_live_config(
       app_type, provider_id,
     ) {
     write_usage_bad_request(w, "provider_not_found")
@@ -923,13 +923,13 @@ async fn Gateway::handle_switch_provider(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  guard self.provider_router.provider_by_id(app_type, provider_id)
+  guard self.proxy.provider_router.provider_by_id(app_type, provider_id)
     is Some(provider) else {
     write_usage_bad_request(w, "provider_not_found")
     return
   }
-  self.provider_router.set_current_provider(app_type, provider_id)
-  self.stats.set_active_target(
+  self.proxy.provider_router.set_current_provider(app_type, provider_id)
+  self.usage.stats.set_active_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
@@ -958,7 +958,7 @@ async fn Gateway::handle_open_provider_terminal(
   let cwd = proxy_string_request(r.path, body, ["cwd"])
   match
     moon_open_provider_terminal_json(
-      self.provider_router,
+      self.proxy.provider_router,
       app_type,
       provider_id,
       cwd,
@@ -974,9 +974,9 @@ async fn Gateway::handle_open_provider_terminal(
 fn Gateway::current_claude_desktop_provider(
   self : Gateway,
 ) -> ProviderRouteTarget? {
-  match self.provider_router.current_provider_id("claude-desktop") {
+  match self.proxy.provider_router.current_provider_id("claude-desktop") {
     Some(provider_id) =>
-      self.provider_router.provider_by_id("claude-desktop", provider_id)
+      self.proxy.provider_router.provider_by_id("claude-desktop", provider_id)
     None => None
   }
 }
@@ -1011,11 +1011,11 @@ async fn Gateway::handle_ensure_claude_desktop_official_provider(
 ///|
 
 fn Gateway::ensure_claude_desktop_official_provider(self : Gateway) -> Bool {
-  if self.provider_router.provider_by_id("claude-desktop", "codex-oauth")
+  if self.proxy.provider_router.provider_by_id("claude-desktop", "codex-oauth")
     is Some(_) {
     return false
   }
-  self.provider_router.upsert_provider(
+  self.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude-desktop",
       provider_id="codex-oauth",
@@ -1024,8 +1024,8 @@ fn Gateway::ensure_claude_desktop_official_provider(self : Gateway) -> Bool {
       model_mapping=moon_model_mapping_from_env(),
     ),
   )
-  if self.provider_router.current_provider_id("claude-desktop") is None {
-    self.provider_router.set_current_provider("claude-desktop", "codex-oauth")
+  if self.proxy.provider_router.current_provider_id("claude-desktop") is None {
+    self.proxy.provider_router.set_current_provider("claude-desktop", "codex-oauth")
   }
   true
 }
@@ -1036,11 +1036,11 @@ fn Gateway::ensure_claude_desktop_official_provider(self : Gateway) -> Bool {
 fn Gateway::import_claude_desktop_providers_from_claude(self : Gateway) -> Int {
   ignore(self.ensure_claude_desktop_official_provider())
   let mut imported = 0
-  guard self.provider_router.providers.get("claude") is Some(claude_providers) else {
+  guard self.proxy.provider_router.providers.get("claude") is Some(claude_providers) else {
     return imported
   }
   for provider in claude_providers.values() {
-    if self.provider_router.provider_by_id(
+    if self.proxy.provider_router.provider_by_id(
         "claude-desktop",
         provider.provider_id,
       )
@@ -1059,7 +1059,7 @@ fn Gateway::import_claude_desktop_providers_from_claude(self : Gateway) -> Int {
     guard import_decision is Some((import_mode, claude_desktop_model_routes)) else {
       continue
     }
-    self.provider_router.upsert_provider(
+    self.proxy.provider_router.upsert_provider(
       ProviderRouteTarget::new(
         app_type="claude-desktop",
         provider_id=provider.provider_id,
@@ -1080,12 +1080,12 @@ fn Gateway::import_claude_desktop_providers_from_claude(self : Gateway) -> Int {
     )
     imported += 1
   }
-  if self.provider_router.current_provider_id("claude-desktop") is None {
-    match self.provider_router.current_provider_id("claude") {
+  if self.proxy.provider_router.current_provider_id("claude-desktop") is None {
+    match self.proxy.provider_router.current_provider_id("claude") {
       Some(provider_id) =>
-        if self.provider_router.provider_by_id("claude-desktop", provider_id)
+        if self.proxy.provider_router.provider_by_id("claude-desktop", provider_id)
           is Some(_) {
-          self.provider_router.set_current_provider(
+          self.proxy.provider_router.set_current_provider(
             "claude-desktop", provider_id,
           )
         }
@@ -1130,9 +1130,9 @@ async fn Gateway::handle_sync_current_providers_live(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let targets = self.provider_router.sync_current_provider_targets()
+  let targets = self.proxy.provider_router.sync_current_provider_targets()
   for target in targets {
-    self.stats.set_active_target(
+    self.usage.stats.set_active_target(
       target.app_type,
       target.provider_id,
       target.provider_name,
@@ -1162,7 +1162,7 @@ async fn Gateway::handle_read_live_provider_settings(
   }
   write_usage_json(
     w,
-    self.provider_router.read_live_provider_settings(app_type),
+    self.proxy.provider_router.read_live_provider_settings(app_type),
   )
 }
 
@@ -1174,7 +1174,7 @@ async fn Gateway::handle_get_live_provider_ids(
   w : @httpx.ResponseWriter,
   app_type : String,
 ) -> Unit {
-  write_usage_json(w, self.provider_router.live_provider_ids_json(app_type))
+  write_usage_json(w, self.proxy.provider_router.live_provider_ids_json(app_type))
 }
 
 
@@ -1193,7 +1193,7 @@ async fn Gateway::handle_get_live_provider(
   }
   write_usage_json(
     w,
-    self.provider_router.live_provider_json(app_type, provider_id),
+    self.proxy.provider_router.live_provider_json(app_type, provider_id),
   )
 }
 
@@ -1208,7 +1208,7 @@ async fn Gateway::handle_import_live_providers(
   write_usage_json(
     w,
     Json::number(
-      self.provider_router.import_live_providers(app_type).to_double(),
+      self.proxy.provider_router.import_live_providers(app_type).to_double(),
     ),
   )
 }
@@ -1220,7 +1220,7 @@ async fn Gateway::handle_get_universal_providers(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.provider_router.universal_providers_json())
+  write_usage_json(w, self.proxy.provider_router.universal_providers_json())
 }
 
 
@@ -1236,7 +1236,7 @@ async fn Gateway::handle_get_universal_provider(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  write_usage_json(w, self.provider_router.universal_provider_json(id))
+  write_usage_json(w, self.proxy.provider_router.universal_provider_json(id))
 }
 
 
@@ -1254,7 +1254,7 @@ async fn Gateway::handle_upsert_universal_provider(
   }
   write_usage_json(
     w,
-    Json::boolean(self.provider_router.upsert_universal_provider(provider)),
+    Json::boolean(self.proxy.provider_router.upsert_universal_provider(provider)),
   )
 }
 
@@ -1273,7 +1273,7 @@ async fn Gateway::handle_delete_universal_provider(
   }
   write_usage_json(
     w,
-    Json::boolean(self.provider_router.delete_universal_provider(id)),
+    Json::boolean(self.proxy.provider_router.delete_universal_provider(id)),
   )
 }
 
@@ -1292,7 +1292,7 @@ async fn Gateway::handle_sync_universal_provider(
   }
   write_usage_json(
     w,
-    Json::boolean(self.provider_router.sync_universal_provider(id)),
+    Json::boolean(self.proxy.provider_router.sync_universal_provider(id)),
   )
 }
 
@@ -1325,7 +1325,7 @@ async fn Gateway::handle_update_providers_sort_order(
   write_usage_json(
     w,
     Json::boolean(
-      self.provider_router.update_providers_sort_order(app_type, updates),
+      self.proxy.provider_router.update_providers_sort_order(app_type, updates),
     ),
   )
 }
@@ -1370,7 +1370,7 @@ async fn Gateway::handle_stream_check_all_providers(
   ]).unwrap_or(false)
   let rows : Array[Json] = []
   for
-    provider_id in self.provider_router.stream_check_provider_ids(
+    provider_id in self.proxy.provider_router.stream_check_provider_ids(
       app_type, proxy_targets_only,
     ) {
     guard self.stream_check_provider_result_json(app_type, provider_id)
@@ -1390,12 +1390,12 @@ fn Gateway::stream_check_provider_result_json(
   app_type : String,
   provider_id : String,
 ) -> Json? {
-  guard self.provider_router.provider_by_id(app_type, provider_id)
+  guard self.proxy.provider_router.provider_by_id(app_type, provider_id)
     is Some(provider) else {
     return None
   }
   let config = stream_check_effective_config_for_provider(
-    self.stream_check_config,
+    self.config.stream_check_config,
     provider,
   )
   let model = stream_check_reported_model_for_app(config, app_type)
@@ -1910,7 +1910,7 @@ fn Gateway::provider_limit_config_for_provider(
   provider_id : String,
   app_type : String,
 ) -> ProviderLimitConfig? {
-  guard self.provider_router.provider_by_id(app_type, provider_id)
+  guard self.proxy.provider_router.provider_by_id(app_type, provider_id)
     is Some(provider) else {
     return None
   }
@@ -1928,7 +1928,7 @@ fn Gateway::sync_provider_limits_from_target(
     is Some(config) else {
     return
   }
-  self.stats.set_provider_limits(
+  self.usage.stats.set_provider_limits(
     target.provider_id,
     target.app_type,
     daily_limit_usd=config.daily_limit_usd,
@@ -2609,7 +2609,7 @@ fn Gateway::selected_provider_chain(
   self : Gateway,
   app_type : String,
 ) -> Array[ProviderRouteTarget] {
-  let selection = self.provider_router.select_providers(app_type)
+  let selection = self.proxy.provider_router.select_providers(app_type)
   if selection.is_ok() {
     selection.providers
   } else {

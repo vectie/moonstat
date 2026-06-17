@@ -49,7 +49,7 @@ async fn Gateway::handle_get_copilot_optimizer_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.copilot_optimizer_config_json)
+  write_usage_json(w, self.config.copilot_optimizer_config_json)
 }
 
 
@@ -61,10 +61,10 @@ async fn Gateway::handle_set_copilot_optimizer_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.copilot_optimizer_config_json = moon_copilot_optimizer_config_from_request(
+  self.config.copilot_optimizer_config_json = moon_copilot_optimizer_config_from_request(
     r.path,
     body,
-    self.copilot_optimizer_config_json,
+    self.config.copilot_optimizer_config_json,
   )
   write_usage_json(w, Json::boolean(true))
 }

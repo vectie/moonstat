@@ -20,7 +20,7 @@ async fn Gateway::handle_get_openclaw_default_model(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw_default_model.unwrap_or(Json::null()))
+  write_usage_json(w, self.openclaw.openclaw_default_model.unwrap_or(Json::null()))
 }
 
 
@@ -36,7 +36,7 @@ async fn Gateway::handle_set_openclaw_default_model(
     write_usage_bad_request(w, "invalid_openclaw_default_model")
     return
   }
-  self.openclaw_default_model = Some(model)
+  self.openclaw.openclaw_default_model = Some(model)
   write_usage_json(w, suite_write_outcome_json())
 }
 
@@ -47,7 +47,7 @@ async fn Gateway::handle_get_openclaw_model_catalog(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw_model_catalog.unwrap_or(Json::null()))
+  write_usage_json(w, self.openclaw.openclaw_model_catalog.unwrap_or(Json::null()))
 }
 
 
@@ -63,7 +63,7 @@ async fn Gateway::handle_set_openclaw_model_catalog(
     write_usage_bad_request(w, "invalid_openclaw_model_catalog")
     return
   }
-  self.openclaw_model_catalog = Some(catalog)
+  self.openclaw.openclaw_model_catalog = Some(catalog)
   write_usage_json(w, suite_write_outcome_json())
 }
 
@@ -74,7 +74,7 @@ async fn Gateway::handle_get_openclaw_agents_defaults(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw_agents_defaults.unwrap_or(Json::null()))
+  write_usage_json(w, self.openclaw.openclaw_agents_defaults.unwrap_or(Json::null()))
 }
 
 
@@ -98,7 +98,7 @@ async fn Gateway::handle_set_openclaw_agents_defaults(
     write_usage_bad_request(w, "invalid_openclaw_agents_defaults")
     return
   }
-  self.openclaw_agents_defaults = Some(defaults_json)
+  self.openclaw.openclaw_agents_defaults = Some(defaults_json)
   write_usage_json(w, suite_write_outcome_json())
 }
 
@@ -109,7 +109,7 @@ async fn Gateway::handle_get_openclaw_env(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw_env)
+  write_usage_json(w, self.openclaw.openclaw_env)
 }
 
 
@@ -125,7 +125,7 @@ async fn Gateway::handle_set_openclaw_env(
     write_usage_bad_request(w, "invalid_openclaw_env")
     return
   }
-  self.openclaw_env = env
+  self.openclaw.openclaw_env = env
   write_usage_json(w, suite_write_outcome_json())
 }
 
@@ -136,7 +136,7 @@ async fn Gateway::handle_get_openclaw_tools(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw_tools)
+  write_usage_json(w, self.openclaw.openclaw_tools)
 }
 
 
@@ -152,7 +152,7 @@ async fn Gateway::handle_set_openclaw_tools(
     write_usage_bad_request(w, "invalid_openclaw_tools")
     return
   }
-  self.openclaw_tools = tools
+  self.openclaw.openclaw_tools = tools
   write_usage_json(w, suite_write_outcome_json())
 }
 
@@ -169,7 +169,7 @@ async fn Gateway::handle_get_hermes_memory(
     write_usage_bad_request(w, "invalid_hermes_memory_kind")
     return
   }
-  write_usage_json(w, Json::string(self.hermes_memory.get(kind).unwrap_or("")))
+  write_usage_json(w, Json::string(self.openclaw.hermes_memory.get(kind).unwrap_or("")))
 }
 
 
@@ -188,7 +188,7 @@ async fn Gateway::handle_set_hermes_memory(
   let content = proxy_string_request(r.path, body, ["content", "value", "text"]).unwrap_or(
     "",
   )
-  self.hermes_memory[kind] = content
+  self.openclaw.hermes_memory[kind] = content
   write_usage_json(w, Json::null())
 }
 
@@ -199,7 +199,7 @@ async fn Gateway::handle_get_hermes_memory_limits(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, hermes_memory_limits_json(self.hermes_memory_enabled))
+  write_usage_json(w, hermes_memory_limits_json(self.openclaw.hermes_memory_enabled))
 }
 
 
@@ -219,7 +219,7 @@ async fn Gateway::handle_set_hermes_memory_enabled(
     write_usage_bad_request(w, "missing_enabled")
     return
   }
-  self.hermes_memory_enabled[kind] = enabled
+  self.openclaw.hermes_memory_enabled[kind] = enabled
   write_usage_json(w, suite_write_outcome_json())
 }
 

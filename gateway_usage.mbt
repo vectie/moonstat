@@ -5,13 +5,13 @@ async fn Gateway::record_success_usage(
   response_bytes : Int,
 ) -> Unit {
   self.record_provider_result(true)
-  self.stats.record_success_usage_with_pricing(
+  self.usage.stats.record_success_usage_with_pricing(
     usage,
     response_bytes,
     self.pricing_override_rows(),
-    self.pricing_deleted_model_ids,
+    self.usage.pricing_deleted_model_ids,
   )
-  self.stats.save_persistent_store()
+  self.usage.stats.save_persistent_store()
 }
 
 
@@ -32,20 +32,20 @@ async fn Gateway::record_success_stream_usage(
     match usage {
       Some(usage) if usage.has_billable_tokens() => ()
       _ => {
-        self.stats.record_success_without_usage_log(response_bytes)
-        self.stats.save_persistent_store()
+        self.usage.stats.record_success_without_usage_log(response_bytes)
+        self.usage.stats.save_persistent_store()
         return
       }
     }
   }
-  self.stats.record_success_usage_with_pricing(
+  self.usage.stats.record_success_usage_with_pricing(
     usage.unwrap_or(TokenUsage::empty()),
     response_bytes,
     self.pricing_override_rows(),
-    self.pricing_deleted_model_ids,
+    self.usage.pricing_deleted_model_ids,
     first_token_ms~,
   )
-  self.stats.save_persistent_store()
+  self.usage.stats.save_persistent_store()
 }
 
 
@@ -57,7 +57,7 @@ async fn Gateway::handle_stats(
 ) -> Unit {
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
-  w.write(self.stats.to_json().stringify(indent=2))
+  w.write(self.usage.stats.to_json().stringify(indent=2))
   w.flush()
 }
 
@@ -74,15 +74,15 @@ async fn Gateway::handle_usage_logs(
   let body = proxy_json_body(r)
   let filters = usage_request_log_filters_from_request(r.path, body)
   let pricing_overrides = self.pricing_override_rows()
-  let backfilled = self.stats.backfill_missing_usage_costs(
+  let backfilled = self.usage.stats.backfill_missing_usage_costs(
     pricing_overrides,
-    self.pricing_deleted_model_ids,
+    self.usage.pricing_deleted_model_ids,
   )
   if backfilled > 0 {
-    self.stats.save_persistent_store()
+    self.usage.stats.save_persistent_store()
   }
   w.write(
-    self.stats
+    self.usage.stats
     .usage_logs_paginated_json(
       filters,
       page=usage_int_from_request(r.path, body, ["page"]).unwrap_or(0),
@@ -90,7 +90,7 @@ async fn Gateway::handle_usage_logs(
         20,
       ),
       pricing_overrides~,
-      deleted_model_ids=self.pricing_deleted_model_ids,
+      deleted_model_ids=self.usage.pricing_deleted_model_ids,
     )
     .stringify(indent=2),
   )
@@ -108,7 +108,7 @@ async fn Gateway::handle_usage_summary(
   let body = proxy_json_body(r)
   write_usage_json(
     w,
-    self.stats.usage_summary_filtered_json(
+    self.usage.stats.usage_summary_filtered_json(
       start_date=usage_int_from_request(r.path, body, [
         "start_date", "startDate",
       ]),
@@ -129,7 +129,7 @@ async fn Gateway::handle_usage_summary_by_app(
   let body = proxy_json_body(r)
   write_usage_json(
     w,
-    self.stats.usage_summary_by_app_filtered_json(
+    self.usage.stats.usage_summary_by_app_filtered_json(
       start_date=usage_int_from_request(r.path, body, [
         "start_date", "startDate",
       ]),
@@ -154,7 +154,7 @@ async fn Gateway::handle_usage_trends(
   let app_type = usage_string_from_request(r.path, body, ["app_type", "appType"])
   write_usage_json(
     w,
-    self.stats.usage_trends_json(start_ts~, end_ts~, app_type~),
+    self.usage.stats.usage_trends_json(start_ts~, end_ts~, app_type~),
   )
 }
 
@@ -196,7 +196,7 @@ async fn Gateway::handle_usage_provider_limits(
   )
   write_usage_json(
     w,
-    self.stats.provider_limit_status_json(
+    self.usage.stats.provider_limit_status_json(
       provider_id,
       app_type,
       daily_limit_usd~,
@@ -216,7 +216,7 @@ async fn Gateway::handle_usage_provider_stats(
   let body = proxy_json_body(r)
   write_usage_json(
     w,
-    self.stats.provider_stats_filtered_json(
+    self.usage.stats.provider_stats_filtered_json(
       start_date=usage_int_from_request(r.path, body, [
         "start_date", "startDate",
       ]),
@@ -237,7 +237,7 @@ async fn Gateway::handle_usage_model_stats(
   let body = proxy_json_body(r)
   write_usage_json(
     w,
-    self.stats.model_stats_filtered_json(
+    self.usage.stats.model_stats_filtered_json(
       start_date=usage_int_from_request(r.path, body, [
         "start_date", "startDate",
       ]),
@@ -254,7 +254,7 @@ async fn Gateway::handle_usage_data_sources(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.stats.usage_data_sources_json())
+  write_usage_json(w, self.usage.stats.usage_data_sources_json())
 }
 
 
@@ -291,11 +291,11 @@ async fn Gateway::query_provider_usage_standalone(
   app_type : String,
   provider_id : String,
 ) -> UsageResult {
-  match self.usage_cache.get_script(app_type, provider_id) {
+  match self.usage.usage_cache.get_script(app_type, provider_id) {
     Some(result) => return result
     None => ()
   }
-  match self.provider_router.provider_by_id(app_type, provider_id) {
+  match self.proxy.provider_router.provider_by_id(app_type, provider_id) {
     Some(provider) =>
       match moon_provider_balance_query_credentials(provider) {
         Some((base_url, api_key)) => return moon_get_balance(base_url, api_key)
@@ -340,7 +340,7 @@ async fn Gateway::handle_test_usage_script(
           )
       }
   }
-  self.usage_cache.put_script(app_type, provider_id, result)
+  self.usage.usage_cache.put_script(app_type, provider_id, result)
   write_usage_json(w, result.to_json())
 }
 
@@ -373,14 +373,14 @@ async fn Gateway::handle_usage_sync_session(
     "opencode_db_path",
     "opencodeDbPath",
   ).unwrap_or(default_opencode_db_path())
-  let result = self.stats.sync_session_logs(
+  let result = self.usage.stats.sync_session_logs(
     claude_projects_dir~,
     codex_dir~,
     gemini_dir~,
     opencode_db_path~,
     opencode_export_path~,
   )
-  self.stats.save_persistent_store()
+  self.usage.stats.save_persistent_store()
   write_usage_json(w, result.to_json())
 }
 
@@ -395,18 +395,18 @@ async fn Gateway::handle_usage_request_detail(
   let body = proxy_json_body(r)
   let request_id = usage_request_detail_id_from_request(r.path, body)
   let pricing_overrides = self.pricing_override_rows()
-  let backfilled = self.stats.backfill_missing_usage_costs(
+  let backfilled = self.usage.stats.backfill_missing_usage_costs(
     pricing_overrides,
-    self.pricing_deleted_model_ids,
+    self.usage.pricing_deleted_model_ids,
   )
   if backfilled > 0 {
-    self.stats.save_persistent_store()
+    self.usage.stats.save_persistent_store()
   }
   match
-    self.stats.request_detail_json_with_pricing(
+    self.usage.stats.request_detail_json_with_pricing(
       request_id,
       pricing_overrides,
-      self.pricing_deleted_model_ids,
+      self.usage.pricing_deleted_model_ids,
     ) {
     Some(detail) => write_usage_json(w, detail)
     None => write_usage_json(w, Json::null())

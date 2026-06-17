@@ -1274,8 +1274,8 @@ fn Gateway::moon_persist_webdav_sync_success(
     settings,
     moon_sync_success_status_json(manifest_hash),
   )
-  self.app_settings = moon_app_settings_with_sync(
-    self.app_settings,
+  self.config.app_settings = moon_app_settings_with_sync(
+    self.config.app_settings,
     "webdavSync",
     next,
   )
@@ -1292,8 +1292,8 @@ fn Gateway::moon_persist_s3_sync_success(
     settings,
     moon_sync_success_status_json_with_etag(manifest_hash, etag),
   )
-  self.app_settings = moon_app_settings_with_sync(
-    self.app_settings,
+  self.config.app_settings = moon_app_settings_with_sync(
+    self.config.app_settings,
     "s3Sync",
     next,
   )

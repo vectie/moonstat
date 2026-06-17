@@ -870,14 +870,14 @@ async fn Gateway::handle_webdav_sync_save_settings(
   }
   let normalized = moon_webdav_sync_settings_json(
     settings,
-    moon_app_webdav_sync_json(self.app_settings),
+    moon_app_webdav_sync_json(self.config.app_settings),
     !moon_sync_password_touched_request(r.path, body),
   )
   match moon_validate_webdav_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None => {
-      self.app_settings = moon_app_settings_with_sync(
-        self.app_settings,
+      self.config.app_settings = moon_app_settings_with_sync(
+        self.config.app_settings,
         "webdavSync",
         normalized,
       )
@@ -901,14 +901,14 @@ async fn Gateway::handle_s3_sync_save_settings(
   }
   let normalized = moon_s3_sync_settings_json(
     settings,
-    moon_app_s3_sync_json(self.app_settings),
+    moon_app_s3_sync_json(self.config.app_settings),
     !moon_sync_password_touched_request(r.path, body),
   )
   match moon_validate_s3_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None => {
-      self.app_settings = moon_app_settings_with_sync(
-        self.app_settings,
+      self.config.app_settings = moon_app_settings_with_sync(
+        self.config.app_settings,
         "s3Sync",
         normalized,
       )
@@ -999,7 +999,7 @@ async fn Gateway::handle_get_settings(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.app_settings)
+  write_usage_json(w, self.config.app_settings)
 }
 
 
@@ -1012,18 +1012,18 @@ async fn Gateway::handle_save_settings(
 ) -> Unit {
   match proxy_json_body(r) {
     Some(settings) => {
-      self.app_settings = moon_merge_settings_for_save(
+      self.config.app_settings = moon_merge_settings_for_save(
         settings,
-        self.app_settings,
+        self.config.app_settings,
       )
-      match self.app_settings {
+      match self.config.app_settings {
         Object(obj) => {
           match proxy_json_bool(obj, "launchOnStartup") {
-            Some(enabled) => self.auto_launch_enabled = enabled
+            Some(enabled) => self.config.auto_launch_enabled = enabled
             None => ()
           }
           match proxy_json_bool(obj, "skipClaudeOnboarding") {
-            Some(skipped) => self.claude_onboarding_skipped = skipped
+            Some(skipped) => self.config.claude_onboarding_skipped = skipped
             None => ()
           }
         }
@@ -1042,7 +1042,7 @@ async fn Gateway::handle_get_app_config_dir_override(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match self.app_config_dir_override {
+  match self.config.app_config_dir_override {
     Some(path) => write_usage_json(w, Json::string(path))
     None => write_usage_json(w, Json::null())
   }
@@ -1057,7 +1057,7 @@ async fn Gateway::handle_set_app_config_dir_override(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.app_config_dir_override = moon_optional_path_from_request(r.path, body)
+  self.config.app_config_dir_override = moon_optional_path_from_request(r.path, body)
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -1068,7 +1068,7 @@ async fn Gateway::handle_get_rectifier_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.rectifier_config_json)
+  write_usage_json(w, self.config.rectifier_config_json)
 }
 
 
@@ -1080,10 +1080,10 @@ async fn Gateway::handle_set_rectifier_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.rectifier_config_json = moon_rectifier_config_from_request(
+  self.config.rectifier_config_json = moon_rectifier_config_from_request(
     r.path,
     body,
-    self.rectifier_config_json,
+    self.config.rectifier_config_json,
   )
   write_usage_json(w, Json::boolean(true))
 }
@@ -1095,7 +1095,7 @@ async fn Gateway::handle_get_optimizer_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.optimizer_config_json)
+  write_usage_json(w, self.config.optimizer_config_json)
 }
 
 
@@ -1110,13 +1110,13 @@ async fn Gateway::handle_set_optimizer_config(
   let config = moon_optimizer_config_from_request(
     r.path,
     body,
-    self.optimizer_config_json,
+    self.config.optimizer_config_json,
   )
   if !moon_optimizer_cache_ttl_valid(config) {
     write_usage_bad_request(w, "invalid_optimizer_cache_ttl")
     return
   }
-  self.optimizer_config_json = config
+  self.config.optimizer_config_json = config
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -1127,7 +1127,7 @@ async fn Gateway::handle_get_log_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.log_config_json)
+  write_usage_json(w, self.config.log_config_json)
 }
 
 
@@ -1139,10 +1139,10 @@ async fn Gateway::handle_set_log_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.log_config_json = moon_log_config_from_request(
+  self.config.log_config_json = moon_log_config_from_request(
     r.path,
     body,
-    self.log_config_json,
+    self.config.log_config_json,
   )
   write_usage_json(w, Json::boolean(true))
 }
@@ -1155,7 +1155,7 @@ async fn Gateway::handle_get_common_config_snippet(
   w : @httpx.ResponseWriter,
   app_type : String,
 ) -> Unit {
-  match self.config_snippets.get(app_type) {
+  match self.config.config_snippets.get(app_type) {
     Some(snippet) => write_usage_json(w, Json::string(snippet))
     None => write_usage_json(w, Json::null())
   }
@@ -1195,9 +1195,9 @@ async fn Gateway::handle_set_common_config_snippet(
     None => ()
   }
   if snippet.trim().is_empty() {
-    self.config_snippets.remove(app_type)
+    self.config.config_snippets.remove(app_type)
   } else {
-    self.config_snippets[app_type] = snippet
+    self.config.config_snippets[app_type] = snippet
   }
   write_usage_json(w, Json::null())
 }
@@ -1223,9 +1223,9 @@ async fn Gateway::handle_set_common_config_snippet_request(
     None => ()
   }
   if snippet.trim().is_empty() {
-    self.config_snippets.remove(app_type)
+    self.config.config_snippets.remove(app_type)
   } else {
-    self.config_snippets[app_type] = snippet
+    self.config.config_snippets[app_type] = snippet
   }
   write_usage_json(w, Json::null())
 }
@@ -1251,7 +1251,7 @@ async fn Gateway::handle_extract_common_config_snippet(
         Err(error) => write_usage_bad_request(w, error)
       }
     None =>
-      match self.config_snippets.get(app_type) {
+      match self.config.config_snippets.get(app_type) {
         Some(snippet) => write_usage_json(w, Json::string(snippet))
         None => write_usage_json(w, Json::string(""))
       }
@@ -1284,7 +1284,7 @@ async fn Gateway::handle_read_claude_mcp_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match moon_mcp_config_text(self.mcp_servers) {
+  match moon_mcp_config_text(self.config.mcp_servers) {
     Some(content) => write_usage_json(w, Json::string(content))
     None => write_usage_json(w, Json::null())
   }
@@ -1304,7 +1304,7 @@ async fn Gateway::handle_get_mcp_config(
     w,
     {
       "configPath": Json::string(moon_app_config_path()),
-      "servers": moon_mcp_servers_object_for_app(self.mcp_servers, Some(app)),
+      "servers": moon_mcp_servers_object_for_app(self.config.mcp_servers, Some(app)),
     }.to_json(),
   )
 }
@@ -1333,7 +1333,7 @@ async fn Gateway::handle_upsert_mcp_server_in_config(
       } else {
         moon_mcp_server_with_app(server, app, true)
       }
-      self.mcp_servers[id] = next
+      self.config.mcp_servers[id] = next
       write_usage_json(w, Json::boolean(true))
     }
     None => write_usage_json(w, Json::boolean(false))
@@ -1353,7 +1353,7 @@ async fn Gateway::handle_import_default_config(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  match moon_import_default_config_json(self.provider_router, app_type) {
+  match moon_import_default_config_json(self.proxy.provider_router, app_type) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
@@ -1366,7 +1366,7 @@ async fn Gateway::handle_read_claude_plugin_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match self.claude_plugin_config {
+  match self.config.claude_plugin_config {
     Some(content) => write_usage_json(w, Json::string(content))
     None =>
       if @fsx.exists_as_file(moon_claude_plugin_config_path()) {
@@ -1394,11 +1394,11 @@ async fn Gateway::handle_apply_claude_plugin_config(
   let body = proxy_json_body(r)
   let official = proxy_bool_request(r.path, body, ["official"]).unwrap_or(false)
   if official {
-    self.claude_plugin_applied = false
-    self.claude_plugin_config = None
+    self.config.claude_plugin_applied = false
+    self.config.claude_plugin_config = None
   } else {
-    self.claude_plugin_applied = true
-    self.claude_plugin_config = Some("{\n  \"primaryApiKey\": \"any\"\n}\n")
+    self.config.claude_plugin_applied = true
+    self.config.claude_plugin_config = Some("{\n  \"primaryApiKey\": \"any\"\n}\n")
   }
   write_usage_json(w, Json::boolean(true))
 }
@@ -1420,7 +1420,7 @@ async fn Gateway::handle_get_hermes_model_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.hermes_model_config.unwrap_or(Json::null()))
+  write_usage_json(w, self.openclaw.hermes_model_config.unwrap_or(Json::null()))
 }
 
 
@@ -1500,7 +1500,7 @@ async fn Gateway::handle_get_stream_check_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.stream_check_config.to_json())
+  write_usage_json(w, self.config.stream_check_config.to_json())
 }
 
 
@@ -1513,9 +1513,9 @@ async fn Gateway::handle_save_stream_check_config(
 ) -> Unit {
   let body = r.body.read_all().text()
   match
-    stream_check_config_from_request(r.path, body, self.stream_check_config) {
+    stream_check_config_from_request(r.path, body, self.config.stream_check_config) {
     Some(config) => {
-      self.stream_check_config = config
+      self.config.stream_check_config = config
       write_usage_json(w, Json::null())
     }
     None => write_usage_bad_request(w, "invalid_stream_check_config")
@@ -1526,11 +1526,11 @@ async fn Gateway::handle_save_stream_check_config(
 ///|
 
 fn Gateway::openclaw_config_health_json(self : Gateway) -> Json {
-  let defaults = self.openclaw_agents_defaults.unwrap_or(Json::object({}))
+  let defaults = self.openclaw.openclaw_agents_defaults.unwrap_or(Json::object({}))
   let config = {
-    "tools": self.openclaw_tools,
+    "tools": self.openclaw.openclaw_tools,
     "agents": { "defaults": defaults }.to_json(),
-    "env": self.openclaw_env,
+    "env": self.openclaw.openclaw_env,
   }.to_json()
   openclaw_config_health_from_json(config)
 }

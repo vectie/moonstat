@@ -66,7 +66,7 @@ test "ccs omo slim local file omits categories" {
 ///|
 test "ccs omo current provider helpers use opencode category" {
   let gateway = Gateway::new(port=17777)
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="opencode",
       provider_id="omo-a",
@@ -74,22 +74,22 @@ test "ccs omo current provider helpers use opencode category" {
       provider_type=Some("omo"),
     ),
   )
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="opencode",
       provider_id="plain",
       provider_name="Plain",
     ),
   )
-  gateway.provider_router.set_current_provider("opencode", "omo-a")
+  gateway.proxy.provider_router.set_current_provider("opencode", "omo-a")
   assert_eq(gateway.current_omo_provider_id(false), "omo-a")
   assert_eq(gateway.current_omo_provider_id(true), "")
   gateway.clear_current_omo_provider(false)
-  assert_eq(gateway.provider_router.current_provider_id("opencode"), None)
-  gateway.provider_router.set_current_provider("opencode", "plain")
+  assert_eq(gateway.proxy.provider_router.current_provider_id("opencode"), None)
+  gateway.proxy.provider_router.set_current_provider("opencode", "plain")
   gateway.clear_current_omo_provider(false)
   assert_eq(
-    gateway.provider_router.current_provider_id("opencode"),
+    gateway.proxy.provider_router.current_provider_id("opencode"),
     Some("plain"),
   )
 }

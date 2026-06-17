@@ -171,7 +171,7 @@ async fn Gateway::handle_launch_session_terminal(
       command,
       cwd,
       custom_config,
-      moon_session_terminal_from_settings(self.app_settings),
+      moon_session_terminal_from_settings(self.config.app_settings),
     ) {
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)

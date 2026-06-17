@@ -399,7 +399,7 @@ async fn Gateway::handle_import_prompt_from_file(
   let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   match moon_prompt_file_path_from_request(r.path, body, app) {
     Ok(file_path) =>
-      match moon_import_prompt_from_file_json(self.prompts, app, file_path) {
+      match moon_import_prompt_from_file_json(self.config.prompts, app, file_path) {
         Ok(result) => write_usage_json(w, result)
         Err(error) => write_usage_bad_request(w, error)
       }

@@ -772,10 +772,10 @@ test "gateway syncs ccs provider limit metadata into usage limits" {
       }.to_json(),
     ),
   )
-  gateway.provider_router.upsert_provider(provider)
+  gateway.proxy.provider_router.upsert_provider(provider)
   gateway.sync_provider_limits_from_target(provider)
   let now = TREND_DAY_SECONDS * 10
-  gateway.stats.record_request_log(
+  gateway.usage.stats.record_request_log(
     RequestLog::new(
       request_id="req-provider-limit",
       provider_id="limited-provider",
@@ -788,7 +788,7 @@ test "gateway syncs ccs provider limit metadata into usage limits" {
     ),
   )
   json_inspect(
-    gateway.stats.provider_limit_status_json(
+    gateway.usage.stats.provider_limit_status_json(
       "limited-provider",
       "codex",
       now_ts=Some(now),
@@ -818,10 +818,10 @@ test "gateway add provider follows ccs current provider semantics" {
     true,
   )
   assert_eq(
-    gateway.provider_router.current_provider_id("codex"),
+    gateway.proxy.provider_router.current_provider_id("codex"),
     Some("codex-oauth"),
   )
-  gateway.provider_router.current_provider_ids.remove("gemini")
+  gateway.proxy.provider_router.current_provider_ids.remove("gemini")
   gateway.add_provider_target_ccs(
     "gemini",
     ProviderRouteTarget::new(
@@ -832,7 +832,7 @@ test "gateway add provider follows ccs current provider semantics" {
     true,
   )
   assert_eq(
-    gateway.provider_router.current_provider_id("gemini"),
+    gateway.proxy.provider_router.current_provider_id("gemini"),
     Some("gemini-alt"),
   )
   gateway.add_provider_target_ccs(
@@ -844,9 +844,9 @@ test "gateway add provider follows ccs current provider semantics" {
     ),
     true,
   )
-  assert_eq(gateway.provider_router.current_provider_id("opencode"), None)
+  assert_eq(gateway.proxy.provider_router.current_provider_id("opencode"), None)
   assert_eq(
-    gateway.provider_router.current_provider_for_moon_command("opencode"),
+    gateway.proxy.provider_router.current_provider_for_moon_command("opencode"),
     "",
   )
 }
@@ -868,16 +868,16 @@ test "gateway update provider follows ccs rename guards" {
     Err("Original provider 'missing-original' does not exist in app 'opencode'"),
   )
   assert_true(
-    gateway.provider_router.provider_by_id("opencode", "opencode-next") is None,
+    gateway.proxy.provider_router.provider_by_id("opencode", "opencode-next") is None,
   )
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="opencode",
       provider_id="opencode-a",
       provider_name="OpenCode A",
     ),
   )
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="opencode",
       provider_id="opencode-b",
@@ -898,7 +898,7 @@ test "gateway update provider follows ccs rename guards" {
     Err("Provider 'opencode-b' already exists in app 'opencode'"),
   )
   assert_true(
-    gateway.provider_router.provider_by_id("opencode", "opencode-a") is Some(_),
+    gateway.proxy.provider_router.provider_by_id("opencode", "opencode-a") is Some(_),
   )
   let non_additive_result = gateway.update_provider_target_ccs(
     "codex",
@@ -914,7 +914,7 @@ test "gateway update provider follows ccs rename guards" {
     Err("Only additive-mode providers support changing provider key"),
   )
   assert_true(
-    gateway.provider_router.provider_by_id("codex", "codex-renamed") is None,
+    gateway.proxy.provider_router.provider_by_id("codex", "codex-renamed") is None,
   )
   let rename_result = gateway.update_provider_target_ccs(
     "opencode",
@@ -927,10 +927,10 @@ test "gateway update provider follows ccs rename guards" {
   )
   assert_eq(rename_result, Ok(()))
   assert_true(
-    gateway.provider_router.provider_by_id("opencode", "opencode-a") is None,
+    gateway.proxy.provider_router.provider_by_id("opencode", "opencode-a") is None,
   )
   assert_true(
-    gateway.provider_router.provider_by_id("opencode", "opencode-renamed")
+    gateway.proxy.provider_router.provider_by_id("opencode", "opencode-renamed")
     is Some(_),
   )
 }
@@ -1578,7 +1578,7 @@ async test "queryProviderUsage returns cached ccs script result first" {
       ),
     ]),
   )
-  gateway.usage_cache.put_script("codex", "cached-provider", cached)
+  gateway.usage.usage_cache.put_script("codex", "cached-provider", cached)
   assert_eq(
     gateway
     .query_provider_usage_standalone("codex", "cached-provider")
@@ -1590,7 +1590,7 @@ async test "queryProviderUsage returns cached ccs script result first" {
 ///|
 async test "queryProviderUsage falls back to ccs native balance credentials" {
   let gateway = Gateway::new(port=17020, host="127.0.0.20", model="gpt-5")
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="openrouter-native",
@@ -1900,11 +1900,11 @@ test "proxy app config alias matches ccs app config shape" {
 ///|
 test "proxy global config state updates ccs config shapes" {
   let gateway = Gateway::new(port=17006, host="127.0.0.7", model="gpt-5")
-  gateway.proxy_enabled = false
-  gateway.proxy_listen_address = "127.0.0.8"
-  gateway.proxy_listen_port = 17007
-  gateway.proxy_enable_logging = false
-  gateway.proxy_takeover_enabled.set("codex", true)
+  gateway.proxy.proxy_enabled = false
+  gateway.proxy.proxy_listen_address = "127.0.0.8"
+  gateway.proxy.proxy_listen_port = 17007
+  gateway.proxy.proxy_enable_logging = false
+  gateway.proxy.proxy_takeover_enabled.set("codex", true)
   guard gateway.proxy_global_config_json() is Object(global_config) else {
     fail("expected global config object")
   }
@@ -1929,13 +1929,13 @@ test "proxy global config state updates ccs config shapes" {
 ///|
 test "proxy lifecycle state matches ccs command aliases" {
   let gateway = Gateway::new(port=17016, host="127.0.0.16", model="gpt-5")
-  gateway.proxy_enabled = false
+  gateway.proxy.proxy_enabled = false
   guard gateway.proxy_server_info_json() is Object(server_info) else {
     fail("expected server info")
   }
   assert_eq(server_info["address"], Json::string("127.0.0.16"))
   assert_eq(server_info["port"], Json::number(17016.0))
-  gateway.proxy_takeover_enabled.set("codex", true)
+  gateway.proxy.proxy_takeover_enabled.set("codex", true)
   assert_true(gateway.proxy_takeover_active())
   assert_eq(
     moon_stop_proxy_takeover_error(),
@@ -1943,18 +1943,18 @@ test "proxy lifecycle state matches ccs command aliases" {
   )
   gateway.proxy_clear_takeover()
   assert_false(gateway.proxy_takeover_active())
-  gateway.proxy_enabled = true
-  gateway.proxy_app_enabled.set("claude", true)
-  gateway.proxy_app_enabled.set("codex", true)
-  gateway.proxy_app_enabled.set("gemini", true)
-  gateway.provider_router.set_failover_queue("codex", ["codex-oauth"])
-  gateway.provider_router.set_auto_failover("codex", true)
+  gateway.proxy.proxy_enabled = true
+  gateway.proxy.proxy_app_enabled.set("claude", true)
+  gateway.proxy.proxy_app_enabled.set("codex", true)
+  gateway.proxy.proxy_app_enabled.set("gemini", true)
+  gateway.proxy.provider_router.set_failover_queue("codex", ["codex-oauth"])
+  gateway.proxy.provider_router.set_auto_failover("codex", true)
   gateway.proxy_clear_enabled_apps_for_manual_stop()
   assert_false(gateway.proxy_app_enabled_for_app("claude"))
   assert_false(gateway.proxy_app_enabled_for_app("codex"))
   assert_false(gateway.proxy_app_enabled_for_app("gemini"))
-  assert_true(gateway.provider_router.auto_failover_enabled_for_app("codex"))
-  json_inspect(gateway.provider_router.failover_queue_json("codex"), content=[
+  assert_true(gateway.proxy.provider_router.auto_failover_enabled_for_app("codex"))
+  json_inspect(gateway.proxy.provider_router.failover_queue_json("codex"), content=[
     {
       "providerId": "codex-oauth",
       "providerName": "Codex OAuth",
@@ -1968,10 +1968,10 @@ test "ccs auto failover enable requires proxy takeover" {
   let gateway = Gateway::new(port=17017, host="127.0.0.17", model="gpt-5")
   assert_true(gateway.can_set_auto_failover_ccs("codex", true))
   assert_true(gateway.can_set_auto_failover_ccs("codex", false))
-  gateway.proxy_app_enabled.set("codex", false)
+  gateway.proxy.proxy_app_enabled.set("codex", false)
   assert_false(gateway.can_set_auto_failover_ccs("codex", true))
   assert_true(gateway.can_set_auto_failover_ccs("codex", false))
-  gateway.proxy_app_enabled.set("codex", true)
+  gateway.proxy.proxy_app_enabled.set("codex", true)
   assert_true(gateway.can_set_auto_failover_ccs("codex", true))
 }
 
@@ -2017,13 +2017,13 @@ test "standalone tray update mirrors ccs no tray result" {
 ///|
 test "standalone external open records ccs normalized target" {
   let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
-  assert_eq(gateway.last_external_url, None)
+  assert_eq(gateway.proxy.last_external_url, None)
   assert_eq(
     gateway.record_external_open("github.com/vectie/moonstat"),
     "https://github.com/vectie/moonstat",
   )
   assert_eq(
-    gateway.last_external_url,
+    gateway.proxy.last_external_url,
     Some("https://github.com/vectie/moonstat"),
   )
   assert_eq(
@@ -2031,7 +2031,7 @@ test "standalone external open records ccs normalized target" {
     "https://HTTP://github.com/vectie/moonstat",
   )
   assert_eq(
-    gateway.last_external_url,
+    gateway.proxy.last_external_url,
     Some("https://HTTP://github.com/vectie/moonstat"),
   )
 }
@@ -2040,18 +2040,18 @@ test "standalone external open records ccs normalized target" {
 test "standalone update check records moonstat release target" {
   let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
   assert_eq(gateway.record_external_open(moon_update_url()), moon_update_url())
-  assert_eq(gateway.last_external_url, Some(moon_update_url()))
+  assert_eq(gateway.proxy.last_external_url, Some(moon_update_url()))
 }
 
 ///|
 test "proxy app config state updates ccs app fields" {
   let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
-  gateway.proxy_app_enabled.set("codex", false)
-  gateway.provider_router.set_max_retries("codex", 5)
-  gateway.proxy_streaming_first_byte_timeout.set("codex", 11)
-  gateway.proxy_streaming_idle_timeout.set("codex", 22)
-  gateway.proxy_non_streaming_timeout.set("codex", 33)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.proxy_app_enabled.set("codex", false)
+  gateway.proxy.provider_router.set_max_retries("codex", 5)
+  gateway.proxy.proxy_streaming_first_byte_timeout.set("codex", 11)
+  gateway.proxy.proxy_streaming_idle_timeout.set("codex", 22)
+  gateway.proxy.proxy_non_streaming_timeout.set("codex", 33)
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 7,
     success_threshold: 3,
     timeout_seconds: 44,
@@ -2076,7 +2076,7 @@ test "proxy app config state updates ccs app fields" {
 ///|
 test "proxy app config circuit updates are app scoped" {
   let gateway = Gateway::new(port=17009, host="127.0.0.10", model="gpt-5")
-  gateway.provider_router.update_app_configs("claude", {
+  gateway.proxy.provider_router.update_app_configs("claude", {
     failure_threshold: 9,
     success_threshold: 4,
     timeout_seconds: 77,
@@ -2129,8 +2129,8 @@ test "stream check config accepts ccs camelCase body and query fields" {
 ///|
 test "stream check result uses ccs camelCase shape" {
   let gateway = Gateway::new(port=17017, host="127.0.0.17", model="gpt-5")
-  gateway.stream_check_config = {
-    ..gateway.stream_check_config,
+  gateway.config.stream_check_config = {
+    ..gateway.config.stream_check_config,
     codex_model: "codex-check-model",
   }
   guard gateway.stream_check_provider_result_json("codex", "codex-oauth")
@@ -2151,8 +2151,8 @@ test "stream check result uses ccs camelCase shape" {
 ///|
 test "stream check strips ccs codex effort suffix from result model" {
   let gateway = Gateway::new(port=17018, host="127.0.0.18", model="gpt-5")
-  gateway.stream_check_config = {
-    ..gateway.stream_check_config,
+  gateway.config.stream_check_config = {
+    ..gateway.config.stream_check_config,
     codex_model: "gpt-5.5@low",
     claude_model: "claude-sonnet-4-5#high",
   }
@@ -2162,7 +2162,7 @@ test "stream check strips ccs codex effort suffix from result model" {
   }
   assert_eq(result["modelUsed"], Json::string("gpt-5.5"))
   assert_eq(
-    stream_check_reported_model_for_app(gateway.stream_check_config, "claude"),
+    stream_check_reported_model_for_app(gateway.config.stream_check_config, "claude"),
     "claude-sonnet-4-5#high",
   )
 }
@@ -2170,12 +2170,12 @@ test "stream check strips ccs codex effort suffix from result model" {
 ///|
 test "stream check provider test config overrides global config like ccs" {
   let gateway = Gateway::new(port=17019, host="127.0.0.19", model="gpt-5")
-  gateway.stream_check_config = {
-    ..gateway.stream_check_config,
+  gateway.config.stream_check_config = {
+    ..gateway.config.stream_check_config,
     codex_model: "global-model@low",
     test_prompt: "global prompt",
   }
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="codex-provider-test",
@@ -2196,12 +2196,12 @@ test "stream check provider test config overrides global config like ccs" {
       ),
     ),
   )
-  guard gateway.provider_router.provider_by_id("codex", "codex-provider-test")
+  guard gateway.proxy.provider_router.provider_by_id("codex", "codex-provider-test")
     is Some(provider) else {
     fail("expected provider")
   }
   let config = stream_check_effective_config_for_provider(
-    gateway.stream_check_config,
+    gateway.config.stream_check_config,
     provider,
   )
   assert_eq(config.codex_model, "provider-model@medium")
@@ -2389,8 +2389,8 @@ test "proxy pricing config aliases use ccs env-backed defaults" {
 ///|
 test "proxy pricing config runtime overrides feed provider activation defaults" {
   let gateway = Gateway::new(port=17017, host="127.0.0.17", model="gpt-5")
-  gateway.proxy_default_cost_multipliers.set("codex", "1.75")
-  gateway.proxy_pricing_model_sources.set("codex", "request")
+  gateway.proxy.proxy_default_cost_multipliers.set("codex", "1.75")
+  gateway.proxy.proxy_pricing_model_sources.set("codex", "request")
   let provider = ProviderRouteTarget::new(
     app_type="codex",
     provider_id="codex-oauth",
@@ -2405,10 +2405,10 @@ test "proxy pricing config runtime overrides feed provider activation defaults" 
 ///|
 test "proxy pricing config makes claude desktop inherit claude defaults like ccs" {
   let gateway = Gateway::new(port=17017, host="127.0.0.17", model="gpt-5")
-  gateway.proxy_default_cost_multipliers.set("claude", "1.5")
-  gateway.proxy_pricing_model_sources.set("claude", "request")
-  gateway.proxy_default_cost_multipliers.set("claude-desktop", "9.9")
-  gateway.proxy_pricing_model_sources.set("claude-desktop", "response")
+  gateway.proxy.proxy_default_cost_multipliers.set("claude", "1.5")
+  gateway.proxy.proxy_pricing_model_sources.set("claude", "request")
+  gateway.proxy.proxy_default_cost_multipliers.set("claude-desktop", "9.9")
+  gateway.proxy.proxy_pricing_model_sources.set("claude-desktop", "response")
   let provider = ProviderRouteTarget::new(
     app_type="claude-desktop",
     provider_id="desktop",
@@ -2515,7 +2515,7 @@ test "codex common config extraction removes provider toml tables" {
 ///|
 test "proxy circuit breaker config alias matches ccs shape" {
   let gateway = Gateway::new(port=17006, host="127.0.0.7", model="gpt-5")
-  guard gateway.provider_router.circuit_config.to_json() is Object(config) else {
+  guard gateway.proxy.provider_router.circuit_config.to_json() is Object(config) else {
     fail("expected circuit config object")
   }
   assert_eq(config["failureThreshold"], Json::number(4.0))
@@ -2606,7 +2606,7 @@ test "ccs circuit breaker stats command currently returns null" {
 ///|
 test "proxy provider health alias mirrors circuit breaker state" {
   let gateway = Gateway::new(port=17007, host="127.0.0.8", model="gpt-5")
-  guard gateway.provider_router.provider_health_json(
+  guard gateway.proxy.provider_router.provider_health_json(
       "codex-oauth", "claude", "test-time",
     )
     is Object(healthy) else {
@@ -2620,7 +2620,7 @@ test "proxy provider health alias mirrors circuit breaker state" {
   assert_eq(healthy["updated_at"], Json::string("test-time"))
 
   for _ in 0..<4 {
-    gateway.provider_router.record_result(
+    gateway.proxy.provider_router.record_result(
       "codex-oauth",
       "claude",
       false,
@@ -2628,7 +2628,7 @@ test "proxy provider health alias mirrors circuit breaker state" {
       now_ms=1000,
     )
   }
-  guard gateway.provider_router.provider_health_json(
+  guard gateway.proxy.provider_router.provider_health_json(
       "codex-oauth", "claude", "test-time",
     )
     is Object(open) else {
@@ -2639,7 +2639,7 @@ test "proxy provider health alias mirrors circuit breaker state" {
   assert_eq(open["last_success_at"], Json::null())
   assert_eq(open["last_failure_at"], Json::string("1000"))
   assert_eq(open["last_error"], Json::string("circuit_open"))
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "claude",
     )
     is Some(stats) else {
@@ -2648,8 +2648,8 @@ test "proxy provider health alias mirrors circuit breaker state" {
   assert_true(stats.state == Open)
   assert_eq(stats.total_requests, 4)
   assert_eq(stats.failed_requests, 4)
-  gateway.provider_router.reset_provider_breaker("codex-oauth", "claude")
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  gateway.proxy.provider_router.reset_provider_breaker("codex-oauth", "claude")
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "claude",
     )
     is Some(reset_stats) else {
@@ -2658,7 +2658,7 @@ test "proxy provider health alias mirrors circuit breaker state" {
   assert_true(reset_stats.state == Closed)
   assert_eq(reset_stats.total_requests, 0)
   assert_eq(reset_stats.failed_requests, 0)
-  guard gateway.provider_router.provider_health_json(
+  guard gateway.proxy.provider_router.provider_health_json(
       "codex-oauth", "claude", "test-time-after-reset",
     )
     is Object(reset_health) else {
@@ -2674,10 +2674,10 @@ test "proxy provider health alias mirrors circuit breaker state" {
 ///|
 test "proxy status alias matches ccs proxy status shape" {
   let gateway = Gateway::new(port=17002, host="127.0.0.3", model="gpt-5")
-  gateway.stats.record_inbound(16)
-  gateway.stats.record_bad_request()
-  gateway.stats.set_active_target("codex", "codex-oauth", "Codex OAuth")
-  gateway.stats.last_request_at = Some("test-timestamp")
+  gateway.usage.stats.record_inbound(16)
+  gateway.usage.stats.record_bad_request()
+  gateway.usage.stats.set_active_target("codex", "codex-oauth", "Codex OAuth")
+  gateway.usage.stats.last_request_at = Some("test-timestamp")
   guard gateway.proxy_status_json() is Object(status) else {
     fail("expected proxy status object")
   }
@@ -2701,12 +2701,12 @@ test "proxy status alias matches ccs proxy status shape" {
 ///|
 test "proxy status running follows ccs start stop state" {
   let gateway = Gateway::new(port=17004, host="127.0.0.5", model="gpt-5")
-  gateway.proxy_enabled = false
+  gateway.proxy.proxy_enabled = false
   guard gateway.proxy_status_json() is Object(stopped) else {
     fail("expected stopped proxy status")
   }
   assert_eq(stopped["running"], Json::boolean(false))
-  gateway.proxy_enabled = true
+  gateway.proxy.proxy_enabled = true
   guard gateway.proxy_status_json() is Object(started) else {
     fail("expected started proxy status")
   }
@@ -3569,24 +3569,24 @@ test "invalid ccs provider pricing model source falls back to default env" {
 ///|
 test "gateway records upstream failures into provider router before finish" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 60,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
   gateway.record_provider_result(false)
-  gateway.stats.record_upstream_error_status(0, 502)
-  assert_eq(gateway.stats.current_request_app_type, None)
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  gateway.usage.stats.record_upstream_error_status(0, 502)
+  assert_eq(gateway.usage.stats.current_request_app_type, None)
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -3904,7 +3904,7 @@ test "claude desktop mimo normalization is scoped to anthropic mimo providers" {
 ///|
 test "claude desktop status reports ccs profile and proxy route health" {
   let gateway = Gateway::new(port=17111, host="127.0.0.11")
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude-desktop",
       provider_id="broken-proxy",
@@ -3912,7 +3912,7 @@ test "claude desktop status reports ccs profile and proxy route health" {
       claude_desktop_mode=Some("proxy"),
     ),
   )
-  gateway.provider_router.set_current_provider("claude-desktop", "broken-proxy")
+  gateway.proxy.provider_router.set_current_provider("claude-desktop", "broken-proxy")
   let status = @claude_desktop.ClaudeDesktopStatus::new(
     configured=true,
     profile_path="/tmp/profile.json",
@@ -3942,7 +3942,7 @@ test "claude desktop status reports ccs profile and proxy route health" {
 ///|
 test "claude desktop status reports direct provider base url" {
   let gateway = Gateway::new(port=17112, host="127.0.0.12")
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude-desktop",
       provider_id="direct",
@@ -3957,7 +3957,7 @@ test "claude desktop status reports direct provider base url" {
       ),
     ),
   )
-  gateway.provider_router.set_current_provider("claude-desktop", "direct")
+  gateway.proxy.provider_router.set_current_provider("claude-desktop", "direct")
   let status = @claude_desktop.ClaudeDesktopStatus::new(
     configured=true,
     profile_path="/tmp/profile.json",
@@ -3980,7 +3980,7 @@ test "claude desktop status reports direct provider base url" {
 ///|
 async test "gateway applies ccs provider cost multiplier to request log" {
   let gateway = Gateway::new(port=0)
-  gateway.pricing_overrides.set("test-model", ModelPricing::{
+  gateway.usage.pricing_overrides.set("test-model", ModelPricing::{
     model_id: "test-model",
     display_name: "Test Model",
     input_cost_per_million: "1.0",
@@ -4002,7 +4002,7 @@ async test "gateway applies ccs provider cost multiplier to request log" {
       ),
     ),
   )
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   assert_true(
     gateway.activate_provider_target(
       "claude",
@@ -4010,7 +4010,7 @@ async test "gateway applies ccs provider cost multiplier to request log" {
       bypass_circuit_breaker=true,
     ),
   )
-  gateway.stats.record_request_context("claude", "test-model")
+  gateway.usage.stats.record_request_context("claude", "test-model")
   gateway.record_success_usage(
     TokenUsage::new(
       input_tokens=1000,
@@ -4019,8 +4019,8 @@ async test "gateway applies ccs provider cost multiplier to request log" {
     ),
     64,
   )
-  assert_eq(gateway.stats.request_logs.length(), 1)
-  let log = gateway.stats.request_logs[0]
+  assert_eq(gateway.usage.stats.request_logs.length(), 1)
+  let log = gateway.usage.stats.request_logs[0]
   assert_eq(log.cost_multiplier, "2.5")
   assert_eq(log.input_cost_usd, "0.001")
   assert_eq(log.total_cost_usd, "0.0025")
@@ -4032,7 +4032,7 @@ async test "gateway applies ccs provider cost multiplier to request log" {
 ///|
 async test "gateway ignores invalid ccs provider cost multiplier" {
   let gateway = Gateway::new(port=0)
-  gateway.pricing_overrides.set("test-model", ModelPricing::{
+  gateway.usage.pricing_overrides.set("test-model", ModelPricing::{
     model_id: "test-model",
     display_name: "Test Model",
     input_cost_per_million: "1.0",
@@ -4054,7 +4054,7 @@ async test "gateway ignores invalid ccs provider cost multiplier" {
       ),
     ),
   )
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   assert_true(
     gateway.activate_provider_target(
       "claude",
@@ -4062,7 +4062,7 @@ async test "gateway ignores invalid ccs provider cost multiplier" {
       bypass_circuit_breaker=true,
     ),
   )
-  gateway.stats.record_request_context("claude", "test-model")
+  gateway.usage.stats.record_request_context("claude", "test-model")
   gateway.record_success_usage(
     TokenUsage::new(
       input_tokens=1000,
@@ -4071,8 +4071,8 @@ async test "gateway ignores invalid ccs provider cost multiplier" {
     ),
     64,
   )
-  assert_eq(gateway.stats.request_logs.length(), 1)
-  let log = gateway.stats.request_logs[0]
+  assert_eq(gateway.usage.stats.request_logs.length(), 1)
+  let log = gateway.usage.stats.request_logs[0]
   assert_eq(log.cost_multiplier, "1.0")
   assert_eq(log.total_cost_usd, "0.001")
 }
@@ -4080,7 +4080,7 @@ async test "gateway ignores invalid ccs provider cost multiplier" {
 ///|
 async test "gateway applies ccs request pricing model source" {
   let gateway = Gateway::new(port=0)
-  gateway.pricing_overrides.set("request-model", ModelPricing::{
+  gateway.usage.pricing_overrides.set("request-model", ModelPricing::{
     model_id: "request-model",
     display_name: "Request Model",
     input_cost_per_million: "1.0",
@@ -4088,7 +4088,7 @@ async test "gateway applies ccs request pricing model source" {
     cache_read_cost_per_million: "0",
     cache_creation_cost_per_million: "0",
   })
-  gateway.pricing_overrides.set("response-model", ModelPricing::{
+  gateway.usage.pricing_overrides.set("response-model", ModelPricing::{
     model_id: "response-model",
     display_name: "Response Model",
     input_cost_per_million: "9.0",
@@ -4110,7 +4110,7 @@ async test "gateway applies ccs request pricing model source" {
       ),
     ),
   )
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   assert_true(
     gateway.activate_provider_target(
       "claude",
@@ -4118,7 +4118,7 @@ async test "gateway applies ccs request pricing model source" {
       bypass_circuit_breaker=true,
     ),
   )
-  gateway.stats.record_request_context("claude", "request-model")
+  gateway.usage.stats.record_request_context("claude", "request-model")
   gateway.record_success_usage(
     TokenUsage::new(
       input_tokens=1000,
@@ -4127,8 +4127,8 @@ async test "gateway applies ccs request pricing model source" {
     ),
     64,
   )
-  assert_eq(gateway.stats.request_logs.length(), 1)
-  let log = gateway.stats.request_logs[0]
+  assert_eq(gateway.usage.stats.request_logs.length(), 1)
+  let log = gateway.usage.stats.request_logs[0]
   assert_eq(log.model, "response-model")
   assert_eq(log.request_model, Some("request-model"))
   assert_eq(log.pricing_model, Some("request-model"))
@@ -4138,14 +4138,14 @@ async test "gateway applies ccs request pricing model source" {
 ///|
 async test "gateway records billable ccs stream usage once" {
   let gateway = Gateway::new(port=0)
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
-  gateway.stats.record_stream_mode(true)
+  gateway.usage.stats.record_stream_mode(true)
   gateway.record_success_stream_usage(
     Some(
       TokenUsage::new(
@@ -4157,15 +4157,15 @@ async test "gateway records billable ccs stream usage once" {
     ),
     42,
   )
-  assert_eq(gateway.stats.successful_responses, 1)
-  assert_eq(gateway.stats.input_tokens, 10)
-  assert_eq(gateway.stats.cache_read_tokens, 4)
-  assert_eq(gateway.stats.request_logs.length(), 1)
-  let log = gateway.stats.request_logs[0]
+  assert_eq(gateway.usage.stats.successful_responses, 1)
+  assert_eq(gateway.usage.stats.input_tokens, 10)
+  assert_eq(gateway.usage.stats.cache_read_tokens, 4)
+  assert_eq(gateway.usage.stats.request_logs.length(), 1)
+  let log = gateway.usage.stats.request_logs[0]
   assert_true(log.is_streaming)
   assert_eq(log.model, "gpt-5")
   assert_eq(log.input_tokens, 10)
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -4177,19 +4177,19 @@ async test "gateway records billable ccs stream usage once" {
 ///|
 async test "gateway records all zero ccs stream usage request log" {
   let gateway = Gateway::new(port=0)
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
-  gateway.stats.record_stream_mode(true)
+  gateway.usage.stats.record_stream_mode(true)
   gateway.record_success_stream_usage(Some(TokenUsage::empty()), 42)
-  assert_eq(gateway.stats.successful_responses, 1)
-  assert_eq(gateway.stats.response_bytes, 42)
-  assert_eq(gateway.stats.request_logs.length(), 1)
-  let log = gateway.stats.request_logs[0]
+  assert_eq(gateway.usage.stats.successful_responses, 1)
+  assert_eq(gateway.usage.stats.response_bytes, 42)
+  assert_eq(gateway.usage.stats.request_logs.length(), 1)
+  let log = gateway.usage.stats.request_logs[0]
   assert_true(log.is_streaming)
   assert_eq(log.model, "gpt-5")
   assert_eq(log.input_tokens, 0)
@@ -4201,48 +4201,48 @@ async test "gateway records all zero ccs stream usage request log" {
 ///|
 async test "gateway skips all zero ccs transformed stream usage log" {
   let gateway = Gateway::new(port=0)
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
-  gateway.stats.record_stream_mode(true)
+  gateway.usage.stats.record_stream_mode(true)
   gateway.record_success_stream_usage(
     Some(TokenUsage::empty()),
     42,
     skip_empty_usage=true,
   )
-  assert_eq(gateway.stats.successful_responses, 1)
-  assert_eq(gateway.stats.response_bytes, 42)
-  assert_eq(gateway.stats.request_logs.length(), 0)
-  assert_true(gateway.stats.current_request_id is None)
+  assert_eq(gateway.usage.stats.successful_responses, 1)
+  assert_eq(gateway.usage.stats.response_bytes, 42)
+  assert_eq(gateway.usage.stats.request_logs.length(), 0)
+  assert_true(gateway.usage.stats.current_request_id is None)
 }
 
 ///|
 async test "gateway records all zero ccs nonstream usage request log" {
   let gateway = Gateway::new(port=0)
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
-  gateway.stats.record_stream_mode(false)
+  gateway.usage.stats.record_stream_mode(false)
   gateway.record_success_usage(TokenUsage::empty(), 42)
-  assert_eq(gateway.stats.successful_responses, 1)
-  assert_eq(gateway.stats.response_bytes, 42)
-  assert_eq(gateway.stats.request_logs.length(), 1)
-  let log = gateway.stats.request_logs[0]
+  assert_eq(gateway.usage.stats.successful_responses, 1)
+  assert_eq(gateway.usage.stats.response_bytes, 42)
+  assert_eq(gateway.usage.stats.request_logs.length(), 1)
+  let log = gateway.usage.stats.request_logs[0]
   assert_false(log.is_streaming)
   assert_eq(log.model, "gpt-5")
   assert_eq(log.input_tokens, 0)
   assert_eq(log.output_tokens, 0)
   assert_eq(log.total_cost_usd, "0")
   assert_eq(log.status_code, 200)
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -4254,14 +4254,14 @@ async test "gateway records all zero ccs nonstream usage request log" {
 ///|
 async test "gateway nonretryable upstream errors release half open permit" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 0,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="codex-alt",
@@ -4269,37 +4269,37 @@ async test "gateway nonretryable upstream errors release half open permit" {
     ),
   )
   assert_true(
-    gateway.provider_router.update_providers_sort_order("codex", [
+    gateway.proxy.provider_router.update_providers_sort_order("codex", [
       { id: "codex-oauth", sort_index: 0 },
       { id: "codex-alt", sort_index: 1 },
     ]),
   )
-  gateway.provider_router.set_failover_queue("codex", [
+  gateway.proxy.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
-  gateway.provider_router.set_auto_failover("codex", true)
+  gateway.proxy.provider_router.set_auto_failover("codex", true)
 
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
   gateway.record_provider_result(false)
-  gateway.stats.record_upstream_error_status(0, 502)
+  gateway.usage.stats.record_upstream_error_status(0, 502)
 
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let _ = gateway.activate_provider("codex")
-  assert_true(gateway.stats.current_request_used_half_open_permit)
-  gateway.stats.record_request_context(
+  assert_true(gateway.usage.stats.current_request_used_half_open_permit)
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
   gateway.record_upstream_error_status(0, 400)
 
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -4309,35 +4309,35 @@ async test "gateway nonretryable upstream errors release half open permit" {
   assert_eq(stats.total_requests, 1)
   assert_eq(stats.failed_requests, 1)
 
-  gateway.stats.record_inbound(10)
+  gateway.usage.stats.record_inbound(10)
   let third = gateway.activate_provider("codex")
   assert_true(third is Some(_))
-  assert_true(gateway.stats.current_request_used_half_open_permit)
+  assert_true(gateway.usage.stats.current_request_used_half_open_permit)
 }
 
 ///|
 async test "gateway streaming success records provider health before request completion" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 60,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.stats.record_inbound(16)
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_inbound(16)
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
   )
-  gateway.stats.record_stream_mode(true)
+  gateway.usage.stats.record_stream_mode(true)
   let selected = gateway.activate_provider("codex")
   guard selected is Some(provider) else { fail("expected provider") }
   assert_true(provider.provider_id == "codex-oauth")
 
   gateway.record_provider_result(true)
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats_after_first_chunk) else {
@@ -4345,8 +4345,8 @@ async test "gateway streaming success records provider health before request com
   }
   assert_true(stats_after_first_chunk.total_requests == 1)
   assert_true(stats_after_first_chunk.failed_requests == 0)
-  assert_true(gateway.stats.successful_responses == 0)
-  guard gateway.stats.current_request_id is Some(_) else {
+  assert_true(gateway.usage.stats.successful_responses == 0)
+  guard gateway.usage.stats.current_request_id is Some(_) else {
     fail("request should remain open until stream end")
   }
 
@@ -4356,14 +4356,14 @@ async test "gateway streaming success records provider health before request com
     record_provider=false,
     first_token_ms=Some(7),
   )
-  assert_true(gateway.stats.successful_responses == 1)
-  assert_true(gateway.stats.response_bytes == 24)
-  assert_true(gateway.stats.request_logs.length() == 1)
-  assert_true(gateway.stats.request_logs[0].is_streaming)
-  assert_true(gateway.stats.request_logs[0].model == "gpt-5")
-  assert_true(gateway.stats.request_logs[0].first_token_ms == Some(7))
-  assert_true(gateway.stats.current_request_id is None)
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  assert_true(gateway.usage.stats.successful_responses == 1)
+  assert_true(gateway.usage.stats.response_bytes == 24)
+  assert_true(gateway.usage.stats.request_logs.length() == 1)
+  assert_true(gateway.usage.stats.request_logs[0].is_streaming)
+  assert_true(gateway.usage.stats.request_logs[0].model == "gpt-5")
+  assert_true(gateway.usage.stats.request_logs[0].first_token_ms == Some(7))
+  assert_true(gateway.usage.stats.current_request_id is None)
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats_after_stream_end) else {
@@ -4376,14 +4376,14 @@ async test "gateway streaming success records provider health before request com
 ///|
 test "gateway activation skips occupied half open provider in failover chain" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 0,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="codex-alt",
@@ -4391,23 +4391,23 @@ test "gateway activation skips occupied half open provider in failover chain" {
     ),
   )
   assert_true(
-    gateway.provider_router.update_providers_sort_order("codex", [
+    gateway.proxy.provider_router.update_providers_sort_order("codex", [
       { id: "codex-oauth", sort_index: 0 },
       { id: "codex-alt", sort_index: 1 },
     ]),
   )
-  gateway.provider_router.set_failover_queue("codex", [
+  gateway.proxy.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
-  gateway.provider_router.set_auto_failover("codex", true)
-  gateway.provider_router.record_result(
+  gateway.proxy.provider_router.set_auto_failover("codex", true)
+  gateway.proxy.provider_router.record_result(
     "codex-oauth",
     "codex",
     false,
     false,
     now_ms=1000,
   )
-  let occupied = gateway.provider_router.allow_provider_request(
+  let occupied = gateway.proxy.provider_router.allow_provider_request(
     "codex-oauth",
     "codex",
     now_ms=1000,
@@ -4418,8 +4418,8 @@ test "gateway activation skips occupied half open provider in failover chain" {
   let selected = gateway.activate_provider("codex")
   guard selected is Some(provider) else { fail("expected fallback provider") }
   assert_eq(provider.provider_id, "codex-alt")
-  assert_eq(gateway.stats.current_provider_id, Some("codex-alt"))
-  assert_false(gateway.stats.current_request_used_half_open_permit)
+  assert_eq(gateway.usage.stats.current_provider_id, Some("codex-alt"))
+  assert_false(gateway.usage.stats.current_request_used_half_open_permit)
 }
 
 ///|
@@ -4438,9 +4438,9 @@ test "gateway activation can exclude already attempted failover providers" {
     ),
   ]
   for provider in providers {
-    gateway.provider_router.upsert_provider(provider)
+    gateway.proxy.provider_router.upsert_provider(provider)
   }
-  gateway.provider_router.set_auto_failover("codex", true)
+  gateway.proxy.provider_router.set_auto_failover("codex", true)
   let selected = gateway.activate_first_available_provider_excluding(
     "codex",
     providers,
@@ -4450,20 +4450,20 @@ test "gateway activation can exclude already attempted failover providers" {
     fail("expected unattempted fallback provider")
   }
   assert_eq(provider.provider_id, "fallback")
-  assert_eq(gateway.stats.current_provider_id, Some("fallback"))
+  assert_eq(gateway.usage.stats.current_provider_id, Some("fallback"))
 }
 
 ///|
 test "gateway retryable upstream status activates next failover provider" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 60,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="codex-alt",
@@ -4471,21 +4471,21 @@ test "gateway retryable upstream status activates next failover provider" {
     ),
   )
   assert_true(
-    gateway.provider_router.update_providers_sort_order("codex", [
+    gateway.proxy.provider_router.update_providers_sort_order("codex", [
       { id: "codex-oauth", sort_index: 0 },
       { id: "codex-alt", sort_index: 1 },
     ]),
   )
-  gateway.provider_router.set_failover_queue("codex", [
+  gateway.proxy.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
-  gateway.provider_router.set_auto_failover("codex", true)
-  let selection = gateway.provider_router.select_providers("codex", now_ms=1000)
+  gateway.proxy.provider_router.set_auto_failover("codex", true)
+  let selection = gateway.proxy.provider_router.select_providers("codex", now_ms=1000)
   assert_true(selection.is_ok())
   assert_true(selection.providers.length() == 2)
 
-  gateway.stats.record_inbound(10)
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_inbound(10)
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
@@ -4508,15 +4508,15 @@ test "gateway retryable upstream status activates next failover provider" {
   assert_true(attempted.length() == 1)
   assert_true(attempted[0] == "codex-oauth")
   assert_true(fallback.provider_id == "codex-alt")
-  guard gateway.stats.current_provider_id is Some(current_provider_id) else {
+  guard gateway.usage.stats.current_provider_id is Some(current_provider_id) else {
     fail("expected current provider id")
   }
   assert_true(current_provider_id == "codex-alt")
-  guard gateway.stats.current_request_app_type is Some(current_app_type) else {
+  guard gateway.usage.stats.current_request_app_type is Some(current_app_type) else {
     fail("expected current request app type")
   }
   assert_true(current_app_type == "codex")
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -4530,14 +4530,14 @@ test "gateway retryable upstream status activates next failover provider" {
 ///|
 test "gateway retryable upstream status respects ccs max retries cap before permits" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 0,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="codex-alt",
@@ -4545,29 +4545,29 @@ test "gateway retryable upstream status respects ccs max retries cap before perm
     ),
   )
   assert_true(
-    gateway.provider_router.update_providers_sort_order("codex", [
+    gateway.proxy.provider_router.update_providers_sort_order("codex", [
       { id: "codex-oauth", sort_index: 0 },
       { id: "codex-alt", sort_index: 1 },
     ]),
   )
-  gateway.provider_router.set_failover_queue("codex", [
+  gateway.proxy.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
-  gateway.provider_router.set_auto_failover("codex", true)
-  gateway.provider_router.set_max_retries("codex", 0)
-  gateway.provider_router.record_result(
+  gateway.proxy.provider_router.set_auto_failover("codex", true)
+  gateway.proxy.provider_router.set_max_retries("codex", 0)
+  gateway.proxy.provider_router.record_result(
     "codex-alt",
     "codex",
     false,
     false,
     now_ms=1000,
   )
-  let selection = gateway.provider_router.select_providers("codex", now_ms=1000)
+  let selection = gateway.proxy.provider_router.select_providers("codex", now_ms=1000)
   assert_true(selection.is_ok())
   assert_eq(selection.providers.length(), 2)
 
-  gateway.stats.record_inbound(10)
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_inbound(10)
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
@@ -4589,9 +4589,9 @@ test "gateway retryable upstream status respects ccs max retries cap before perm
   assert_true(next is None)
   assert_eq(attempted.length(), 1)
   assert_eq(attempted[0], "codex-oauth")
-  assert_eq(gateway.stats.current_provider_id, Some("codex-oauth"))
+  assert_eq(gateway.usage.stats.current_provider_id, Some("codex-oauth"))
 
-  let fallback_permit = gateway.provider_router.allow_provider_request(
+  let fallback_permit = gateway.proxy.provider_router.allow_provider_request(
     "codex-alt",
     "codex",
     now_ms=1000,
@@ -4603,19 +4603,19 @@ test "gateway retryable upstream status respects ccs max retries cap before perm
 ///|
 test "gateway retryable final provider remains active for final upstream error" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 60,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  let selection = gateway.provider_router.select_providers("codex", now_ms=1000)
+  let selection = gateway.proxy.provider_router.select_providers("codex", now_ms=1000)
   assert_true(selection.is_ok())
   assert_true(selection.providers.length() == 1)
 
-  gateway.stats.record_inbound(10)
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_inbound(10)
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
@@ -4637,11 +4637,11 @@ test "gateway retryable final provider remains active for final upstream error" 
   assert_true(next is None)
   assert_true(attempted.length() == 1)
   assert_true(attempted[0] == "codex-oauth")
-  guard gateway.stats.current_provider_id is Some(current_provider_id) else {
+  guard gateway.usage.stats.current_provider_id is Some(current_provider_id) else {
     fail("expected current provider id")
   }
   assert_true(current_provider_id == "codex-oauth")
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -4655,14 +4655,14 @@ test "gateway retryable final provider remains active for final upstream error" 
 ///|
 test "gateway nonretryable upstream status does not activate failover provider" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 60,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="codex-alt",
@@ -4670,21 +4670,21 @@ test "gateway nonretryable upstream status does not activate failover provider" 
     ),
   )
   assert_true(
-    gateway.provider_router.update_providers_sort_order("codex", [
+    gateway.proxy.provider_router.update_providers_sort_order("codex", [
       { id: "codex-oauth", sort_index: 0 },
       { id: "codex-alt", sort_index: 1 },
     ]),
   )
-  gateway.provider_router.set_failover_queue("codex", [
+  gateway.proxy.provider_router.set_failover_queue("codex", [
     "codex-oauth", "codex-alt",
   ])
-  gateway.provider_router.set_auto_failover("codex", true)
-  let selection = gateway.provider_router.select_providers("codex", now_ms=1000)
+  gateway.proxy.provider_router.set_auto_failover("codex", true)
+  let selection = gateway.proxy.provider_router.select_providers("codex", now_ms=1000)
   assert_true(selection.is_ok())
   assert_true(selection.providers.length() == 2)
 
-  gateway.stats.record_inbound(10)
-  gateway.stats.record_request_context(
+  gateway.usage.stats.record_inbound(10)
+  gateway.usage.stats.record_request_context(
     "codex",
     "gpt-5",
     provider_type=Some("codex"),
@@ -4706,11 +4706,11 @@ test "gateway nonretryable upstream status does not activate failover provider" 
   assert_true(next is None)
   assert_true(attempted.length() == 1)
   assert_true(attempted[0] == "codex-oauth")
-  guard gateway.stats.current_provider_id is Some(current_provider_id) else {
+  guard gateway.usage.stats.current_provider_id is Some(current_provider_id) else {
     fail("expected current provider id")
   }
   assert_true(current_provider_id == "codex-oauth")
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -4724,21 +4724,21 @@ test "gateway nonretryable upstream status does not activate failover provider" 
 ///|
 test "gateway activation bypasses circuit breaker for single provider" {
   let gateway = Gateway::new(port=0)
-  gateway.provider_router.update_all_configs({
+  gateway.proxy.provider_router.update_all_configs({
     failure_threshold: 1,
     success_threshold: 2,
     timeout_seconds: 60,
     error_rate_threshold: 0.6,
     min_requests: 10,
   })
-  gateway.provider_router.record_result(
+  gateway.proxy.provider_router.record_result(
     "codex-oauth",
     "codex",
     false,
     false,
     now_ms=1000,
   )
-  guard gateway.provider_router.get_circuit_breaker_stats(
+  guard gateway.proxy.provider_router.get_circuit_breaker_stats(
       "codex-oauth", "codex",
     )
     is Some(stats) else {
@@ -4751,8 +4751,8 @@ test "gateway activation bypasses circuit breaker for single provider" {
     fail("single provider should bypass circuit gating")
   }
   assert_eq(provider.provider_id, "codex-oauth")
-  assert_eq(gateway.stats.current_provider_id, Some("codex-oauth"))
-  assert_false(gateway.stats.current_request_used_half_open_permit)
+  assert_eq(gateway.usage.stats.current_provider_id, Some("codex-oauth"))
+  assert_false(gateway.usage.stats.current_request_used_half_open_permit)
 }
 
 ///|
@@ -8810,7 +8810,7 @@ test "ccs suggested claude desktop routes fallback to anthropic model" {
 ///|
 test "ccs imports missing claude providers into claude desktop namespace" {
   let gateway = Gateway::new(port=17071)
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude",
       provider_id="claude-extra",
@@ -8829,7 +8829,7 @@ test "ccs imports missing claude providers into claude desktop namespace" {
     ),
   )
   assert_eq(gateway.import_claude_desktop_providers_from_claude(), 1)
-  guard gateway.provider_router.provider_by_id("claude-desktop", "claude-extra")
+  guard gateway.proxy.provider_router.provider_by_id("claude-desktop", "claude-extra")
     is Some(imported) else {
     fail("expected imported provider")
   }
@@ -8897,7 +8897,7 @@ test "ccs claude desktop direct compatibility filters unsafe providers" {
 ///|
 test "ccs import skips claude providers without direct or proxy compatibility" {
   let gateway = Gateway::new(port=17073)
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude",
       provider_id="incomplete",
@@ -8907,7 +8907,7 @@ test "ccs import skips claude providers without direct or proxy compatibility" {
   )
   assert_eq(gateway.import_claude_desktop_providers_from_claude(), 0)
   assert_true(
-    gateway.provider_router.provider_by_id("claude-desktop", "incomplete")
+    gateway.proxy.provider_router.provider_by_id("claude-desktop", "incomplete")
     is None,
   )
 }
@@ -8915,7 +8915,7 @@ test "ccs import skips claude providers without direct or proxy compatibility" {
 ///|
 test "ccs import derives claude desktop routes from claude provider env" {
   let gateway = Gateway::new(port=17072)
-  gateway.provider_router.upsert_provider(
+  gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude",
       provider_id="env-routes",
@@ -8930,7 +8930,7 @@ test "ccs import derives claude desktop routes from claude provider env" {
     ),
   )
   assert_eq(gateway.import_claude_desktop_providers_from_claude(), 1)
-  guard gateway.provider_router.provider_by_id("claude-desktop", "env-routes")
+  guard gateway.proxy.provider_router.provider_by_id("claude-desktop", "env-routes")
     is Some(imported) else {
     fail("expected imported provider")
   }

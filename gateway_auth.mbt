@@ -1,8 +1,8 @@
 
 async fn Gateway::record_unauthorized(self : Gateway) -> Unit {
   self.release_provider_permit_neutral()
-  self.stats.record_unauthorized()
-  self.stats.save_persistent_store()
+  self.usage.stats.record_unauthorized()
+  self.usage.stats.save_persistent_store()
 }
 
 
@@ -95,7 +95,7 @@ async fn Gateway::handle_get_codex_oauth_quota(
     "accountId", "account_id", "account",
   ])
   let quota = moon_get_codex_oauth_quota(account_id)
-  self.usage_cache.put_subscription(quota.tool, quota)
+  self.usage.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }
 
@@ -146,7 +146,7 @@ async fn Gateway::handle_auth_start_login(
       if flow is Object(obj) &&
         json_string_from_map(obj, "device_code") is Some(device_code) &&
         json_string_from_map(obj, "user_code") is Some(user_code) {
-        self.auth_device_user_codes[device_code] = user_code
+        self.auth.auth_device_user_codes[device_code] = user_code
       }
       write_usage_json(w, flow)
     }
@@ -174,7 +174,7 @@ async fn Gateway::handle_auth_poll_for_account(
   let user_code = match
     proxy_string_request(r.path, body, ["userCode", "user_code", "code"]) {
     Some(value) => Some(value)
-    None => self.auth_device_user_codes.get(device_code)
+    None => self.auth.auth_device_user_codes.get(device_code)
   }
   if provider != AUTH_PROVIDER_GITHUB_COPILOT && user_code is None {
     write_usage_bad_request(w, "missing_user_code")
@@ -188,11 +188,11 @@ async fn Gateway::handle_auth_poll_for_account(
       github_domain=copilot_github_domain_request(r.path, body),
     ) {
     Ok(Some(account)) => {
-      self.auth_device_user_codes.remove(device_code)
+      self.auth.auth_device_user_codes.remove(device_code)
       try @codex.load_credentials() catch {
         _ => ()
       } noraise {
-        credentials => self.credentials = Some(credentials)
+        credentials => self.auth.credentials = Some(credentials)
       }
       write_usage_json(w, account)
     }
@@ -252,7 +252,7 @@ async fn Gateway::handle_auth_remove_account(
   }
   match managed_auth_remove_account(provider, account_id) {
     Ok(result) => {
-      self.credentials = None
+      self.auth.credentials = None
       write_usage_json(w, result)
     }
     Err(error) => write_usage_bad_request(w, error)
@@ -293,7 +293,7 @@ async fn Gateway::handle_auth_logout(
   let provider = managed_auth_provider_request(r.path, body)
   match managed_auth_logout(provider) {
     Ok(result) => {
-      self.credentials = None
+      self.auth.credentials = None
       write_usage_json(w, result)
     }
     Err(error) => write_usage_bad_request(w, error)
@@ -564,7 +564,7 @@ async fn Gateway::handle_login(
   w.header().set("Content-Type", "application/json")
   try {
     let creds = @codex.start_oauth_flow()
-    self.credentials = Some(creds)
+    self.auth.credentials = Some(creds)
     self.logger.info("Login successful")
     w.write_header(@status.Ok)
     w.write("{\"status\":\"ok\",\"message\":\"Login successful\"}")

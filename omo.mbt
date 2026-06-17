@@ -162,10 +162,10 @@ fn moon_omo_strip_jsonc_comments(input : String) -> String {
 ///|
 fn Gateway::current_omo_provider_id(self : Gateway, slim : Bool) -> String {
   let category = moon_omo_category(slim)
-  let current = self.provider_router
+  let current = self.proxy.provider_router
     .current_provider_id("opencode")
     .unwrap_or("")
-  guard self.provider_router.provider_by_id("opencode", current)
+  guard self.proxy.provider_router.provider_by_id("opencode", current)
     is Some(provider) else {
     return ""
   }
@@ -179,15 +179,15 @@ fn Gateway::current_omo_provider_id(self : Gateway, slim : Bool) -> String {
 ///|
 fn Gateway::clear_current_omo_provider(self : Gateway, slim : Bool) -> Unit {
   let category = moon_omo_category(slim)
-  let current = self.provider_router
+  let current = self.proxy.provider_router
     .current_provider_id("opencode")
     .unwrap_or("")
-  guard self.provider_router.provider_by_id("opencode", current)
+  guard self.proxy.provider_router.provider_by_id("opencode", current)
     is Some(provider) else {
     return
   }
   if provider.provider_type == Some(category) {
-    self.provider_router.current_provider_ids.remove("opencode")
+    self.proxy.provider_router.current_provider_ids.remove("opencode")
   }
 }
 
