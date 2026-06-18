@@ -333,7 +333,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
           w.flush()
           return
         }
-        let client = self.codex_client(
+        let client = self.auth.codex_client(
           creds,
           accept="application/json",
           session_id~,
@@ -505,7 +505,7 @@ async fn Gateway::forward_streaming_chat_completion(
           w.flush()
           return
         }
-        let client = self.codex_client(
+        let client = self.auth.codex_client(
           creds,
           accept="text/event-stream",
           session_id~,
@@ -789,7 +789,7 @@ async fn Gateway::forward_non_streaming_codex_response(
           w.flush()
           return
         }
-        let client = self.codex_client(
+        let client = self.auth.codex_client(
           creds,
           accept="application/json",
           session_id~,
@@ -958,7 +958,7 @@ async fn Gateway::forward_streaming_codex_response(
           w.flush()
           return
         }
-        let client = self.codex_client(
+        let client = self.auth.codex_client(
           creds,
           accept="text/event-stream",
           session_id~,
@@ -1434,8 +1434,8 @@ fn append_query_to_full_url(
 }
 
 ///|
-async fn Gateway::codex_client(
-  self : Gateway,
+async fn AuthService::codex_client(
+  self : AuthService,
   creds : @codex.Credentials,
   accept~ : String,
   session_id? : String? = None,
