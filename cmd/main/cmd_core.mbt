@@ -325,45 +325,6 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["delete_env_vars", ..] | ["delete-env-vars", ..] => delete_env_vars(arr)
     ["restore_env_backup", ..] | ["restore-env-backup", ..] =>
       restore_env_backup(arr)
-    ["get_claude_mcp_status", ..] | ["get-claude-mcp-status", ..] =>
-      check_usage_endpoint(arr, "/get_claude_mcp_status")
-    ["read_claude_mcp_config", ..] | ["read-claude-mcp-config", ..] =>
-      check_usage_endpoint(arr, "/read_claude_mcp_config")
-    ["upsert_claude_mcp_server", ..] | ["upsert-claude-mcp-server", ..] =>
-      upsert_mcp_server(arr, "/upsert_claude_mcp_server")
-    ["delete_claude_mcp_server", ..] | ["delete-claude-mcp-server", ..] =>
-      delete_mcp_server(arr, "/delete_claude_mcp_server")
-    ["validate_mcp_command", ..] | ["validate-mcp-command", ..] =>
-      check_usage_endpoint(arr, mcp_validate_command_path(arr))
-    ["get_mcp_config", ..] | ["get-mcp-config", ..] =>
-      check_usage_endpoint(arr, mcp_app_path(arr, "/get_mcp_config"))
-    ["upsert_mcp_server_in_config", ..] | ["upsert-mcp-server-in-config", ..] =>
-      upsert_mcp_server(arr, "/upsert_mcp_server_in_config")
-    ["delete_mcp_server_in_config", ..] | ["delete-mcp-server-in-config", ..] =>
-      delete_mcp_server(arr, "/delete_mcp_server_in_config")
-    ["set_mcp_enabled", ..] | ["set-mcp-enabled", ..] => set_mcp_enabled(arr)
-    ["get_mcp_servers", ..] | ["get-mcp-servers", ..] =>
-      check_usage_endpoint(arr, "/get_mcp_servers")
-    ["upsert_mcp_server", ..] | ["upsert-mcp-server", ..] =>
-      upsert_mcp_server(arr, "/upsert_mcp_server")
-    ["delete_mcp_server", ..] | ["delete-mcp-server", ..] =>
-      delete_mcp_server(arr, "/delete_mcp_server")
-    ["toggle_mcp_app", ..] | ["toggle-mcp-app", ..] => toggle_mcp_app(arr)
-    ["import_mcp_from_apps", ..] | ["import-mcp-from-apps", ..] =>
-      check_json_post_endpoint(arr, "/import_mcp_from_apps", "MCP")
-    ["get_prompts", ..] | ["get-prompts", ..] =>
-      check_usage_endpoint(arr, prompt_app_path(arr, "/get_prompts"))
-    ["upsert_prompt", ..] | ["upsert-prompt", ..] => upsert_prompt(arr)
-    ["delete_prompt", ..] | ["delete-prompt", ..] => delete_prompt(arr)
-    ["enable_prompt", ..] | ["enable-prompt", ..] => enable_prompt(arr)
-    ["import_prompt_from_file", ..] | ["import-prompt-from-file", ..] =>
-      import_prompt_from_file(arr)
-    ["get_current_prompt_file_content", ..]
-    | ["get-current-prompt-file-content", ..] =>
-      check_usage_endpoint(
-        arr,
-        prompt_file_path(arr, "/get_current_prompt_file_content"),
-      )
     ["get_usage_summary", ..] | ["get-usage-summary", ..] =>
       check_usage_summary(arr)
     ["get_usage_summary_by_app", ..] | ["get-usage-summary-by-app", ..] =>
@@ -403,36 +364,6 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["testUsageScript", ..]
     | ["test_usage_script", ..]
     | ["test-usage-script", ..] => test_usage_script(arr)
-    ["mcp", "status", ..] => check_usage_endpoint(arr, "/get_claude_mcp_status")
-    ["mcp", "read-config", ..] =>
-      check_usage_endpoint(arr, "/read_claude_mcp_config")
-    ["mcp", "validate", ..] =>
-      check_usage_endpoint(arr, mcp_validate_command_path(arr))
-    ["mcp", "config", ..] =>
-      check_usage_endpoint(arr, mcp_app_path(arr, "/get_mcp_config"))
-    ["mcp", "upsert-config", ..] =>
-      upsert_mcp_server(arr, "/upsert_mcp_server_in_config")
-    ["mcp", "delete-config", ..] =>
-      delete_mcp_server(arr, "/delete_mcp_server_in_config")
-    ["mcp", "set-enabled", ..] => set_mcp_enabled(arr)
-    ["mcp", "list", ..] => check_usage_endpoint(arr, "/get_mcp_servers")
-    ["mcp", "upsert", ..] => upsert_mcp_server(arr, "/upsert_mcp_server")
-    ["mcp", "delete", ..] => delete_mcp_server(arr, "/delete_mcp_server")
-    ["mcp", "toggle", ..] => toggle_mcp_app(arr)
-    ["mcp", "import", ..] =>
-      check_json_post_endpoint(arr, "/import_mcp_from_apps", "MCP")
-    ["prompt", "list", ..] | ["prompts", "list", ..] =>
-      check_usage_endpoint(arr, prompt_app_path(arr, "/get_prompts"))
-    ["prompt", "upsert", ..] | ["prompts", "upsert", ..] => upsert_prompt(arr)
-    ["prompt", "delete", ..] | ["prompts", "delete", ..] => delete_prompt(arr)
-    ["prompt", "enable", ..] | ["prompts", "enable", ..] => enable_prompt(arr)
-    ["prompt", "import", ..] | ["prompts", "import", ..] =>
-      import_prompt_from_file(arr)
-    ["prompt", "current", ..] | ["prompts", "current", ..] =>
-      check_usage_endpoint(
-        arr,
-        prompt_file_path(arr, "/get_current_prompt_file_content"),
-      )
     ["usage", "logs", ..] => check_usage_logs(arr)
     ["usage", "get-request-logs", ..] => check_usage_logs(arr)
     ["usage", "summary", ..] => check_usage_summary(arr)

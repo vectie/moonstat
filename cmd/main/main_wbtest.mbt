@@ -7,7 +7,7 @@ test "has flag matches exact CLI option" {
 
 ///|
 test "registered cli commands match suite command aliases and status commands" {
-  assert_true(registered_cli_commands().length() >= 125)
+  assert_true(registered_cli_commands().length() >= 145)
   assert_true(
     cli_args_match_pattern(
       ["moonstat", "suite", "manifest", "--host", "127.0.0.1"],
@@ -216,6 +216,34 @@ test "registered cli commands match suite command aliases and status commands" {
   assert_true(
     registered_cli_command_id(["moonstat", "workspace", "open"]) ==
     Some("open_workspace_directory"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "mcp", "status"]) ==
+    Some("get_claude_mcp_status"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "mcp", "upsert-config"]) ==
+    Some("upsert_mcp_server_in_config"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "validate_mcp_command"]) ==
+    Some("validate_mcp_command"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "mcp", "toggle"]) ==
+    Some("toggle_mcp_app"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "prompt", "list"]) ==
+    Some("get_prompts"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "prompts", "upsert"]) ==
+    Some("upsert_prompt"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "get_current_prompt_file_content"]) ==
+    Some("get_current_prompt_file_content"),
   )
   assert_true(
     registered_cli_command_id(["moonstat", "usage", "summary"]) == None,
