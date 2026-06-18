@@ -9533,10 +9533,16 @@ test "gemini native response converts to anthropic message with usage" {
 }
 
 ///|
-test "moonstat config helpers normalize suite app paths" {
-  assert_eq(moon_normalize_app_type("claude_desktop"), "claude-desktop")
-  assert_eq(moon_normalize_app_type("open-code"), "opencode")
-  assert_eq(moon_normalize_app_type("omo_slim"), "omo-slim")
+test "moonstat config helpers require canonical suite app paths" {
+  assert_eq(moon_normalize_app_type("claude-desktop"), "claude-desktop")
+  assert_eq(moon_normalize_app_type("opencode"), "opencode")
+  assert_eq(moon_normalize_app_type("omo-slim"), "omo-slim")
+  assert_eq(moon_normalize_app_type("claude_desktop"), "claude")
+  assert_eq(moon_normalize_app_type("open-code"), "claude")
+  assert_eq(moon_normalize_app_type("open_code"), "claude")
+  assert_eq(moon_normalize_app_type("open-claw"), "claude")
+  assert_eq(moon_normalize_app_type("open_claw"), "claude")
+  assert_eq(moon_normalize_app_type("omo_slim"), "claude")
   assert_eq(moon_normalize_app_type("unknown"), "claude")
   assert_eq(moon_config_dir("codex"), @pathx.join(moon_home_dir(), ".codex"))
   assert_eq(

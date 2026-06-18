@@ -614,14 +614,14 @@ fn getenv_or_none(key : String) -> String? {
 ///|
 fn moon_normalize_app_type(app : String) -> String {
   match app.trim().to_lower() {
-    "claude-desktop" | "claude_desktop" => "claude-desktop"
+    "claude-desktop" => "claude-desktop"
     "codex" => "codex"
     "gemini" => "gemini"
-    "opencode" | "open-code" | "open_code" => "opencode"
-    "openclaw" | "open-claw" | "open_claw" => "openclaw"
+    "opencode" => "opencode"
+    "openclaw" => "openclaw"
     "hermes" => "hermes"
     "omo" => "omo"
-    "omo-slim" | "omo_slim" => "omo-slim"
+    "omo-slim" => "omo-slim"
     _ => "claude"
   }
 }
