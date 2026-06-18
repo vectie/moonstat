@@ -317,14 +317,6 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       id: "get_current_prompt_file_content",
       patterns: ["prompt current", "prompts current"],
     },
-    { id: "suite_manifest", patterns: ["suite manifest"] },
-    { id: "suite_status", patterns: ["suite status"] },
-    { id: "suite_write_status", patterns: ["suite write-status"] },
-    { id: "suite_moonclaw_providers", patterns: ["suite moonclaw-providers"] },
-    {
-      id: "suite_write_moonclaw_providers",
-      patterns: ["suite write-moonclaw-providers"],
-    },
     { id: "help", patterns: ["help", "--help", "-h"] },
     { id: "version", patterns: ["version", "--version", "-v"] },
   ]
@@ -332,6 +324,9 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     commands.push(command)
   }
   for command in usage_cli_commands() {
+    commands.push(command)
+  }
+  for command in suite_cli_commands() {
     commands.push(command)
   }
   commands

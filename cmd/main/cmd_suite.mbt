@@ -1,4 +1,18 @@
 ///|
+fn suite_cli_commands() -> Array[CliCommandSpec] {
+  [
+    { id: "suite_manifest", patterns: ["suite manifest"] },
+    { id: "suite_status", patterns: ["suite status"] },
+    { id: "suite_write_status", patterns: ["suite write-status"] },
+    { id: "suite_moonclaw_providers", patterns: ["suite moonclaw-providers"] },
+    {
+      id: "suite_write_moonclaw_providers",
+      patterns: ["suite write-moonclaw-providers"],
+    },
+  ]
+}
+
+///|
 fn cli_suite_command_id(command_id : String) -> Bool {
   match command_id {
     "suite_manifest"
