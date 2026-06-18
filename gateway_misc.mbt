@@ -1060,40 +1060,6 @@ fn json_non_empty_string_from_map_any(
 }
 
 ///|
-fn codex_toml_string_value(content : String, key : String) -> String? {
-  for raw_line in content.split("\n") {
-    let line = raw_line.trim()
-    if line.has_prefix("#") {
-      continue
-    }
-    let mut index = 0
-    let mut found_key = ""
-    let mut found_value = ""
-    for part in line.split("=") {
-      if index == 0 {
-        found_key = part.trim().to_owned()
-      } else if index == 1 {
-        found_value = part.trim().to_owned()
-      }
-      index += 1
-    }
-    if index < 2 || found_key != key {
-      continue
-    }
-    let value = found_value
-    if value.length() >= 2 &&
-      value[0] == '"' &&
-      value[value.length() - 1] == '"' {
-      return Some(value[1:value.length() - 1].to_owned())
-    }
-    if !value.is_empty() {
-      return Some(value)
-    }
-  }
-  None
-}
-
-///|
 fn suite_write_outcome_json() -> Json {
   let empty : Map[String, Json] = {}
   Json::object(empty)

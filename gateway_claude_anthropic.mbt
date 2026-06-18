@@ -463,11 +463,7 @@ fn ProviderRouteTarget::uses_anthropic_messages_format(
 ) -> Bool {
   let api_format = match self.api_format {
     Some(api_format) => api_format.trim().to_owned()
-    None =>
-      match provider_settings_api_format(self.settings_config) {
-        Some(api_format) => api_format.trim().to_owned()
-        None => "anthropic"
-      }
+    None => "anthropic"
   }
   api_format.is_empty() || api_format == "anthropic"
 }

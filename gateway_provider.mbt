@@ -1611,126 +1611,6 @@ fn provider_settings_config_with_inline_metadata(
 }
 
 ///|
-fn provider_settings_base_url(app_type : String, settings : Json?) -> String? {
-  guard settings is Some(Object(obj)) else { return None }
-  match app_type {
-    "codex" =>
-      match json_string_from_map_any(obj, ["config"]) {
-        Some(config) => codex_toml_string_value(config, "base_url")
-        None => None
-      }
-    "gemini" =>
-      match obj.get("env") {
-        Some(Object(env)) =>
-          json_non_empty_string_from_map_any(env, ["GOOGLE_GEMINI_BASE_URL"])
-        _ => None
-      }
-    "hermes" => json_non_empty_string_from_map_any(obj, ["baseUrl"])
-    "opencode" | "omo" | "omo-slim" =>
-      match obj.get("options") {
-        Some(Object(options)) =>
-          json_non_empty_string_from_map_any(options, ["baseURL"])
-        _ => None
-      }
-    "openclaw" => json_non_empty_string_from_map_any(obj, ["baseUrl"])
-    "claude" | "claude-desktop" =>
-      match obj.get("env") {
-        Some(Object(env)) =>
-          json_non_empty_string_from_map_any(env, ["ANTHROPIC_BASE_URL"])
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
-fn provider_settings_api_key(app_type : String, settings : Json?) -> String? {
-  guard settings is Some(Object(obj)) else { return None }
-  match app_type {
-    "codex" =>
-      match obj.get("auth") {
-        Some(Object(auth)) =>
-          json_non_empty_string_from_map_any(auth, ["OPENAI_API_KEY"])
-        _ => None
-      }
-    "gemini" =>
-      match obj.get("env") {
-        Some(Object(env)) =>
-          json_non_empty_string_from_map_any(env, [
-            "GEMINI_API_KEY", "GOOGLE_API_KEY",
-          ])
-        _ => None
-      }
-    "hermes" => json_non_empty_string_from_map_any(obj, ["apiKey"])
-    "opencode" | "omo" | "omo-slim" =>
-      match obj.get("options") {
-        Some(Object(options)) =>
-          json_non_empty_string_from_map_any(options, ["apiKey"])
-        _ => None
-      }
-    "openclaw" => json_non_empty_string_from_map_any(obj, ["apiKey"])
-    "claude" | "claude-desktop" =>
-      match obj.get("env") {
-        Some(Object(env)) =>
-          json_non_empty_string_from_map_any(env, [
-            "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "GEMINI_API_KEY",
-            "GOOGLE_API_KEY",
-          ])
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
-fn provider_settings_api_format(settings : Json?) -> String? {
-  guard settings is Some(Object(obj)) else { return None }
-  match obj.get("meta") {
-    Some(Object(meta)) =>
-      match json_non_empty_string_from_map_any(meta, ["apiFormat"]) {
-        Some(api_format) => return Some(api_format)
-        None => ()
-      }
-    _ => ()
-  }
-  match json_non_empty_string_from_map_any(obj, ["apiFormat"]) {
-    Some(api_format) => Some(api_format)
-    None => None
-  }
-}
-
-///|
-fn provider_explicit_type_from_request(
-  path : StringView,
-  body : Json?,
-  settings : Json?,
-) -> String? {
-  match provider_string_from_request(path, body, ["providerType"]) {
-    Some(value) if !value.trim().is_empty() => return Some(value)
-    _ => ()
-  }
-  guard settings is Some(Object(obj)) else { return None }
-  match obj.get("meta") {
-    Some(Object(meta)) => {
-      match json_non_empty_string_from_map_any(meta, ["providerType"]) {
-        Some(value) => return Some(provider_type_normalize(value))
-        None => ()
-      }
-      match meta.get("authBinding") {
-        Some(Object(binding)) =>
-          match json_non_empty_string_from_map_any(binding, ["authProvider"]) {
-            Some(value) => return Some(provider_type_normalize(value))
-            None => ()
-          }
-        _ => ()
-      }
-    }
-    _ => ()
-  }
-  None
-}
-
-///|
 fn provider_type_normalize(value : String) -> String {
   value.trim().to_owned().to_lower().replace_all(old="-", new="_")
 }
@@ -1739,7 +1619,6 @@ fn provider_type_normalize(value : String) -> String {
 fn provider_resolved_provider_type(
   app_type : String,
   explicit_type : String?,
-  settings : Json?,
   api_format : String?,
   base_url : String?,
   api_key : String?,
@@ -1766,9 +1645,6 @@ fn provider_resolved_provider_type(
         }
         None => ()
       }
-      if provider_settings_bearer_only(settings) {
-        return Some("claude_auth")
-      }
       None
     }
     "gemini" => Some(provider_gemini_key_provider_type(api_key))
@@ -1788,50 +1664,6 @@ fn provider_gemini_key_provider_type(api_key : String?) -> String {
       }
     }
     None => "gemini"
-  }
-}
-
-///|
-fn provider_settings_bearer_only(settings : Json?) -> Bool {
-  guard settings is Some(Object(obj)) else { return false }
-  match json_non_empty_string_from_map_any(obj, ["authMode"]) {
-    Some(mode) if mode == "bearer_only" => return true
-    _ => ()
-  }
-  match obj.get("env") {
-    Some(Object(env)) =>
-      match json_non_empty_string_from_map_any(env, ["AUTH_MODE"]) {
-        Some(mode) => mode == "bearer_only"
-        None => false
-      }
-    _ => false
-  }
-}
-
-///|
-fn provider_settings_prompt_cache_key(settings : Json?) -> String? {
-  guard settings is Some(Object(obj)) else { return None }
-  match json_non_empty_string_from_map_any(obj, ["promptCacheKey"]) {
-    Some(value) => return Some(value)
-    None => ()
-  }
-  match obj.get("meta") {
-    Some(Object(meta)) =>
-      json_non_empty_string_from_map_any(meta, ["promptCacheKey"])
-    _ => None
-  }
-}
-
-///|
-fn provider_settings_codex_fast_mode(settings : Json?) -> Bool? {
-  guard settings is Some(Object(obj)) else { return None }
-  match json_bool_from_map(obj, "codexFastMode") {
-    Some(value) => return Some(value)
-    None => ()
-  }
-  match obj.get("meta") {
-    Some(Object(meta)) => json_bool_from_map(meta, "codexFastMode")
-    _ => None
   }
 }
 
@@ -1873,26 +1705,7 @@ fn provider_limit_string_from_settings(
   obj : Map[String, Json],
   keys : Array[String],
 ) -> String? {
-  match json_non_empty_string_from_map_any(obj, keys) {
-    Some(value) => return Some(value)
-    None => ()
-  }
-  match obj.get("meta") {
-    Some(Object(meta)) => json_non_empty_string_from_map_any(meta, keys)
-    _ => None
-  }
-}
-
-///|
-fn provider_prefer_non_empty(primary : String?, fallback : String?) -> String? {
-  match primary {
-    Some(value) if !value.trim().is_empty() => Some(value)
-    _ =>
-      match fallback {
-        Some(value) if !value.trim().is_empty() => Some(value)
-        _ => None
-      }
-  }
+  json_non_empty_string_from_map_any(obj, keys)
 }
 
 ///|
@@ -1993,7 +1806,7 @@ fn universal_provider_apps_from_request(
   path : StringView,
   body : Json?,
 ) -> Json {
-  let apps_value = provider_string_from_request(path, body, ["apps", "app"]).unwrap_or(
+  let apps_value = provider_string_from_request(path, body, ["apps"]).unwrap_or(
     "claude,codex,gemini",
   )
   let enabled = universal_provider_enabled_apps(apps_value)
@@ -2058,33 +1871,26 @@ fn provider_target_from_request(
   guard provider_id_from_request(path, body) is Some(provider_id) else {
     return None
   }
-  let provider_name = provider_string_from_request(path, body, [
-    "name", "providerName",
-  ]).unwrap_or(provider_id)
+  let provider_name = provider_string_from_request(path, body, ["name"]).unwrap_or(
+    provider_id,
+  )
   let enabled = provider_bool_from_request(path, body, ["enabled"]).unwrap_or(
     true,
   )
   let settings_config = provider_settings_config_from_body(body)
-  let explicit_provider_type = provider_explicit_type_from_request(
-    path, body, settings_config,
-  )
-  let api_format = provider_prefer_non_empty(
-    provider_string_from_request(path, body, ["apiFormat"]),
-    provider_settings_api_format(settings_config),
-  )
-  let base_url = provider_prefer_non_empty(
-    provider_string_from_request(path, body, ["baseUrl"]),
-    provider_settings_base_url(app_type, settings_config),
-  )
-  let api_key = provider_prefer_non_empty(
-    provider_string_from_request(path, body, ["apiKey"]),
-    provider_settings_api_key(app_type, settings_config),
-  )
+  let explicit_provider_type = provider_string_from_request(path, body, [
+    "providerType",
+  ])
+  let api_format = provider_string_from_request(path, body, ["apiFormat"])
+  let base_url = provider_string_from_request(path, body, ["baseUrl"])
+  let api_key = provider_string_from_request(path, body, ["apiKey"])
   let provider_type = provider_resolved_provider_type(
-    app_type, explicit_provider_type, settings_config, api_format, base_url, api_key,
+    app_type, explicit_provider_type, api_format, base_url, api_key,
   )
-  let prompt_cache_key = provider_settings_prompt_cache_key(settings_config)
-  let codex_fast_mode = provider_settings_codex_fast_mode(settings_config).unwrap_or(
+  let prompt_cache_key = provider_string_from_request(path, body, [
+    "promptCacheKey",
+  ])
+  let codex_fast_mode = provider_bool_from_request(path, body, ["codexFastMode"]).unwrap_or(
     false,
   )
   let notes = provider_string_from_request(path, body, ["notes"])
@@ -2123,16 +1929,7 @@ fn provider_claude_desktop_mode_from_body(body : Json?) -> String? {
   guard provider_body_payload(body) is Some(Object(obj)) else { return None }
   match json_non_empty_string_from_map_any(obj, ["claudeDesktopMode"]) {
     Some(mode) => normalize_claude_desktop_mode(mode)
-    None =>
-      match obj.get("meta") {
-        Some(Object(meta)) =>
-          match
-            json_non_empty_string_from_map_any(meta, ["claudeDesktopMode"]) {
-            Some(mode) => normalize_claude_desktop_mode(mode)
-            None => None
-          }
-        _ => None
-      }
+    None => None
   }
 }
 
@@ -2197,15 +1994,7 @@ fn provider_claude_desktop_routes_object(
 ) -> Map[String, Json]? {
   match obj.get("claudeDesktopModelRoutes") {
     Some(Object(routes)) => Some(routes)
-    _ =>
-      match obj.get("meta") {
-        Some(Object(meta)) =>
-          match meta.get("claudeDesktopModelRoutes") {
-            Some(Object(routes)) => Some(routes)
-            _ => None
-          }
-        _ => None
-      }
+    _ => None
   }
 }
 
