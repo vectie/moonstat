@@ -1226,16 +1226,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.usage.handle_get_subscription_quota(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_codex_oauth_quota", (r, w) => {
-    self.handle_get_codex_oauth_quota(r, w)
+    self.auth.handle_get_codex_oauth_quota(r, w, self.usage)
   })
   router.add_handler(@httpx.Method::Post, "/get_codex_oauth_quota", (r, w) => {
-    self.handle_get_codex_oauth_quota(r, w)
+    self.auth.handle_get_codex_oauth_quota(r, w, self.usage)
   })
   router.add_handler(@httpx.Method::Get, "/get_codex_oauth_models", (r, w) => {
-    self.handle_get_codex_oauth_models(r, w)
+    self.auth.handle_get_codex_oauth_models(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_codex_oauth_models", (r, w) => {
-    self.handle_get_codex_oauth_models(r, w)
+    self.auth.handle_get_codex_oauth_models(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_coding_plan_quota", (r, w) => {
     self.usage.handle_get_coding_plan_quota(r, w)
@@ -1332,58 +1332,58 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_fetch_models_for_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/auth_start_login", (r, w) => {
-    self.handle_auth_start_login(r, w)
+    self.auth.handle_auth_start_login(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/auth_start_login", (r, w) => {
-    self.handle_auth_start_login(r, w)
+    self.auth.handle_auth_start_login(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/auth_poll_for_account", (r, w) => {
-    self.handle_auth_poll_for_account(r, w)
+    self.auth.handle_auth_poll_for_account(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/auth_poll_for_account", (r, w) => {
-    self.handle_auth_poll_for_account(r, w)
+    self.auth.handle_auth_poll_for_account(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/auth_list_accounts", (r, w) => {
-    self.handle_auth_list_accounts(r, w)
+    self.auth.handle_auth_list_accounts(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/auth_list_accounts", (r, w) => {
-    self.handle_auth_list_accounts(r, w)
+    self.auth.handle_auth_list_accounts(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/auth_get_status", (r, w) => {
-    self.handle_auth_get_status(r, w)
+    self.auth.handle_auth_get_status(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/auth_get_status", (r, w) => {
-    self.handle_auth_get_status(r, w)
+    self.auth.handle_auth_get_status(r, w)
   })
   router.add_handler(@httpx.Method::Delete, "/auth_remove_account", (r, w) => {
-    self.handle_auth_remove_account(r, w)
+    self.auth.handle_auth_remove_account(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/auth_remove_account", (r, w) => {
-    self.handle_auth_remove_account(r, w)
+    self.auth.handle_auth_remove_account(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/auth_set_default_account", (r, w) => {
-    self.handle_auth_set_default_account(r, w)
+    self.auth.handle_auth_set_default_account(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/auth_set_default_account", (r, w) => {
-    self.handle_auth_set_default_account(r, w)
+    self.auth.handle_auth_set_default_account(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/auth_logout", (r, w) => {
-    self.handle_auth_logout(r, w)
+    self.auth.handle_auth_logout(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/auth_logout", (r, w) => {
-    self.handle_auth_logout(r, w)
+    self.auth.handle_auth_logout(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_start_device_flow", (r, w) => {
-    self.handle_copilot_start_device_flow(r, w)
+    self.auth.handle_copilot_start_device_flow(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/copilot_start_device_flow", (r, w) => {
-    self.handle_copilot_start_device_flow(r, w)
+    self.auth.handle_copilot_start_device_flow(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_poll_for_auth", (r, w) => {
-    self.handle_copilot_poll_for_auth(r, w)
+    self.auth.handle_copilot_poll_for_auth(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/copilot_poll_for_auth", (r, w) => {
-    self.handle_copilot_poll_for_auth(r, w)
+    self.auth.handle_copilot_poll_for_auth(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_poll_for_account", (r, w) => {
     self.handle_copilot_poll_for_account(r, w)
@@ -1395,16 +1395,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_copilot_list_accounts(w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_get_auth_status", (_, w) => {
-    self.handle_copilot_get_auth_status(w)
+    self.auth.handle_copilot_get_auth_status(w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_is_authenticated", (_, w) => {
-    self.handle_copilot_is_authenticated(w)
+    self.auth.handle_copilot_is_authenticated(w)
   })
   router.add_handler(@httpx.Method::Post, "/copilot_logout", (_, w) => {
-    self.handle_copilot_logout(w)
+    self.auth.handle_copilot_logout(w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_logout", (_, w) => {
-    self.handle_copilot_logout(w)
+    self.auth.handle_copilot_logout(w)
   })
   router.add_handler(@httpx.Method::Delete, "/copilot_remove_account", (r, w) => {
     self.handle_copilot_remove_account(r, w)
@@ -1419,12 +1419,12 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_copilot_set_default_account(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_get_token", (r, w) => {
-    self.handle_copilot_get_token(r, w)
+    self.auth.handle_copilot_get_token(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_get_token_for_account", (
     r,
     w,
-  ) => self.handle_copilot_get_token(r, w))
+  ) => self.auth.handle_copilot_get_token(r, w))
   router.add_handler(@httpx.Method::Get, "/copilot_get_models", (r, w) => {
     self.handle_copilot_get_models(r, w)
   })
@@ -1449,7 +1449,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_claude_desktop_models(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/login", (r, w) => {
-    self.handle_login(r, w)
+    self.auth.handle_login(r, w, self.logger)
   })
   router.set_not_found_handler(file_server.handler())
   let server = @httpx.Server::new(self.host, self.port, reuse_addr=true)

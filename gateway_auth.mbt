@@ -74,23 +74,25 @@ fn moon_provider_balance_query_credentials(
 }
 
 ///|
-async fn Gateway::handle_get_codex_oauth_quota(
-  self : Gateway,
+async fn AuthService::handle_get_codex_oauth_quota(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
+  usage : UsageService,
 ) -> Unit {
+  ignore(self)
   let body = proxy_json_body(r)
   let account_id = proxy_string_request(r.path, body, [
     "accountId", "account_id", "account",
   ])
   let quota = moon_get_codex_oauth_quota(account_id)
-  self.usage.usage_cache.put_subscription(quota.tool, quota)
+  usage.usage_cache.put_subscription(quota.tool, quota)
   write_usage_json(w, quota.to_json())
 }
 
 ///|
-async fn Gateway::handle_get_codex_oauth_models(
-  self : Gateway,
+async fn AuthService::handle_get_codex_oauth_models(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -113,8 +115,8 @@ fn managed_auth_provider_request(path : StringView, body : Json?) -> String {
 }
 
 ///|
-async fn Gateway::handle_auth_start_login(
-  self : Gateway,
+async fn AuthService::handle_auth_start_login(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -129,7 +131,7 @@ async fn Gateway::handle_auth_start_login(
       if flow is Object(obj) &&
         json_string_from_map(obj, "device_code") is Some(device_code) &&
         json_string_from_map(obj, "user_code") is Some(user_code) {
-        self.auth.auth_device_user_codes[device_code] = user_code
+        self.auth_device_user_codes[device_code] = user_code
       }
       write_usage_json(w, flow)
     }
@@ -138,8 +140,8 @@ async fn Gateway::handle_auth_start_login(
 }
 
 ///|
-async fn Gateway::handle_auth_poll_for_account(
-  self : Gateway,
+async fn AuthService::handle_auth_poll_for_account(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -155,7 +157,7 @@ async fn Gateway::handle_auth_poll_for_account(
   let user_code = match
     proxy_string_request(r.path, body, ["userCode", "user_code", "code"]) {
     Some(value) => Some(value)
-    None => self.auth.auth_device_user_codes.get(device_code)
+    None => self.auth_device_user_codes.get(device_code)
   }
   if provider != AUTH_PROVIDER_GITHUB_COPILOT && user_code is None {
     write_usage_bad_request(w, "missing_user_code")
@@ -169,11 +171,11 @@ async fn Gateway::handle_auth_poll_for_account(
       github_domain=copilot_github_domain_request(r.path, body),
     ) {
     Ok(Some(account)) => {
-      self.auth.auth_device_user_codes.remove(device_code)
+      self.auth_device_user_codes.remove(device_code)
       try @codex.load_credentials() catch {
         _ => ()
       } noraise {
-        credentials => self.auth.credentials = Some(credentials)
+        credentials => self.credentials = Some(credentials)
       }
       write_usage_json(w, account)
     }
@@ -183,8 +185,8 @@ async fn Gateway::handle_auth_poll_for_account(
 }
 
 ///|
-async fn Gateway::handle_auth_list_accounts(
-  self : Gateway,
+async fn AuthService::handle_auth_list_accounts(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -198,8 +200,8 @@ async fn Gateway::handle_auth_list_accounts(
 }
 
 ///|
-async fn Gateway::handle_auth_get_status(
-  self : Gateway,
+async fn AuthService::handle_auth_get_status(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -213,8 +215,8 @@ async fn Gateway::handle_auth_get_status(
 }
 
 ///|
-async fn Gateway::handle_auth_remove_account(
-  self : Gateway,
+async fn AuthService::handle_auth_remove_account(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -227,7 +229,7 @@ async fn Gateway::handle_auth_remove_account(
   }
   match managed_auth_remove_account(provider, account_id) {
     Ok(result) => {
-      self.auth.credentials = None
+      self.credentials = None
       write_usage_json(w, result)
     }
     Err(error) => write_usage_bad_request(w, error)
@@ -235,8 +237,8 @@ async fn Gateway::handle_auth_remove_account(
 }
 
 ///|
-async fn Gateway::handle_auth_set_default_account(
-  self : Gateway,
+async fn AuthService::handle_auth_set_default_account(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -255,8 +257,8 @@ async fn Gateway::handle_auth_set_default_account(
 }
 
 ///|
-async fn Gateway::handle_auth_logout(
-  self : Gateway,
+async fn AuthService::handle_auth_logout(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -264,7 +266,7 @@ async fn Gateway::handle_auth_logout(
   let provider = managed_auth_provider_request(r.path, body)
   match managed_auth_logout(provider) {
     Ok(result) => {
-      self.auth.credentials = None
+      self.credentials = None
       write_usage_json(w, result)
     }
     Err(error) => write_usage_bad_request(w, error)
@@ -272,8 +274,8 @@ async fn Gateway::handle_auth_logout(
 }
 
 ///|
-async fn Gateway::handle_copilot_start_device_flow(
-  self : Gateway,
+async fn AuthService::handle_copilot_start_device_flow(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -286,8 +288,8 @@ async fn Gateway::handle_copilot_start_device_flow(
 }
 
 ///|
-async fn Gateway::handle_copilot_poll_for_auth(
-  self : Gateway,
+async fn AuthService::handle_copilot_poll_for_auth(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -310,8 +312,8 @@ async fn Gateway::handle_copilot_poll_for_auth(
 }
 
 ///|
-async fn Gateway::handle_copilot_get_auth_status(
-  self : Gateway,
+async fn AuthService::handle_copilot_get_auth_status(
+  self : AuthService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -319,8 +321,8 @@ async fn Gateway::handle_copilot_get_auth_status(
 }
 
 ///|
-async fn Gateway::handle_copilot_is_authenticated(
-  self : Gateway,
+async fn AuthService::handle_copilot_is_authenticated(
+  self : AuthService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -328,8 +330,8 @@ async fn Gateway::handle_copilot_is_authenticated(
 }
 
 ///|
-async fn Gateway::handle_copilot_logout(
-  self : Gateway,
+async fn AuthService::handle_copilot_logout(
+  self : AuthService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -337,8 +339,8 @@ async fn Gateway::handle_copilot_logout(
 }
 
 ///|
-async fn Gateway::handle_copilot_get_token(
-  self : Gateway,
+async fn AuthService::handle_copilot_get_token(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -497,21 +499,22 @@ async fn write_auth_error(w : @httpx.ResponseWriter, message : String) -> Unit {
 }
 
 ///|
-async fn Gateway::handle_login(
-  self : Gateway,
+async fn AuthService::handle_login(
+  self : AuthService,
   _r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
+  logger : @pino.Logger,
 ) -> Unit {
   w.header().set("Content-Type", "application/json")
   try {
     let creds = @codex.start_oauth_flow()
-    self.auth.credentials = Some(creds)
-    self.logger.info("Login successful")
+    self.credentials = Some(creds)
+    logger.info("Login successful")
     w.write_header(@status.Ok)
     w.write("{\"status\":\"ok\",\"message\":\"Login successful\"}")
   } catch {
     _ => {
-      self.logger.error("Login failed")
+      logger.error("Login failed")
       w.write_header(@status.InternalServerError)
       w.write("{\"error\":\"Login failed\"}")
     }
