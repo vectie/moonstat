@@ -181,9 +181,6 @@ pub fn Transport::sink() -> Transport {
 /// # Returns
 /// A Transport that sends logs to the specified queue
 ///
-/// # Note
-/// This method is deprecated; the alias "chan" is provided for backward compatibility
-#alias(chan, deprecated)
 pub fn Transport::channel(queue : @aqueue.Queue[Json]) -> Transport {
   Channel(queue)
 }
