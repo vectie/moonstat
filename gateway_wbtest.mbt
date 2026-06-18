@@ -2380,12 +2380,14 @@ async test "provider config endpoints are owned by proxy service" {
   let proxy_source = @fsx.read_file("gateway_proxy.mbt")
   let config_source = @fsx.read_file("gateway_config.mbt")
   let misc_source = @fsx.read_file("gateway_misc.mbt")
+  let route_source = @fsx.read_file("gateway_proxy_routes.mbt")
   let omo_source = @fsx.read_file("omo.mbt")
   let usage_source = @fsx.read_file("gateway_usage.mbt")
   let sources = provider_source +
     proxy_source +
     config_source +
     misc_source +
+    route_source +
     omo_source
   let core_source = @fsx.read_file("gateway_core.mbt")
   for
@@ -2435,16 +2437,15 @@ async test "provider config endpoints are owned by proxy service" {
   assert_false(sources.contains("fn Gateway::codex_provider_outbound_request("))
   assert_true(sources.contains("async fn AuthService::codex_client("))
   assert_false(sources.contains("async fn Gateway::codex_client("))
-  assert_true(core_source.contains("self.proxy.handle_models(w)"))
+  assert_true(core_source.contains("self.proxy.register_inference_routes("))
+  assert_true(route_source.contains("self.handle_models(w)"))
+  assert_true(route_source.contains("self.handle_gemini(usage, r, w)"))
+  assert_true(route_source.contains("self.handle_messages("))
+  assert_true(route_source.contains("self.handle_chat_completions("))
+  assert_true(route_source.contains("self.handle_codex_responses("))
   assert_true(
-    core_source.contains("self.proxy.handle_gemini(self.usage, r, w)"),
-  )
-  assert_true(core_source.contains("self.proxy.handle_messages("))
-  assert_true(core_source.contains("self.proxy.handle_chat_completions("))
-  assert_true(core_source.contains("self.proxy.handle_codex_responses("))
-  assert_true(
-    core_source.contains(
-      "self.proxy.handle_claude_desktop_models(self.auth, self.usage, r, w)",
+    route_source.contains(
+      "self.handle_claude_desktop_models(auth, usage, r, w)",
     ),
   )
   assert_true(

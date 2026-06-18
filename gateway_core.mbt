@@ -34,114 +34,15 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   }
   let router = @httpx.Router::new()
   let file_server = @httpx.FileServer::new("public")
-  router.add_handler(Post, "/v1/messages", (r, w) => {
-    self.proxy.handle_messages(
-      self.auth,
-      self.usage,
-      self.config,
-      self.session,
-      self.model,
-      self.logger,
-      r,
-      w,
-    )
-  })
-  router.add_handler(Post, "/claude-desktop/v1/messages", (r, w) => {
-    self.proxy.handle_messages(
-      self.auth,
-      self.usage,
-      self.config,
-      self.session,
-      self.model,
-      self.logger,
-      r,
-      w,
-    )
-  })
-  for method_ in @httpx.methods {
-    router.add_handler(method_, "/v1beta/*path", (r, w) => {
-      self.proxy.handle_gemini(self.usage, r, w)
-    })
-    router.add_handler(method_, "/gemini/v1beta/*path", (r, w) => {
-      self.proxy.handle_gemini(self.usage, r, w)
-    })
-    router.add_handler(method_, "/gemini/v1/*path", (r, w) => {
-      self.proxy.handle_gemini(self.usage, r, w)
-    })
-  }
-  router.add_handler(Post, "/chat/completions", (r, w) => {
-    self.proxy.handle_chat_completions(
-      self.auth,
-      self.usage,
-      self.session,
-      self.model,
-      r,
-      w,
-    )
-  })
-  router.add_handler(Post, "/v1/chat/completions", (r, w) => {
-    self.proxy.handle_chat_completions(
-      self.auth,
-      self.usage,
-      self.session,
-      self.model,
-      r,
-      w,
-    )
-  })
-  router.add_handler(Post, "/openclaw/v1/chat/completions", (r, w) => {
-    self.proxy.handle_chat_completions(
-      self.auth,
-      self.usage,
-      self.session,
-      self.model,
-      r,
-      w,
-      app_type="openclaw",
-    )
-  })
-  router.add_handler(Post, "/responses", (r, w) => {
-    self.proxy.handle_codex_responses(
-      self.auth,
-      self.usage,
-      self.session,
-      self.model,
-      r,
-      w,
-    )
-  })
-  router.add_handler(Post, "/v1/responses", (r, w) => {
-    self.proxy.handle_codex_responses(
-      self.auth,
-      self.usage,
-      self.session,
-      self.model,
-      r,
-      w,
-    )
-  })
-  router.add_handler(Post, "/responses/compact", (r, w) => {
-    self.proxy.handle_codex_responses(
-      self.auth,
-      self.usage,
-      self.session,
-      self.model,
-      r,
-      w,
-      compact=true,
-    )
-  })
-  router.add_handler(Post, "/v1/responses/compact", (r, w) => {
-    self.proxy.handle_codex_responses(
-      self.auth,
-      self.usage,
-      self.session,
-      self.model,
-      r,
-      w,
-      compact=true,
-    )
-  })
+  self.proxy.register_inference_routes(
+    router,
+    self.auth,
+    self.usage,
+    self.config,
+    self.session,
+    self.model,
+    self.logger,
+  )
   router.add_handler(Get, "/participant/register", (_, w) => {
     self.workspace.handle_register_page(self.logger, w)
   })
@@ -1280,11 +1181,6 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   })
   router.add_handler(Get, "/copilot/usage", (r, w) => {
     self.auth.handle_copilot_get_usage(r, w)
-  })
-  router.add_handler(Get, "/models", (_, w) => self.proxy.handle_models(w))
-  router.add_handler(Get, "/v1/models", (_, w) => self.proxy.handle_models(w))
-  router.add_handler(Get, "/claude-desktop/v1/models", (r, w) => {
-    self.proxy.handle_claude_desktop_models(self.auth, self.usage, r, w)
   })
   router.add_handler(Post, "/login", (r, w) => {
     self.auth.handle_login(r, w, self.logger)
