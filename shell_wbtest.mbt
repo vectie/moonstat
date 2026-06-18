@@ -1,5 +1,5 @@
 ///|
-test "ccs external url normalization mirrors shell command behavior" {
+test "moonstat external url normalization mirrors shell command behavior" {
   assert_eq(
     moon_normalize_external_url("github.com/vectie/moonstat"),
     "https://github.com/vectie/moonstat",
@@ -19,7 +19,7 @@ test "ccs external url normalization mirrors shell command behavior" {
 }
 
 ///|
-test "ccs requested tool names keeps valid unique tools" {
+test "moonstat requested tool names keeps valid unique tools" {
   assert_eq(moon_requested_tool_names(Some("codex,unknown,codex,claude")), [
     "codex", "claude",
   ])
@@ -27,7 +27,7 @@ test "ccs requested tool names keeps valid unique tools" {
 }
 
 ///|
-test "ccs standalone app shell defaults use tauri-compatible empty results" {
+test "moonstat standalone app shell defaults use tauri-compatible empty results" {
   assert_eq(moon_init_error_json(), Json::null())
   assert_eq(moon_migration_result_json(), Json::boolean(false))
   assert_eq(moon_skills_migration_result_json(), Json::null())
@@ -35,7 +35,7 @@ test "ccs standalone app shell defaults use tauri-compatible empty results" {
 }
 
 ///|
-test "ccs tool lifecycle action and json tool parsing mirrors tauri command inputs" {
+test "moonstat tool lifecycle action and json tool parsing mirrors tauri command inputs" {
   assert_true(moon_tool_lifecycle_action("install") is Some(Install))
   assert_true(moon_tool_lifecycle_action("update") is Some(Update))
   assert_eq(
@@ -53,7 +53,7 @@ test "ccs tool lifecycle action and json tool parsing mirrors tauri command inpu
 }
 
 ///|
-test "ccs tool lifecycle commands use official and npm fallbacks" {
+test "moonstat tool lifecycle commands use official and npm fallbacks" {
   assert_true(
     moon_tool_install_command("claude").contains("claude.ai/install.sh"),
   )
@@ -69,7 +69,7 @@ test "ccs tool lifecycle commands use official and npm fallbacks" {
 }
 
 ///|
-test "ccs tool installation report uses anchored default command" {
+test "moonstat tool installation report uses anchored default command" {
   let install = MoonToolInstallation::{
     path: "/opt/homebrew/bin/codex",
     real: "/opt/homebrew/bin/codex",
