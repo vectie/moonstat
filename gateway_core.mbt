@@ -91,63 +91,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(Post, "/config/folder/open", (r, w) => {
     self.config.handle_open_config_folder(r, w)
   })
-  router.add_handler(Get, "/files/directories/pick", (r, w) => {
-    self.runtime.handle_pick_directory(r, w)
-  })
-  router.add_handler(Post, "/files/directories/pick", (r, w) => {
-    self.runtime.handle_pick_directory(r, w)
-  })
-  router.add_handler(Get, "/runtime/open-external", (r, w) => {
-    self.proxy.handle_open_external(r, w)
-  })
-  router.add_handler(Post, "/runtime/open-external", (r, w) => {
-    self.proxy.handle_open_external(r, w)
-  })
-  router.add_handler(Post, "/runtime/clipboard/text", (r, w) => {
-    self.runtime.handle_copy_text_to_clipboard(r, w)
-  })
-  router.add_handler(Get, "/runtime/clipboard/text", (r, w) => {
-    self.runtime.handle_copy_text_to_clipboard(r, w)
-  })
-  router.add_handler(Post, "/runtime/updates/check", (_, w) => {
-    self.proxy.handle_check_for_updates(w)
-  })
-  router.add_handler(Get, "/runtime/updates/check", (_, w) => {
-    self.proxy.handle_check_for_updates(w)
-  })
-  router.add_handler(Post, "/runtime/tray-menu/update", (_, w) => {
-    self.runtime.handle_update_tray_menu(w)
-  })
-  router.add_handler(Get, "/runtime/tray-menu/update", (_, w) => {
-    self.runtime.handle_update_tray_menu(w)
-  })
-  router.add_handler(Get, "/runtime/portable-mode", (_, w) => {
-    self.runtime.handle_is_portable_mode(w)
-  })
-  router.add_handler(Get, "/runtime/init-error", (_, w) => {
-    self.runtime.handle_get_init_error(w)
-  })
-  router.add_handler(Get, "/runtime/migration-result", (_, w) => {
-    self.runtime.handle_get_migration_result(w)
-  })
-  router.add_handler(Get, "/runtime/skills-migration-result", (_, w) => {
-    self.runtime.handle_get_skills_migration_result(w)
-  })
-  router.add_handler(Get, "/tools/versions", (r, w) => {
-    self.runtime.handle_get_tool_versions(r, w)
-  })
-  router.add_handler(Post, "/tools/versions", (r, w) => {
-    self.runtime.handle_get_tool_versions(r, w)
-  })
-  router.add_handler(Post, "/tools/lifecycle-action", (r, w) => {
-    self.runtime.handle_run_tool_lifecycle_action(r, w)
-  })
-  router.add_handler(Get, "/tools/probe", (r, w) => {
-    self.runtime.handle_probe_tool_installations(r, w)
-  })
-  router.add_handler(Post, "/tools/probe", (r, w) => {
-    self.runtime.handle_probe_tool_installations(r, w)
-  })
+  self.runtime.register_routes(router, self.proxy)
   router.add_handler(Post, "/runtime/window-theme", (r, w) => {
     self.config.handle_set_window_theme(r, w)
   })
@@ -462,12 +406,6 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   })
   router.add_handler(Post, "/settings", (r, w) => {
     self.config.handle_save_settings(r, w)
-  })
-  router.add_handler(Post, "/runtime/restart", (_, w) => {
-    self.runtime.handle_restart_app(w)
-  })
-  router.add_handler(Post, "/runtime/updates/install-restart", (_, w) => {
-    self.runtime.handle_install_update_and_restart(w)
   })
   router.add_handler(Get, "/settings/app-config-dir", (_, w) => {
     self.config.handle_get_app_config_dir_override(w)
