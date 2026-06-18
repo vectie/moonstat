@@ -29,11 +29,6 @@ fn moon_sync_db_compat_version() -> Int {
 }
 
 ///|
-fn moon_sync_legacy_db_compat_version() -> Int {
-  5
-}
-
-///|
 fn moon_sync_remote_db_sql() -> String {
   "db.sql"
 }
@@ -86,7 +81,6 @@ priv struct MoonLocalSyncSnapshot {
 
 ///|
 priv struct MoonWebDavRemoteSnapshot {
-  layout : String
   manifest : MoonSyncManifestInfo
   manifest_bytes : Bytes
 }
@@ -447,13 +441,10 @@ fn moon_sync_path_segments(path : String) -> Array[String] {
 fn moon_sync_remote_dir_segments(
   remote_root : String,
   profile : String,
-  layout : String,
 ) -> Array[String] {
   let segs = moon_sync_path_segments(remote_root)
   segs.push("v\{moon_sync_protocol_version()}")
-  if layout == "current" {
-    segs.push("db-v\{moon_sync_db_compat_version()}")
-  }
+  segs.push("db-v\{moon_sync_db_compat_version()}")
   for part in moon_sync_path_segments(profile) {
     segs.push(part)
   }
@@ -464,19 +455,17 @@ fn moon_sync_remote_dir_segments(
 fn moon_sync_remote_dir_display(
   remote_root : String,
   profile : String,
-  layout : String,
 ) -> String {
-  "/\{moon_sync_remote_dir_segments(remote_root, profile, layout).join("/")}"
+  "/\{moon_sync_remote_dir_segments(remote_root, profile).join("/")}"
 }
 
 ///|
 fn moon_sync_remote_file_path(
   remote_root : String,
   profile : String,
-  layout : String,
   file_name : String,
 ) -> String {
-  let segs = moon_sync_remote_dir_segments(remote_root, profile, layout)
+  let segs = moon_sync_remote_dir_segments(remote_root, profile)
   for part in moon_sync_path_segments(file_name) {
     segs.push(part)
   }
@@ -520,7 +509,7 @@ fn moon_sync_snapshot_id(
 
 ///|
 fn moon_sync_device_name() -> String {
-  let configured = @os.getenv("CC_SWITCH_DEVICE_NAME") catch { _ => None }
+  let configured = @os.getenv("MOONSTAT_DEVICE_NAME") catch { _ => None }
   match configured {
     Some(value) if !value.trim().is_empty() => value.trim().to_owned()
     _ => {
@@ -614,11 +603,10 @@ fn moon_webdav_encoded_path(segments : Array[String]) -> String {
 ///|
 fn moon_webdav_remote_file_url(
   settings : Json,
-  layout : String,
   file_name : String,
 ) -> Result[String, String] {
   let remote_segments = match
-    moon_webdav_remote_dir_segments_from_settings(settings, layout) {
+    moon_webdav_remote_dir_segments_from_settings(settings) {
     Ok(segs) => segs
     Err(error) => return Err(error)
   }
@@ -631,11 +619,10 @@ fn moon_webdav_remote_file_url(
 ///|
 fn moon_webdav_remote_dir_url(
   settings : Json,
-  layout : String,
   depth : Int,
 ) -> Result[String, String] {
   let remote_segments = match
-    moon_webdav_remote_dir_segments_from_settings(settings, layout) {
+    moon_webdav_remote_dir_segments_from_settings(settings) {
     Ok(segs) => segs
     Err(error) => return Err(error)
   }
@@ -657,7 +644,6 @@ fn moon_webdav_remote_dir_url(
 ///|
 fn moon_webdav_remote_dir_segments_from_settings(
   settings : Json,
-  layout : String,
 ) -> Result[Array[String], String] {
   guard settings is Object(obj) else {
     return Err("WebDAV sync is not configured.")
@@ -668,7 +654,7 @@ fn moon_webdav_remote_dir_segments_from_settings(
   guard json_string_from_map(obj, "profile") is Some(profile) else {
     return Err("WebDAV profile is required.")
   }
-  Ok(moon_sync_remote_dir_segments(remote_root, profile, layout))
+  Ok(moon_sync_remote_dir_segments(remote_root, profile))
 }
 
 ///|
@@ -733,7 +719,7 @@ fn moon_s3_remote_file_key(
   guard json_string_from_map(obj, "profile") is Some(profile) else {
     return Err("S3 profile is required.")
   }
-  Ok(moon_sync_remote_file_path(remote_root, profile, "current", file_name))
+  Ok(moon_sync_remote_file_path(remote_root, profile, file_name))
 }
 
 ///|
@@ -747,7 +733,7 @@ fn moon_s3_remote_dir_display(settings : Json) -> Result[String, String] {
   guard json_string_from_map(obj, "profile") is Some(profile) else {
     return Err("S3 profile is required.")
   }
-  Ok(moon_sync_remote_dir_segments(remote_root, profile, "current").join("/"))
+  Ok(moon_sync_remote_dir_segments(remote_root, profile).join("/"))
 }
 
 ///|
@@ -1132,12 +1118,12 @@ async fn moon_webdav_sync_test_connection_json(
     return Err("WebDAV PROPFIND failed: HTTP \{base_status}")
   }
   let dir_segments = match
-    moon_webdav_remote_dir_segments_from_settings(settings, "current") {
+    moon_webdav_remote_dir_segments_from_settings(settings) {
     Ok(segs) => segs
     Err(error) => return Err(error)
   }
   for depth in 1..<=dir_segments.length() {
-    let dir_url = match moon_webdav_remote_dir_url(settings, "current", depth) {
+    let dir_url = match moon_webdav_remote_dir_url(settings, depth) {
       Ok(url) => url
       Err(error) => return Err(error)
     }
@@ -1475,11 +1461,7 @@ async fn ConfigService::moon_webdav_sync_upload_json(
         error => return Err("Failed to stage manifest.json: \{error}")
       }
       let db_url = match
-        moon_webdav_remote_file_url(
-          settings,
-          "current",
-          moon_sync_remote_db_sql(),
-        ) {
+        moon_webdav_remote_file_url(settings, moon_sync_remote_db_sql()) {
         Ok(url) => url
         Err(error) => return Err(error)
       }
@@ -1495,11 +1477,7 @@ async fn ConfigService::moon_webdav_sync_upload_json(
         Err(error) => return Err(error)
       }
       let skills_url = match
-        moon_webdav_remote_file_url(
-          settings,
-          "current",
-          moon_sync_remote_skills_zip(),
-        ) {
+        moon_webdav_remote_file_url(settings, moon_sync_remote_skills_zip()) {
         Ok(url) => url
         Err(error) => return Err(error)
       }
@@ -1515,11 +1493,7 @@ async fn ConfigService::moon_webdav_sync_upload_json(
         Err(error) => return Err(error)
       }
       let manifest_url = match
-        moon_webdav_remote_file_url(
-          settings,
-          "current",
-          moon_sync_remote_manifest(),
-        ) {
+        moon_webdav_remote_file_url(settings, moon_sync_remote_manifest()) {
         Ok(url) => url
         Err(error) => return Err(error)
       }
@@ -1650,7 +1624,6 @@ async fn ConfigService::moon_s3_sync_upload_json(
 ///|
 fn moon_webdav_remote_info_from_body(
   body : String,
-  layout : String,
   settings : Json,
 ) -> Result[Json, String] {
   guard settings is Object(obj) else {
@@ -1669,7 +1642,7 @@ fn moon_webdav_remote_info_from_body(
     Ok(manifest) => manifest
     Err(error) => return Err(error)
   }
-  Ok(moon_sync_remote_info_json(manifest, layout, remote_root, profile))
+  Ok(moon_sync_remote_info_json(manifest, remote_root, profile))
 }
 
 ///|
@@ -1682,11 +1655,7 @@ async fn moon_webdav_sync_fetch_remote_info_json(
   let username = json_string_from_map(obj, "username").unwrap_or("")
   let password = json_string_from_map(obj, "password").unwrap_or("")
   let current_url = match
-    moon_webdav_remote_file_url(
-      settings,
-      "current",
-      moon_sync_remote_manifest(),
-    ) {
+    moon_webdav_remote_file_url(settings, moon_sync_remote_manifest()) {
     Ok(url) => url
     Err(error) => return Err(error)
   }
@@ -1695,27 +1664,12 @@ async fn moon_webdav_sync_fetch_remote_info_json(
     Err(error) => return Err(error)
   }
   if current.code >= 200 && current.code <= 299 {
-    return moon_webdav_remote_info_from_body(current.body, "current", settings)
+    return moon_webdav_remote_info_from_body(current.body, settings)
   }
   if current.code != 404 {
     return Err("WebDAV GET failed: HTTP \{current.code}")
   }
-  let legacy_url = match
-    moon_webdav_remote_file_url(settings, "legacy", moon_sync_remote_manifest()) {
-    Ok(url) => url
-    Err(error) => return Err(error)
-  }
-  let legacy = match moon_webdav_get_text(legacy_url, username, password) {
-    Ok(response) => response
-    Err(error) => return Err(error)
-  }
-  if legacy.code == 404 {
-    return Ok({ "empty": Json::boolean(true) }.to_json())
-  }
-  if legacy.code >= 200 && legacy.code <= 299 {
-    return moon_webdav_remote_info_from_body(legacy.body, "legacy", settings)
-  }
-  Err("WebDAV GET failed: HTTP \{legacy.code}")
+  Ok({ "empty": Json::boolean(true) }.to_json())
 }
 
 ///|
@@ -1787,13 +1741,9 @@ async fn moon_s3_sync_fetch_remote_info_json(
         Ok(path) => path
         Err(error) => return Err(error)
       }
-      let compatible = moon_sync_validate_manifest_compat(
-          remote.manifest,
-          "current",
-        )
+      let compatible = moon_sync_validate_manifest_compat(remote.manifest)
         is Ok(_)
-      let db_compat_version = match
-        moon_sync_effective_db_compat_version(remote.manifest, "current") {
+      let db_compat_version = match remote.manifest.db_compat_version {
         Some(value) => Json::number(value.to_double())
         None => Json::null()
       }
@@ -1818,7 +1768,6 @@ async fn moon_s3_sync_fetch_remote_info_json(
 ///|
 async fn moon_webdav_fetch_manifest_snapshot(
   settings : Json,
-  layout : String,
 ) -> Result[MoonWebDavRemoteSnapshot, String]? {
   guard settings is Object(obj) else {
     return Some(Err("WebDAV sync is not configured."))
@@ -1826,7 +1775,7 @@ async fn moon_webdav_fetch_manifest_snapshot(
   let username = json_string_from_map(obj, "username").unwrap_or("")
   let password = json_string_from_map(obj, "password").unwrap_or("")
   let manifest_url = match
-    moon_webdav_remote_file_url(settings, layout, moon_sync_remote_manifest()) {
+    moon_webdav_remote_file_url(settings, moon_sync_remote_manifest()) {
     Ok(url) => url
     Err(error) => return Some(Err(error))
   }
@@ -1847,29 +1796,14 @@ async fn moon_webdav_fetch_manifest_snapshot(
     Ok(manifest) => manifest
     Err(error) => return Some(Err(error))
   }
-  Some(
-    Ok({
-      layout,
-      manifest,
-      manifest_bytes: @encoding/utf8.encode(response.body),
-    }),
-  )
+  Some(Ok({ manifest, manifest_bytes: @encoding/utf8.encode(response.body) }))
 }
 
 ///|
 async fn moon_webdav_find_remote_snapshot(
   settings : Json,
 ) -> Result[MoonWebDavRemoteSnapshot, String]? {
-  match moon_webdav_fetch_manifest_snapshot(settings, "current") {
-    Some(Ok(snapshot)) => return Some(Ok(snapshot))
-    Some(Err(error)) => return Some(Err(error))
-    None => ()
-  }
-  match moon_webdav_fetch_manifest_snapshot(settings, "legacy") {
-    Some(Ok(snapshot)) => Some(Ok(snapshot))
-    Some(Err(error)) => Some(Err(error))
-    None => None
-  }
+  moon_webdav_fetch_manifest_snapshot(settings)
 }
 
 ///|
@@ -1896,11 +1830,10 @@ fn moon_sync_validate_artifact(
 ///|
 async fn moon_webdav_download_artifact(
   settings : Json,
-  layout : String,
   artifact_name : String,
   output_path : String,
 ) -> Result[Bytes, String] {
-  let url = match moon_webdav_remote_file_url(settings, layout, artifact_name) {
+  let url = match moon_webdav_remote_file_url(settings, artifact_name) {
     Ok(url) => url
     Err(error) => return Err(error)
   }
@@ -1983,7 +1916,7 @@ async fn ConfigService::moon_webdav_sync_download_json(
     Some(Err(error)) => return Err(error)
     None => return Err("No downloadable sync data found on the remote.")
   }
-  match moon_sync_validate_manifest_compat(remote.manifest, remote.layout) {
+  match moon_sync_validate_manifest_compat(remote.manifest) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
@@ -1997,7 +1930,6 @@ async fn ConfigService::moon_webdav_sync_download_json(
       let db_sql = match
         moon_webdav_download_artifact(
           settings,
-          remote.layout,
           moon_sync_remote_db_sql(),
           db_path,
         ) {
@@ -2016,7 +1948,6 @@ async fn ConfigService::moon_webdav_sync_download_json(
       let skills_zip = match
         moon_webdav_download_artifact(
           settings,
-          remote.layout,
           moon_sync_remote_skills_zip(),
           skills_path,
         ) {
@@ -2050,9 +1981,9 @@ async fn ConfigService::moon_webdav_sync_download_json(
   Ok(
     {
       "status": Json::string("downloaded"),
-      "sourceLayout": Json::string(remote.layout),
+      "sourceLayout": Json::string("current"),
       "sourcePath": Json::string(
-        moon_sync_remote_dir_display(remote_root, profile, remote.layout),
+        moon_sync_remote_dir_display(remote_root, profile),
       ),
     }.to_json(),
   )
@@ -2069,7 +2000,7 @@ async fn ConfigService::moon_s3_sync_download_json(
     Some(Err(error)) => return Err(error)
     None => return Err("No downloadable sync data found on the remote.")
   }
-  match moon_sync_validate_manifest_compat(remote.manifest, "current") {
+  match moon_sync_validate_manifest_compat(remote.manifest) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
@@ -2132,22 +2063,6 @@ async fn ConfigService::moon_s3_sync_download_json(
 }
 
 ///|
-fn moon_sync_effective_db_compat_version(
-  manifest : MoonSyncManifestInfo,
-  layout : String,
-) -> Int? {
-  match manifest.db_compat_version {
-    Some(value) => Some(value)
-    None =>
-      if layout == "legacy" {
-        Some(moon_sync_legacy_db_compat_version())
-      } else {
-        None
-      }
-  }
-}
-
-///|
 fn moon_sync_manifest_info_from_json(
   manifest_json : Json,
 ) -> Result[MoonSyncManifestInfo, String] {
@@ -2205,7 +2120,6 @@ fn moon_sync_manifest_info_from_json(
 ///|
 fn moon_sync_validate_manifest_compat(
   manifest : MoonSyncManifestInfo,
-  layout : String,
 ) -> Result[Unit, String] {
   if manifest.format != moon_sync_protocol_format() {
     return Err("Remote manifest format is incompatible: \{manifest.format}")
@@ -2215,18 +2129,12 @@ fn moon_sync_validate_manifest_compat(
       "Remote manifest protocol version is incompatible: v\{manifest.version} (local v\{moon_sync_protocol_version()})",
     )
   }
-  guard moon_sync_effective_db_compat_version(manifest, layout)
-    is Some(db_compat_version) else {
+  guard manifest.db_compat_version is Some(db_compat_version) else {
     return Err("Remote manifest is missing the database compatibility version.")
   }
-  if layout == "current" && db_compat_version != moon_sync_db_compat_version() {
+  if db_compat_version != moon_sync_db_compat_version() {
     return Err(
       "Remote database snapshot version is incompatible: db-v\{db_compat_version} (local db-v\{moon_sync_db_compat_version()})",
-    )
-  }
-  if layout == "legacy" && db_compat_version > moon_sync_db_compat_version() {
-    return Err(
-      "Remote database snapshot version is incompatible: db-v\{db_compat_version} (local supports up to db-v\{moon_sync_db_compat_version()})",
     )
   }
   Ok(())
@@ -2235,13 +2143,11 @@ fn moon_sync_validate_manifest_compat(
 ///|
 fn moon_sync_remote_info_json(
   manifest : MoonSyncManifestInfo,
-  layout : String,
   remote_root : String,
   profile : String,
 ) -> Json {
-  let compatible = moon_sync_validate_manifest_compat(manifest, layout) is Ok(_)
-  let db_compat_version = match
-    moon_sync_effective_db_compat_version(manifest, layout) {
+  let compatible = moon_sync_validate_manifest_compat(manifest) is Ok(_)
+  let db_compat_version = match manifest.db_compat_version {
     Some(value) => Json::number(value.to_double())
     None => Json::null()
   }
@@ -2254,9 +2160,9 @@ fn moon_sync_remote_info_json(
     "dbCompatVersion": db_compat_version,
     "compatible": Json::boolean(compatible),
     "artifacts": Json::array(manifest.artifacts.map(Json::string)),
-    "layout": Json::string(layout),
+    "layout": Json::string("current"),
     "remotePath": Json::string(
-      moon_sync_remote_dir_display(remote_root, profile, layout),
+      moon_sync_remote_dir_display(remote_root, profile),
     ),
   }.to_json()
 }

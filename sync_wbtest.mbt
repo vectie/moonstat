@@ -171,16 +171,16 @@ test "moonstat s3 object urls and keys match moonstat transport layout" {
       "accessKeyId": Json::string("AKID"),
       "secretAccessKey": Json::string("SECRET"),
       "endpoint": Json::string("http://minio.local:9000/"),
-      "remoteRoot": Json::string("cc switch"),
+      "remoteRoot": Json::string("moonstat team"),
       "profile": Json::string("team/default"),
     }.to_json(),
     None,
     false,
   )
   assert_eq(
-    moon_s3_object_url(custom, "cc switch/v2/db-v6/team/default/db.sql"),
+    moon_s3_object_url(custom, "moonstat team/v2/db-v6/team/default/db.sql"),
     Ok(
-      "http://minio.local:9000/moonstat/cc%20switch/v2/db-v6/team/default/db.sql",
+      "http://minio.local:9000/moonstat/moonstat%20team/v2/db-v6/team/default/db.sql",
     ),
   )
 }
@@ -248,20 +248,18 @@ test "moonstat s3 status and etag parsing match s3 transport behavior" {
 }
 
 ///|
-test "moonstat sync protocol paths match moonstat v2 current and legacy layouts" {
+test "moonstat sync protocol paths use moonstat v2 db layout" {
+  assert_eq(moon_sync_remote_dir_segments("moonstat-sync", "default"), [
+    "moonstat-sync", "v2", "db-v6", "default",
+  ])
   assert_eq(
-    moon_sync_remote_dir_segments("moonstat-sync", "default", "current"),
-    ["moonstat-sync", "v2", "db-v6", "default"],
-  )
-  assert_eq(
-    moon_sync_remote_dir_segments("/moonstat-sync/", "/team/default/", "legacy"),
-    ["moonstat-sync", "v2", "team", "default"],
+    moon_sync_remote_dir_segments("/moonstat-sync/", "/team/default/"),
+    ["moonstat-sync", "v2", "db-v6", "team", "default"],
   )
   assert_eq(
     moon_sync_remote_file_path(
       "moonstat-sync",
       "default",
-      "current",
       moon_sync_remote_manifest(),
     ),
     "moonstat-sync/v2/db-v6/default/manifest.json",
@@ -270,7 +268,6 @@ test "moonstat sync protocol paths match moonstat v2 current and legacy layouts"
     moon_sync_remote_file_path(
       "moonstat-sync",
       "default",
-      "current",
       moon_sync_remote_db_sql(),
     ),
     "moonstat-sync/v2/db-v6/default/db.sql",
@@ -279,7 +276,6 @@ test "moonstat sync protocol paths match moonstat v2 current and legacy layouts"
     moon_sync_remote_file_path(
       "moonstat-sync",
       "default",
-      "current",
       moon_sync_remote_skills_zip(),
     ),
     "moonstat-sync/v2/db-v6/default/skills.zip",
@@ -296,26 +292,16 @@ test "moonstat webdav remote manifest url encodes path segments like moonstat" {
       ),
       "username": Json::string("alice"),
       "password": Json::string("secret"),
-      "remoteRoot": Json::string("cc switch-sync"),
+      "remoteRoot": Json::string("moonstat team-sync"),
       "profile": Json::string("default profile"),
     }.to_json(),
     None,
     false,
   )
   assert_eq(
-    moon_webdav_remote_file_url(
-      settings,
-      "current",
-      moon_sync_remote_manifest(),
-    ),
+    moon_webdav_remote_file_url(settings, moon_sync_remote_manifest()),
     Ok(
-      "https://dav.example.com/remote.php/dav/files/demo/cc%20switch-sync/v2/db-v6/default%20profile/manifest.json",
-    ),
-  )
-  assert_eq(
-    moon_webdav_remote_file_url(settings, "legacy", moon_sync_remote_manifest()),
-    Ok(
-      "https://dav.example.com/remote.php/dav/files/demo/cc%20switch-sync/v2/default%20profile/manifest.json",
+      "https://dav.example.com/remote.php/dav/files/demo/moonstat%20team-sync/v2/db-v6/default%20profile/manifest.json",
     ),
   )
   assert_eq(
@@ -347,7 +333,7 @@ test "moonstat webdav connection command matches moonstat methods" {
     false,
   )
   assert_eq(
-    moon_webdav_remote_dir_url(settings, "current", 2),
+    moon_webdav_remote_dir_url(settings, 2),
     Ok("https://dav.example.com/root/moonstat-sync/v2/"),
   )
   let request = moon_webdav_curl_status_request(
@@ -408,7 +394,7 @@ test "moonstat sync sha256 and snapshot id match sync protocol" {
 }
 
 ///|
-test "moonstat sync manifest compatibility follows current and legacy db versions" {
+test "moonstat sync manifest compatibility requires current db version" {
   let manifest_json = {
     "format": Json::string(moon_sync_protocol_format()),
     "version": Json::number(moon_sync_protocol_version().to_double()),
@@ -423,26 +409,20 @@ test "moonstat sync manifest compatibility follows current and legacy db version
   }.to_json()
   let manifest = moon_sync_manifest_info_from_json(manifest_json).unwrap()
   assert_eq(manifest.artifacts, ["db.sql", "skills.zip"])
-  assert_true(moon_sync_validate_manifest_compat(manifest, "current") is Ok(_))
-  let legacy_manifest = moon_sync_manifest_info_from_json(
+  assert_true(moon_sync_validate_manifest_compat(manifest) is Ok(_))
+  let missing_db_manifest = moon_sync_manifest_info_from_json(
     {
       "format": Json::string(moon_sync_protocol_format()),
       "version": Json::number(moon_sync_protocol_version().to_double()),
-      "deviceName": Json::string("Old Mac"),
+      "deviceName": Json::string("Incomplete Mac"),
       "createdAt": Json::string("2026-02-12T00:00:00Z"),
-      "snapshotId": Json::string("snap-legacy"),
+      "snapshotId": Json::string("snap-missing-db"),
       "artifacts": {
         "db.sql": { "sha256": Json::string("abc"), "size": Json::number(1) }.to_json(),
       }.to_json(),
     }.to_json(),
   ).unwrap()
-  assert_eq(
-    moon_sync_effective_db_compat_version(legacy_manifest, "legacy"),
-    Some(moon_sync_legacy_db_compat_version()),
-  )
-  assert_true(
-    moon_sync_validate_manifest_compat(legacy_manifest, "current") is Err(_),
-  )
+  assert_true(moon_sync_validate_manifest_compat(missing_db_manifest) is Err(_))
   let newer_manifest = moon_sync_manifest_info_from_json(
     {
       "format": Json::string(moon_sync_protocol_format()),
@@ -458,9 +438,7 @@ test "moonstat sync manifest compatibility follows current and legacy db version
       }.to_json(),
     }.to_json(),
   ).unwrap()
-  assert_true(
-    moon_sync_validate_manifest_compat(newer_manifest, "legacy") is Err(_),
-  )
+  assert_true(moon_sync_validate_manifest_compat(newer_manifest) is Err(_))
 }
 
 ///|
@@ -490,8 +468,7 @@ test "moonstat webdav remote info maps manifest body" {
     #|    "db.sql": { "sha256": "abc", "size": 1 }
     #|  }
     #|}
-  guard moon_webdav_remote_info_from_body(body, "current", settings)
-    is Ok(Object(obj)) else {
+  guard moon_webdav_remote_info_from_body(body, settings) is Ok(Object(obj)) else {
     fail("expected webdav remote info object")
   }
   assert_eq(obj["deviceName"], Json::string("My MacBook"))
@@ -520,9 +497,7 @@ test "moonstat sync remote info response mirrors moonstat fetch remote info shap
       }.to_json(),
     }.to_json(),
   ).unwrap()
-  guard moon_sync_remote_info_json(
-      manifest, "current", "moonstat-sync", "default",
-    )
+  guard moon_sync_remote_info_json(manifest, "moonstat-sync", "default")
     is Object(obj) else {
     fail("expected remote info object")
   }
