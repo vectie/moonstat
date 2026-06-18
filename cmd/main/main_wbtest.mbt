@@ -692,7 +692,7 @@ test "usage filter paths encode moonstat query values" {
 }
 
 ///|
-test "stream check paths use moonstat command names and camelCase args" {
+test "stream check paths use moonstat command names and kebab-case flags" {
   assert_eq(
     stream_check_provider_path([
       "moonstat", "stream-check", "provider", "--app-type", "codex", "--provider-id",
@@ -702,7 +702,7 @@ test "stream check paths use moonstat command names and camelCase args" {
   )
   assert_eq(
     stream_check_all_path([
-      "moonstat", "stream-check", "all", "--appType", "claude", "--proxyTargetsOnly",
+      "moonstat", "stream-check", "all", "--app-type", "claude", "--proxy-targets-only",
       "true",
     ]),
     "/proxy/stream-check/all?appType=claude&proxyTargetsOnly=true",
@@ -721,7 +721,7 @@ test "copilot grouped commands build canonical auth paths" {
   assert_eq(
     copilot_github_domain_path(
       [
-        "moonstat", "copilot", "login", "--githubDomain", "https://ghe.example.com",
+        "moonstat", "copilot", "login", "--github-domain", "https://ghe.example.com",
       ],
       "/copilot/device-flow",
     ),
@@ -730,7 +730,7 @@ test "copilot grouped commands build canonical auth paths" {
   assert_eq(
     copilot_device_path(
       [
-        "moonstat", "copilot", "poll", "--deviceCode", "dev 1", "--github-domain",
+        "moonstat", "copilot", "poll", "--device-code", "dev 1", "--github-domain",
         "ghe.example.com",
       ],
       "/copilot/poll-account",
@@ -741,7 +741,7 @@ test "copilot grouped commands build canonical auth paths" {
   )
   assert_eq(
     copilot_account_path(
-      ["moonstat", "copilot", "remove", "--accountId", "ghe.example.com:42"],
+      ["moonstat", "copilot", "remove", "--account-id", "ghe.example.com:42"],
       "/copilot/account",
     ),
     Some("/copilot/account?accountId=ghe.example.com%3A42"),
@@ -758,7 +758,7 @@ test "copilot grouped commands build canonical auth paths" {
 ///|
 test "usage aggregate paths accept moonstat date and app filters" {
   let args = [
-    "moonstat", "usage", "summary", "--startDate", "10", "--endDate", "20", "--appType",
+    "moonstat", "usage", "summary", "--start-date", "10", "--end-date", "20", "--app-type",
     "claude desktop",
   ]
   assert_eq(
@@ -800,9 +800,9 @@ test "usage detail path encodes moonstat request ids" {
 }
 
 ///|
-test "usage aliases build same paths as moonstat command names" {
+test "usage kebab-case flags build canonical paths" {
   let args = [
-    "moonstat", "usage", "summary", "--startDate", "10", "--endDate", "20", "--appType",
+    "moonstat", "usage", "summary", "--start-date", "10", "--end-date", "20", "--app-type",
     "codex",
   ]
   assert_eq(
@@ -811,7 +811,7 @@ test "usage aliases build same paths as moonstat command names" {
   )
   assert_eq(
     usage_logs_path([
-      "moonstat", "usage", "logs", "--page", "1", "--pageSize", "50", "--appType",
+      "moonstat", "usage", "logs", "--page", "1", "--page-size", "50", "--app-type",
       "claude",
     ]),
     "/usage/logs?app_type=claude&page=1&pageSize=50",
@@ -963,7 +963,7 @@ test "proxy config setter paths encode moonstat command arguments" {
   assert_eq(
     provider_test_endpoints_path([
       "moonstat", "provider", "test-endpoints", "--urls", "https://api.example.com/v1,not-a-url",
-      "--timeoutSecs", "3",
+      "--timeout-secs", "3",
     ]),
     Some(
       "/providers/test-endpoints?urls=https%3A%2F%2Fapi.example.com%2Fv1%2Cnot-a-url&timeoutSecs=3",
@@ -983,8 +983,8 @@ test "proxy grouped commands build canonical paths" {
   assert_eq(
     proxy_global_config_update_path(
       [
-        "moonstat", "proxy", "global-config", "set", "--proxyEnabled", "true", "--listenAddress",
-        "127.0.0.1", "--listenPort", "15721",
+        "moonstat", "proxy", "global-config", "set", "--proxy-enabled", "true", "--listen-address",
+        "127.0.0.1", "--listen-port", "15721",
       ],
       "/proxy/global-config",
     ),
@@ -992,8 +992,8 @@ test "proxy grouped commands build canonical paths" {
   )
   assert_eq(
     proxy_app_config_update_path([
-      "moonstat", "proxy", "app-config", "set", "--appType", "codex", "--enabled",
-      "true", "--autoFailoverEnabled", "true",
+      "moonstat", "proxy", "app-config", "set", "--app-type", "codex", "--enabled",
+      "true", "--auto-failover-enabled", "true",
     ]),
     "/proxy/app-config?appType=codex&enabled=true&autoFailoverEnabled=true",
   )
@@ -1009,7 +1009,7 @@ test "proxy grouped commands build canonical paths" {
   )
   assert_eq(
     proxy_auto_failover_enabled_path([
-      "moonstat", "proxy", "auto-failover-enabled", "set", "--appType", "codex",
+      "moonstat", "proxy", "auto-failover-enabled", "set", "--app-type", "codex",
       "--enabled", "true",
     ]),
     Some("/proxy/auto-failover-enabled?app_type=codex&enabled=true"),
@@ -1071,7 +1071,7 @@ test "proxy grouped commands build canonical paths" {
   )
   assert_eq(
     delete_sessions_body([
-      "moonstat", "delete_sessions", "--items", "[{\"providerId\":\"codex\",\"sessionId\":\"s1\",\"sourcePath\":\"/tmp/s1.jsonl\"}]",
+      "moonstat", "sessions", "delete-many", "--items", "[{\"providerId\":\"codex\",\"sessionId\":\"s1\",\"sourcePath\":\"/tmp/s1.jsonl\"}]",
     ]),
     Some(
       "[{\"providerId\":\"codex\",\"sessionId\":\"s1\",\"sourcePath\":\"/tmp/s1.jsonl\"}]",
@@ -1079,7 +1079,7 @@ test "proxy grouped commands build canonical paths" {
   )
   assert_eq(
     delete_sessions_body([
-      "moonstat", "delete_sessions", "--body", "{\"items\":[]}",
+      "moonstat", "sessions", "delete-many", "--body", "{\"items\":[]}",
     ]),
     Some("{\"items\":[]}"),
   )
@@ -1113,13 +1113,13 @@ test "proxy grouped commands build canonical paths" {
   )
   assert_eq(
     delete_env_vars_body([
-      "moonstat", "delete_env_vars", "--conflicts", "[{\"key\":\"OPENAI_API_KEY\",\"sourcePath\":\"/tmp/.zshrc\"}]",
+      "moonstat", "config", "env-delete", "--conflicts", "[{\"key\":\"OPENAI_API_KEY\",\"sourcePath\":\"/tmp/.zshrc\"}]",
     ]),
     Some("[{\"key\":\"OPENAI_API_KEY\",\"sourcePath\":\"/tmp/.zshrc\"}]"),
   )
   assert_eq(
     delete_env_vars_body([
-      "moonstat", "delete_env_vars", "--body", "{\"conflicts\":[]}",
+      "moonstat", "config", "env-delete", "--body", "{\"conflicts\":[]}",
     ]),
     Some("{\"conflicts\":[]}"),
   )
@@ -1129,7 +1129,7 @@ test "proxy grouped commands build canonical paths" {
 test "provider grouped commands build canonical paths" {
   assert_eq(
     provider_app_path(
-      ["moonstat", "provider", "list", "--appType", "codex"],
+      ["moonstat", "provider", "list", "--app-type", "codex"],
       "/providers",
     ),
     "/providers?app=codex",
@@ -1137,7 +1137,8 @@ test "provider grouped commands build canonical paths" {
   assert_eq(
     provider_id_path(
       [
-        "moonstat", "provider", "switch", "--appType", "codex", "--providerId", "custom provider",
+        "moonstat", "provider", "switch", "--app-type", "codex", "--provider-id",
+        "custom provider",
       ],
       "/providers/switch",
     ),
@@ -1146,8 +1147,8 @@ test "provider grouped commands build canonical paths" {
   assert_eq(
     provider_endpoint_url_path(
       [
-        "moonstat", "provider", "endpoints", "add", "--appType", "codex", "--providerId",
-        "custom", "--endpointUrl", "https://backup.example.com/v1",
+        "moonstat", "provider", "endpoints", "add", "--app-type", "codex", "--provider-id",
+        "custom", "--endpoint-url", "https://backup.example.com/v1",
       ],
       "/providers/endpoints",
     ),
@@ -1162,7 +1163,7 @@ test "provider grouped commands build canonical paths" {
   assert_eq(
     provider_live_provider_path(
       [
-        "moonstat", "provider", "openclaw", "live-get", "--providerId", "open claw",
+        "moonstat", "provider", "openclaw", "live-get", "--provider-id", "open claw",
       ],
       "openclaw",
     ),
@@ -1210,7 +1211,7 @@ test "provider grouped commands build canonical paths" {
 test "top level moonstat config command names build config paths" {
   assert_eq(
     config_app_path(
-      ["moonstat", "config", "status", "--appType", "codex"],
+      ["moonstat", "config", "status", "--app-type", "codex"],
       "/config/status",
     ),
     "/config/status?app=codex",
@@ -1224,14 +1225,14 @@ test "top level moonstat config command names build config paths" {
   )
   assert_eq(
     pick_directory_path([
-      "moonstat", "files", "directory", "pick", "--defaultPath", "/tmp/claude projects",
+      "moonstat", "files", "directory", "pick", "--default-path", "/tmp/claude projects",
     ]),
     "/files/directories/pick?defaultPath=%2Ftmp%2Fclaude%20projects",
   )
   assert_eq(
     config_snippet_path(
       [
-        "moonstat", "config", "snippet", "set", "--appType", "codex", "--snippet",
+        "moonstat", "config", "snippet", "set", "--app-type", "codex", "--snippet",
         "model=\"gpt-5\"",
       ],
       "/config/snippets",
@@ -1249,21 +1250,21 @@ test "top level moonstat config command names build config paths" {
   )
   assert_eq(
     extract_common_config_snippet_path([
-      "moonstat", "config", "snippet", "extract", "--appType", "claude", "--settingsConfig",
+      "moonstat", "config", "snippet", "extract", "--app-type", "claude", "--settings-config",
       "{\"env\":{}}",
     ]),
     "/config/snippets/extract?appType=claude&settingsConfig=%7B%22env%22%3A%7B%7D%7D",
   )
   assert_eq(
     restore_env_backup_path([
-      "moonstat", "config", "env-restore", "--backupPath", "/tmp/env backup.json",
+      "moonstat", "config", "env-restore", "--backup-path", "/tmp/env backup.json",
     ]),
     Some("/config/env/restore?backupPath=%2Ftmp%2Fenv%20backup.json"),
   )
   assert_eq(
     config_file_path(
       [
-        "moonstat", "config", "file", "export", "--filePath", "/tmp/moon stat.json",
+        "moonstat", "config", "file", "export", "--file-path", "/tmp/moon stat.json",
       ],
       "/config/files/export",
     ),
@@ -1285,7 +1286,7 @@ test "top level moonstat config command names build config paths" {
   )
   assert_eq(
     db_backup_rename_path([
-      "moonstat", "backups", "db", "rename", "--oldFilename", "moonstat-1.db", "--newName",
+      "moonstat", "backups", "db", "rename", "--old-filename", "moonstat-1.db", "--new-name",
       "renamed",
     ]),
     "/backups/db/rename?oldFilename=moonstat-1.db&newName=renamed",
@@ -1328,7 +1329,7 @@ test "top level moonstat config command names build config paths" {
     sync_settings_path(
       [
         "moonstat", "sync", "webdav", "settings", "--settings", "{\"baseUrl\":\"https://dav.example.com\"}",
-        "--passwordTouched", "false",
+        "--password-touched", "false",
       ],
       "/sync/webdav/settings",
     ),
@@ -1369,7 +1370,7 @@ test "top level moonstat settings command names build settings paths" {
   assert_eq(
     moon_json_config_path(
       [
-        "moonstat", "settings", "rectifier", "set", "--requestThinkingSignature",
+        "moonstat", "settings", "rectifier", "set", "--request-thinking-signature",
         "false",
       ],
       "/settings/rectifier",
@@ -1390,8 +1391,8 @@ test "top level moonstat settings command names build settings paths" {
   assert_eq(
     moon_json_config_path(
       [
-        "moonstat", "settings", "copilot-optimizer", "set", "--warmupModel", "gpt-5-mini",
-        "--stripThinking", "true",
+        "moonstat", "settings", "copilot-optimizer", "set", "--warmup-model", "gpt-5-mini",
+        "--strip-thinking", "true",
       ],
       "/settings/copilot-optimizer",
       "--config",
@@ -1455,7 +1456,7 @@ test "top level moonstat workspace command names build workspace paths" {
 test "top level moonstat mcp command names build mcp paths" {
   assert_eq(
     mcp_app_path(
-      ["moonstat", "mcp", "config", "--appType", "codex"],
+      ["moonstat", "mcp", "config", "--app-type", "codex"],
       "/mcp/config",
     ),
     "/mcp/config?app=codex",
@@ -1468,7 +1469,7 @@ test "top level moonstat mcp command names build mcp paths" {
   )
   assert_eq(
     mcp_id_path(
-      ["moonstat", "mcp", "delete", "--serverId", "filesystem server"],
+      ["moonstat", "mcp", "delete", "--server-id", "filesystem server"],
       "/mcp/servers",
     ),
     Some("/mcp/servers?id=filesystem%20server"),
@@ -1476,7 +1477,7 @@ test "top level moonstat mcp command names build mcp paths" {
   guard mcp_upsert_path(
       [
         "moonstat", "mcp", "upsert-config", "--app", "codex", "--id", "filesystem",
-        "--name", "Filesystem", "--command", "npx", "--syncOtherSide", "true",
+        "--name", "Filesystem", "--command", "npx", "--sync-other-side", "true",
       ],
       "/mcp/config/servers",
     )
@@ -1504,7 +1505,7 @@ test "top level moonstat mcp command names build mcp paths" {
 test "top level moonstat prompt command names build prompt paths" {
   assert_eq(
     prompt_app_path(
-      ["moonstat", "prompt", "list", "--appType", "codex"],
+      ["moonstat", "prompt", "list", "--app-type", "codex"],
       "/prompts",
     ),
     "/prompts?app=codex",
@@ -1521,7 +1522,7 @@ test "top level moonstat prompt command names build prompt paths" {
   )
   assert_eq(
     prompt_id_path(
-      ["moonstat", "prompt", "delete", "--app", "codex", "--promptId", "review"],
+      ["moonstat", "prompt", "delete", "--app", "codex", "--id", "review"],
       "/prompts",
     ),
     Some("/prompts?app=codex&id=review"),
@@ -1541,7 +1542,7 @@ test "top level moonstat prompt command names build prompt paths" {
 test "usage balance command builds balance path" {
   assert_eq(
     balance_path([
-      "moonstat", "usage", "balance", "--baseUrl", "https://api.deepseek.com", "--apiKey",
+      "moonstat", "usage", "balance", "--base-url", "https://api.deepseek.com", "--api-key",
       "sk test",
     ]),
     Some(
@@ -1560,7 +1561,7 @@ test "usage balance command builds balance path" {
 test "usage subscription quota command builds quota path" {
   assert_eq(
     subscription_quota_path([
-      "moonstat", "usage", "quota", "--appType", "gemini",
+      "moonstat", "usage", "quota", "--app-type", "gemini",
     ]),
     Some("/usage/subscription-quota?tool=gemini"),
   )
@@ -1571,7 +1572,7 @@ test "usage subscription quota command builds quota path" {
 test "usage codex oauth quota command builds quota path" {
   assert_eq(
     codex_oauth_quota_path([
-      "moonstat", "usage", "codex-oauth-quota", "--accountId", "acct 1",
+      "moonstat", "usage", "codex-oauth-quota", "--account-id", "acct 1",
     ]),
     "/usage/codex-oauth-quota?accountId=acct%201",
   )
@@ -1599,7 +1600,7 @@ test "usage codex oauth models command builds models path" {
 test "moonstat auth commands build managed auth paths" {
   assert_eq(
     auth_provider_path(
-      ["moonstat", "auth", "status", "--authProvider", "codex_oauth"],
+      ["moonstat", "auth", "status", "--auth-provider", "codex_oauth"],
       "/auth/status",
     ),
     "/auth/status?authProvider=codex_oauth",
@@ -1701,8 +1702,8 @@ test "top level moonstat skill commands build paths" {
   )
   assert_eq(
     skill_restore_backup_path([
-      "moonstat", "skills", "backup", "restore", "--backupId", "traffic-stats-1",
-      "--currentApp", "claude",
+      "moonstat", "skills", "backup", "restore", "--backup-id", "traffic-stats-1",
+      "--current-app", "claude",
     ]),
     "/skills/backups/restore?backupId=traffic-stats-1&currentApp=claude",
   )
@@ -1722,7 +1723,7 @@ test "top level moonstat skill commands build paths" {
   )
   assert_eq(
     skill_zip_install_path([
-      "moonstat", "skills", "install-zip", "--filePath", "/tmp/skill bundle", "--currentApp",
+      "moonstat", "skills", "install-zip", "--file-path", "/tmp/skill bundle", "--current-app",
       "codex",
     ]),
     "/skills/install-zip?filePath=%2Ftmp%2Fskill%20bundle&currentApp=codex",

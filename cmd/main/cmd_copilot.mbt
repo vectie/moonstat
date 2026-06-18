@@ -104,7 +104,7 @@ async fn copilot_account_post(args : Array[String], path : String) -> Unit {
 ///|
 fn copilot_github_domain_path(args : Array[String], path : String) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--github-domain", "--githubDomain") {
+  match parse_string_arg(args, "--github-domain") {
     Some(value) => query.push(cli_query_pair("githubDomain", value))
     None => ()
   }
@@ -113,12 +113,11 @@ fn copilot_github_domain_path(args : Array[String], path : String) -> String {
 
 ///|
 fn copilot_device_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg_any(args, "--device-code", "--deviceCode")
-    is Some(device_code) else {
+  guard parse_string_arg(args, "--device-code") is Some(device_code) else {
     return None
   }
   let query : Array[String] = [cli_query_pair("deviceCode", device_code)]
-  match parse_string_arg_any(args, "--github-domain", "--githubDomain") {
+  match parse_string_arg(args, "--github-domain") {
     Some(value) => query.push(cli_query_pair("githubDomain", value))
     None => ()
   }
@@ -127,8 +126,7 @@ fn copilot_device_path(args : Array[String], path : String) -> String? {
 
 ///|
 fn copilot_account_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg_any(args, "--account-id", "--accountId")
-    is Some(account_id) else {
+  guard parse_string_arg(args, "--account-id") is Some(account_id) else {
     return None
   }
   let query : Array[String] = [cli_query_pair("accountId", account_id)]
@@ -138,7 +136,7 @@ fn copilot_account_path(args : Array[String], path : String) -> String? {
 ///|
 fn copilot_account_optional_path(args : Array[String], path : String) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--account-id", "--accountId") {
+  match parse_string_arg(args, "--account-id") {
     Some(value) => query.push(cli_query_pair("accountId", value))
     None => ()
   }

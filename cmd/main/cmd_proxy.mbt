@@ -650,8 +650,7 @@ async fn check_proxy_provider_endpoint(
 
 ///|
 fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg_any(args, "--provider-id", "--providerId")
-    is Some(provider_id) else {
+  guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
     return None
   }
   let app_type = proxy_app_arg(args)
@@ -664,7 +663,7 @@ fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? 
 fn proxy_app_arg(args : Array[String]) -> String {
   match parse_string_arg_any(args, "--app", "--app-type") {
     Some(value) => value
-    None => parse_string_arg(args, "--appType").unwrap_or("claude")
+    None => "claude"
   }
 }
 
@@ -672,7 +671,7 @@ fn proxy_app_arg(args : Array[String]) -> String {
 fn provider_app_arg(args : Array[String]) -> String {
   match parse_string_arg_any(args, "--app", "--app-type") {
     Some(value) => value
-    None => parse_string_arg(args, "--appType").unwrap_or("claude")
+    None => "claude"
   }
 }
 
@@ -680,7 +679,7 @@ fn provider_app_arg(args : Array[String]) -> String {
 fn provider_id_arg(args : Array[String]) -> String? {
   match parse_string_arg(args, "--id") {
     Some(id) => Some(id)
-    None => parse_string_arg_any(args, "--provider-id", "--providerId")
+    None => parse_string_arg(args, "--provider-id")
   }
 }
 
@@ -746,15 +745,15 @@ fn universal_provider_upsert_path(args : Array[String]) -> String? {
     cli_query_pair("id", provider_id),
     cli_query_pair("name", name),
   ]
-  match parse_string_arg_any(args, "--provider-type", "--providerType") {
+  match parse_string_arg(args, "--provider-type") {
     Some(value) => query.push(cli_query_pair("providerType", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--base-url", "--baseUrl") {
+  match parse_string_arg(args, "--base-url") {
     Some(value) => query.push(cli_query_pair("baseUrl", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--api-key", "--apiKey") {
+  match parse_string_arg(args, "--api-key") {
     Some(value) => query.push(cli_query_pair("apiKey", value))
     None => ()
   }
@@ -762,19 +761,19 @@ fn universal_provider_upsert_path(args : Array[String]) -> String? {
     Some(value) => query.push(cli_query_pair("apps", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--claude-model", "--claudeModel") {
+  match parse_string_arg(args, "--claude-model") {
     Some(value) => query.push(cli_query_pair("claudeModel", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--codex-model", "--codexModel") {
+  match parse_string_arg(args, "--codex-model") {
     Some(value) => query.push(cli_query_pair("codexModel", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--gemini-model", "--geminiModel") {
+  match parse_string_arg(args, "--gemini-model") {
     Some(value) => query.push(cli_query_pair("geminiModel", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--reasoning-effort", "--reasoningEffort") {
+  match parse_string_arg(args, "--reasoning-effort") {
     Some(value) => query.push(cli_query_pair("reasoningEffort", value))
     None => ()
   }
@@ -790,7 +789,7 @@ fn provider_presets_path(args : Array[String]) -> String {
     Some(value) => query.push(cli_query_pair("query", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--sort-mode", "--sortMode") {
+  match parse_string_arg(args, "--sort-mode") {
     Some(value) => query.push(cli_query_pair("sortMode", value))
     None => ()
   }
@@ -800,8 +799,7 @@ fn provider_presets_path(args : Array[String]) -> String {
 ///|
 fn provider_endpoint_url_path(args : Array[String], path : String) -> String? {
   guard provider_id_arg(args) is Some(provider_id) else { return None }
-  guard parse_string_arg_any(args, "--endpoint-url", "--endpointUrl")
-    is Some(endpoint_url) else {
+  guard parse_string_arg(args, "--endpoint-url") is Some(endpoint_url) else {
     return None
   }
   Some(
@@ -820,7 +818,7 @@ fn provider_test_endpoints_path(args : Array[String]) -> String? {
       }
   }
   let query : Array[String] = [cli_query_pair("urls", urls)]
-  match parse_string_arg_any(args, "--timeout-secs", "--timeoutSecs") {
+  match parse_string_arg(args, "--timeout-secs") {
     Some(value) => query.push(cli_query_pair("timeoutSecs", value))
     None => ()
   }
@@ -830,8 +828,7 @@ fn provider_test_endpoints_path(args : Array[String]) -> String? {
 ///|
 fn provider_sort_order_path(args : Array[String]) -> String? {
   guard provider_id_arg(args) is Some(provider_id) else { return None }
-  guard parse_string_arg_any(args, "--sort-index", "--sortIndex")
-    is Some(sort_index) else {
+  guard parse_string_arg(args, "--sort-index") is Some(sort_index) else {
     return None
   }
   Some(
@@ -847,8 +844,7 @@ fn provider_upsert_path(
 ) -> String? {
   guard provider_id_arg(args) is Some(provider_id) else { return None }
   let name = parse_string_arg(args, "--name").unwrap_or(provider_id)
-  if require_original &&
-    parse_string_arg_any(args, "--original-id", "--originalId") is None {
+  if require_original && parse_string_arg(args, "--original-id") is None {
     return None
   }
   let query : Array[String] = [
@@ -856,15 +852,15 @@ fn provider_upsert_path(
     cli_query_pair("id", provider_id),
     cli_query_pair("name", name),
   ]
-  match parse_string_arg_any(args, "--original-id", "--originalId") {
+  match parse_string_arg(args, "--original-id") {
     Some(value) => query.push(cli_query_pair("originalId", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--base-url", "--baseUrl") {
+  match parse_string_arg(args, "--base-url") {
     Some(value) => query.push(cli_query_pair("baseUrl", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--api-key", "--apiKey") {
+  match parse_string_arg(args, "--api-key") {
     Some(value) => query.push(cli_query_pair("apiKey", value))
     None => ()
   }
@@ -876,7 +872,7 @@ fn provider_upsert_path(
     Some(value) => query.push(cli_query_pair("enabled", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--add-to-live", "--addToLive") {
+  match parse_string_arg(args, "--add-to-live") {
     Some(value) => query.push(cli_query_pair("addToLive", value))
     None => ()
   }
@@ -894,26 +890,20 @@ fn proxy_app_value_update_path(args : Array[String], path : String) -> String? {
 
 ///|
 fn proxy_circuit_config_update_path(args : Array[String]) -> String? {
-  guard parse_string_arg_any(args, "--failure-threshold", "--failureThreshold")
-    is Some(failure_threshold) else {
+  guard parse_string_arg(args, "--failure-threshold") is Some(failure_threshold) else {
     return None
   }
-  guard parse_string_arg_any(args, "--success-threshold", "--successThreshold")
-    is Some(success_threshold) else {
+  guard parse_string_arg(args, "--success-threshold") is Some(success_threshold) else {
     return None
   }
-  guard parse_string_arg_any(args, "--timeout-seconds", "--timeoutSeconds")
-    is Some(timeout_seconds) else {
+  guard parse_string_arg(args, "--timeout-seconds") is Some(timeout_seconds) else {
     return None
   }
-  guard parse_string_arg_any(
-      args, "--error-rate-threshold", "--errorRateThreshold",
-    )
+  guard parse_string_arg(args, "--error-rate-threshold")
     is Some(error_rate_threshold) else {
     return None
   }
-  guard parse_string_arg_any(args, "--min-requests", "--minRequests")
-    is Some(min_requests) else {
+  guard parse_string_arg(args, "--min-requests") is Some(min_requests) else {
     return None
   }
   let query = [
@@ -932,19 +922,19 @@ fn proxy_global_config_update_path(
   path : String,
 ) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--proxy-enabled", "--proxyEnabled") {
+  match parse_string_arg(args, "--proxy-enabled") {
     Some(value) => query.push(cli_query_pair("proxyEnabled", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--listen-address", "--listenAddress") {
+  match parse_string_arg(args, "--listen-address") {
     Some(value) => query.push(cli_query_pair("listenAddress", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--listen-port", "--listenPort") {
+  match parse_string_arg(args, "--listen-port") {
     Some(value) => query.push(cli_query_pair("listenPort", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--enable-logging", "--enableLogging") {
+  match parse_string_arg(args, "--enable-logging") {
     Some(value) => query.push(cli_query_pair("enableLogging", value))
     None => ()
   }
@@ -969,59 +959,44 @@ fn proxy_app_config_update_path(args : Array[String]) -> String {
     Some(value) => query.push(cli_query_pair("enabled", value))
     None => ()
   }
-  match
-    parse_string_arg_any(
-      args, "--auto-failover-enabled", "--autoFailoverEnabled",
-    ) {
+  match parse_string_arg(args, "--auto-failover-enabled") {
     Some(value) => query.push(cli_query_pair("autoFailoverEnabled", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--max-retries", "--maxRetries") {
+  match parse_string_arg(args, "--max-retries") {
     Some(value) => query.push(cli_query_pair("maxRetries", value))
     None => ()
   }
-  match
-    parse_string_arg_any(
-      args, "--streaming-first-byte-timeout", "--streamingFirstByteTimeout",
-    ) {
+  match parse_string_arg(args, "--streaming-first-byte-timeout") {
     Some(value) =>
       query.push(cli_query_pair("streamingFirstByteTimeout", value))
     None => ()
   }
-  match
-    parse_string_arg_any(
-      args, "--streaming-idle-timeout", "--streamingIdleTimeout",
-    ) {
+  match parse_string_arg(args, "--streaming-idle-timeout") {
     Some(value) => query.push(cli_query_pair("streamingIdleTimeout", value))
     None => ()
   }
-  match
-    parse_string_arg_any(
-      args, "--non-streaming-timeout", "--nonStreamingTimeout",
-    ) {
+  match parse_string_arg(args, "--non-streaming-timeout") {
     Some(value) => query.push(cli_query_pair("nonStreamingTimeout", value))
     None => ()
   }
-  match
-    parse_string_arg_any(args, "--failure-threshold", "--failureThreshold") {
+  match parse_string_arg(args, "--failure-threshold") {
     Some(value) => query.push(cli_query_pair("failureThreshold", value))
     None => ()
   }
-  match
-    parse_string_arg_any(args, "--success-threshold", "--successThreshold") {
+  match parse_string_arg(args, "--success-threshold") {
     Some(value) => query.push(cli_query_pair("successThreshold", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--timeout-seconds", "--timeoutSeconds") {
+  match parse_string_arg(args, "--timeout-seconds") {
     Some(value) => query.push(cli_query_pair("timeoutSeconds", value))
     None => ()
   }
-  match
-    parse_string_arg_any(args, "--error-rate-threshold", "--errorRateThreshold") {
+  match parse_string_arg(args, "--error-rate-threshold") {
     Some(value) => query.push(cli_query_pair("errorRateThreshold", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--min-requests", "--minRequests") {
+  match parse_string_arg(args, "--min-requests") {
     Some(value) => query.push(cli_query_pair("minRequests", value))
     None => ()
   }
@@ -1052,13 +1027,12 @@ fn proxy_auto_failover_enabled_path(args : Array[String]) -> String? {
 
 ///|
 fn stream_check_provider_path(args : Array[String]) -> String? {
-  let app_type = match parse_string_arg_any(args, "--app-type", "--appType") {
+  let app_type = match parse_string_arg(args, "--app-type") {
     Some(value) => Some(value)
     None => parse_string_arg(args, "--app")
   }
   guard app_type is Some(app_type) else { return None }
-  let provider_id = match
-    parse_string_arg_any(args, "--provider-id", "--providerId") {
+  let provider_id = match parse_string_arg(args, "--provider-id") {
     Some(value) => Some(value)
     None => parse_string_arg(args, "--id")
   }
@@ -1108,13 +1082,12 @@ fn usage_provider_script_path(
   path : String,
   include_script : Bool,
 ) -> String? {
-  guard parse_string_arg_any(args, "--provider-id", "--providerId")
-    is Some(provider_id) else {
+  guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
     return None
   }
   let app = match parse_string_arg_any(args, "--app", "--app-type") {
     Some(value) => Some(value)
-    None => parse_string_arg(args, "--appType")
+    None => None
   }
   guard app is Some(app) else { return None }
   let query = [
@@ -1122,7 +1095,7 @@ fn usage_provider_script_path(
     cli_query_pair("app", app),
   ]
   if include_script {
-    match parse_string_arg_any(args, "--script-code", "--scriptCode") {
+    match parse_string_arg(args, "--script-code") {
       Some(value) => query.push(cli_query_pair("scriptCode", value))
       None => ()
     }
@@ -1132,28 +1105,22 @@ fn usage_provider_script_path(
 
 ///|
 fn usage_pricing_update_path(args : Array[String]) -> String? {
-  guard parse_string_arg_any(args, "--model-id", "--modelId") is Some(model_id) else {
+  guard parse_string_arg(args, "--model-id") is Some(model_id) else {
     return None
   }
-  guard parse_string_arg_any(args, "--display-name", "--displayName")
-    is Some(display_name) else {
+  guard parse_string_arg(args, "--display-name") is Some(display_name) else {
     return None
   }
-  guard parse_string_arg_any(args, "--input-cost", "--inputCost")
-    is Some(input_cost) else {
+  guard parse_string_arg(args, "--input-cost") is Some(input_cost) else {
     return None
   }
-  guard parse_string_arg_any(args, "--output-cost", "--outputCost")
-    is Some(output_cost) else {
+  guard parse_string_arg(args, "--output-cost") is Some(output_cost) else {
     return None
   }
-  guard parse_string_arg_any(args, "--cache-read-cost", "--cacheReadCost")
-    is Some(cache_read_cost) else {
+  guard parse_string_arg(args, "--cache-read-cost") is Some(cache_read_cost) else {
     return None
   }
-  guard parse_string_arg_any(
-      args, "--cache-creation-cost", "--cacheCreationCost",
-    )
+  guard parse_string_arg(args, "--cache-creation-cost")
     is Some(cache_creation_cost) else {
     return None
   }
@@ -1170,7 +1137,7 @@ fn usage_pricing_update_path(args : Array[String]) -> String? {
 
 ///|
 fn usage_pricing_delete_path(args : Array[String]) -> String? {
-  guard parse_string_arg_any(args, "--model-id", "--modelId") is Some(model_id) else {
+  guard parse_string_arg(args, "--model-id") is Some(model_id) else {
     return None
   }
   Some("/usage/model-pricing?\{cli_query_pair("model_id", model_id)}")

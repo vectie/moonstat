@@ -225,11 +225,11 @@ fn usage_logs_path(args : Array[String]) -> String {
     Some(value) => query.push(cli_query_pair("page", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--page-size", "--pageSize") {
+  match parse_string_arg(args, "--page-size") {
     Some(value) => query.push(cli_query_pair("pageSize", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--provider-name", "--providerName") {
+  match parse_string_arg(args, "--provider-name") {
     Some(value) => query.push(cli_query_pair("providerName", value))
     None => ()
   }
@@ -237,7 +237,7 @@ fn usage_logs_path(args : Array[String]) -> String {
     Some(value) => query.push(cli_query_pair("model", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--status-code", "--statusCode") {
+  match parse_string_arg(args, "--status-code") {
     Some(value) => query.push(cli_query_pair("statusCode", value))
     None => ()
   }
@@ -259,16 +259,16 @@ fn usage_date_app_query(
   app_filter~ : Bool,
 ) -> Array[String] {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--start-date", "--startDate") {
+  match parse_string_arg(args, "--start-date") {
     Some(value) => query.push(cli_query_pair("start_date", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--end-date", "--endDate") {
+  match parse_string_arg(args, "--end-date") {
     Some(value) => query.push(cli_query_pair("end_date", value))
     None => ()
   }
   if app_filter {
-    match parse_string_arg_any(args, "--app-type", "--appType") {
+    match parse_string_arg(args, "--app-type") {
       Some(value) => query.push(cli_query_pair("app_type", value))
       None => ()
     }
@@ -279,11 +279,11 @@ fn usage_date_app_query(
 ///|
 fn usage_limits_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--provider-id", "--providerId") {
+  match parse_string_arg(args, "--provider-id") {
     Some(value) => query.push(cli_query_pair("provider_id", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--app-type", "--appType") {
+  match parse_string_arg(args, "--app-type") {
     Some(value) => query.push(cli_query_pair("app_type", value))
     None => ()
   }
@@ -340,8 +340,7 @@ async fn check_usage_endpoint(args : Array[String], path : String) -> Unit {
 ///|
 async fn check_usage_detail(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
-  guard parse_string_arg_any(args, "--request-id", "--requestId")
-    is Some(request_id) else {
+  guard parse_string_arg(args, "--request-id") is Some(request_id) else {
     logger.error("Missing required --request-id")
     return
   }

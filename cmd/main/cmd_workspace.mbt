@@ -488,7 +488,7 @@ fn workspace_subdir_path(args : Array[String], base_path : String) -> String {
 
 ///|
 fn save_file_dialog_path(args : Array[String]) -> String {
-  match parse_string_arg_any(args, "--default-name", "--defaultName") {
+  match parse_string_arg(args, "--default-name") {
     Some(name) => "/files/dialogs/save?\{cli_query_pair("defaultName", name)}"
     None => "/files/dialogs/save"
   }
@@ -497,7 +497,7 @@ fn save_file_dialog_path(args : Array[String]) -> String {
 ///|
 fn config_file_path(args : Array[String], base_path : String) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--file-path", "--filePath") {
+  match parse_string_arg(args, "--file-path") {
     Some(file_path) => query.push(cli_query_pair("filePath", file_path))
     None =>
       match parse_string_arg(args, "--path") {
@@ -510,7 +510,7 @@ fn config_file_path(args : Array[String], base_path : String) -> String {
 
 ///|
 fn db_backup_filename_arg(args : Array[String]) -> String? {
-  match parse_string_arg_any(args, "--filename", "--fileName") {
+  match parse_string_arg(args, "--filename") {
     Some(filename) => Some(filename)
     None => parse_string_arg(args, "--name")
   }

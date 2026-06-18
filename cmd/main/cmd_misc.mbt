@@ -528,7 +528,7 @@ async fn test_api_endpoints(args : Array[String]) -> Unit {
 
 ///|
 fn config_app_arg(args : Array[String]) -> String {
-  parse_string_arg_any(args, "--app", "--appType").unwrap_or(
+  parse_string_arg(args, "--app").unwrap_or(
     parse_string_arg(args, "--app-type").unwrap_or("claude"),
   )
 }
@@ -577,9 +577,10 @@ fn moon_json_config_path(
     None => ()
   }
   let query : Array[String] = []
-  for flag_name in moon_json_config_flag_names() {
+  for pair in moon_json_config_flag_pairs() {
+    let (flag_name, query_key) = pair
     match parse_string_arg(args, "--\{flag_name}") {
-      Some(value) => query.push(cli_query_pair(flag_name, value))
+      Some(value) => query.push(cli_query_pair(query_key, value))
       None => ()
     }
   }
@@ -591,16 +592,25 @@ fn moon_json_config_path(
 }
 
 ///|
-fn moon_json_config_flag_names() -> Array[String] {
+fn moon_json_config_flag_pairs() -> Array[(String, String)] {
   [
-    "enabled", "requestThinkingSignature", "request_thinking_signature", "requestThinkingBudget",
-    "request_thinking_budget", "requestMediaFallback", "request_media_fallback",
-    "requestMediaHeuristic", "request_media_heuristic", "thinkingOptimizer", "thinking_optimizer",
-    "cacheInjection", "cache_injection", "cacheTtl", "cache_ttl", "requestClassification",
-    "request_classification", "toolResultMerging", "tool_result_merging", "compactDetection",
-    "compact_detection", "deterministicRequestId", "deterministic_request_id", "subagentDetection",
-    "subagent_detection", "warmupDowngrade", "warmup_downgrade", "warmupModel", "warmup_model",
-    "stripThinking", "strip_thinking", "level",
+    ("enabled", "enabled"),
+    ("request-thinking-signature", "requestThinkingSignature"),
+    ("request-thinking-budget", "requestThinkingBudget"),
+    ("request-media-fallback", "requestMediaFallback"),
+    ("request-media-heuristic", "requestMediaHeuristic"),
+    ("thinking-optimizer", "thinkingOptimizer"),
+    ("cache-injection", "cacheInjection"),
+    ("cache-ttl", "cacheTtl"),
+    ("request-classification", "requestClassification"),
+    ("tool-result-merging", "toolResultMerging"),
+    ("compact-detection", "compactDetection"),
+    ("deterministic-request-id", "deterministicRequestId"),
+    ("subagent-detection", "subagentDetection"),
+    ("warmup-downgrade", "warmupDowngrade"),
+    ("warmup-model", "warmupModel"),
+    ("strip-thinking", "stripThinking"),
+    ("level", "level"),
   ]
 }
 
@@ -616,7 +626,7 @@ fn apply_claude_plugin_config_path(args : Array[String]) -> String {
 ///|
 fn pick_directory_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--default-path", "--defaultPath") {
+  match parse_string_arg(args, "--default-path") {
     Some(path) => query.push(cli_query_pair("defaultPath", path))
     None => ()
   }
@@ -687,7 +697,7 @@ fn window_theme_path(args : Array[String]) -> String {
 ///|
 fn db_backup_rename_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--old-filename", "--oldFilename") {
+  match parse_string_arg(args, "--old-filename") {
     Some(filename) => query.push(cli_query_pair("oldFilename", filename))
     None =>
       match parse_string_arg(args, "--filename") {
@@ -695,7 +705,7 @@ fn db_backup_rename_path(args : Array[String]) -> String {
         None => ()
       }
   }
-  match parse_string_arg_any(args, "--new-name", "--newName") {
+  match parse_string_arg(args, "--new-name") {
     Some(name) => query.push(cli_query_pair("newName", name))
     None =>
       match parse_string_arg(args, "--name") {
@@ -737,14 +747,11 @@ fn sync_settings_path(args : Array[String], base_path : String) -> String {
     Some(settings) => query.push(cli_query_pair("settings", settings))
     None => ()
   }
-  match
-    parse_string_arg_any(
-      args, "--preserve-empty-password", "--preserveEmptyPassword",
-    ) {
+  match parse_string_arg(args, "--preserve-empty-password") {
     Some(value) => query.push(cli_query_pair("preserveEmptyPassword", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--password-touched", "--passwordTouched") {
+  match parse_string_arg(args, "--password-touched") {
     Some(value) => query.push(cli_query_pair("passwordTouched", value))
     None => ()
   }
@@ -754,11 +761,11 @@ fn sync_settings_path(args : Array[String], base_path : String) -> String {
 ///|
 fn session_messages_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--provider-id", "--providerId") {
+  match parse_string_arg(args, "--provider-id") {
     Some(value) => query.push(cli_query_pair("providerId", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--source-path", "--sourcePath") {
+  match parse_string_arg(args, "--source-path") {
     Some(value) => query.push(cli_query_pair("sourcePath", value))
     None => ()
   }
@@ -776,7 +783,7 @@ fn launch_session_terminal_path(args : Array[String]) -> String {
     Some(value) => query.push(cli_query_pair("cwd", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--custom-config", "--customConfig") {
+  match parse_string_arg(args, "--custom-config") {
     Some(value) => query.push(cli_query_pair("customConfig", value))
     None => ()
   }
@@ -786,15 +793,15 @@ fn launch_session_terminal_path(args : Array[String]) -> String {
 ///|
 fn delete_session_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--provider-id", "--providerId") {
+  match parse_string_arg(args, "--provider-id") {
     Some(value) => query.push(cli_query_pair("providerId", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--session-id", "--sessionId") {
+  match parse_string_arg(args, "--session-id") {
     Some(value) => query.push(cli_query_pair("sessionId", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--source-path", "--sourcePath") {
+  match parse_string_arg(args, "--source-path") {
     Some(value) => query.push(cli_query_pair("sourcePath", value))
     None => ()
   }
@@ -813,7 +820,7 @@ fn skill_id_arg(args : Array[String]) -> String? {
     None =>
       match parse_string_arg(args, "--directory") {
         Some(directory) => Some(directory)
-        None => parse_string_arg_any(args, "--skill-id", "--skillId")
+        None => parse_string_arg(args, "--skill-id")
       }
   }
 }
@@ -830,7 +837,7 @@ fn skill_id_path(args : Array[String], base_path : String) -> String {
     Some(id) => query.push(cli_query_pair("id", id))
     None => ()
   }
-  match parse_string_arg_any(args, "--app", "--appType") {
+  match parse_string_arg(args, "--app") {
     Some(app) => query.push(cli_query_pair("app", app))
     None =>
       match parse_string_arg(args, "--app-type") {
@@ -844,7 +851,7 @@ fn skill_id_path(args : Array[String], base_path : String) -> String {
 ///|
 fn skill_backup_id_path(args : Array[String], base_path : String) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--backup-id", "--backupId") {
+  match parse_string_arg(args, "--backup-id") {
     Some(backup_id) => query.push(cli_query_pair("backupId", backup_id))
     None =>
       match parse_string_arg(args, "--id") {
@@ -858,7 +865,7 @@ fn skill_backup_id_path(args : Array[String], base_path : String) -> String {
 ///|
 fn skill_restore_backup_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--backup-id", "--backupId") {
+  match parse_string_arg(args, "--backup-id") {
     Some(backup_id) => query.push(cli_query_pair("backupId", backup_id))
     None =>
       match parse_string_arg(args, "--id") {
@@ -866,10 +873,10 @@ fn skill_restore_backup_path(args : Array[String]) -> String {
         None => ()
       }
   }
-  match parse_string_arg_any(args, "--current-app", "--currentApp") {
+  match parse_string_arg(args, "--current-app") {
     Some(app) => query.push(cli_query_pair("currentApp", app))
     None =>
-      match parse_string_arg_any(args, "--app", "--appType") {
+      match parse_string_arg(args, "--app") {
         Some(app) => query.push(cli_query_pair("currentApp", app))
         None =>
           match parse_string_arg(args, "--app-type") {
@@ -904,10 +911,10 @@ fn skill_install_path(args : Array[String], base_path : String) -> String {
     Some(description) => query.push(cli_query_pair("description", description))
     None => ()
   }
-  match parse_string_arg_any(args, "--current-app", "--currentApp") {
+  match parse_string_arg(args, "--current-app") {
     Some(app) => query.push(cli_query_pair("currentApp", app))
     None =>
-      match parse_string_arg_any(args, "--app", "--appType") {
+      match parse_string_arg(args, "--app") {
         Some(app) => query.push(cli_query_pair("app", app))
         None =>
           match parse_string_arg(args, "--app-type") {
@@ -999,7 +1006,7 @@ fn skill_repo_remove_path(args : Array[String]) -> String {
 ///|
 fn skill_zip_install_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--file-path", "--filePath") {
+  match parse_string_arg(args, "--file-path") {
     Some(value) => query.push(cli_query_pair("filePath", value))
     None =>
       match parse_string_arg(args, "--path") {
@@ -1007,10 +1014,10 @@ fn skill_zip_install_path(args : Array[String]) -> String {
         None => ()
       }
   }
-  match parse_string_arg_any(args, "--current-app", "--currentApp") {
+  match parse_string_arg(args, "--current-app") {
     Some(app) => query.push(cli_query_pair("currentApp", app))
     None =>
-      match parse_string_arg_any(args, "--app", "--appType") {
+      match parse_string_arg(args, "--app") {
         Some(app) => query.push(cli_query_pair("currentApp", app))
         None =>
           match parse_string_arg(args, "--app-type") {
@@ -1041,7 +1048,7 @@ fn config_snippet_path(
 ///|
 fn extract_common_config_snippet_path(args : Array[String]) -> String {
   let query : Array[String] = [cli_query_pair("appType", config_app_arg(args))]
-  match parse_string_arg_any(args, "--settings-config", "--settingsConfig") {
+  match parse_string_arg(args, "--settings-config") {
     Some(settings) => query.push(cli_query_pair("settingsConfig", settings))
     None => ()
   }
@@ -1050,8 +1057,7 @@ fn extract_common_config_snippet_path(args : Array[String]) -> String {
 
 ///|
 fn restore_env_backup_path(args : Array[String]) -> String? {
-  guard parse_string_arg_any(args, "--backup-path", "--backupPath")
-    is Some(path) else {
+  guard parse_string_arg(args, "--backup-path") is Some(path) else {
     return None
   }
   Some("/config/env/restore?\{cli_query_pair("backupPath", path)}")
@@ -1066,7 +1072,7 @@ fn mcp_app_path(args : Array[String], base_path : String) -> String {
 fn mcp_server_id_arg(args : Array[String]) -> String? {
   match parse_string_arg(args, "--id") {
     Some(id) => Some(id)
-    None => parse_string_arg_any(args, "--server-id", "--serverId")
+    None => parse_string_arg(args, "--server-id")
   }
 }
 
@@ -1124,7 +1130,7 @@ fn mcp_upsert_path(args : Array[String], base_path : String) -> String? {
       }
   }
   query.push(cli_query_pair("app", config_app_arg(args)))
-  match parse_string_arg_any(args, "--sync-other-side", "--syncOtherSide") {
+  match parse_string_arg(args, "--sync-other-side") {
     Some(value) => query.push(cli_query_pair("syncOtherSide", value))
     None => ()
   }
@@ -1149,9 +1155,7 @@ fn prompt_app_path(args : Array[String], base_path : String) -> String {
 
 ///|
 fn prompt_id_path(args : Array[String], base_path : String) -> String? {
-  guard parse_string_arg_any(args, "--id", "--promptId") is Some(id) else {
-    return None
-  }
+  guard parse_string_arg(args, "--id") is Some(id) else { return None }
   Some(
     "\{base_path}?\{cli_query_pair("app", config_app_arg(args))}&\{cli_query_pair("id", id)}",
   )
@@ -1163,9 +1167,7 @@ fn prompt_upsert_path(args : Array[String]) -> String? {
   match parse_string_arg(args, "--prompt") {
     Some(prompt) => query.push(cli_query_pair("prompt", prompt))
     None => {
-      guard parse_string_arg_any(args, "--id", "--promptId") is Some(id) else {
-        return None
-      }
+      guard parse_string_arg(args, "--id") is Some(id) else { return None }
       query.push(cli_query_pair("id", id))
       match parse_string_arg(args, "--name") {
         Some(name) => query.push(cli_query_pair("name", name))
@@ -1191,13 +1193,12 @@ fn prompt_upsert_path(args : Array[String]) -> String? {
 
 ///|
 fn stream_check_all_path(args : Array[String]) -> String {
-  let app_type = match parse_string_arg_any(args, "--app-type", "--appType") {
+  let app_type = match parse_string_arg(args, "--app-type") {
     Some(value) => value
     None => parse_string_arg(args, "--app").unwrap_or("claude")
   }
   let query : Array[String] = [cli_query_pair("appType", app_type)]
-  match
-    parse_string_arg_any(args, "--proxy-targets-only", "--proxyTargetsOnly") {
+  match parse_string_arg(args, "--proxy-targets-only") {
     Some(value) => query.push(cli_query_pair("proxyTargetsOnly", value))
     None => ()
   }
@@ -1207,34 +1208,31 @@ fn stream_check_all_path(args : Array[String]) -> String {
 ///|
 fn stream_check_config_update_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--timeout-secs", "--timeoutSecs") {
+  match parse_string_arg(args, "--timeout-secs") {
     Some(value) => query.push(cli_query_pair("timeoutSecs", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--max-retries", "--maxRetries") {
+  match parse_string_arg(args, "--max-retries") {
     Some(value) => query.push(cli_query_pair("maxRetries", value))
     None => ()
   }
-  match
-    parse_string_arg_any(
-      args, "--degraded-threshold-ms", "--degradedThresholdMs",
-    ) {
+  match parse_string_arg(args, "--degraded-threshold-ms") {
     Some(value) => query.push(cli_query_pair("degradedThresholdMs", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--claude-model", "--claudeModel") {
+  match parse_string_arg(args, "--claude-model") {
     Some(value) => query.push(cli_query_pair("claudeModel", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--codex-model", "--codexModel") {
+  match parse_string_arg(args, "--codex-model") {
     Some(value) => query.push(cli_query_pair("codexModel", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--gemini-model", "--geminiModel") {
+  match parse_string_arg(args, "--gemini-model") {
     Some(value) => query.push(cli_query_pair("geminiModel", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--test-prompt", "--testPrompt") {
+  match parse_string_arg(args, "--test-prompt") {
     Some(value) => query.push(cli_query_pair("testPrompt", value))
     None => ()
   }
@@ -1310,10 +1308,10 @@ fn cli_path_with_query(path : String, query : Array[String]) -> String {
 
 ///|
 fn balance_path(args : Array[String]) -> String? {
-  guard parse_string_arg_any(args, "--base-url", "--baseUrl") is Some(base_url) else {
+  guard parse_string_arg(args, "--base-url") is Some(base_url) else {
     return None
   }
-  guard parse_string_arg_any(args, "--api-key", "--apiKey") is Some(api_key) else {
+  guard parse_string_arg(args, "--api-key") is Some(api_key) else {
     return None
   }
   Some(
@@ -1328,7 +1326,7 @@ fn subscription_quota_path(args : Array[String]) -> String? {
     None =>
       match parse_string_arg_any(args, "--app", "--app-type") {
         Some(value) => Some(value)
-        None => parse_string_arg(args, "--appType")
+        None => None
       }
   }
   guard tool is Some(tool) else { return None }
@@ -1337,10 +1335,10 @@ fn subscription_quota_path(args : Array[String]) -> String? {
 
 ///|
 fn coding_plan_quota_path(args : Array[String]) -> String? {
-  guard parse_string_arg_any(args, "--base-url", "--baseUrl") is Some(base_url) else {
+  guard parse_string_arg(args, "--base-url") is Some(base_url) else {
     return None
   }
-  guard parse_string_arg_any(args, "--api-key", "--apiKey") is Some(api_key) else {
+  guard parse_string_arg(args, "--api-key") is Some(api_key) else {
     return None
   }
   Some(

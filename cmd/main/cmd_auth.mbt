@@ -141,7 +141,7 @@ async fn check_codex_oauth_models(args : Array[String]) -> Unit {
 ///|
 fn codex_oauth_quota_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--account-id", "--accountId") {
+  match parse_string_arg(args, "--account-id") {
     Some(value) => query.push(cli_query_pair("accountId", value))
     None => ()
   }
@@ -151,7 +151,7 @@ fn codex_oauth_quota_path(args : Array[String]) -> String {
 ///|
 fn codex_oauth_models_path(args : Array[String]) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--account-id", "--accountId") {
+  match parse_string_arg(args, "--account-id") {
     Some(value) => query.push(cli_query_pair("accountId", value))
     None => ()
   }
@@ -161,7 +161,7 @@ fn codex_oauth_models_path(args : Array[String]) -> String {
 ///|
 fn auth_provider_path(args : Array[String], path : String) -> String {
   let query : Array[String] = []
-  match parse_string_arg_any(args, "--auth-provider", "--authProvider") {
+  match parse_string_arg(args, "--auth-provider") {
     Some(value) => query.push(cli_query_pair("authProvider", value))
     None => ()
   }
@@ -170,12 +170,11 @@ fn auth_provider_path(args : Array[String], path : String) -> String {
 
 ///|
 fn auth_account_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg_any(args, "--account-id", "--accountId")
-    is Some(account_id) else {
+  guard parse_string_arg(args, "--account-id") is Some(account_id) else {
     return None
   }
   let query : Array[String] = [cli_query_pair("accountId", account_id)]
-  match parse_string_arg_any(args, "--auth-provider", "--authProvider") {
+  match parse_string_arg(args, "--auth-provider") {
     Some(value) => query.push(cli_query_pair("authProvider", value))
     None => ()
   }
@@ -184,16 +183,15 @@ fn auth_account_path(args : Array[String], path : String) -> String? {
 
 ///|
 fn auth_poll_path(args : Array[String]) -> String? {
-  guard parse_string_arg_any(args, "--device-code", "--deviceCode")
-    is Some(device_code) else {
+  guard parse_string_arg(args, "--device-code") is Some(device_code) else {
     return None
   }
   let query : Array[String] = [cli_query_pair("deviceCode", device_code)]
-  match parse_string_arg_any(args, "--user-code", "--userCode") {
+  match parse_string_arg(args, "--user-code") {
     Some(value) => query.push(cli_query_pair("userCode", value))
     None => ()
   }
-  match parse_string_arg_any(args, "--auth-provider", "--authProvider") {
+  match parse_string_arg(args, "--auth-provider") {
     Some(value) => query.push(cli_query_pair("authProvider", value))
     None => ()
   }
