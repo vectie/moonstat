@@ -3993,20 +3993,24 @@ fn moon_scan_local_proxies_json() -> Json {
 }
 
 ///|
-async fn Gateway::handle_get_claude_desktop_status(
-  self : Gateway,
+async fn ProxyService::handle_get_claude_desktop_status(
+  self : ProxyService,
+  host : String,
+  port : Int,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let status = @claude_desktop.status()
-  write_usage_json(w, self.claude_desktop_status_json(status))
+  write_usage_json(w, self.claude_desktop_status_json(status, host, port))
 }
 
 ///|
-fn Gateway::claude_desktop_status_json(
-  self : Gateway,
+fn ProxyService::claude_desktop_status_json(
+  self : ProxyService,
   status : @claude_desktop.ClaudeDesktopStatus,
+  host : String,
+  port : Int,
 ) -> Json {
-  let provider = self.proxy.current_claude_desktop_provider()
+  let provider = self.current_claude_desktop_provider()
   let mode = match provider {
     Some(provider) => provider.claude_desktop_mode_for_status()
     None => None
@@ -4019,7 +4023,7 @@ fn Gateway::claude_desktop_status_json(
     "configLibraryPath": Json::string(status.config_library_path),
     "mode": provider_route_optional_string_json(mode),
     "expectedBaseUrl": provider_route_optional_string_json(
-      self.claude_desktop_expected_base_url(mode, provider),
+      self.claude_desktop_expected_base_url(mode, provider, host, port),
     ),
     "actualBaseUrl": provider_route_optional_string_json(status.actual_base_url),
     "proxyRunning": Json::boolean(true),
@@ -4051,14 +4055,16 @@ fn ProviderRouteTarget::claude_desktop_mode_for_status(
 }
 
 ///|
-fn Gateway::claude_desktop_expected_base_url(
-  self : Gateway,
+fn ProxyService::claude_desktop_expected_base_url(
+  self : ProxyService,
   mode : String?,
   provider : ProviderRouteTarget?,
+  host : String,
+  port : Int,
 ) -> String? {
+  ignore(self)
   match mode {
-    Some("proxy") =>
-      Some(@claude_desktop.local_gateway_base_url(self.host, self.port))
+    Some("proxy") => Some(@claude_desktop.local_gateway_base_url(host, port))
     Some("direct") =>
       match provider {
         Some(provider) => provider.claude_desktop_direct_base_url()
@@ -4096,8 +4102,8 @@ fn claude_desktop_missing_route_mappings(
 }
 
 ///|
-async fn Gateway::handle_get_claude_desktop_default_routes(
-  self : Gateway,
+async fn ProxyService::handle_get_claude_desktop_default_routes(
+  self : ProxyService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)

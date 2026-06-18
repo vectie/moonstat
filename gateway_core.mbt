@@ -877,12 +877,12 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.proxy.handle_open_provider_terminal(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_claude_desktop_status", (_, w) => {
-    self.handle_get_claude_desktop_status(w)
+    self.proxy.handle_get_claude_desktop_status(self.host, self.port, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_claude_desktop_default_routes", (
     _,
     w,
-  ) => self.handle_get_claude_desktop_default_routes(w))
+  ) => self.proxy.handle_get_claude_desktop_default_routes(w))
   router.add_handler(
     @httpx.Method::Post,
     "/import_claude_desktop_providers_from_claude",

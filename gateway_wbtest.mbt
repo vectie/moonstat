@@ -2261,7 +2261,8 @@ async test "provider config endpoints are owned by proxy service" {
       "handle_import_default_config", "handle_import_claude_desktop_providers_from_claude",
       "handle_ensure_claude_desktop_official_provider", "handle_scan_local_proxies",
       "handle_test_api_endpoints", "handle_get_custom_endpoints", "handle_add_custom_endpoint",
-      "handle_remove_custom_endpoint", "handle_update_endpoint_last_used",
+      "handle_remove_custom_endpoint", "handle_update_endpoint_last_used", "handle_get_claude_desktop_status",
+      "handle_get_claude_desktop_default_routes",
     ] {
     assert_true(sources.contains("async fn ProxyService::\{handler}("))
     assert_false(sources.contains("async fn Gateway::\{handler}("))
@@ -2302,6 +2303,16 @@ async test "provider config endpoints are owned by proxy service" {
   )
   assert_true(
     core_source.contains("self.proxy.handle_update_endpoint_last_used(r, w)"),
+  )
+  assert_true(
+    core_source.contains(
+      "self.proxy.handle_get_claude_desktop_status(self.host, self.port, w)",
+    ),
+  )
+  assert_true(
+    core_source.contains(
+      "self.proxy.handle_get_claude_desktop_default_routes(w)",
+    ),
   )
 }
 
@@ -4296,20 +4307,23 @@ test "claude desktop status reports ccs profile and proxy route health" {
     stale_raw_models=true,
     token_configured=true,
   )
-  json_inspect(gateway.claude_desktop_status_json(status), content={
-    "supported": true,
-    "configured": true,
-    "appliedId": "00000000-0000-4000-8000-000000157210",
-    "profilePath": "/tmp/profile.json",
-    "configLibraryPath": "/tmp/configLibrary",
-    "mode": "proxy",
-    "expectedBaseUrl": "http://127.0.0.11:17111/claude-desktop",
-    "actualBaseUrl": "https://wrong.example",
-    "proxyRunning": true,
-    "staleRawModels": true,
-    "missingRouteMappings": true,
-    "gatewayTokenConfigured": true,
-  })
+  json_inspect(
+    gateway.proxy.claude_desktop_status_json(status, gateway.host, gateway.port),
+    content={
+      "supported": true,
+      "configured": true,
+      "appliedId": "00000000-0000-4000-8000-000000157210",
+      "profilePath": "/tmp/profile.json",
+      "configLibraryPath": "/tmp/configLibrary",
+      "mode": "proxy",
+      "expectedBaseUrl": "http://127.0.0.11:17111/claude-desktop",
+      "actualBaseUrl": "https://wrong.example",
+      "proxyRunning": true,
+      "staleRawModels": true,
+      "missingRouteMappings": true,
+      "gatewayTokenConfigured": true,
+    },
+  )
 }
 
 ///|
@@ -4341,7 +4355,12 @@ test "claude desktop status reports direct provider base url" {
     stale_raw_models=false,
     token_configured=false,
   )
-  guard gateway.claude_desktop_status_json(status) is Object(obj) else {
+  guard gateway.proxy.claude_desktop_status_json(
+      status,
+      gateway.host,
+      gateway.port,
+    )
+    is Object(obj) else {
     fail("expected status object")
   }
   assert_eq(obj["mode"], Json::string("direct"))
