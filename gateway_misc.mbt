@@ -5192,9 +5192,10 @@ async fn Gateway::handle_messages(
           self.logger.info(
             "Received Anthropic request for model: \{anthropic_request.model}",
           )
-          let model = self.upstream_claude_model(
+          let model = self.proxy.upstream_claude_model(
             anthropic_request.model,
             active_provider,
+            default_model=self.model,
             app_type~,
           )
           self.logger.debug("Using Codex model: \{model}")
@@ -5242,10 +5243,11 @@ async fn Gateway::handle_messages(
 }
 
 ///|
-fn Gateway::upstream_claude_model(
-  self : Gateway,
+fn ProxyService::upstream_claude_model(
+  _self : ProxyService,
   request_model : String,
   provider : ProviderRouteTarget?,
+  default_model~ : String,
   app_type? : String = "claude",
 ) -> String {
   match provider {
@@ -5258,7 +5260,7 @@ fn Gateway::upstream_claude_model(
       } else {
         provider.map_model_for_upstream(request_model)
       }
-    None => self.model
+    None => default_model
   }
 }
 
@@ -5341,7 +5343,12 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
           self.handle_non_streaming_request(
             request,
             request_json,
-            self.upstream_claude_model(request.model, Some(provider), app_type~),
+            self.proxy.upstream_claude_model(
+              request.model,
+              Some(provider),
+              default_model=self.model,
+              app_type~,
+            ),
             request_path,
             Some(provider),
             app_type,
@@ -5489,9 +5496,10 @@ async fn Gateway::forward_non_streaming_claude_compatible_request(
             self.handle_non_streaming_request(
               request,
               request_json,
-              self.upstream_claude_model(
+              self.proxy.upstream_claude_model(
                 request.model,
                 Some(provider),
+                default_model=self.model,
                 app_type~,
               ),
               request_path,
@@ -6729,9 +6737,10 @@ async fn Gateway::forward_streaming_claude_compatible_request(
             self.handle_streaming_request(
               request,
               request_json,
-              self.upstream_claude_model(
+              self.proxy.upstream_claude_model(
                 request.model,
                 Some(provider),
+                default_model=self.model,
                 app_type~,
               ),
               request_path,
@@ -6808,9 +6817,10 @@ async fn Gateway::forward_streaming_claude_compatible_request(
             self.handle_streaming_request(
               request,
               request_json,
-              self.upstream_claude_model(
+              self.proxy.upstream_claude_model(
                 request.model,
                 Some(provider),
+                default_model=self.model,
                 app_type~,
               ),
               request_path,
@@ -6850,7 +6860,12 @@ async fn Gateway::forward_streaming_claude_compatible_request(
         self.handle_streaming_request(
           request,
           request_json,
-          self.upstream_claude_model(request.model, Some(provider), app_type~),
+          self.proxy.upstream_claude_model(
+            request.model,
+            Some(provider),
+            default_model=self.model,
+            app_type~,
+          ),
           request_path,
           Some(provider),
           app_type,

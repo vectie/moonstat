@@ -2412,7 +2412,7 @@ async test "provider config endpoints are owned by proxy service" {
       "activate_first_available_provider_excluding", "activate_provider_target",
       "activate_next_provider_after_upstream_status", "active_provider_target", "forward_gemini_get",
       "forward_gemini_post", "all_provider_circuits_open", "selected_provider_chain",
-      "claude_provider_outbound_body",
+      "claude_provider_outbound_body", "upstream_claude_model",
     ] {
     assert_true(sources.contains("fn ProxyService::\{helper}("))
     assert_false(sources.contains("async fn Gateway::\{helper}("))
@@ -4224,7 +4224,7 @@ test "ccs upstream status retryability matches client error bucket" {
 }
 
 ///|
-test "gateway uses ccs model mapping for upstream claude model" {
+test "proxy service uses ccs model mapping for upstream claude model" {
   let gateway = Gateway::new(port=0, model="gpt-default")
   let provider = ProviderRouteTarget::new(
     app_type="claude",
@@ -4235,7 +4235,11 @@ test "gateway uses ccs model mapping for upstream claude model" {
     ),
   )
   assert_eq(
-    gateway.upstream_claude_model("claude-sonnet-4-6", Some(provider)),
+    gateway.proxy.upstream_claude_model(
+      "claude-sonnet-4-6",
+      Some(provider),
+      default_model=gateway.model,
+    ),
     "deepseek-v4-pro",
   )
   let unmapped = ProviderRouteTarget::new(
@@ -4244,11 +4248,19 @@ test "gateway uses ccs model mapping for upstream claude model" {
     provider_name="Plain",
   )
   assert_eq(
-    gateway.upstream_claude_model("claude-sonnet-4-6", Some(unmapped)),
+    gateway.proxy.upstream_claude_model(
+      "claude-sonnet-4-6",
+      Some(unmapped),
+      default_model=gateway.model,
+    ),
     "claude-sonnet-4-6",
   )
   assert_eq(
-    gateway.upstream_claude_model("deepseek-v4-pro [1M]", Some(unmapped)),
+    gateway.proxy.upstream_claude_model(
+      "deepseek-v4-pro [1M]",
+      Some(unmapped),
+      default_model=gateway.model,
+    ),
     "deepseek-v4-pro",
   )
   let copilot = ProviderRouteTarget::new(
@@ -4258,13 +4270,17 @@ test "gateway uses ccs model mapping for upstream claude model" {
     provider_type=Some("github_copilot"),
   )
   assert_eq(
-    gateway.upstream_claude_model("claude-sonnet-4-6[1m]", Some(copilot)),
+    gateway.proxy.upstream_claude_model(
+      "claude-sonnet-4-6[1m]",
+      Some(copilot),
+      default_model=gateway.model,
+    ),
     "claude-sonnet-4.6-1m",
   )
 }
 
 ///|
-test "gateway uses ccs claude desktop route metadata for upstream model" {
+test "proxy service uses ccs claude desktop route metadata for upstream model" {
   let gateway = Gateway::new(port=0, model="gpt-default")
   let routes : Map[String, ClaudeDesktopModelRoute] = {
     "claude-sonnet-4-6": ClaudeDesktopModelRoute::new(
@@ -4282,37 +4298,44 @@ test "gateway uses ccs claude desktop route metadata for upstream model" {
     claude_desktop_model_routes=routes,
   )
   assert_eq(
-    gateway.upstream_claude_model(
+    gateway.proxy.upstream_claude_model(
       "claude-sonnet-4-6",
       Some(provider),
+      default_model=gateway.model,
       app_type="claude-desktop",
     ),
     "deepseek-v4-flash",
   )
   assert_eq(
-    gateway.upstream_claude_model(
+    gateway.proxy.upstream_claude_model(
       "claude-sonnet-4-6-20251001",
       Some(provider),
+      default_model=gateway.model,
       app_type="claude-desktop",
     ),
     "deepseek-v4-flash",
   )
   assert_eq(
-    gateway.upstream_claude_model(
+    gateway.proxy.upstream_claude_model(
       "claude-opus-4-7",
       Some(provider),
+      default_model=gateway.model,
       app_type="claude-desktop",
     ),
     "upstream-opus",
   )
   assert_eq(
-    gateway.upstream_claude_model("claude-sonnet-4-6", Some(provider)),
+    gateway.proxy.upstream_claude_model(
+      "claude-sonnet-4-6",
+      Some(provider),
+      default_model=gateway.model,
+    ),
     "mapping-should-not-win",
   )
 }
 
 ///|
-test "gateway repairs unsafe ccs claude desktop route ids" {
+test "proxy service repairs unsafe ccs claude desktop route ids" {
   let gateway = Gateway::new(port=0, model="gpt-default")
   let routes : Map[String, ClaudeDesktopModelRoute] = {
     "gpt-5": ClaudeDesktopModelRoute::new(model="gpt-5-upstream [1M]"),
@@ -4324,17 +4347,19 @@ test "gateway repairs unsafe ccs claude desktop route ids" {
     claude_desktop_model_routes=routes,
   )
   assert_eq(
-    gateway.upstream_claude_model(
+    gateway.proxy.upstream_claude_model(
       "claude-sonnet-4-6",
       Some(provider),
+      default_model=gateway.model,
       app_type="claude-desktop",
     ),
     "gpt-5-upstream",
   )
   assert_eq(
-    gateway.upstream_claude_model(
+    gateway.proxy.upstream_claude_model(
       "gpt-5",
       Some(provider),
+      default_model=gateway.model,
       app_type="claude-desktop",
     ),
     "gpt-5-upstream",
