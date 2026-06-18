@@ -304,16 +304,7 @@ async fn start_gateway(args : Array[String]) -> Unit {
 async fn import_default_config(args : Array[String]) -> Unit {
   check_json_post_endpoint(
     args,
-    provider_app_path(args, "/import_default_config"),
-    "Provider",
-  )
-}
-
-///|
-async fn import_default_config_test_hook(args : Array[String]) -> Unit {
-  check_json_post_endpoint(
-    args,
-    provider_app_path(args, "/import_default_config_test_hook"),
+    provider_app_path(args, "/proxy/import-default-config"),
     "Provider",
   )
 }

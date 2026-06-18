@@ -757,30 +757,6 @@ async fn ProxyService::handle_proxy_set_default_cost_multiplier(
 }
 
 ///|
-async fn ProxyService::handle_proxy_set_default_cost_multiplier_unit(
-  self : ProxyService,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  let config = proxy_embedded_config(body)
-  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
-    write_usage_bad_request(w, "missing_app_type")
-    return
-  }
-  guard proxy_string_request(r.path, config, ["value"]) is Some(value) else {
-    write_usage_bad_request(w, "missing_value")
-    return
-  }
-  if !usage_non_negative_decimal(value) {
-    write_usage_bad_request(w, "invalid_default_cost_multiplier")
-    return
-  }
-  self.proxy_default_cost_multipliers.set(app_type, value.trim().to_owned())
-  write_usage_json(w, Json::null())
-}
-
-///|
 async fn ProxyService::handle_proxy_pricing_model_source(
   self : ProxyService,
   r : @httpx.RequestReader,
@@ -817,30 +793,6 @@ async fn ProxyService::handle_proxy_set_pricing_model_source(
   let trimmed = value.trim().to_owned()
   self.proxy_pricing_model_sources.set(app_type, trimmed)
   write_usage_json(w, moon_unit_success_json())
-}
-
-///|
-async fn ProxyService::handle_proxy_set_pricing_model_source_unit(
-  self : ProxyService,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  let config = proxy_embedded_config(body)
-  guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
-    write_usage_bad_request(w, "missing_app_type")
-    return
-  }
-  guard proxy_string_request(r.path, config, ["value"]) is Some(value) else {
-    write_usage_bad_request(w, "missing_value")
-    return
-  }
-  if !pricing_model_source_is_valid(value) {
-    write_usage_bad_request(w, "invalid_pricing_model_source")
-    return
-  }
-  self.proxy_pricing_model_sources.set(app_type, value.trim().to_owned())
-  write_usage_json(w, Json::null())
 }
 
 ///|
@@ -1057,20 +1009,6 @@ async fn ProxyService::handle_proxy_circuit_breaker_stats(
 }
 
 ///|
-async fn ProxyService::handle_proxy_circuit_breaker_stats_moon_alias(
-  self : ProxyService,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  write_usage_json(w, moon_circuit_breaker_stats_command_json())
-}
-
-///|
-fn moon_circuit_breaker_stats_command_json() -> Json {
-  Json::null()
-}
-
-///|
 async fn ProxyService::handle_proxy_reset_circuit_breaker(
   self : ProxyService,
   r : @httpx.RequestReader,
@@ -1227,14 +1165,6 @@ async fn ProxyService::handle_proxy_set_takeover_for_app(
   }
   self.proxy_takeover_enabled.set(app_type, enabled)
   write_usage_json(w, moon_unit_success_json())
-}
-
-///|
-async fn ProxyService::handle_proxy_live_takeover_active(
-  self : ProxyService,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  write_usage_json(w, Json::boolean(self.takeover_active()))
 }
 
 ///|

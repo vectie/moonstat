@@ -372,11 +372,11 @@ test "ccs read command parsers accept json payload keys" {
     Some("gemini"),
   )
   assert_eq(
-    provider_app_from_request("/get_providers", provider_body),
+    provider_app_from_request("/providers", provider_body),
     Some("codex"),
   )
   assert_eq(
-    provider_id_from_request("/get_custom_endpoints", provider_body),
+    provider_id_from_request("/providers/endpoints/list", provider_body),
     Some("codex-oauth"),
   )
   assert_eq(
@@ -389,7 +389,7 @@ test "ccs read command parsers accept json payload keys" {
   )
   assert_eq(
     hermes_memory_kind_from_request(
-      "/get_hermes_memory",
+      "/hermes/memory",
       Some({ "kind": Json::string("user") }.to_json()),
     ),
     Some("user"),
@@ -405,25 +405,25 @@ test "proxy failover command parsers accept ccs json payload keys" {
       "enabled": Json::boolean(true),
     }.to_json(),
   )
-  guard proxy_provider_query_from_request("/reset_circuit_breaker", body)
+  guard proxy_provider_query_from_request("/proxy/reset-circuit-breaker", body)
     is Some(query) else {
     fail("expected provider query")
   }
   assert_eq(query.app_type, "codex")
   assert_eq(query.provider_id, "codex-oauth")
   assert_eq(
-    proxy_app_type_from_request("/get_failover_queue", body),
+    proxy_app_type_from_request("/proxy/failover-queue", body),
     Some("codex"),
   )
   assert_eq(
     proxy_app_type_from_request(
-      "/get_failover_queue",
+      "/proxy/failover-queue",
       Some({ "app": Json::string(" gemini ") }.to_json()),
     ),
     Some("gemini"),
   )
   assert_eq(
-    proxy_bool_request("/set_auto_failover_enabled", body, ["enabled"]),
+    proxy_bool_request("/proxy/auto-failover-enabled", body, ["enabled"]),
     Some(true),
   )
   guard stream_check_provider_from_request("/proxy/stream-check/provider", body)
@@ -585,7 +585,7 @@ test "ccs daily memory search helpers count and snippet matches" {
 ///|
 test "provider command helpers parse ccs sort and endpoint test payloads" {
   let updates = provider_sort_updates_from_request(
-    "/update_providers_sort_order?app=codex&id=custom&sortIndex=2",
+    "/providers/sort-order?app=codex&id=custom&sortIndex=2",
     None,
   )
   assert_eq(updates.length(), 1)
@@ -593,7 +593,7 @@ test "provider command helpers parse ccs sort and endpoint test payloads" {
   assert_eq(updates[0].sort_index, 2)
 
   let body_updates = provider_sort_updates_from_request(
-    "/update_providers_sort_order",
+    "/providers/sort-order",
     Some(
       {
         "updates": Json::array([
@@ -610,7 +610,7 @@ test "provider command helpers parse ccs sort and endpoint test payloads" {
   json_inspect(
     provider_endpoint_latency_results_json(
       provider_endpoint_urls_from_request(
-        "/test_api_endpoints?urls=https%3A%2F%2Fapi.example.com%2Fv1,not-a-url",
+        "/providers/test-endpoints?urls=https%3A%2F%2Fapi.example.com%2Fv1,not-a-url",
         None,
       ),
       8,
@@ -647,7 +647,7 @@ test "provider command helpers parse ccs sort and endpoint test payloads" {
 ///|
 test "universal provider helper builds ccs provider shape from query args" {
   guard universal_provider_from_request(
-      "/upsert_universal_provider?id=u%201&name=Universal+One&providerType=openai-compatible&apps=claude,codex&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&codexModel=gpt-5&reasoningEffort=medium",
+      "/providers/universal?id=u%201&name=Universal+One&providerType=openai-compatible&apps=claude,codex&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&codexModel=gpt-5&reasoningEffort=medium",
       None,
     )
     is Some(provider) else {
@@ -663,7 +663,7 @@ test "universal provider helper builds ccs provider shape from query args" {
     "apiKey": "sk-test",
   })
   guard universal_provider_from_request(
-      "/upsert_universal_provider",
+      "/providers/universal",
       Some(
         {
           "provider": {
@@ -682,7 +682,7 @@ test "universal provider helper builds ccs provider shape from query args" {
 ///|
 test "provider target parses ccs claude desktop route metadata" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -733,7 +733,7 @@ test "provider target parses ccs claude desktop route metadata" {
 ///|
 test "provider target preserves ccs provider limit metadata" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -950,7 +950,7 @@ test "gateway update provider follows ccs rename guards" {
 ///|
 test "provider target resolves ccs app settings credentials" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -972,7 +972,7 @@ test "provider target resolves ccs app settings credentials" {
   assert_eq(opencode.base_url, Some("https://opencode.example/v1"))
   assert_eq(opencode.api_key, Some("sk-opencode"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -992,7 +992,7 @@ test "provider target resolves ccs app settings credentials" {
   assert_eq(openclaw.base_url, Some("https://openclaw.example/v1"))
   assert_eq(openclaw.api_key, Some("sk-openclaw"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1012,7 +1012,7 @@ test "provider target resolves ccs app settings credentials" {
   assert_eq(hermes.base_url, Some("https://hermes.example/v1"))
   assert_eq(hermes.api_key, Some("sk-hermes"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1035,7 +1035,7 @@ test "provider target resolves ccs app settings credentials" {
   assert_eq(gemini.base_url, Some("https://gemini.example"))
   assert_eq(gemini.api_key, Some("sk-gemini"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1059,7 +1059,7 @@ test "provider target resolves ccs app settings credentials" {
   assert_eq(desktop.base_url, Some("https://desktop.example/anthropic"))
   assert_eq(desktop.api_key, Some("sk-desktop"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1085,7 +1085,7 @@ test "provider target resolves ccs app settings credentials" {
 ///|
 test "provider target infers ccs proxy provider type from settings" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1109,7 +1109,7 @@ test "provider target infers ccs proxy provider type from settings" {
   assert_eq(openrouter.provider_type, Some("openrouter"))
   assert_eq(openrouter.api_key, Some("sk-or"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1131,7 +1131,7 @@ test "provider target infers ccs proxy provider type from settings" {
   }
   assert_eq(bearer.provider_type, Some("claude_auth"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1152,7 +1152,7 @@ test "provider target infers ccs proxy provider type from settings" {
   }
   assert_eq(gemini.provider_type, Some("gemini_cli"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1178,7 +1178,7 @@ test "provider target infers ccs proxy provider type from settings" {
   assert_eq(claude_gemini.api_key, Some("ya29.claude-gemini"))
   assert_eq(claude_gemini.provider_type, Some("gemini_cli"))
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1205,7 +1205,7 @@ test "provider target infers ccs proxy provider type from settings" {
 ///|
 test "provider target accepts ccs legacy openrouter compat values" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1227,7 +1227,7 @@ test "provider target accepts ccs legacy openrouter compat values" {
   assert_eq(number_provider.api_format, Some("openai_chat"))
 
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1249,7 +1249,7 @@ test "provider target accepts ccs legacy openrouter compat values" {
   assert_eq(string_provider.api_format, Some("openai_chat"))
 
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1274,7 +1274,7 @@ test "provider target accepts ccs legacy openrouter compat values" {
 ///|
 test "provider target merges ccs sibling meta with settings config" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1316,7 +1316,7 @@ test "provider target merges ccs sibling meta with settings config" {
 ///|
 test "provider target defaults missing ccs codex fast mode to false" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1350,7 +1350,7 @@ test "provider target defaults missing ccs codex fast mode to false" {
 ///|
 test "provider target keeps ccs custom user agent metadata" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1379,7 +1379,7 @@ test "provider target keeps ccs custom user agent metadata" {
 ///|
 test "official provider ignores ccs custom user agent metadata" {
   guard provider_target_from_request(
-      "/add_provider",
+      "/providers",
       Some(
         {
           "provider": {
@@ -1765,14 +1765,14 @@ test "suite config helpers mirror ccs openclaw hermes shapes" {
   })
   json_inspect(
     openclaw_default_model_from_request(
-      "/set_openclaw_default_model?primary=gpt-5&fallbacks=sonnet%2Copus",
+      "/openclaw/default-model?primary=gpt-5&fallbacks=sonnet%2Copus",
       None,
     ).unwrap(),
     content={ "primary": "gpt-5", "fallbacks": ["sonnet", "opus"] },
   )
   json_inspect(
     suite_object_request(
-      "/set_openclaw_model_catalog?catalog=%7B%22fast%22%3A%7B%22alias%22%3A%22f%22%7D%7D",
+      "/openclaw/model-catalog?catalog=%7B%22fast%22%3A%7B%22alias%22%3A%22f%22%7D%7D",
       None,
       "catalog",
     ).unwrap(),
@@ -1788,17 +1788,17 @@ test "suite config helpers mirror ccs openclaw hermes shapes" {
     },
   )
   assert_eq(
-    hermes_memory_kind_from_request("/get_hermes_memory?kind=user", None),
+    hermes_memory_kind_from_request("/hermes/memory?kind=user", None),
     Some("user"),
   )
   assert_eq(
-    hermes_memory_kind_from_request("/get_hermes_memory?kind=bad", None),
+    hermes_memory_kind_from_request("/hermes/memory?kind=bad", None),
     None,
   )
-  assert_eq(hermes_web_port_from_request("/open_hermes_web_ui?port=9120"), 9120)
+  assert_eq(hermes_web_port_from_request("/hermes/web-ui?port=9120"), 9120)
   assert_eq(
     proxy_string_request(
-      "/open_hermes_web_ui",
+      "/hermes/web-ui",
       Some({ "path": Json::string("/config") }.to_json()),
       ["path"],
     ),
@@ -2935,7 +2935,7 @@ test "proxy config request parsers accept ccs camelCase and query aliases" {
     Some("gemini"),
   )
   assert_eq(
-    proxy_app_type_from_request("/switch_provider?app=codex&id=custom", None),
+    proxy_app_type_from_request("/providers/switch?app=codex&id=custom", None),
     Some("codex"),
   )
 }
@@ -3187,11 +3187,6 @@ test "proxy circuit breaker config update hot applies to existing breakers" {
     fail("expected stats after five failures")
   }
   assert_true(after_five.state == Open)
-}
-
-///|
-test "ccs circuit breaker stats command currently returns null" {
-  assert_eq(moon_circuit_breaker_stats_command_json(), Json::null())
 }
 
 ///|

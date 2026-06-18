@@ -603,22 +603,13 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       self.runtime.uptime_seconds(self.started_at_ms),
     )
   })
-  router.add_handler(Get, "/get_proxy_status", (_, w) => {
-    self.proxy.handle_proxy_status(
-      w,
-      self.usage,
-      self.host,
-      self.port,
-      self.runtime.uptime_seconds(self.started_at_ms),
-    )
-  })
-  router.add_handler(Post, "/start_proxy_server", (_, w) => {
+  router.add_handler(Post, "/proxy/start", (_, w) => {
     self.proxy.handle_proxy_start_server(w, self.started_at_ms)
   })
-  router.add_handler(Post, "/stop_proxy_server", (_, w) => {
+  router.add_handler(Post, "/proxy/stop", (_, w) => {
     self.proxy.handle_proxy_stop_server(w)
   })
-  router.add_handler(Post, "/stop_proxy_with_restore", (_, w) => {
+  router.add_handler(Post, "/proxy/stop-with-restore", (_, w) => {
     self.proxy.handle_proxy_stop_with_restore(w)
   })
   router.add_handler(Get, "/proxy/config", (_, w) => {
@@ -627,28 +618,13 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       live_takeover_active=self.proxy.takeover_active(),
     )
   })
-  router.add_handler(Get, "/get_proxy_config", (_, w) => {
-    self.proxy.handle_proxy_config(
-      w,
-      live_takeover_active=self.proxy.takeover_active(),
-    )
-  })
   router.add_handler(Post, "/proxy/config", (r, w) => {
-    self.proxy.handle_proxy_update_config(r, w)
-  })
-  router.add_handler(Post, "/update_proxy_config", (r, w) => {
     self.proxy.handle_proxy_update_config(r, w)
   })
   router.add_handler(Get, "/proxy/global-config", (_, w) => {
     self.proxy.handle_proxy_global_config(w)
   })
-  router.add_handler(Get, "/get_global_proxy_config", (_, w) => {
-    self.proxy.handle_proxy_global_config(w)
-  })
   router.add_handler(Post, "/proxy/global-config", (r, w) => {
-    self.proxy.handle_proxy_update_global_config(r, w)
-  })
-  router.add_handler(Post, "/update_global_proxy_config", (r, w) => {
     self.proxy.handle_proxy_update_global_config(r, w)
   })
   router.add_handler(Get, "/get_settings", (_, w) => {
@@ -699,34 +675,28 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(Post, "/set_log_config", (r, w) => {
     self.config.handle_set_log_config(r, w)
   })
-  router.add_handler(Get, "/get_global_proxy_url", (_, w) => {
+  router.add_handler(Get, "/proxy/global-url", (_, w) => {
     self.proxy.handle_get_global_proxy_url(w)
   })
-  router.add_handler(Post, "/set_global_proxy_url", (r, w) => {
+  router.add_handler(Post, "/proxy/global-url", (r, w) => {
     self.proxy.handle_set_global_proxy_url(r, w)
   })
-  router.add_handler(Get, "/test_proxy_url", (r, w) => {
+  router.add_handler(Get, "/proxy/test-url", (r, w) => {
     self.proxy.handle_test_proxy_url(r, w)
   })
-  router.add_handler(Post, "/test_proxy_url", (r, w) => {
+  router.add_handler(Post, "/proxy/test-url", (r, w) => {
     self.proxy.handle_test_proxy_url(r, w)
   })
-  router.add_handler(Get, "/get_upstream_proxy_status", (_, w) => {
+  router.add_handler(Get, "/proxy/upstream-status", (_, w) => {
     self.proxy.handle_get_upstream_proxy_status(w)
   })
-  router.add_handler(Get, "/scan_local_proxies", (_, w) => {
+  router.add_handler(Get, "/proxy/local-proxies", (_, w) => {
     self.proxy.handle_scan_local_proxies(w)
   })
   router.add_handler(Get, "/proxy/app-config", (r, w) => {
     self.proxy.handle_proxy_app_config(r, w)
   })
-  router.add_handler(Get, "/get_proxy_config_for_app", (r, w) => {
-    self.proxy.handle_proxy_app_config(r, w)
-  })
   router.add_handler(Post, "/proxy/app-config", (r, w) => {
-    self.proxy.handle_proxy_update_app_config(r, w)
-  })
-  router.add_handler(Post, "/update_proxy_config_for_app", (r, w) => {
     self.proxy.handle_proxy_update_app_config(r, w)
   })
   router.add_handler(Get, "/proxy/default-cost-multiplier", (r, w) => {
@@ -735,169 +705,91 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(Post, "/proxy/default-cost-multiplier", (r, w) => {
     self.proxy.handle_proxy_set_default_cost_multiplier(r, w)
   })
-  router.add_handler(Post, "/set_default_cost_multiplier", (r, w) => {
-    self.proxy.handle_proxy_set_default_cost_multiplier(r, w)
-  })
-  router.add_handler(Get, "/get_default_cost_multiplier_test_hook", (r, w) => {
-    self.proxy.handle_proxy_default_cost_multiplier(r, w)
-  })
-  router.add_handler(Get, "/get_default_cost_multiplier", (r, w) => {
-    self.proxy.handle_proxy_default_cost_multiplier(r, w)
-  })
-  router.add_handler(Post, "/set_default_cost_multiplier_test_hook", (r, w) => {
-    self.proxy.handle_proxy_set_default_cost_multiplier_unit(r, w)
-  })
   router.add_handler(Get, "/proxy/pricing-model-source", (r, w) => {
     self.proxy.handle_proxy_pricing_model_source(r, w)
   })
   router.add_handler(Post, "/proxy/pricing-model-source", (r, w) => {
     self.proxy.handle_proxy_set_pricing_model_source(r, w)
   })
-  router.add_handler(Post, "/set_pricing_model_source", (r, w) => {
-    self.proxy.handle_proxy_set_pricing_model_source(r, w)
-  })
-  router.add_handler(Get, "/get_pricing_model_source_test_hook", (r, w) => {
-    self.proxy.handle_proxy_pricing_model_source(r, w)
-  })
-  router.add_handler(Get, "/get_pricing_model_source", (r, w) => {
-    self.proxy.handle_proxy_pricing_model_source(r, w)
-  })
-  router.add_handler(Post, "/set_pricing_model_source_test_hook", (r, w) => {
-    self.proxy.handle_proxy_set_pricing_model_source_unit(r, w)
-  })
   router.add_handler(Get, "/proxy/provider-health", (r, w) => {
-    self.proxy.handle_proxy_provider_health(r, w)
-  })
-  router.add_handler(Get, "/get_provider_health", (r, w) => {
     self.proxy.handle_proxy_provider_health(r, w)
   })
   router.add_handler(Get, "/proxy/circuit-breaker-config", (_, w) => {
     self.proxy.handle_proxy_circuit_breaker_config(w)
   })
-  router.add_handler(Get, "/get_circuit_breaker_config", (_, w) => {
-    self.proxy.handle_proxy_circuit_breaker_config(w)
-  })
   router.add_handler(Post, "/proxy/circuit-breaker-config", (r, w) => {
-    self.proxy.handle_proxy_update_circuit_breaker_config(r, w)
-  })
-  router.add_handler(Post, "/update_circuit_breaker_config", (r, w) => {
     self.proxy.handle_proxy_update_circuit_breaker_config(r, w)
   })
   router.add_handler(Get, "/proxy/circuit-breaker-stats", (r, w) => {
     self.proxy.handle_proxy_circuit_breaker_stats(r, w)
   })
-  router.add_handler(Get, "/get_circuit_breaker_stats", (_, w) => {
-    self.proxy.handle_proxy_circuit_breaker_stats_moon_alias(w)
-  })
   router.add_handler(Post, "/proxy/reset-circuit-breaker", (r, w) => {
-    self.proxy.handle_proxy_reset_circuit_breaker(r, w)
-  })
-  router.add_handler(Post, "/reset_circuit_breaker", (r, w) => {
     self.proxy.handle_proxy_reset_circuit_breaker(r, w)
   })
   router.add_handler(Get, "/proxy/failover-queue", (r, w) => {
     self.proxy.handle_proxy_failover_queue(r, w)
   })
-  router.add_handler(Get, "/get_failover_queue", (r, w) => {
-    self.proxy.handle_proxy_failover_queue(r, w)
-  })
   router.add_handler(Post, "/proxy/failover-queue", (r, w) => {
-    self.proxy.handle_proxy_add_failover_queue(r, w)
-  })
-  router.add_handler(Post, "/add_to_failover_queue", (r, w) => {
     self.proxy.handle_proxy_add_failover_queue(r, w)
   })
   router.add_handler(Delete, "/proxy/failover-queue", (r, w) => {
     self.proxy.handle_proxy_remove_failover_queue(r, w)
   })
-  router.add_handler(Delete, "/remove_from_failover_queue", (r, w) => {
-    self.proxy.handle_proxy_remove_failover_queue(r, w)
-  })
-  router.add_handler(Post, "/remove_from_failover_queue", (r, w) => {
-    self.proxy.handle_proxy_remove_failover_queue(r, w)
-  })
   router.add_handler(Get, "/proxy/available-failover-providers", (r, w) => {
-    self.proxy.handle_proxy_available_failover_providers(r, w)
-  })
-  router.add_handler(Get, "/get_available_providers_for_failover", (r, w) => {
     self.proxy.handle_proxy_available_failover_providers(r, w)
   })
   router.add_handler(Get, "/proxy/auto-failover-enabled", (r, w) => {
     self.proxy.handle_proxy_auto_failover_enabled(r, w)
   })
-  router.add_handler(Get, "/get_auto_failover_enabled", (r, w) => {
-    self.proxy.handle_proxy_auto_failover_enabled(r, w)
-  })
   router.add_handler(Post, "/proxy/auto-failover-enabled", (r, w) => {
-    self.proxy.handle_proxy_set_auto_failover_enabled(r, w)
-  })
-  router.add_handler(Post, "/set_auto_failover_enabled", (r, w) => {
     self.proxy.handle_proxy_set_auto_failover_enabled(r, w)
   })
   router.add_handler(Get, "/proxy/takeover-status", (_, w) => {
     self.proxy.handle_proxy_takeover_status(w)
   })
-  router.add_handler(Get, "/get_proxy_takeover_status", (_, w) => {
-    self.proxy.handle_proxy_takeover_status(w)
-  })
-  router.add_handler(Get, "/is_live_takeover_active", (_, w) => {
-    self.proxy.handle_proxy_live_takeover_active(w)
-  })
   router.add_handler(Post, "/proxy/takeover-status", (r, w) => {
     self.proxy.handle_proxy_set_takeover_for_app(r, w)
   })
-  router.add_handler(Post, "/set_proxy_takeover_for_app", (r, w) => {
-    self.proxy.handle_proxy_set_takeover_for_app(r, w)
-  })
-  router.add_handler(Post, "/switch_proxy_provider", (r, w) => {
+  router.add_handler(Post, "/proxy/switch-provider", (r, w) => {
     self.proxy.handle_proxy_switch_provider(self.usage, r, w)
   })
-  router.add_handler(Post, "/sync_current_providers_live", (_, w) => {
+  router.add_handler(Post, "/proxy/sync-current-providers-live", (_, w) => {
     self.proxy.handle_sync_current_providers_live(self.usage, w)
   })
-  router.add_handler(Post, "/import_default_config", (r, w) => {
+  router.add_handler(Post, "/proxy/import-default-config", (r, w) => {
     self.proxy.handle_import_default_config(r, w)
   })
-  router.add_handler(Post, "/import_default_config_test_hook", (r, w) => {
-    self.proxy.handle_import_default_config(r, w)
-  })
-  router.add_handler(Get, "/get_providers", (r, w) => {
+  router.add_handler(Get, "/providers", (r, w) => {
     self.proxy.handle_get_providers(r, w)
   })
-  router.add_handler(Post, "/get_providers", (r, w) => {
-    self.proxy.handle_get_providers(r, w)
-  })
-  router.add_handler(Get, "/get_current_provider", (r, w) => {
+  router.add_handler(Get, "/providers/current", (r, w) => {
     self.proxy.handle_get_current_provider(r, w)
   })
-  router.add_handler(Post, "/get_current_provider", (r, w) => {
+  router.add_handler(Post, "/providers/current", (r, w) => {
     self.proxy.handle_get_current_provider(r, w)
   })
-  router.add_handler(Post, "/add_provider", (r, w) => {
+  router.add_handler(Post, "/providers", (r, w) => {
     self.proxy.handle_add_provider(r, w, self.usage)
   })
-  router.add_handler(Post, "/update_provider", (r, w) => {
+  router.add_handler(Post, "/providers/update", (r, w) => {
     self.proxy.handle_update_provider(r, w, self.usage)
   })
-  router.add_handler(Delete, "/delete_provider", (r, w) => {
+  router.add_handler(Delete, "/providers", (r, w) => {
     self.proxy.handle_delete_provider(r, w)
   })
-  router.add_handler(Post, "/delete_provider", (r, w) => {
+  router.add_handler(Post, "/providers/delete", (r, w) => {
     self.proxy.handle_delete_provider(r, w)
   })
-  router.add_handler(Delete, "/remove_provider_from_live_config", (r, w) => {
+  router.add_handler(Delete, "/providers/live", (r, w) => {
     self.proxy.handle_remove_provider_from_live_config(r, w)
   })
-  router.add_handler(Post, "/remove_provider_from_live_config", (r, w) => {
+  router.add_handler(Post, "/providers/live/remove", (r, w) => {
     self.proxy.handle_remove_provider_from_live_config(r, w)
   })
-  router.add_handler(Post, "/switch_provider", (r, w) => {
+  router.add_handler(Post, "/providers/switch", (r, w) => {
     self.proxy.handle_switch_provider(r, w, self.usage)
   })
-  router.add_handler(Post, "/switch_provider_test_hook", (r, w) => {
-    self.proxy.handle_switch_provider(r, w, self.usage)
-  })
-  router.add_handler(Post, "/open_provider_terminal", (r, w) => {
+  router.add_handler(Post, "/providers/terminal", (r, w) => {
     self.proxy.handle_open_provider_terminal(r, w)
   })
   router.add_handler(Get, "/get_claude_desktop_status", (_, w) => {
@@ -913,10 +805,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(Post, "/ensure_claude_desktop_official_provider", (_, w) => {
     self.proxy.handle_ensure_claude_desktop_official_provider(w)
   })
-  router.add_handler(Get, "/read_live_provider_settings", (r, w) => {
+  router.add_handler(Get, "/providers/live-settings", (r, w) => {
     self.proxy.handle_read_live_provider_settings(r, w)
   })
-  router.add_handler(Post, "/read_live_provider_settings", (r, w) => {
+  router.add_handler(Post, "/providers/live-settings", (r, w) => {
     self.proxy.handle_read_live_provider_settings(r, w)
   })
   router.add_handler(Get, "/get_claude_plugin_status", (_, w) => {
@@ -976,148 +868,138 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(Post, "/open_workspace_directory", (r, w) => {
     self.workspace.handle_open_workspace_directory(r, w)
   })
-  router.add_handler(Get, "/get_opencode_live_provider_ids", (_, w) => {
-    self.proxy.handle_get_live_provider_ids(w, "opencode")
+  router.add_handler(Get, "/providers/live-ids", (r, w) => {
+    self.proxy.handle_get_live_provider_ids(
+      w,
+      usage_query_value(r.path, "app").unwrap_or("opencode"),
+    )
   })
-  router.add_handler(Get, "/get_openclaw_live_provider_ids", (_, w) => {
-    self.proxy.handle_get_live_provider_ids(w, "openclaw")
+  router.add_handler(Get, "/providers/live-provider", (r, w) => {
+    self.proxy.handle_get_live_provider(
+      r,
+      w,
+      usage_query_value(r.path, "app").unwrap_or("openclaw"),
+    )
   })
-  router.add_handler(Get, "/get_openclaw_live_provider", (r, w) => {
-    self.proxy.handle_get_live_provider(r, w, "openclaw")
+  router.add_handler(Post, "/providers/live-provider", (r, w) => {
+    self.proxy.handle_get_live_provider(
+      r,
+      w,
+      usage_query_value(r.path, "app").unwrap_or("openclaw"),
+    )
   })
-  router.add_handler(Post, "/get_openclaw_live_provider", (r, w) => {
-    self.proxy.handle_get_live_provider(r, w, "openclaw")
-  })
-  router.add_handler(Get, "/scan_openclaw_config_health", (_, w) => {
+  router.add_handler(Get, "/openclaw/config-health", (_, w) => {
     self.openclaw.handle_scan_openclaw_config_health(w)
   })
-  router.add_handler(Get, "/get_openclaw_default_model", (_, w) => {
+  router.add_handler(Get, "/openclaw/default-model", (_, w) => {
     self.openclaw.handle_get_openclaw_default_model(w)
   })
-  router.add_handler(Post, "/set_openclaw_default_model", (r, w) => {
+  router.add_handler(Post, "/openclaw/default-model", (r, w) => {
     self.openclaw.handle_set_openclaw_default_model(r, w)
   })
-  router.add_handler(Get, "/get_openclaw_model_catalog", (_, w) => {
+  router.add_handler(Get, "/openclaw/model-catalog", (_, w) => {
     self.openclaw.handle_get_openclaw_model_catalog(w)
   })
-  router.add_handler(Post, "/set_openclaw_model_catalog", (r, w) => {
+  router.add_handler(Post, "/openclaw/model-catalog", (r, w) => {
     self.openclaw.handle_set_openclaw_model_catalog(r, w)
   })
-  router.add_handler(Get, "/get_openclaw_agents_defaults", (_, w) => {
+  router.add_handler(Get, "/openclaw/agents-defaults", (_, w) => {
     self.openclaw.handle_get_openclaw_agents_defaults(w)
   })
-  router.add_handler(Post, "/set_openclaw_agents_defaults", (r, w) => {
+  router.add_handler(Post, "/openclaw/agents-defaults", (r, w) => {
     self.openclaw.handle_set_openclaw_agents_defaults(r, w)
   })
-  router.add_handler(Get, "/get_openclaw_env", (_, w) => {
+  router.add_handler(Get, "/openclaw/env", (_, w) => {
     self.openclaw.handle_get_openclaw_env(w)
   })
-  router.add_handler(Post, "/set_openclaw_env", (r, w) => {
+  router.add_handler(Post, "/openclaw/env", (r, w) => {
     self.openclaw.handle_set_openclaw_env(r, w)
   })
-  router.add_handler(Get, "/get_openclaw_tools", (_, w) => {
+  router.add_handler(Get, "/openclaw/tools", (_, w) => {
     self.openclaw.handle_get_openclaw_tools(w)
   })
-  router.add_handler(Post, "/set_openclaw_tools", (r, w) => {
+  router.add_handler(Post, "/openclaw/tools", (r, w) => {
     self.openclaw.handle_set_openclaw_tools(r, w)
   })
-  router.add_handler(Get, "/get_hermes_live_provider_ids", (_, w) => {
-    self.proxy.handle_get_live_provider_ids(w, "hermes")
-  })
-  router.add_handler(Get, "/get_hermes_live_provider", (r, w) => {
-    self.proxy.handle_get_live_provider(r, w, "hermes")
-  })
-  router.add_handler(Post, "/get_hermes_live_provider", (r, w) => {
-    self.proxy.handle_get_live_provider(r, w, "hermes")
-  })
-  router.add_handler(Get, "/get_hermes_model_config", (_, w) => {
+  router.add_handler(Get, "/hermes/model-config", (_, w) => {
     self.openclaw.handle_get_hermes_model_config(w)
   })
-  router.add_handler(Get, "/get_hermes_memory", (r, w) => {
+  router.add_handler(Get, "/hermes/memory", (r, w) => {
     self.openclaw.handle_get_hermes_memory(r, w)
   })
-  router.add_handler(Post, "/get_hermes_memory", (r, w) => {
-    self.openclaw.handle_get_hermes_memory(r, w)
-  })
-  router.add_handler(Post, "/set_hermes_memory", (r, w) => {
+  router.add_handler(Post, "/hermes/memory", (r, w) => {
     self.openclaw.handle_set_hermes_memory(r, w)
   })
-  router.add_handler(Get, "/get_hermes_memory_limits", (_, w) => {
+  router.add_handler(Get, "/hermes/memory-limits", (_, w) => {
     self.openclaw.handle_get_hermes_memory_limits(w)
   })
-  router.add_handler(Post, "/set_hermes_memory_enabled", (r, w) => {
+  router.add_handler(Post, "/hermes/memory-enabled", (r, w) => {
     self.openclaw.handle_set_hermes_memory_enabled(r, w)
   })
-  router.add_handler(Get, "/open_hermes_web_ui", (r, w) => {
+  router.add_handler(Get, "/hermes/web-ui", (r, w) => {
     self.openclaw.handle_open_hermes_web_ui(r, w)
   })
-  router.add_handler(Post, "/open_hermes_web_ui", (r, w) => {
+  router.add_handler(Post, "/hermes/web-ui", (r, w) => {
     self.openclaw.handle_open_hermes_web_ui(r, w)
   })
-  router.add_handler(Post, "/launch_hermes_dashboard", (_, w) => {
+  router.add_handler(Post, "/hermes/dashboard", (_, w) => {
     self.openclaw.handle_launch_hermes_dashboard(w)
   })
-  router.add_handler(Post, "/import_opencode_providers_from_live", (_, w) => {
-    self.proxy.handle_import_live_providers(w, "opencode")
+  router.add_handler(Post, "/providers/import-live", (r, w) => {
+    self.proxy.handle_import_live_providers(
+      w,
+      usage_query_value(r.path, "app").unwrap_or("opencode"),
+    )
   })
-  router.add_handler(Post, "/import_openclaw_providers_from_live", (_, w) => {
-    self.proxy.handle_import_live_providers(w, "openclaw")
-  })
-  router.add_handler(Post, "/import_hermes_providers_from_live", (_, w) => {
-    self.proxy.handle_import_live_providers(w, "hermes")
-  })
-  router.add_handler(Get, "/get_universal_providers", (_, w) => {
+  router.add_handler(Get, "/providers/universal", (_, w) => {
     self.proxy.handle_get_universal_providers(w)
   })
-  router.add_handler(Get, "/get_universal_provider", (r, w) => {
+  router.add_handler(Get, "/providers/universal/item", (r, w) => {
     self.proxy.handle_get_universal_provider(r, w)
   })
-  router.add_handler(Post, "/upsert_universal_provider", (r, w) => {
+  router.add_handler(Post, "/providers/universal", (r, w) => {
     self.proxy.handle_upsert_universal_provider(r, w)
   })
-  router.add_handler(Delete, "/delete_universal_provider", (r, w) => {
+  router.add_handler(Delete, "/providers/universal", (r, w) => {
     self.proxy.handle_delete_universal_provider(r, w)
   })
-  router.add_handler(Post, "/delete_universal_provider", (r, w) => {
+  router.add_handler(Post, "/providers/universal/delete", (r, w) => {
     self.proxy.handle_delete_universal_provider(r, w)
   })
-  router.add_handler(Post, "/sync_universal_provider", (r, w) => {
+  router.add_handler(Post, "/providers/universal/sync", (r, w) => {
     self.proxy.handle_sync_universal_provider(r, w)
   })
-  router.add_handler(Get, "/get_provider_presets", (r, w) => {
+  router.add_handler(Get, "/providers/presets", (r, w) => {
     self.proxy.handle_get_provider_presets(r, w)
   })
-  router.add_handler(Post, "/test_api_endpoints", (r, w) => {
+  router.add_handler(Post, "/providers/test-endpoints", (r, w) => {
     self.proxy.handle_test_api_endpoints(r, w)
   })
-  router.add_handler(Get, "/test_api_endpoints", (r, w) => {
+  router.add_handler(Get, "/providers/test-endpoints", (r, w) => {
     self.proxy.handle_test_api_endpoints(r, w)
   })
-  router.add_handler(Post, "/update_providers_sort_order", (r, w) => {
+  router.add_handler(Post, "/providers/sort-order", (r, w) => {
     self.proxy.handle_update_providers_sort_order(r, w)
   })
-  router.add_handler(Get, "/get_custom_endpoints", (r, w) => {
+  router.add_handler(Get, "/providers/endpoints/list", (r, w) => {
     self.proxy.handle_get_custom_endpoints(r, w)
   })
-  router.add_handler(Post, "/get_custom_endpoints", (r, w) => {
+  router.add_handler(Post, "/providers/endpoints/list", (r, w) => {
     self.proxy.handle_get_custom_endpoints(r, w)
   })
-  router.add_handler(Post, "/add_custom_endpoint", (r, w) => {
+  router.add_handler(Post, "/providers/endpoints", (r, w) => {
     self.proxy.handle_add_custom_endpoint(r, w)
   })
-  router.add_handler(Delete, "/remove_custom_endpoint", (r, w) => {
+  router.add_handler(Delete, "/providers/endpoints", (r, w) => {
     self.proxy.handle_remove_custom_endpoint(r, w)
   })
-  router.add_handler(Post, "/remove_custom_endpoint", (r, w) => {
+  router.add_handler(Post, "/providers/endpoints/remove", (r, w) => {
     self.proxy.handle_remove_custom_endpoint(r, w)
   })
-  router.add_handler(Post, "/update_endpoint_last_used", (r, w) => {
+  router.add_handler(Post, "/providers/endpoints/touch", (r, w) => {
     self.proxy.handle_update_endpoint_last_used(r, w)
   })
   router.add_handler(Get, "/proxy/running", (_, w) => {
-    self.proxy.handle_proxy_running(w)
-  })
-  router.add_handler(Get, "/is_proxy_running", (_, w) => {
     self.proxy.handle_proxy_running(w)
   })
   router.add_handler(Get, "/usage/logs", (r, w) => {

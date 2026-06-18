@@ -220,319 +220,100 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "stream_check_all_providers", patterns: ["stream-check all"] },
     { id: "save_stream_check_config", patterns: ["stream-check config set"] },
     { id: "get_stream_check_config", patterns: ["stream-check config"] },
-    {
-      id: "update_proxy_config",
-      patterns: [
-        "proxy config set", "proxy update-config", "update_proxy_config", "update-proxy-config",
-      ],
-    },
-    {
-      id: "get_proxy_config",
-      patterns: ["proxy config", "get_proxy_config", "get-proxy-config"],
-    },
-    {
-      id: "update_global_proxy_config",
-      patterns: [
-        "proxy global-config set", "proxy update-global-config", "update_global_proxy_config",
-        "update-global-proxy-config",
-      ],
-    },
-    {
-      id: "get_global_proxy_config",
-      patterns: [
-        "proxy global-config", "get_global_proxy_config", "get-global-proxy-config",
-      ],
-    },
-    {
-      id: "set_global_proxy_url",
-      patterns: [
-        "proxy global-url set", "proxy set-global-url", "set_global_proxy_url", "set-global-proxy-url",
-      ],
-    },
-    {
-      id: "get_global_proxy_url",
-      patterns: [
-        "proxy global-url", "get_global_proxy_url", "get-global-proxy-url",
-      ],
-    },
-    {
-      id: "update_proxy_config_for_app",
-      patterns: [
-        "proxy app-config set", "proxy update-app-config", "update_proxy_config_for_app",
-        "update-proxy-config-for-app",
-      ],
-    },
-    {
-      id: "get_proxy_config_for_app",
-      patterns: [
-        "proxy app-config", "get_proxy_config_for_app", "get-proxy-config-for-app",
-      ],
-    },
+    { id: "update_proxy_config", patterns: ["proxy config set"] },
+    { id: "get_proxy_config", patterns: ["proxy config"] },
+    { id: "update_global_proxy_config", patterns: ["proxy global-config set"] },
+    { id: "get_global_proxy_config", patterns: ["proxy global-config"] },
+    { id: "set_global_proxy_url", patterns: ["proxy global-url set"] },
+    { id: "get_global_proxy_url", patterns: ["proxy global-url"] },
+    { id: "update_proxy_config_for_app", patterns: ["proxy app-config set"] },
+    { id: "get_proxy_config_for_app", patterns: ["proxy app-config"] },
     {
       id: "set_default_cost_multiplier",
-      patterns: [
-        "proxy default-cost-multiplier set", "proxy set-default-cost-multiplier",
-        "set_default_cost_multiplier", "set-default-cost-multiplier",
-      ],
+      patterns: ["proxy default-cost-multiplier set"],
     },
     {
       id: "get_default_cost_multiplier",
-      patterns: [
-        "proxy default-cost-multiplier", "get_default_cost_multiplier", "get-default-cost-multiplier",
-      ],
+      patterns: ["proxy default-cost-multiplier"],
     },
     {
       id: "set_pricing_model_source",
-      patterns: [
-        "proxy pricing-model-source set", "proxy set-pricing-model-source", "set_pricing_model_source",
-        "set-pricing-model-source",
-      ],
+      patterns: ["proxy pricing-model-source set"],
     },
-    {
-      id: "get_pricing_model_source",
-      patterns: [
-        "proxy pricing-model-source", "get_pricing_model_source", "get-pricing-model-source",
-      ],
-    },
+    { id: "get_pricing_model_source", patterns: ["proxy pricing-model-source"] },
     {
       id: "update_circuit_breaker_config",
-      patterns: [
-        "proxy circuit-breaker-config set", "proxy update-circuit-breaker-config",
-        "update_circuit_breaker_config", "update-circuit-breaker-config",
-      ],
+      patterns: ["proxy circuit-breaker-config set"],
     },
     {
       id: "get_circuit_breaker_config",
-      patterns: [
-        "proxy circuit-breaker-config", "get_circuit_breaker_config", "get-circuit-breaker-config",
-      ],
+      patterns: ["proxy circuit-breaker-config"],
     },
-    {
-      id: "add_to_failover_queue",
-      patterns: [
-        "proxy failover-queue add", "proxy add-to-failover-queue", "add_to_failover_queue",
-        "add-to-failover-queue",
-      ],
-    },
+    { id: "add_to_failover_queue", patterns: ["proxy failover-queue add"] },
     {
       id: "remove_from_failover_queue",
-      patterns: [
-        "proxy failover-queue remove", "proxy remove-from-failover-queue", "remove_from_failover_queue",
-        "remove-from-failover-queue",
-      ],
+      patterns: ["proxy failover-queue remove"],
     },
-    {
-      id: "get_failover_queue",
-      patterns: [
-        "proxy failover-queue", "proxy get-failover-queue", "get_failover_queue",
-        "get-failover-queue",
-      ],
-    },
+    { id: "get_failover_queue", patterns: ["proxy failover-queue"] },
     {
       id: "set_auto_failover_enabled",
-      patterns: [
-        "proxy auto-failover-enabled set", "proxy set-auto-failover-enabled", "set_auto_failover_enabled",
-        "set-auto-failover-enabled",
-      ],
+      patterns: ["proxy auto-failover-enabled set"],
     },
     {
       id: "get_auto_failover_enabled",
-      patterns: [
-        "proxy auto-failover-enabled", "proxy get-auto-failover-enabled", "get_auto_failover_enabled",
-        "get-auto-failover-enabled",
-      ],
+      patterns: ["proxy auto-failover-enabled"],
     },
     {
       id: "set_proxy_takeover_for_app",
-      patterns: [
-        "proxy takeover-status set", "proxy set-proxy-takeover-for-app", "set_proxy_takeover_for_app",
-        "set-proxy-takeover-for-app",
-      ],
+      patterns: ["proxy takeover-status set"],
     },
-    {
-      id: "get_proxy_takeover_status",
-      patterns: [
-        "proxy takeover-status", "get_proxy_takeover_status", "get-proxy-takeover-status",
-      ],
-    },
-    {
-      id: "get_proxy_status",
-      patterns: ["proxy status", "get_proxy_status", "get-proxy-status"],
-    },
-    {
-      id: "start_proxy_server",
-      patterns: [
-        "proxy start-proxy-server", "start_proxy_server", "start-proxy-server",
-      ],
-    },
-    {
-      id: "stop_proxy_server",
-      patterns: [
-        "proxy stop-proxy-server", "stop_proxy_server", "stop-proxy-server",
-      ],
-    },
-    {
-      id: "stop_proxy_with_restore",
-      patterns: [
-        "proxy stop-proxy-with-restore", "stop_proxy_with_restore", "stop-proxy-with-restore",
-      ],
-    },
-    {
-      id: "test_proxy_url",
-      patterns: ["proxy test-url", "test_proxy_url", "test-proxy-url"],
-    },
-    {
-      id: "get_upstream_proxy_status",
-      patterns: [
-        "proxy upstream-status", "get_upstream_proxy_status", "get-upstream-proxy-status",
-      ],
-    },
-    {
-      id: "scan_local_proxies",
-      patterns: ["proxy scan-local", "scan_local_proxies", "scan-local-proxies"],
-    },
-    {
-      id: "get_default_cost_multiplier_test_hook",
-      patterns: [
-        "get_default_cost_multiplier_test_hook", "get-default-cost-multiplier-test-hook",
-      ],
-    },
-    {
-      id: "set_default_cost_multiplier_test_hook",
-      patterns: [
-        "set_default_cost_multiplier_test_hook", "set-default-cost-multiplier-test-hook",
-      ],
-    },
-    {
-      id: "get_pricing_model_source_test_hook",
-      patterns: [
-        "get_pricing_model_source_test_hook", "get-pricing-model-source-test-hook",
-      ],
-    },
-    {
-      id: "set_pricing_model_source_test_hook",
-      patterns: [
-        "set_pricing_model_source_test_hook", "set-pricing-model-source-test-hook",
-      ],
-    },
-    {
-      id: "get_provider_health",
-      patterns: [
-        "proxy provider-health", "get_provider_health", "get-provider-health",
-      ],
-    },
+    { id: "get_proxy_takeover_status", patterns: ["proxy takeover-status"] },
+    { id: "get_proxy_status", patterns: ["proxy status"] },
+    { id: "start_proxy_server", patterns: ["proxy start"] },
+    { id: "stop_proxy_server", patterns: ["proxy stop"] },
+    { id: "stop_proxy_with_restore", patterns: ["proxy stop-with-restore"] },
+    { id: "test_proxy_url", patterns: ["proxy test-url"] },
+    { id: "get_upstream_proxy_status", patterns: ["proxy upstream-status"] },
+    { id: "scan_local_proxies", patterns: ["proxy scan-local"] },
+    { id: "get_provider_health", patterns: ["proxy provider-health"] },
     {
       id: "get_circuit_breaker_stats",
-      patterns: [
-        "proxy circuit-breaker-stats", "get_circuit_breaker_stats", "get-circuit-breaker-stats",
-      ],
+      patterns: ["proxy circuit-breaker-stats"],
     },
-    {
-      id: "reset_circuit_breaker",
-      patterns: [
-        "proxy reset-circuit-breaker", "reset_circuit_breaker", "reset-circuit-breaker",
-      ],
-    },
+    { id: "reset_circuit_breaker", patterns: ["proxy reset-circuit-breaker"] },
     {
       id: "get_available_providers_for_failover",
-      patterns: [
-        "proxy available-failover-providers", "proxy get-available-providers-for-failover",
-        "get_available_providers_for_failover", "get-available-providers-for-failover",
-      ],
+      patterns: ["proxy available-failover-providers"],
     },
-    {
-      id: "is_live_takeover_active",
-      patterns: [
-        "proxy is-live-takeover-active", "is_live_takeover_active", "is-live-takeover-active",
-      ],
-    },
-    {
-      id: "switch_proxy_provider",
-      patterns: [
-        "proxy switch-proxy-provider", "switch_proxy_provider", "switch-proxy-provider",
-      ],
-    },
-    {
-      id: "is_proxy_running",
-      patterns: [
-        "proxy running", "proxy is-proxy-running", "is_proxy_running", "is-proxy-running",
-      ],
-    },
-    {
-      id: "get_providers",
-      patterns: [
-        "provider list", "providers list", "get_providers", "get-providers",
-      ],
-    },
+    { id: "is_live_takeover_active", patterns: ["proxy live-takeover-active"] },
+    { id: "switch_proxy_provider", patterns: ["proxy switch-provider"] },
+    { id: "is_proxy_running", patterns: ["proxy running"] },
+    { id: "get_providers", patterns: ["provider list", "providers list"] },
     {
       id: "get_current_provider",
-      patterns: [
-        "provider current", "providers current", "get_current_provider", "get-current-provider",
-      ],
+      patterns: ["provider current", "providers current"],
     },
-    {
-      id: "add_provider",
-      patterns: [
-        "provider add", "providers add", "add_provider", "add-provider",
-      ],
-    },
-    {
-      id: "update_provider",
-      patterns: [
-        "provider update", "providers update", "update_provider", "update-provider",
-      ],
-    },
-    {
-      id: "delete_provider",
-      patterns: [
-        "provider delete", "providers delete", "delete_provider", "delete-provider",
-      ],
-    },
+    { id: "add_provider", patterns: ["provider add", "providers add"] },
+    { id: "update_provider", patterns: ["provider update", "providers update"] },
+    { id: "delete_provider", patterns: ["provider delete", "providers delete"] },
     {
       id: "remove_provider_from_live_config",
-      patterns: [
-        "provider remove-live", "providers remove-live", "remove_provider_from_live_config",
-        "remove-provider-from-live-config",
-      ],
+      patterns: ["provider remove-live", "providers remove-live"],
     },
-    {
-      id: "switch_provider",
-      patterns: [
-        "provider switch", "providers switch", "switch_provider", "switch-provider",
-      ],
-    },
-    {
-      id: "switch_provider_test_hook",
-      patterns: ["switch_provider_test_hook", "switch-provider-test-hook"],
-    },
+    { id: "switch_provider", patterns: ["provider switch", "providers switch"] },
     {
       id: "sync_current_providers_live",
-      patterns: [
-        "provider sync-live", "providers sync-live", "sync_current_providers_live",
-        "sync-current-providers-live",
-      ],
+      patterns: ["provider sync-live", "providers sync-live"],
     },
     {
       id: "read_live_provider_settings",
-      patterns: [
-        "provider live-settings", "providers live-settings", "read_live_provider_settings",
-        "read-live-provider-settings",
-      ],
+      patterns: ["provider live-settings", "providers live-settings"],
     },
     {
       id: "open_provider_terminal",
-      patterns: ["open_provider_terminal", "open-provider-terminal"],
+      patterns: ["provider terminal", "providers terminal"],
     },
-    {
-      id: "import_default_config",
-      patterns: ["import_default_config", "import-default-config"],
-    },
-    {
-      id: "import_default_config_test_hook",
-      patterns: [
-        "import_default_config_test_hook", "import-default-config-test-hook",
-      ],
-    },
+    { id: "import_default_config", patterns: ["proxy import-default-config"] },
     {
       id: "get_claude_desktop_status",
       patterns: ["get_claude_desktop_status", "get-claude-desktop-status"],
@@ -569,129 +350,80 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     },
     {
       id: "get_opencode_live_provider_ids",
-      patterns: [
-        "get_opencode_live_provider_ids", "get-opencode-live-provider-ids",
-      ],
+      patterns: ["provider opencode live-ids"],
     },
     {
       id: "get_openclaw_live_provider_ids",
-      patterns: [
-        "get_openclaw_live_provider_ids", "get-openclaw-live-provider-ids",
-      ],
+      patterns: ["provider openclaw live-ids"],
     },
     {
       id: "get_openclaw_live_provider",
-      patterns: ["get_openclaw_live_provider", "get-openclaw-live-provider"],
+      patterns: ["provider openclaw live-get"],
     },
     {
       id: "get_hermes_live_provider_ids",
-      patterns: ["get_hermes_live_provider_ids", "get-hermes-live-provider-ids"],
+      patterns: ["provider hermes live-ids"],
     },
-    {
-      id: "get_hermes_live_provider",
-      patterns: ["get_hermes_live_provider", "get-hermes-live-provider"],
-    },
+    { id: "get_hermes_live_provider", patterns: ["provider hermes live-get"] },
     {
       id: "import_opencode_providers_from_live",
-      patterns: [
-        "import_opencode_providers_from_live", "import-opencode-providers-from-live",
-      ],
+      patterns: ["provider opencode import-live"],
     },
     {
       id: "import_openclaw_providers_from_live",
-      patterns: [
-        "import_openclaw_providers_from_live", "import-openclaw-providers-from-live",
-      ],
+      patterns: ["provider openclaw import-live"],
     },
     {
       id: "import_hermes_providers_from_live",
-      patterns: [
-        "import_hermes_providers_from_live", "import-hermes-providers-from-live",
-      ],
+      patterns: ["provider hermes import-live"],
     },
     {
       id: "get_universal_providers",
-      patterns: [
-        "provider universal list", "providers universal list", "get_universal_providers",
-        "get-universal-providers",
-      ],
+      patterns: ["provider universal list", "providers universal list"],
     },
     {
       id: "get_universal_provider",
-      patterns: [
-        "provider universal get", "providers universal get", "get_universal_provider",
-        "get-universal-provider",
-      ],
+      patterns: ["provider universal get", "providers universal get"],
     },
     {
       id: "upsert_universal_provider",
-      patterns: [
-        "provider universal upsert", "providers universal upsert", "upsert_universal_provider",
-        "upsert-universal-provider",
-      ],
+      patterns: ["provider universal upsert", "providers universal upsert"],
     },
     {
       id: "delete_universal_provider",
-      patterns: [
-        "provider universal delete", "providers universal delete", "delete_universal_provider",
-        "delete-universal-provider",
-      ],
+      patterns: ["provider universal delete", "providers universal delete"],
     },
     {
       id: "sync_universal_provider",
-      patterns: [
-        "provider universal sync", "providers universal sync", "sync_universal_provider",
-        "sync-universal-provider",
-      ],
+      patterns: ["provider universal sync", "providers universal sync"],
     },
     {
       id: "get_provider_presets",
-      patterns: [
-        "provider presets list", "providers presets list", "get_provider_presets",
-        "get-provider-presets",
-      ],
+      patterns: ["provider presets list", "providers presets list"],
     },
     {
       id: "test_api_endpoints",
-      patterns: [
-        "provider test-endpoints", "providers test-endpoints", "test_api_endpoints",
-        "test-api-endpoints",
-      ],
+      patterns: ["provider test-endpoints", "providers test-endpoints"],
     },
     {
       id: "update_providers_sort_order",
-      patterns: [
-        "provider sort-order set", "providers sort-order set", "update_providers_sort_order",
-        "update-providers-sort-order",
-      ],
+      patterns: ["provider sort-order set", "providers sort-order set"],
     },
     {
       id: "get_custom_endpoints",
-      patterns: [
-        "provider endpoints list", "providers endpoints list", "get_custom_endpoints",
-        "get-custom-endpoints",
-      ],
+      patterns: ["provider endpoints list", "providers endpoints list"],
     },
     {
       id: "add_custom_endpoint",
-      patterns: [
-        "provider endpoints add", "providers endpoints add", "add_custom_endpoint",
-        "add-custom-endpoint",
-      ],
+      patterns: ["provider endpoints add", "providers endpoints add"],
     },
     {
       id: "remove_custom_endpoint",
-      patterns: [
-        "provider endpoints remove", "providers endpoints remove", "remove_custom_endpoint",
-        "remove-custom-endpoint",
-      ],
+      patterns: ["provider endpoints remove", "providers endpoints remove"],
     },
     {
       id: "update_endpoint_last_used",
-      patterns: [
-        "provider endpoints touch", "providers endpoints touch", "update_endpoint_last_used",
-        "update-endpoint-last-used",
-      ],
+      patterns: ["provider endpoints touch", "providers endpoints touch"],
     },
     {
       id: "fetch_models",
@@ -700,78 +432,36 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       ],
     },
     { id: "model_candidates", patterns: ["models candidates"] },
-    {
-      id: "scan_openclaw_config_health",
-      patterns: ["scan_openclaw_config_health", "scan-openclaw-config-health"],
-    },
-    {
-      id: "get_openclaw_default_model",
-      patterns: ["get_openclaw_default_model", "get-openclaw-default-model"],
-    },
+    { id: "scan_openclaw_config_health", patterns: ["openclaw config-health"] },
     {
       id: "set_openclaw_default_model",
-      patterns: ["set_openclaw_default_model", "set-openclaw-default-model"],
+      patterns: ["openclaw default-model set"],
     },
-    {
-      id: "get_openclaw_model_catalog",
-      patterns: ["get_openclaw_model_catalog", "get-openclaw-model-catalog"],
-    },
+    { id: "get_openclaw_default_model", patterns: ["openclaw default-model"] },
     {
       id: "set_openclaw_model_catalog",
-      patterns: ["set_openclaw_model_catalog", "set-openclaw-model-catalog"],
+      patterns: ["openclaw model-catalog set"],
+    },
+    { id: "get_openclaw_model_catalog", patterns: ["openclaw model-catalog"] },
+    {
+      id: "set_openclaw_agents_defaults",
+      patterns: ["openclaw agents-defaults set"],
     },
     {
       id: "get_openclaw_agents_defaults",
-      patterns: ["get_openclaw_agents_defaults", "get-openclaw-agents-defaults"],
+      patterns: ["openclaw agents-defaults"],
     },
-    {
-      id: "set_openclaw_agents_defaults",
-      patterns: ["set_openclaw_agents_defaults", "set-openclaw-agents-defaults"],
-    },
-    {
-      id: "get_openclaw_env",
-      patterns: ["get_openclaw_env", "get-openclaw-env"],
-    },
-    {
-      id: "set_openclaw_env",
-      patterns: ["set_openclaw_env", "set-openclaw-env"],
-    },
-    {
-      id: "get_openclaw_tools",
-      patterns: ["get_openclaw_tools", "get-openclaw-tools"],
-    },
-    {
-      id: "set_openclaw_tools",
-      patterns: ["set_openclaw_tools", "set-openclaw-tools"],
-    },
-    {
-      id: "get_hermes_model_config",
-      patterns: ["get_hermes_model_config", "get-hermes-model-config"],
-    },
-    {
-      id: "get_hermes_memory",
-      patterns: ["get_hermes_memory", "get-hermes-memory"],
-    },
-    {
-      id: "set_hermes_memory",
-      patterns: ["set_hermes_memory", "set-hermes-memory"],
-    },
-    {
-      id: "get_hermes_memory_limits",
-      patterns: ["get_hermes_memory_limits", "get-hermes-memory-limits"],
-    },
-    {
-      id: "set_hermes_memory_enabled",
-      patterns: ["set_hermes_memory_enabled", "set-hermes-memory-enabled"],
-    },
-    {
-      id: "open_hermes_web_ui",
-      patterns: ["open_hermes_web_ui", "open-hermes-web-ui"],
-    },
-    {
-      id: "launch_hermes_dashboard",
-      patterns: ["launch_hermes_dashboard", "launch-hermes-dashboard"],
-    },
+    { id: "set_openclaw_env", patterns: ["openclaw env set"] },
+    { id: "get_openclaw_env", patterns: ["openclaw env"] },
+    { id: "set_openclaw_tools", patterns: ["openclaw tools set"] },
+    { id: "get_openclaw_tools", patterns: ["openclaw tools"] },
+    { id: "get_hermes_model_config", patterns: ["hermes model-config"] },
+    { id: "set_hermes_memory", patterns: ["hermes memory set"] },
+    { id: "get_hermes_memory", patterns: ["hermes memory"] },
+    { id: "get_hermes_memory_limits", patterns: ["hermes memory-limits"] },
+    { id: "set_hermes_memory_enabled", patterns: ["hermes memory-enabled set"] },
+    { id: "open_hermes_web_ui", patterns: ["hermes web-ui"] },
+    { id: "launch_hermes_dashboard", patterns: ["hermes dashboard"] },
     {
       id: "get_claude_config_status",
       patterns: ["get_claude_config_status", "get-claude-config-status"],
@@ -1658,10 +1348,6 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       switch_provider(args)
       true
     }
-    Some("switch_provider_test_hook") => {
-      switch_provider_test_hook(args)
-      true
-    }
     Some("sync_current_providers_live") => {
       sync_current_providers_live(args)
       true
@@ -1676,10 +1362,6 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
     }
     Some("import_default_config") => {
       import_default_config(args)
-      true
-    }
-    Some("import_default_config_test_hook") => {
-      import_default_config_test_hook(args)
       true
     }
     Some("get_claude_desktop_status") => {
@@ -1803,11 +1485,11 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("scan_openclaw_config_health") => {
-      check_usage_endpoint(args, "/scan_openclaw_config_health")
+      check_usage_endpoint(args, "/openclaw/config-health")
       true
     }
     Some("get_openclaw_default_model") => {
-      check_usage_endpoint(args, "/get_openclaw_default_model")
+      check_usage_endpoint(args, "/openclaw/default-model")
       true
     }
     Some("set_openclaw_default_model") => {
@@ -1815,15 +1497,15 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("get_openclaw_model_catalog") => {
-      check_usage_endpoint(args, "/get_openclaw_model_catalog")
+      check_usage_endpoint(args, "/openclaw/model-catalog")
       true
     }
     Some("set_openclaw_model_catalog") => {
-      set_suite_json_config(args, "/set_openclaw_model_catalog", "--catalog")
+      set_suite_json_config(args, "/openclaw/model-catalog", "--catalog")
       true
     }
     Some("get_openclaw_agents_defaults") => {
-      check_usage_endpoint(args, "/get_openclaw_agents_defaults")
+      check_usage_endpoint(args, "/openclaw/agents-defaults")
       true
     }
     Some("set_openclaw_agents_defaults") => {
@@ -1831,7 +1513,7 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("get_openclaw_env") => {
-      check_usage_endpoint(args, "/get_openclaw_env")
+      check_usage_endpoint(args, "/openclaw/env")
       true
     }
     Some("set_openclaw_env") => {
@@ -1839,7 +1521,7 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("get_openclaw_tools") => {
-      check_usage_endpoint(args, "/get_openclaw_tools")
+      check_usage_endpoint(args, "/openclaw/tools")
       true
     }
     Some("set_openclaw_tools") => {
@@ -1847,7 +1529,7 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("get_hermes_model_config") => {
-      check_usage_endpoint(args, "/get_hermes_model_config")
+      check_usage_endpoint(args, "/hermes/model-config")
       true
     }
     Some("get_hermes_memory") => {
@@ -1859,7 +1541,7 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("get_hermes_memory_limits") => {
-      check_usage_endpoint(args, "/get_hermes_memory_limits")
+      check_usage_endpoint(args, "/hermes/memory-limits")
       true
     }
     Some("set_hermes_memory_enabled") => {
@@ -1871,7 +1553,7 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("launch_hermes_dashboard") => {
-      check_json_post_endpoint(args, "/launch_hermes_dashboard", "Hermes")
+      check_json_post_endpoint(args, "/hermes/dashboard", "Hermes")
       true
     }
     Some("get_claude_config_status") => {

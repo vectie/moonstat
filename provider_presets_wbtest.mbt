@@ -1,6 +1,6 @@
 ///|
 test "ccs provider presets include Unity2 across suite apps" {
-  guard moon_provider_presets_json("/get_provider_presets") is Array(presets) else {
+  guard moon_provider_presets_json("/providers/presets") is Array(presets) else {
     fail("expected presets")
   }
   assert_eq(presets.length(), 354)
@@ -63,7 +63,7 @@ test "ccs provider presets mirror visible ccs app counts" {
 ///|
 test "ccs provider presets filter by app and search text" {
   guard moon_provider_presets_json(
-      "/get_provider_presets?appType=gemini&query=unity2",
+      "/providers/presets?appType=gemini&query=unity2",
     )
     is Array(presets) else {
     fail("expected presets")

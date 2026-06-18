@@ -35,7 +35,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     obj["provider_presets_url"],
-    Json::string("http://127.0.0.1:15721/get_provider_presets"),
+    Json::string("http://127.0.0.1:15721/providers/presets"),
   )
   assert_eq(
     obj["usage_sync_session_url"],
@@ -131,7 +131,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET|POST /proxy/stream-check/all")))
   assert_true(routes.contains(Json::string("GET /proxy/stream-check/config")))
   assert_true(routes.contains(Json::string("POST /proxy/stream-check/config")))
-  assert_true(routes.contains(Json::string("GET /get_provider_presets")))
+  assert_true(routes.contains(Json::string("GET /providers/presets")))
   assert_true(routes.contains(Json::string("GET|POST /auth/status")))
   assert_true(routes.contains(Json::string("GET|POST /auth/accounts")))
   assert_true(routes.contains(Json::string("GET|POST /auth/login")))
@@ -212,58 +212,79 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET|POST /search_skills_sh")))
   assert_true(routes.contains(Json::string("GET /get_skill_repos")))
   assert_true(routes.contains(Json::string("POST /install_skills_from_zip")))
-  assert_true(routes.contains(Json::string("GET /get_proxy_status")))
-  assert_true(routes.contains(Json::string("GET /get_proxy_config")))
-  assert_true(routes.contains(Json::string("POST /update_proxy_config")))
-  assert_true(routes.contains(Json::string("GET /get_global_proxy_config")))
-  assert_true(routes.contains(Json::string("POST /update_global_proxy_config")))
-  assert_true(routes.contains(Json::string("GET /get_proxy_config_for_app")))
+  assert_true(routes.contains(Json::string("GET /proxy/status")))
+  assert_true(routes.contains(Json::string("POST /proxy/start")))
+  assert_true(routes.contains(Json::string("POST /proxy/stop")))
+  assert_true(routes.contains(Json::string("POST /proxy/stop-with-restore")))
+  assert_true(routes.contains(Json::string("GET|POST /proxy/config")))
+  assert_true(routes.contains(Json::string("GET|POST /proxy/global-config")))
+  assert_true(routes.contains(Json::string("GET|POST /proxy/global-url")))
+  assert_true(routes.contains(Json::string("GET|POST /proxy/test-url")))
+  assert_true(routes.contains(Json::string("GET /proxy/upstream-status")))
+  assert_true(routes.contains(Json::string("GET /proxy/local-proxies")))
+  assert_true(routes.contains(Json::string("POST /proxy/switch-provider")))
   assert_true(
-    routes.contains(Json::string("POST /update_proxy_config_for_app")),
-  )
-  assert_true(routes.contains(Json::string("GET /get_proxy_takeover_status")))
-  assert_true(routes.contains(Json::string("POST /set_proxy_takeover_for_app")))
-  assert_true(routes.contains(Json::string("GET /get_default_cost_multiplier")))
-  assert_true(routes.contains(Json::string("GET /get_pricing_model_source")))
-  assert_true(
-    routes.contains(Json::string("GET /get_default_cost_multiplier_test_hook")),
-  )
-  assert_true(routes.contains(Json::string("POST /switch_provider_test_hook")))
-  assert_true(routes.contains(Json::string("POST /import_default_config")))
-  assert_true(routes.contains(Json::string("DELETE|POST /delete_provider")))
-  assert_true(
-    routes.contains(
-      Json::string("DELETE|POST /remove_provider_from_live_config"),
-    ),
+    routes.contains(Json::string("POST /proxy/sync-current-providers-live")),
   )
   assert_true(
-    routes.contains(Json::string("DELETE|POST /remove_custom_endpoint")),
+    routes.contains(Json::string("POST /proxy/import-default-config")),
   )
-  assert_true(routes.contains(Json::string("POST /open_provider_terminal")))
+  assert_true(routes.contains(Json::string("GET /providers")))
+  assert_true(routes.contains(Json::string("GET|POST /providers/current")))
+  assert_true(routes.contains(Json::string("POST /providers")))
+  assert_true(routes.contains(Json::string("POST /providers/update")))
+  assert_true(routes.contains(Json::string("DELETE /providers")))
+  assert_true(routes.contains(Json::string("POST /providers/delete")))
+  assert_true(routes.contains(Json::string("DELETE /providers/live")))
+  assert_true(routes.contains(Json::string("POST /providers/live/remove")))
+  assert_true(routes.contains(Json::string("POST /providers/switch")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /providers/live-settings")),
+  )
+  assert_true(routes.contains(Json::string("POST /providers/terminal")))
+  assert_true(routes.contains(Json::string("GET /providers/live-ids")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /providers/live-provider")),
+  )
+  assert_true(routes.contains(Json::string("POST /providers/import-live")))
+  assert_true(routes.contains(Json::string("GET /providers/universal")))
+  assert_true(routes.contains(Json::string("GET /providers/universal/item")))
+  assert_true(routes.contains(Json::string("POST /providers/universal")))
+  assert_true(routes.contains(Json::string("DELETE /providers/universal")))
+  assert_true(routes.contains(Json::string("POST /providers/universal/delete")))
+  assert_true(routes.contains(Json::string("POST /providers/universal/sync")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /providers/test-endpoints")),
+  )
+  assert_true(routes.contains(Json::string("POST /providers/sort-order")))
+  assert_true(
+    routes.contains(Json::string("GET|POST /providers/endpoints/list")),
+  )
+  assert_true(routes.contains(Json::string("POST /providers/endpoints")))
+  assert_true(routes.contains(Json::string("DELETE /providers/endpoints")))
+  assert_true(routes.contains(Json::string("POST /providers/endpoints/remove")))
+  assert_true(routes.contains(Json::string("POST /providers/endpoints/touch")))
   assert_true(routes.contains(Json::string("GET /get_claude_config_status")))
   assert_true(routes.contains(Json::string("GET|POST /get_config_status")))
   assert_true(routes.contains(Json::string("GET /get_claude_desktop_status")))
   let control_routes = [
-    "GET /proxy/status", "POST /start_proxy_server", "POST /stop_proxy_server", "POST /stop_proxy_with_restore",
+    "GET /proxy/status", "POST /proxy/start", "POST /proxy/stop", "POST /proxy/stop-with-restore",
     "GET|POST /proxy/config", "GET|POST /proxy/global-config", "GET|POST /proxy/app-config",
     "GET|POST /proxy/default-cost-multiplier", "GET|POST /proxy/pricing-model-source",
     "GET /proxy/provider-health", "GET|POST /proxy/circuit-breaker-config", "GET /proxy/circuit-breaker-stats",
     "GET|POST|DELETE /proxy/failover-queue", "GET|POST /proxy/auto-failover-enabled",
-    "GET|POST /proxy/takeover-status", "GET /proxy/running", "POST /set_default_cost_multiplier",
-    "POST /set_pricing_model_source", "POST /switch_proxy_provider", "POST /sync_current_providers_live",
-    "GET|POST /get_providers", "GET|POST /get_current_provider", "POST /add_provider",
-    "POST /update_provider", "POST /switch_provider", "GET|POST /read_live_provider_settings",
-    "GET /get_provider_health", "POST /add_to_failover_queue", "POST|DELETE /remove_from_failover_queue",
-    "GET /get_available_providers_for_failover", "POST /set_auto_failover_enabled",
-    "POST /reset_circuit_breaker", "GET /get_mcp_servers", "POST /upsert_mcp_server",
-    "POST|DELETE /delete_mcp_server", "GET|POST /get_prompts", "POST /upsert_prompt",
-    "POST|DELETE /delete_prompt", "POST /import_opencode_providers_from_live", "GET /get_openclaw_live_provider_ids",
-    "POST /import_openclaw_providers_from_live", "GET|POST /get_openclaw_live_provider",
-    "GET /get_openclaw_default_model", "POST /set_openclaw_default_model", "GET /get_hermes_live_provider_ids",
-    "GET|POST /get_hermes_live_provider", "GET|POST /get_hermes_memory", "POST /import_hermes_providers_from_live",
-    "POST /set_hermes_memory", "GET /get_universal_providers", "GET /get_universal_provider",
-    "POST /upsert_universal_provider", "POST|DELETE /delete_universal_provider",
-    "GET|POST /test_api_endpoints", "GET|POST /fetch_models_for_config",
+    "GET|POST /proxy/takeover-status", "GET /proxy/running", "GET|POST /proxy/global-url",
+    "GET|POST /proxy/test-url", "GET /proxy/upstream-status", "GET /proxy/local-proxies",
+    "POST /proxy/switch-provider", "POST /proxy/sync-current-providers-live", "POST /proxy/import-default-config",
+    "GET /providers", "GET|POST /providers/current", "POST /providers", "POST /providers/update",
+    "POST /providers/switch", "GET|POST /providers/live-settings", "GET /providers/live-ids",
+    "GET|POST /providers/live-provider", "POST /providers/import-live", "POST /proxy/reset-circuit-breaker",
+    "GET /get_mcp_servers", "POST /upsert_mcp_server", "POST|DELETE /delete_mcp_server",
+    "GET|POST /get_prompts", "POST /upsert_prompt", "POST|DELETE /delete_prompt",
+    "GET /openclaw/config-health", "GET /openclaw/default-model", "POST /openclaw/default-model",
+    "GET /hermes/model-config", "GET /hermes/memory", "POST /hermes/memory", "GET /providers/universal",
+    "GET /providers/universal/item", "POST /providers/universal", "DELETE /providers/universal",
+    "GET|POST /providers/test-endpoints", "GET|POST /fetch_models_for_config",
   ]
   for route in control_routes {
     assert_true(routes.contains(Json::string(route)))
@@ -358,7 +379,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     moonclaw["provider_presets_url"],
-    Json::string("http://127.0.0.1:15721/get_provider_presets"),
+    Json::string("http://127.0.0.1:15721/providers/presets"),
   )
   guard integrations["moonbook"] is Object(moonbook) else {
     fail("expected moonbook integration")
@@ -467,7 +488,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     moondesk["provider_presets_url"],
-    Json::string("http://127.0.0.1:15721/get_provider_presets"),
+    Json::string("http://127.0.0.1:15721/providers/presets"),
   )
   assert_eq(
     moondesk["stream_check_config_url"],
@@ -578,71 +599,46 @@ fn suite_routes_include_path(routes : Array[Json], path : String) -> Bool {
 ///|
 fn moon_tauri_command_surface() -> Array[String] {
   [
-    "get_providers", "get_current_provider", "add_provider", "update_provider", "delete_provider",
-    "remove_provider_from_live_config", "switch_provider", "import_default_config",
     "get_claude_desktop_status", "get_claude_desktop_default_routes", "import_claude_desktop_providers_from_claude",
     "ensure_claude_desktop_official_provider", "get_claude_config_status", "get_config_status",
     "get_claude_code_config_path", "get_config_dir", "open_config_folder", "pick_directory",
     "open_external", "get_init_error", "get_migration_result", "get_skills_migration_result",
     "get_app_config_path", "open_app_config_folder", "get_claude_common_config_snippet",
     "set_claude_common_config_snippet", "get_common_config_snippet", "set_common_config_snippet",
-    "extract_common_config_snippet", "read_live_provider_settings", "get_settings",
-    "save_settings", "get_rectifier_config", "set_rectifier_config", "get_optimizer_config",
-    "set_optimizer_config", "get_copilot_optimizer_config", "set_copilot_optimizer_config",
-    "get_log_config", "set_log_config", "restart_app", "install_update_and_restart",
-    "check_for_updates", "is_portable_mode", "copy_text_to_clipboard", "get_claude_plugin_status",
-    "read_claude_plugin_config", "apply_claude_plugin_config", "is_claude_plugin_applied",
-    "apply_claude_onboarding_skip", "clear_claude_onboarding_skip", "get_claude_mcp_status",
-    "read_claude_mcp_config", "upsert_claude_mcp_server", "delete_claude_mcp_server",
-    "validate_mcp_command", "get_mcp_config", "upsert_mcp_server_in_config", "delete_mcp_server_in_config",
-    "set_mcp_enabled", "get_mcp_servers", "upsert_mcp_server", "delete_mcp_server",
-    "toggle_mcp_app", "import_mcp_from_apps", "get_prompts", "upsert_prompt", "delete_prompt",
-    "enable_prompt", "import_prompt_from_file", "get_current_prompt_file_content",
-    "fetch_models_for_config", "test_api_endpoints", "get_custom_endpoints", "add_custom_endpoint",
-    "remove_custom_endpoint", "update_endpoint_last_used", "get_app_config_dir_override",
-    "set_app_config_dir_override", "update_providers_sort_order", "export_config_to_file",
-    "import_config_from_file", "webdav_test_connection", "webdav_sync_upload", "webdav_sync_download",
-    "webdav_sync_save_settings", "webdav_sync_fetch_remote_info", "s3_test_connection",
-    "s3_sync_upload", "s3_sync_download", "s3_sync_save_settings", "s3_sync_fetch_remote_info",
-    "save_file_dialog", "open_file_dialog", "open_zip_file_dialog", "create_db_backup",
-    "list_db_backups", "restore_db_backup", "rename_db_backup", "delete_db_backup",
-    "sync_current_providers_live", "parse_deeplink", "merge_deeplink_config", "import_from_deeplink",
-    "import_from_deeplink_unified", "update_tray_menu", "check_env_conflicts", "delete_env_vars",
-    "restore_env_backup", "get_installed_skills", "get_skill_backups", "delete_skill_backup",
-    "install_skill_unified", "uninstall_skill_unified", "restore_skill_backup", "toggle_skill_app",
-    "scan_unmanaged_skills", "import_skills_from_apps", "discover_available_skills",
+    "extract_common_config_snippet", "get_settings", "save_settings", "get_rectifier_config",
+    "set_rectifier_config", "get_optimizer_config", "set_optimizer_config", "get_copilot_optimizer_config",
+    "set_copilot_optimizer_config", "get_log_config", "set_log_config", "restart_app",
+    "install_update_and_restart", "check_for_updates", "is_portable_mode", "copy_text_to_clipboard",
+    "get_claude_plugin_status", "read_claude_plugin_config", "apply_claude_plugin_config",
+    "is_claude_plugin_applied", "apply_claude_onboarding_skip", "clear_claude_onboarding_skip",
+    "get_claude_mcp_status", "read_claude_mcp_config", "upsert_claude_mcp_server",
+    "delete_claude_mcp_server", "validate_mcp_command", "get_mcp_config", "upsert_mcp_server_in_config",
+    "delete_mcp_server_in_config", "set_mcp_enabled", "get_mcp_servers", "upsert_mcp_server",
+    "delete_mcp_server", "toggle_mcp_app", "import_mcp_from_apps", "get_prompts",
+    "upsert_prompt", "delete_prompt", "enable_prompt", "import_prompt_from_file",
+    "get_current_prompt_file_content", "fetch_models_for_config", "get_app_config_dir_override",
+    "set_app_config_dir_override", "export_config_to_file", "import_config_from_file",
+    "webdav_test_connection", "webdav_sync_upload", "webdav_sync_download", "webdav_sync_save_settings",
+    "webdav_sync_fetch_remote_info", "s3_test_connection", "s3_sync_upload", "s3_sync_download",
+    "s3_sync_save_settings", "s3_sync_fetch_remote_info", "save_file_dialog", "open_file_dialog",
+    "open_zip_file_dialog", "create_db_backup", "list_db_backups", "restore_db_backup",
+    "rename_db_backup", "delete_db_backup", "parse_deeplink", "merge_deeplink_config",
+    "import_from_deeplink", "import_from_deeplink_unified", "update_tray_menu", "check_env_conflicts",
+    "delete_env_vars", "restore_env_backup", "get_installed_skills", "get_skill_backups",
+    "delete_skill_backup", "install_skill_unified", "uninstall_skill_unified", "restore_skill_backup",
+    "toggle_skill_app", "scan_unmanaged_skills", "import_skills_from_apps", "discover_available_skills",
     "check_skill_updates", "update_skill", "migrate_skill_storage", "search_skills_sh",
     "get_skills", "get_skills_for_app", "install_skill", "install_skill_for_app",
     "uninstall_skill", "uninstall_skill_for_app", "get_skill_repos", "add_skill_repo",
     "remove_skill_repo", "install_skills_from_zip", "set_auto_launch", "get_auto_launch_status",
-    "start_proxy_server", "stop_proxy_server", "stop_proxy_with_restore", "get_proxy_takeover_status",
-    "set_proxy_takeover_for_app", "get_proxy_status", "get_proxy_config", "update_proxy_config",
-    "get_global_proxy_config", "update_global_proxy_config", "get_proxy_config_for_app",
-    "update_proxy_config_for_app", "get_default_cost_multiplier", "set_default_cost_multiplier",
-    "get_pricing_model_source", "set_pricing_model_source", "is_proxy_running", "is_live_takeover_active",
-    "switch_proxy_provider", "get_provider_health", "reset_circuit_breaker", "get_circuit_breaker_config",
-    "update_circuit_breaker_config", "get_circuit_breaker_stats", "get_failover_queue",
-    "get_available_providers_for_failover", "add_to_failover_queue", "remove_from_failover_queue",
-    "get_auto_failover_enabled", "set_auto_failover_enabled", "list_sessions", "get_session_messages",
-    "delete_session", "delete_sessions", "launch_session_terminal", "get_tool_versions",
-    "run_tool_lifecycle_action", "probe_tool_installations", "open_provider_terminal",
-    "get_universal_providers", "get_universal_provider", "upsert_universal_provider",
-    "delete_universal_provider", "sync_universal_provider", "import_opencode_providers_from_live",
-    "get_opencode_live_provider_ids", "import_openclaw_providers_from_live", "get_openclaw_live_provider_ids",
-    "get_openclaw_live_provider", "scan_openclaw_config_health", "get_openclaw_default_model",
-    "set_openclaw_default_model", "get_openclaw_model_catalog", "set_openclaw_model_catalog",
-    "get_openclaw_agents_defaults", "set_openclaw_agents_defaults", "get_openclaw_env",
-    "set_openclaw_env", "get_openclaw_tools", "set_openclaw_tools", "import_hermes_providers_from_live",
-    "get_hermes_live_provider_ids", "get_hermes_live_provider", "get_hermes_model_config",
-    "open_hermes_web_ui", "launch_hermes_dashboard", "get_hermes_memory", "set_hermes_memory",
-    "get_hermes_memory_limits", "set_hermes_memory_enabled", "get_global_proxy_url",
-    "set_global_proxy_url", "test_proxy_url", "get_upstream_proxy_status", "scan_local_proxies",
-    "set_window_theme", "read_omo_local_file", "get_current_omo_provider_id", "disable_current_omo",
-    "read_omo_slim_local_file", "get_current_omo_slim_provider_id", "disable_current_omo_slim",
-    "read_workspace_file", "write_workspace_file", "list_daily_memory_files", "read_daily_memory_file",
-    "write_daily_memory_file", "delete_daily_memory_file", "search_daily_memory_files",
-    "open_workspace_directory", "enter_lightweight_mode", "exit_lightweight_mode",
-    "is_lightweight_mode",
+    "list_sessions", "get_session_messages", "delete_session", "delete_sessions",
+    "launch_session_terminal", "get_tool_versions", "run_tool_lifecycle_action",
+    "probe_tool_installations", "set_window_theme", "read_omo_local_file", "get_current_omo_provider_id",
+    "disable_current_omo", "read_omo_slim_local_file", "get_current_omo_slim_provider_id",
+    "disable_current_omo_slim", "read_workspace_file", "write_workspace_file", "list_daily_memory_files",
+    "read_daily_memory_file", "write_daily_memory_file", "delete_daily_memory_file",
+    "search_daily_memory_files", "open_workspace_directory", "enter_lightweight_mode",
+    "exit_lightweight_mode", "is_lightweight_mode",
   ]
 }
 
@@ -656,7 +652,7 @@ test "suite manifest covers current Moonstat command surface" {
   guard manifest is Object(obj) else { fail("expected manifest object") }
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
   let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 228)
+  assert_eq(moon_commands.length(), 145)
   for command in moon_commands {
     assert_true(suite_routes_include_path(routes, "/\{command}"))
   }
@@ -677,7 +673,7 @@ fn gateway_source_registers_path(source : String, path : String) -> Bool {
 async test "gateway registers current Moonstat command handlers" {
   let source = @fsx.read_file("gateway_core.mbt")
   let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 228)
+  assert_eq(moon_commands.length(), 145)
   for command in moon_commands {
     assert_true(gateway_source_registers_path(source, "/\{command}"))
   }
@@ -714,7 +710,7 @@ async test "suite status writes discovery file" {
     )
     assert_eq(
       obj["provider_presets_url"],
-      Json::string("http://127.0.0.1:17000/get_provider_presets"),
+      Json::string("http://127.0.0.1:17000/providers/presets"),
     )
     assert_eq(
       obj["usage_sync_session_url"],
@@ -772,7 +768,7 @@ async test "suite status writes discovery file" {
     )
     assert_eq(
       moondesk["provider_presets_url"],
-      Json::string("http://127.0.0.1:17000/get_provider_presets"),
+      Json::string("http://127.0.0.1:17000/providers/presets"),
     )
     assert_eq(
       moondesk["stream_check_provider_url"],

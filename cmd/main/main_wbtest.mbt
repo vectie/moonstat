@@ -177,18 +177,8 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("set_proxy_takeover_for_app"),
   )
   assert_true(
-    registered_cli_command_id([
-      "moonstat", "set_default_cost_multiplier_test_hook",
-    ]) ==
-    Some("set_default_cost_multiplier_test_hook"),
-  )
-  assert_true(
     registered_cli_command_id(["moonstat", "proxy", "running"]) ==
     Some("is_proxy_running"),
-  )
-  assert_true(
-    registered_cli_command_id(["moonstat", "get_proxy_status"]) ==
-    Some("get_proxy_status"),
   )
   assert_true(
     registered_cli_command_id(["moonstat", "provider", "list"]) ==
@@ -211,18 +201,10 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("provider_live_ids"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "get_openclaw_live_provider"]) ==
-    Some("get_openclaw_live_provider"),
-  )
-  assert_true(
     registered_cli_command_id([
-      "moonstat", "import_openclaw_providers_from_live",
+      "moonstat", "provider", "openclaw", "import-live",
     ]) ==
     Some("import_openclaw_providers_from_live"),
-  )
-  assert_true(
-    registered_cli_command_id(["moonstat", "switch_provider_test_hook"]) ==
-    Some("switch_provider_test_hook"),
   )
   assert_true(
     registered_cli_command_id([
@@ -243,31 +225,31 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("model_candidates"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "scan_openclaw_config_health"]) ==
+    registered_cli_command_id(["moonstat", "openclaw", "config-health"]) ==
     Some("scan_openclaw_config_health"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "set_openclaw_model_catalog"]) ==
+    registered_cli_command_id(["moonstat", "openclaw", "model-catalog", "set"]) ==
     Some("set_openclaw_model_catalog"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "get-openclaw-agents-defaults"]) ==
+    registered_cli_command_id(["moonstat", "openclaw", "agents-defaults"]) ==
     Some("get_openclaw_agents_defaults"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "set_openclaw_tools"]) ==
+    registered_cli_command_id(["moonstat", "openclaw", "tools", "set"]) ==
     Some("set_openclaw_tools"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "get_hermes_memory"]) ==
+    registered_cli_command_id(["moonstat", "hermes", "memory"]) ==
     Some("get_hermes_memory"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "open-hermes-web-ui"]) ==
+    registered_cli_command_id(["moonstat", "hermes", "web-ui"]) ==
     Some("open_hermes_web_ui"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "launch_hermes_dashboard"]) ==
+    registered_cli_command_id(["moonstat", "hermes", "dashboard"]) ==
     Some("launch_hermes_dashboard"),
   )
   assert_true(
@@ -748,26 +730,26 @@ test "proxy config setter paths encode moonstat command arguments" {
   assert_eq(
     proxy_provider_endpoint_path(
       [
-        "moonstat", "proxy", "switch-proxy-provider", "--app", "codex", "--provider-id",
+        "moonstat", "proxy", "switch-provider", "--app", "codex", "--provider-id",
         "codex-oauth",
       ],
-      "/switch_proxy_provider",
+      "/proxy/switch-provider",
     ),
-    Some("/switch_proxy_provider?provider_id=codex-oauth&app_type=codex"),
+    Some("/proxy/switch-provider?provider_id=codex-oauth&app_type=codex"),
   )
   assert_eq(
     provider_app_path(
       ["moonstat", "provider", "list", "--app", "codex"],
-      "/get_providers",
+      "/providers",
     ),
-    "/get_providers?app=codex",
+    "/providers?app=codex",
   )
   assert_eq(
     provider_id_path(
       ["moonstat", "provider", "switch", "--app", "codex", "--id", "custom"],
-      "/switch_provider",
+      "/providers/switch",
     ),
-    Some("/switch_provider?app=codex&id=custom"),
+    Some("/providers/switch?app=codex&id=custom"),
   )
   assert_eq(
     provider_upsert_path(
@@ -777,11 +759,11 @@ test "proxy config setter paths encode moonstat command arguments" {
         "sk-test", "--category", "custom", "--enabled", "true", "--add-to-live",
         "false",
       ],
-      "/add_provider",
+      "/providers",
       require_original=false,
     ),
     Some(
-      "/add_provider?app=codex&id=custom&name=Custom%20Provider&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&category=custom&enabled=true&addToLive=false",
+      "/providers?app=codex&id=custom&name=Custom%20Provider&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&category=custom&enabled=true&addToLive=false",
     ),
   )
   assert_eq(
@@ -789,9 +771,9 @@ test "proxy config setter paths encode moonstat command arguments" {
       [
         "moonstat", "provider", "endpoints", "list", "--app", "codex", "--id", "custom",
       ],
-      "/get_custom_endpoints",
+      "/providers/endpoints/list",
     ),
-    Some("/get_custom_endpoints?app=codex&id=custom"),
+    Some("/providers/endpoints/list?app=codex&id=custom"),
   )
   assert_eq(
     provider_endpoint_url_path(
@@ -799,10 +781,10 @@ test "proxy config setter paths encode moonstat command arguments" {
         "moonstat", "provider", "endpoints", "add", "--app", "codex", "--id", "custom",
         "--endpoint-url", "https://backup.example.com/v1",
       ],
-      "/add_custom_endpoint",
+      "/providers/endpoints",
     ),
     Some(
-      "/add_custom_endpoint?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
+      "/providers/endpoints?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
     ),
   )
   assert_eq(
@@ -811,10 +793,10 @@ test "proxy config setter paths encode moonstat command arguments" {
         "moonstat", "provider", "endpoints", "touch", "--app", "codex", "--id", "custom",
         "--endpoint-url", "https://backup.example.com/v1",
       ],
-      "/update_endpoint_last_used",
+      "/providers/endpoints/touch",
     ),
     Some(
-      "/update_endpoint_last_used?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
+      "/providers/endpoints/touch?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
     ),
   )
   assert_eq(
@@ -823,7 +805,7 @@ test "proxy config setter paths encode moonstat command arguments" {
       "--timeoutSecs", "3",
     ]),
     Some(
-      "/test_api_endpoints?urls=https%3A%2F%2Fapi.example.com%2Fv1%2Cnot-a-url&timeoutSecs=3",
+      "/providers/test-endpoints?urls=https%3A%2F%2Fapi.example.com%2Fv1%2Cnot-a-url&timeoutSecs=3",
     ),
   )
   assert_eq(
@@ -831,16 +813,16 @@ test "proxy config setter paths encode moonstat command arguments" {
       "moonstat", "provider", "sort-order", "set", "--app", "codex", "--id", "custom",
       "--sort-index", "2",
     ]),
-    Some("/update_providers_sort_order?app=codex&id=custom&sortIndex=2"),
+    Some("/providers/sort-order?app=codex&id=custom&sortIndex=2"),
   )
 }
 
 ///|
-test "top level moonstat proxy command names build command alias paths" {
+test "proxy grouped commands build canonical paths" {
   assert_eq(
     proxy_global_config_update_path(
       [
-        "moonstat", "update_global_proxy_config", "--proxyEnabled", "true", "--listenAddress",
+        "moonstat", "proxy", "global-config", "set", "--proxyEnabled", "true", "--listenAddress",
         "127.0.0.1", "--listenPort", "15721",
       ],
       "/proxy/global-config",
@@ -849,7 +831,7 @@ test "top level moonstat proxy command names build command alias paths" {
   )
   assert_eq(
     proxy_app_config_update_path([
-      "moonstat", "update_proxy_config_for_app", "--appType", "codex", "--enabled",
+      "moonstat", "proxy", "app-config", "set", "--appType", "codex", "--enabled",
       "true", "--autoFailoverEnabled", "true",
     ]),
     "/proxy/app-config?appType=codex&enabled=true&autoFailoverEnabled=true",
@@ -857,71 +839,74 @@ test "top level moonstat proxy command names build command alias paths" {
   assert_eq(
     proxy_provider_endpoint_path(
       [
-        "moonstat", "switch_proxy_provider", "--app-type", "codex", "--provider-id",
+        "moonstat", "proxy", "switch-provider", "--app-type", "codex", "--provider-id",
         "codex oauth",
       ],
-      "/switch_proxy_provider",
+      "/proxy/switch-provider",
     ),
-    Some("/switch_proxy_provider?provider_id=codex%20oauth&app_type=codex"),
+    Some("/proxy/switch-provider?provider_id=codex%20oauth&app_type=codex"),
   )
   assert_eq(
     proxy_auto_failover_enabled_path([
-      "moonstat", "set_auto_failover_enabled", "--appType", "codex", "--enabled",
-      "true",
+      "moonstat", "proxy", "auto-failover-enabled", "set", "--appType", "codex",
+      "--enabled", "true",
     ]),
     Some("/proxy/auto-failover-enabled?app_type=codex&enabled=true"),
   )
   assert_eq(
     global_proxy_url_path(
-      ["moonstat", "set_global_proxy_url", "--url", "http://127.0.0.1:7890"],
-      "/set_global_proxy_url",
+      [
+        "moonstat", "proxy", "global-url", "set", "--url", "http://127.0.0.1:7890",
+      ],
+      "/proxy/global-url",
     ),
-    Some("/set_global_proxy_url?url=http%3A%2F%2F127.0.0.1%3A7890"),
+    Some("/proxy/global-url?url=http%3A%2F%2F127.0.0.1%3A7890"),
   )
   assert_eq(
     global_proxy_url_path(
-      ["moonstat", "test_proxy_url", "--url", "socks5://127.0.0.1:1080"],
-      "/test_proxy_url",
+      ["moonstat", "proxy", "test-url", "--url", "socks5://127.0.0.1:1080"],
+      "/proxy/test-url",
     ),
-    Some("/test_proxy_url?url=socks5%3A%2F%2F127.0.0.1%3A1080"),
+    Some("/proxy/test-url?url=socks5%3A%2F%2F127.0.0.1%3A1080"),
   )
   assert_eq(
     provider_app_path(
-      ["moonstat", "import_default_config_test_hook", "--app", "codex"],
-      "/import_default_config_test_hook",
+      ["moonstat", "proxy", "import-default-config", "--app", "codex"],
+      "/proxy/import-default-config",
     ),
-    "/import_default_config_test_hook?app=codex",
+    "/proxy/import-default-config?app=codex",
   )
   assert_eq(
     openclaw_default_model_path([
-      "moonstat", "set_openclaw_default_model", "--primary", "gpt-5", "--fallbacks",
+      "moonstat", "openclaw", "default-model", "set", "--primary", "gpt-5", "--fallbacks",
       "sonnet,opus",
     ]),
-    Some("/set_openclaw_default_model?primary=gpt-5&fallbacks=sonnet%2Copus"),
+    Some("/openclaw/default-model?primary=gpt-5&fallbacks=sonnet%2Copus"),
   )
   assert_eq(
     suite_json_config_path(
       [
-        "moonstat", "set_openclaw_model_catalog", "--catalog", "{\"fast\":{\"alias\":\"f\"}}",
+        "moonstat", "openclaw", "model-catalog", "set", "--catalog", "{\"fast\":{\"alias\":\"f\"}}",
       ],
-      "/set_openclaw_model_catalog",
+      "/openclaw/model-catalog",
       "--catalog",
     ),
     Some(
-      "/set_openclaw_model_catalog?catalog=%7B%22fast%22%3A%7B%22alias%22%3A%22f%22%7D%7D",
+      "/openclaw/model-catalog?catalog=%7B%22fast%22%3A%7B%22alias%22%3A%22f%22%7D%7D",
     ),
   )
   assert_eq(
     hermes_memory_path([
-      "moonstat", "set_hermes_memory", "--kind", "memory", "--content", "hello world",
+      "moonstat", "hermes", "memory", "set", "--kind", "memory", "--content", "hello world",
     ]),
-    Some("/set_hermes_memory?kind=memory&content=hello%20world"),
+    Some("/hermes/memory?kind=memory&content=hello%20world"),
   )
   assert_eq(
     hermes_memory_enabled_path([
-      "moonstat", "set_hermes_memory_enabled", "--kind", "user", "--enabled", "false",
+      "moonstat", "hermes", "memory-enabled", "set", "--kind", "user", "--enabled",
+      "false",
     ]),
-    Some("/set_hermes_memory_enabled?kind=user&enabled=false"),
+    Some("/hermes/memory-enabled?kind=user&enabled=false"),
   )
   assert_eq(
     delete_sessions_body([
@@ -980,63 +965,65 @@ test "top level moonstat proxy command names build command alias paths" {
 }
 
 ///|
-test "top level moonstat provider command names build command alias paths" {
+test "provider grouped commands build canonical paths" {
   assert_eq(
     provider_app_path(
-      ["moonstat", "get_providers", "--appType", "codex"],
-      "/get_providers",
+      ["moonstat", "provider", "list", "--appType", "codex"],
+      "/providers",
     ),
-    "/get_providers?app=codex",
+    "/providers?app=codex",
   )
   assert_eq(
     provider_id_path(
       [
-        "moonstat", "switch_provider", "--appType", "codex", "--providerId", "custom provider",
+        "moonstat", "provider", "switch", "--appType", "codex", "--providerId", "custom provider",
       ],
-      "/switch_provider",
+      "/providers/switch",
     ),
-    Some("/switch_provider?app=codex&id=custom%20provider"),
+    Some("/providers/switch?app=codex&id=custom%20provider"),
   )
   assert_eq(
     provider_endpoint_url_path(
       [
-        "moonstat", "add_custom_endpoint", "--appType", "codex", "--providerId",
+        "moonstat", "provider", "endpoints", "add", "--appType", "codex", "--providerId",
         "custom", "--endpointUrl", "https://backup.example.com/v1",
       ],
-      "/add_custom_endpoint",
+      "/providers/endpoints",
     ),
     Some(
-      "/add_custom_endpoint?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
+      "/providers/endpoints?app=codex&providerId=custom&url=https%3A%2F%2Fbackup.example.com%2Fv1",
     ),
   )
   assert_eq(
     provider_live_ids_path("opencode"),
-    "/get_opencode_live_provider_ids",
+    "/providers/live-ids?app=opencode",
   )
   assert_eq(
     provider_live_provider_path(
-      ["moonstat", "get_openclaw_live_provider", "--providerId", "open claw"],
+      [
+        "moonstat", "provider", "openclaw", "live-get", "--providerId", "open claw",
+      ],
       "openclaw",
     ),
-    Some("/get_openclaw_live_provider?providerId=open%20claw"),
+    Some("/providers/live-provider?app=openclaw&providerId=open%20claw"),
   )
   assert_eq(
     provider_live_provider_path(
-      ["moonstat", "get_hermes_live_provider", "--id", "hermes/a"],
+      ["moonstat", "provider", "hermes", "live-get", "--id", "hermes/a"],
       "hermes",
     ),
-    Some("/get_hermes_live_provider?providerId=hermes%2Fa"),
+    Some("/providers/live-provider?app=hermes&providerId=hermes%2Fa"),
   )
   assert_eq(
     provider_import_live_path("openclaw"),
-    "/import_openclaw_providers_from_live",
+    "/providers/import-live?app=openclaw",
   )
   assert_eq(
     universal_provider_id_path(
-      ["moonstat", "sync_universal_provider", "--id", "u 1"],
-      "/sync_universal_provider",
+      ["moonstat", "provider", "universal", "sync", "--id", "u 1"],
+      "/providers/universal/sync",
     ),
-    Some("/sync_universal_provider?id=u%201"),
+    Some("/providers/universal/sync?id=u%201"),
   )
   assert_eq(
     universal_provider_upsert_path([
@@ -1046,7 +1033,7 @@ test "top level moonstat provider command names build command alias paths" {
       "--reasoning-effort", "medium",
     ]),
     Some(
-      "/upsert_universal_provider?id=u%201&name=Universal%20One&providerType=openai-compatible&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&apps=claude%2Ccodex&codexModel=gpt-5&reasoningEffort=medium",
+      "/providers/universal?id=u%201&name=Universal%20One&providerType=openai-compatible&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&apps=claude%2Ccodex&codexModel=gpt-5&reasoningEffort=medium",
     ),
   )
   assert_eq(
@@ -1054,7 +1041,7 @@ test "top level moonstat provider command names build command alias paths" {
       "moonstat", "provider", "presets", "list", "--app", "gemini", "--query", "unity2",
       "--sort-mode", "nameAsc",
     ]),
-    "/get_provider_presets?appType=gemini&query=unity2&sortMode=nameAsc",
+    "/providers/presets?appType=gemini&query=unity2&sortMode=nameAsc",
   )
 }
 
@@ -1566,38 +1553,5 @@ test "top level moonstat skill commands build paths" {
       "codex",
     ]),
     "/install_skills_from_zip?filePath=%2Ftmp%2Fskill%20bundle&currentApp=codex",
-  )
-}
-
-///|
-test "top level moonstat provider test hook commands build paths" {
-  assert_eq(
-    proxy_app_value_update_path(
-      [
-        "moonstat", "set_default_cost_multiplier_test_hook", "--appType", "codex",
-        "--value", "1.25",
-      ],
-      "/set_default_cost_multiplier_test_hook",
-    ),
-    Some("/set_default_cost_multiplier_test_hook?app_type=codex&value=1.25"),
-  )
-  assert_eq(
-    proxy_app_value_update_path(
-      [
-        "moonstat", "set_pricing_model_source_test_hook", "--app-type", "claude",
-        "--value", "request",
-      ],
-      "/set_pricing_model_source_test_hook",
-    ),
-    Some("/set_pricing_model_source_test_hook?app_type=claude&value=request"),
-  )
-  assert_eq(
-    provider_id_path(
-      [
-        "moonstat", "switch_provider_test_hook", "--app", "claude", "--id", "codex-oauth",
-      ],
-      "/switch_provider_test_hook",
-    ),
-    Some("/switch_provider_test_hook?app=claude&id=codex-oauth"),
   )
 }

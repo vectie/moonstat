@@ -5,17 +5,17 @@ async fn check_proxy_status(args : Array[String]) -> Unit {
 
 ///|
 async fn start_proxy_server(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, "/start_proxy_server", "Proxy")
+  check_json_post_endpoint(args, "/proxy/start", "Proxy")
 }
 
 ///|
 async fn stop_proxy_server(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, "/stop_proxy_server", "Proxy")
+  check_json_post_endpoint(args, "/proxy/stop", "Proxy")
 }
 
 ///|
 async fn stop_proxy_with_restore(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, "/stop_proxy_with_restore", "Proxy")
+  check_json_post_endpoint(args, "/proxy/stop-with-restore", "Proxy")
 }
 
 ///|
@@ -48,7 +48,7 @@ async fn update_proxy_global_config(args : Array[String]) -> Unit {
 
 ///|
 async fn set_global_proxy_url(args : Array[String]) -> Unit {
-  guard global_proxy_url_path(args, "/set_global_proxy_url") is Some(path) else {
+  guard global_proxy_url_path(args, "/proxy/global-url") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --url")
     return
@@ -58,7 +58,7 @@ async fn set_global_proxy_url(args : Array[String]) -> Unit {
 
 ///|
 async fn test_global_proxy_url(args : Array[String]) -> Unit {
-  guard global_proxy_url_path(args, "/test_proxy_url") is Some(path) else {
+  guard global_proxy_url_path(args, "/proxy/test-url") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --url")
     return
@@ -93,28 +93,6 @@ async fn set_proxy_default_cost_multiplier(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn check_proxy_default_cost_multiplier_test_hook(
-  args : Array[String],
-) -> Unit {
-  check_proxy_app_endpoint(args, "/get_default_cost_multiplier_test_hook")
-}
-
-///|
-async fn set_proxy_default_cost_multiplier_test_hook(
-  args : Array[String],
-) -> Unit {
-  guard proxy_app_value_update_path(
-      args, "/set_default_cost_multiplier_test_hook",
-    )
-    is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --value")
-    return
-  }
-  check_json_post_endpoint(args, path, "Proxy")
-}
-
-///|
 async fn check_proxy_pricing_model_source(args : Array[String]) -> Unit {
   check_proxy_app_endpoint(args, "/proxy/pricing-model-source")
 }
@@ -122,24 +100,6 @@ async fn check_proxy_pricing_model_source(args : Array[String]) -> Unit {
 ///|
 async fn set_proxy_pricing_model_source(args : Array[String]) -> Unit {
   guard proxy_app_value_update_path(args, "/proxy/pricing-model-source")
-    is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --value")
-    return
-  }
-  check_json_post_endpoint(args, path, "Proxy")
-}
-
-///|
-async fn check_proxy_pricing_model_source_test_hook(
-  args : Array[String],
-) -> Unit {
-  check_proxy_app_endpoint(args, "/get_pricing_model_source_test_hook")
-}
-
-///|
-async fn set_proxy_pricing_model_source_test_hook(args : Array[String]) -> Unit {
-  guard proxy_app_value_update_path(args, "/set_pricing_model_source_test_hook")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --value")
@@ -250,7 +210,7 @@ async fn set_proxy_takeover_status(args : Array[String]) -> Unit {
 
 ///|
 async fn switch_proxy_provider(args : Array[String]) -> Unit {
-  guard proxy_provider_endpoint_path(args, "/switch_proxy_provider")
+  guard proxy_provider_endpoint_path(args, "/proxy/switch-provider")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --provider-id")
@@ -295,10 +255,6 @@ fn cli_proxy_command_id(command_id : String) -> Bool {
     | "test_proxy_url"
     | "get_upstream_proxy_status"
     | "scan_local_proxies"
-    | "get_default_cost_multiplier_test_hook"
-    | "set_default_cost_multiplier_test_hook"
-    | "get_pricing_model_source_test_hook"
-    | "set_pricing_model_source_test_hook"
     | "get_provider_health"
     | "get_circuit_breaker_stats"
     | "reset_circuit_breaker"
@@ -321,8 +277,7 @@ async fn run_proxy_cli_command(
     "update_global_proxy_config" => update_proxy_global_config(args)
     "get_global_proxy_config" => check_proxy_global_config(args)
     "set_global_proxy_url" => set_global_proxy_url(args)
-    "get_global_proxy_url" =>
-      check_usage_endpoint(args, "/get_global_proxy_url")
+    "get_global_proxy_url" => check_usage_endpoint(args, "/proxy/global-url")
     "update_proxy_config_for_app" => update_proxy_app_config(args)
     "get_proxy_config_for_app" => check_proxy_app_config(args)
     "set_default_cost_multiplier" => set_proxy_default_cost_multiplier(args)
@@ -344,23 +299,15 @@ async fn run_proxy_cli_command(
     "stop_proxy_with_restore" => stop_proxy_with_restore(args)
     "test_proxy_url" => test_global_proxy_url(args)
     "get_upstream_proxy_status" =>
-      check_usage_endpoint(args, "/get_upstream_proxy_status")
-    "scan_local_proxies" => check_usage_endpoint(args, "/scan_local_proxies")
-    "get_default_cost_multiplier_test_hook" =>
-      check_proxy_default_cost_multiplier_test_hook(args)
-    "set_default_cost_multiplier_test_hook" =>
-      set_proxy_default_cost_multiplier_test_hook(args)
-    "get_pricing_model_source_test_hook" =>
-      check_proxy_pricing_model_source_test_hook(args)
-    "set_pricing_model_source_test_hook" =>
-      set_proxy_pricing_model_source_test_hook(args)
+      check_usage_endpoint(args, "/proxy/upstream-status")
+    "scan_local_proxies" => check_usage_endpoint(args, "/proxy/local-proxies")
     "get_provider_health" => check_proxy_provider_health(args)
     "get_circuit_breaker_stats" => check_proxy_circuit_breaker_stats(args)
     "reset_circuit_breaker" => reset_proxy_circuit_breaker(args)
     "get_available_providers_for_failover" =>
       check_proxy_available_failover_providers(args)
     "is_live_takeover_active" =>
-      check_proxy_endpoint(args, "/is_live_takeover_active")
+      check_proxy_endpoint(args, "/proxy/takeover-status")
     "switch_proxy_provider" => switch_proxy_provider(args)
     "is_proxy_running" => check_proxy_running(args)
     _ => ()
@@ -369,25 +316,21 @@ async fn run_proxy_cli_command(
 
 ///|
 async fn check_providers(args : Array[String]) -> Unit {
-  check_json_endpoint(
-    args,
-    provider_app_path(args, "/get_providers"),
-    "Provider",
-  )
+  check_json_endpoint(args, provider_app_path(args, "/providers"), "Provider")
 }
 
 ///|
 async fn check_current_provider(args : Array[String]) -> Unit {
   check_json_endpoint(
     args,
-    provider_app_path(args, "/get_current_provider"),
+    provider_app_path(args, "/providers/current"),
     "Provider",
   )
 }
 
 ///|
 async fn add_provider(args : Array[String]) -> Unit {
-  guard provider_upsert_path(args, "/add_provider", require_original=false)
+  guard provider_upsert_path(args, "/providers", require_original=false)
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required provider args: --id")
@@ -398,7 +341,7 @@ async fn add_provider(args : Array[String]) -> Unit {
 
 ///|
 async fn update_provider(args : Array[String]) -> Unit {
-  guard provider_upsert_path(args, "/update_provider", require_original=false)
+  guard provider_upsert_path(args, "/providers/update", require_original=false)
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required provider args: --id")
@@ -409,7 +352,7 @@ async fn update_provider(args : Array[String]) -> Unit {
 
 ///|
 async fn delete_provider(args : Array[String]) -> Unit {
-  guard provider_id_path(args, "/delete_provider") is Some(path) else {
+  guard provider_id_path(args, "/providers") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --id")
     return
@@ -419,8 +362,7 @@ async fn delete_provider(args : Array[String]) -> Unit {
 
 ///|
 async fn remove_provider_from_live_config(args : Array[String]) -> Unit {
-  guard provider_id_path(args, "/remove_provider_from_live_config")
-    is Some(path) else {
+  guard provider_id_path(args, "/providers/live") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --id")
     return
@@ -430,17 +372,7 @@ async fn remove_provider_from_live_config(args : Array[String]) -> Unit {
 
 ///|
 async fn switch_provider(args : Array[String]) -> Unit {
-  guard provider_id_path(args, "/switch_provider") is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
-    return
-  }
-  check_json_post_endpoint(args, path, "Provider")
-}
-
-///|
-async fn switch_provider_test_hook(args : Array[String]) -> Unit {
-  guard provider_id_path(args, "/switch_provider_test_hook") is Some(path) else {
+  guard provider_id_path(args, "/providers/switch") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --id")
     return
@@ -450,7 +382,9 @@ async fn switch_provider_test_hook(args : Array[String]) -> Unit {
 
 ///|
 async fn sync_current_providers_live(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, "/sync_current_providers_live", "Provider")
+  check_json_post_endpoint(
+    args, "/proxy/sync-current-providers-live", "Provider",
+  )
 }
 
 ///|
@@ -467,7 +401,7 @@ async fn open_provider_terminal(args : Array[String]) -> Unit {
 async fn check_live_provider_settings(args : Array[String]) -> Unit {
   check_json_endpoint(
     args,
-    provider_app_path(args, "/read_live_provider_settings"),
+    provider_app_path(args, "/providers/live-settings"),
     "Provider",
   )
 }
@@ -535,12 +469,12 @@ async fn import_provider_live(args : Array[String]) -> Unit {
 
 ///|
 async fn check_universal_providers(args : Array[String]) -> Unit {
-  check_json_endpoint(args, "/get_universal_providers", "Provider")
+  check_json_endpoint(args, "/providers/universal", "Provider")
 }
 
 ///|
 async fn check_universal_provider(args : Array[String]) -> Unit {
-  guard universal_provider_id_path(args, "/get_universal_provider")
+  guard universal_provider_id_path(args, "/providers/universal/item")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --id")
@@ -561,8 +495,7 @@ async fn upsert_universal_provider(args : Array[String]) -> Unit {
 
 ///|
 async fn delete_universal_provider(args : Array[String]) -> Unit {
-  guard universal_provider_id_path(args, "/delete_universal_provider")
-    is Some(path) else {
+  guard universal_provider_id_path(args, "/providers/universal") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --id")
     return
@@ -572,7 +505,7 @@ async fn delete_universal_provider(args : Array[String]) -> Unit {
 
 ///|
 async fn sync_universal_provider(args : Array[String]) -> Unit {
-  guard universal_provider_id_path(args, "/sync_universal_provider")
+  guard universal_provider_id_path(args, "/providers/universal/sync")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --id")
@@ -598,7 +531,7 @@ async fn update_providers_sort_order(args : Array[String]) -> Unit {
 
 ///|
 async fn check_provider_custom_endpoints(args : Array[String]) -> Unit {
-  guard provider_id_path(args, "/get_custom_endpoints") is Some(path) else {
+  guard provider_id_path(args, "/providers/endpoints/list") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --id")
     return
@@ -608,7 +541,7 @@ async fn check_provider_custom_endpoints(args : Array[String]) -> Unit {
 
 ///|
 async fn add_provider_custom_endpoint(args : Array[String]) -> Unit {
-  guard provider_endpoint_url_path(args, "/add_custom_endpoint") is Some(path) else {
+  guard provider_endpoint_url_path(args, "/providers/endpoints") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required provider endpoint args: --id --endpoint-url")
     return
@@ -618,8 +551,7 @@ async fn add_provider_custom_endpoint(args : Array[String]) -> Unit {
 
 ///|
 async fn remove_provider_custom_endpoint(args : Array[String]) -> Unit {
-  guard provider_endpoint_url_path(args, "/remove_custom_endpoint")
-    is Some(path) else {
+  guard provider_endpoint_url_path(args, "/providers/endpoints") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required provider endpoint args: --id --endpoint-url")
     return
@@ -629,7 +561,7 @@ async fn remove_provider_custom_endpoint(args : Array[String]) -> Unit {
 
 ///|
 async fn update_provider_endpoint_last_used(args : Array[String]) -> Unit {
-  guard provider_endpoint_url_path(args, "/update_endpoint_last_used")
+  guard provider_endpoint_url_path(args, "/providers/endpoints/touch")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required provider endpoint args: --id --endpoint-url")
@@ -722,17 +654,12 @@ fn open_provider_terminal_path(args : Array[String]) -> String? {
     Some(cwd) => query.push(cli_query_pair("cwd", cwd))
     None => ()
   }
-  Some(cli_path_with_query("/open_provider_terminal", query))
+  Some(cli_path_with_query("/providers/terminal", query))
 }
 
 ///|
 fn provider_live_ids_path(app_type : String) -> String {
-  match app_type {
-    "opencode" => "/get_opencode_live_provider_ids"
-    "openclaw" => "/get_openclaw_live_provider_ids"
-    "hermes" => "/get_hermes_live_provider_ids"
-    _ => "/get_providers?app=\{cli_url_encode(app_type)}"
-  }
+  "/providers/live-ids?app=\{cli_url_encode(app_type)}"
 }
 
 ///|
@@ -741,22 +668,14 @@ fn provider_live_provider_path(
   app_type : String,
 ) -> String? {
   guard provider_id_arg(args) is Some(provider_id) else { return None }
-  let path = match app_type {
-    "openclaw" => "/get_openclaw_live_provider"
-    "hermes" => "/get_hermes_live_provider"
-    _ => "/get_providers"
-  }
-  Some("\{path}?providerId=\{cli_url_encode(provider_id)}")
+  Some(
+    "/providers/live-provider?app=\{cli_url_encode(app_type)}&providerId=\{cli_url_encode(provider_id)}",
+  )
 }
 
 ///|
 fn provider_import_live_path(app_type : String) -> String {
-  match app_type {
-    "opencode" => "/import_opencode_providers_from_live"
-    "openclaw" => "/import_openclaw_providers_from_live"
-    "hermes" => "/import_hermes_providers_from_live"
-    _ => "/get_providers?app=\{cli_url_encode(app_type)}"
-  }
+  "/providers/import-live?app=\{cli_url_encode(app_type)}"
 }
 
 ///|
@@ -805,7 +724,7 @@ fn universal_provider_upsert_path(args : Array[String]) -> String? {
     Some(value) => query.push(cli_query_pair("reasoningEffort", value))
     None => ()
   }
-  Some("/upsert_universal_provider?\{query.join("&")}")
+  Some("/providers/universal?\{query.join("&")}")
 }
 
 ///|
@@ -821,7 +740,7 @@ fn provider_presets_path(args : Array[String]) -> String {
     Some(value) => query.push(cli_query_pair("sortMode", value))
     None => ()
   }
-  cli_path_with_query("/get_provider_presets", query)
+  cli_path_with_query("/providers/presets", query)
 }
 
 ///|
@@ -851,7 +770,7 @@ fn provider_test_endpoints_path(args : Array[String]) -> String? {
     Some(value) => query.push(cli_query_pair("timeoutSecs", value))
     None => ()
   }
-  Some("/test_api_endpoints?\{query.join("&")}")
+  Some("/providers/test-endpoints?\{query.join("&")}")
 }
 
 ///|
@@ -862,7 +781,7 @@ fn provider_sort_order_path(args : Array[String]) -> String? {
     return None
   }
   Some(
-    "/update_providers_sort_order?app=\{cli_url_encode(provider_app_arg(args))}&id=\{cli_url_encode(provider_id)}&sortIndex=\{cli_url_encode(sort_index)}",
+    "/providers/sort-order?app=\{cli_url_encode(provider_app_arg(args))}&id=\{cli_url_encode(provider_id)}&sortIndex=\{cli_url_encode(sort_index)}",
   )
 }
 

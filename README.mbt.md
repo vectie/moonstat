@@ -89,85 +89,69 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `GET /stats`
 - `GET /metrics`
 - `GET /proxy/status`
-- `POST /start_proxy_server`
-- `POST /stop_proxy_server`
-- `POST /stop_proxy_with_restore`
+- `POST /proxy/start`
+- `POST /proxy/stop`
+- `POST /proxy/stop-with-restore`
 - `GET /proxy/config`
 - `POST /proxy/config`
 - `GET /proxy/global-config`
 - `POST /proxy/global-config`
-- `GET /get_global_proxy_url`
-- `POST /set_global_proxy_url?url=http://127.0.0.1:7890`
-- `GET|POST /test_proxy_url?url=http://127.0.0.1:7890`
-- `GET /get_upstream_proxy_status`
-- `GET /scan_local_proxies`
+- `GET /proxy/global-url`
+- `POST /proxy/global-url?url=http://127.0.0.1:7890`
+- `GET|POST /proxy/test-url?url=http://127.0.0.1:7890`
+- `GET /proxy/upstream-status`
+- `GET /proxy/local-proxies`
 - `GET /proxy/app-config?app_type=claude`
 - `POST /proxy/app-config?app_type=claude&enabled=true`
 - `GET /proxy/default-cost-multiplier?app_type=claude`
 - `POST /proxy/default-cost-multiplier?app_type=claude&value=1.25`
-- `POST /set_default_cost_multiplier?app_type=claude&value=1.25`
 - `GET /proxy/pricing-model-source?app_type=claude`
 - `POST /proxy/pricing-model-source?app_type=claude&value=request`
-- `POST /set_pricing_model_source?app_type=claude&value=request`
 - `GET /proxy/provider-health?app_type=claude&provider_id=codex-oauth`
-- `GET /get_provider_health?app_type=claude&provider_id=codex-oauth`
 - `GET /proxy/circuit-breaker-config`
-- `GET /get_circuit_breaker_config`
 - `POST /proxy/circuit-breaker-config`
-- `POST /update_circuit_breaker_config`
 - `GET /proxy/circuit-breaker-stats?app_type=claude&provider_id=codex-oauth`
-- `GET /get_circuit_breaker_stats?app_type=claude&provider_id=codex-oauth`
 - `POST /proxy/reset-circuit-breaker?app_type=claude&provider_id=codex-oauth`
-- `POST /reset_circuit_breaker?app_type=claude&provider_id=codex-oauth`
 - `GET /proxy/failover-queue?app_type=claude`
-- `GET /get_failover_queue?app_type=claude`
 - `POST /proxy/failover-queue?app_type=claude&provider_id=codex-oauth`
-- `POST /add_to_failover_queue?app_type=claude&provider_id=codex-oauth`
 - `DELETE /proxy/failover-queue?app_type=claude&provider_id=codex-oauth`
-- `DELETE /remove_from_failover_queue?app_type=claude&provider_id=codex-oauth`
 - `GET /proxy/available-failover-providers?app_type=claude`
-- `GET /get_available_providers_for_failover?app_type=claude`
 - `GET /proxy/auto-failover-enabled?app_type=claude`
-- `GET /get_auto_failover_enabled?app_type=claude`
 - `POST /proxy/auto-failover-enabled?app_type=claude&enabled=true`
-- `POST /set_auto_failover_enabled?app_type=claude&enabled=true`
 - `GET /proxy/takeover-status`
 - `POST /proxy/takeover-status?app_type=claude&enabled=true`
-- `GET /is_live_takeover_active`
-- `POST /switch_proxy_provider?app_type=claude&provider_id=codex-oauth`
-- `GET /get_providers?app=codex`
-- `GET /get_current_provider?app=codex`
-- `POST /add_provider?app=codex&id=custom&name=Custom`
-- `POST /update_provider?app=codex&id=custom&name=Custom`
-- `DELETE /delete_provider?app=codex&id=custom`
-- `DELETE /remove_provider_from_live_config?app=codex&id=custom`
-- `POST /switch_provider?app=codex&id=custom`
-- `POST /sync_current_providers_live`
-- `POST /import_default_config_test_hook?app=codex`
-- `GET /read_live_provider_settings?app=codex`
-- `GET /get_opencode_live_provider_ids`
-- `GET /get_openclaw_live_provider_ids`
-- `GET /get_openclaw_live_provider?providerId=custom`
-- `GET /scan_openclaw_config_health`
-- `GET /get_openclaw_default_model`
-- `POST /set_openclaw_default_model?primary=gpt-5&fallbacks=sonnet,opus`
-- `GET /get_openclaw_model_catalog`
-- `POST /set_openclaw_model_catalog?catalog={"fast":{"alias":"f"}}`
-- `GET /get_openclaw_agents_defaults`
-- `POST /set_openclaw_agents_defaults?defaults={"model":{"primary":"gpt-5"}}`
-- `GET /get_openclaw_env`
-- `POST /set_openclaw_env?key=OPENAI_API_KEY&value=...`
-- `GET /get_openclaw_tools`
-- `POST /set_openclaw_tools?allow=bash,read&deny=write`
-- `GET /get_hermes_live_provider_ids`
-- `GET /get_hermes_live_provider?providerId=custom`
-- `GET /get_hermes_model_config`
-- `GET /get_hermes_memory?kind=memory`
-- `POST /set_hermes_memory?kind=memory&content=...`
-- `GET /get_hermes_memory_limits`
-- `POST /set_hermes_memory_enabled?kind=user&enabled=false`
-- `GET /open_hermes_web_ui?path=/`
-- `POST /launch_hermes_dashboard`
+- `POST /proxy/switch-provider?app_type=claude&provider_id=codex-oauth`
+- `POST /proxy/sync-current-providers-live`
+- `POST /proxy/import-default-config?app=codex`
+- `GET /providers?app=codex`
+- `GET /providers/current?app=codex`
+- `POST /providers?app=codex&id=custom&name=Custom`
+- `POST /providers/update?app=codex&id=custom&name=Custom`
+- `DELETE /providers?app=codex&id=custom`
+- `DELETE /providers/live?app=codex&id=custom`
+- `POST /providers/switch?app=codex&id=custom`
+- `GET /providers/live-settings?app=codex`
+- `GET /providers/live-ids?app=openclaw`
+- `GET /providers/live-provider?app=openclaw&providerId=custom`
+- `POST /providers/import-live?app=openclaw`
+- `GET /openclaw/config-health`
+- `GET /openclaw/default-model`
+- `POST /openclaw/default-model?primary=gpt-5&fallbacks=sonnet,opus`
+- `GET /openclaw/model-catalog`
+- `POST /openclaw/model-catalog?catalog={"fast":{"alias":"f"}}`
+- `GET /openclaw/agents-defaults`
+- `POST /openclaw/agents-defaults?defaults={"model":{"primary":"gpt-5"}}`
+- `GET /openclaw/env`
+- `POST /openclaw/env?key=OPENAI_API_KEY&value=...`
+- `GET /openclaw/tools`
+- `POST /openclaw/tools?allow=bash,read&deny=write`
+- `GET /hermes/model-config`
+- `GET /hermes/memory?kind=memory`
+- `POST /hermes/memory?kind=memory&content=...`
+- `GET /hermes/memory-limits`
+- `POST /hermes/memory-enabled?kind=user&enabled=false`
+- `GET /hermes/web-ui?path=/`
+- `POST /hermes/dashboard`
 - `GET /get_claude_config_status`
 - `GET /get_config_status?app=codex`
 - `GET /get_claude_code_config_path`
@@ -214,11 +198,6 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /add_skill_repo?owner=vectie&name=moonstat-skills&branch=main`
 - `POST /remove_skill_repo?owner=vectie&name=moonstat-skills`
 - `POST /install_skills_from_zip?filePath=/tmp/traffic-stats&currentApp=codex`
-- `GET /get_default_cost_multiplier_test_hook?app_type=codex`
-- `POST /set_default_cost_multiplier_test_hook?app_type=codex&value=1.25`
-- `GET /get_pricing_model_source_test_hook?app_type=codex`
-- `POST /set_pricing_model_source_test_hook?app_type=codex&value=request`
-- `POST /switch_provider_test_hook?app=claude&id=codex-oauth`
 - `GET /get_claude_desktop_status`
 - `GET /get_claude_desktop_default_routes`
 - `POST /import_claude_desktop_providers_from_claude`
@@ -283,20 +262,20 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /enable_prompt?app=codex&id=review`
 - `POST /import_prompt_from_file?app=codex&path=/tmp/prompts.md`
 - `GET /get_current_prompt_file_content?app=codex&path=/tmp/prompts.md`
-- `POST /import_opencode_providers_from_live`
-- `POST /import_openclaw_providers_from_live`
-- `POST /import_hermes_providers_from_live`
-- `GET /get_universal_providers`
-- `GET /get_universal_provider?id=custom`
-- `POST /upsert_universal_provider?id=custom&name=Custom&apps=claude,codex`
-- `DELETE|POST /delete_universal_provider?id=custom`
-- `POST /sync_universal_provider?id=custom`
-- `GET|POST /test_api_endpoints?urls=https://api.example.com/v1`
-- `POST /update_providers_sort_order?app=codex&id=custom&sortIndex=0`
-- `GET /get_custom_endpoints?app=codex&providerId=custom`
-- `POST /add_custom_endpoint?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
-- `DELETE /remove_custom_endpoint?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
-- `POST /update_endpoint_last_used?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
+- `POST /providers/import-live?app=opencode`
+- `POST /providers/import-live?app=openclaw`
+- `POST /providers/import-live?app=hermes`
+- `GET /providers/universal`
+- `GET /providers/universal/item?id=custom`
+- `POST /providers/universal?id=custom&name=Custom&apps=claude,codex`
+- `DELETE|POST /providers/universal?id=custom`
+- `POST /providers/universal/sync?id=custom`
+- `GET|POST /providers/test-endpoints?urls=https://api.example.com/v1`
+- `POST /providers/sort-order?app=codex&id=custom&sortIndex=0`
+- `GET /providers/endpoints/list?app=codex&providerId=custom`
+- `POST /providers/endpoints?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
+- `DELETE /providers/endpoints?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
+- `POST /providers/endpoints/touch?app=codex&providerId=custom&url=https://api.backup.example.com/v1`
 - `GET /proxy/running`
 - `GET /is_proxy_running`
 - `GET|POST /usage/logs`
@@ -387,35 +366,29 @@ shape as ccs, including `failureThreshold`, `successThreshold`,
 `timeoutSeconds`, `errorRateThreshold`, and `minRequests`, and hot-applies it to
 existing breakers. `/proxy/failover-queue`,
 `/proxy/available-failover-providers`, and `/proxy/auto-failover-enabled`
-mirror the ccs failover queue and app auto-failover command shapes using
-Moonstat's standalone provider router state. The standalone CLI accepts grouped
-proxy, failover, provider, and stream-check commands, for example
-`moonstat proxy start-proxy-server`,
+manage Moonstat's failover queue and app auto-failover settings using
+standalone provider router state. The standalone CLI accepts grouped proxy,
+failover, provider, and stream-check commands, for example
+`moonstat proxy start`,
 `moonstat proxy app-config set --appType codex --enabled true`, and
 `moonstat stream-check provider --appType codex --providerId provider-1`.
-`/get_global_proxy_url`, `/set_global_proxy_url`, `/test_proxy_url`,
-`/get_upstream_proxy_status`, and `/scan_local_proxies` mirror ccs' global
-outbound proxy command shapes; Moonstat stores the configured upstream proxy in
-standalone gateway state and uses deterministic validation/test responses so the
-feature does not require external network access.
-The `/get_providers`,
-`/get_current_provider`, `/add_provider`, `/update_provider`,
-`/delete_provider`, `/remove_provider_from_live_config`, and
-`/switch_provider` mirror ccs provider CRUD/current-provider command shapes
-against that same standalone provider router state. `/read_live_provider_settings`,
-`/sync_current_providers_live`, `/test_api_endpoints`, and
-`/update_providers_sort_order` mirror the ccs live settings, live sync,
-endpoint latency result, and `sortIndex` command shapes.
-`/get_opencode_live_provider_ids`, `/get_openclaw_live_provider_ids`,
-`/get_hermes_live_provider_ids`, `/get_openclaw_live_provider`,
-`/get_hermes_live_provider`, `/scan_openclaw_config_health`, and the matching
-`import_*_from_live` commands expose the same suite-facing provider command
-surface against Moonstat's standalone provider router state. The standalone
-OpenClaw health scan returns an empty warning list because Moonstat does not own
-OpenClaw's live config file. The OpenClaw default-model/catalog/agents/env/tools
-commands and Hermes model/memory/dashboard commands keep CCS-compatible JSON
-shapes in Moonstat gateway state, returning `null` or CCS defaults before a
-standalone caller sets them. CCS config-folder, common-snippet, and environment
+`/proxy/global-url`, `/proxy/test-url`, `/proxy/upstream-status`, and
+`/proxy/local-proxies` manage outbound proxy state and deterministic proxy test
+responses without external network access.
+The `/providers`, `/providers/current`, `/providers/update`,
+`/providers/live`, and `/providers/switch` routes manage provider CRUD and
+current-provider state. `/providers/live-settings`,
+`/proxy/sync-current-providers-live`, `/providers/test-endpoints`, and
+`/providers/sort-order` expose live settings, live sync, endpoint latency
+results, and `sortIndex` updates.
+`/providers/live-ids`, `/providers/live-provider`, and
+`/providers/import-live` expose suite-facing provider views against Moonstat's
+standalone provider router state. The standalone OpenClaw health scan returns an
+empty warning list because Moonstat does not own OpenClaw's live config file.
+The OpenClaw default-model/catalog/agents/env/tools routes and Hermes
+model/memory/dashboard routes keep their JSON state in Moonstat, returning
+`null` or defaults before a standalone caller sets them. CCS config-folder,
+common-snippet, and environment
 conflict commands are mirrored by `/get_config_status`, `/get_config_dir`,
 `/get_common_config_snippet`, `/set_common_config_snippet`,
 `/extract_common_config_snippet`, `/check_env_conflicts`, `/delete_env_vars`,
@@ -451,15 +424,13 @@ imports Claude/Gemini JSON MCP server maps plus Codex `config.toml`
 `mcp_servers` entries. It also imports, reads, and enables CCS prompt files
 (`CLAUDE.md`, `AGENTS.md`, or `GEMINI.md`); enabling a prompt writes the
 selected content to that app's prompt file.
-`/get_universal_providers`,
-`/get_universal_provider`, `/upsert_universal_provider`,
-`/delete_universal_provider`, and `/sync_universal_provider` preserve the ccs
-universal-provider JSON shape and can sync enabled Claude/Codex/Gemini apps into
-concrete router providers named `universal-claude-*`, `universal-codex-*`, and
-`universal-gemini-*`. `/get_custom_endpoints`,
-`/add_custom_endpoint`, `/remove_custom_endpoint`, and `/update_endpoint_last_used`
-mirror ccs provider custom endpoint metadata, including URL normalization,
-newest-first listing, and best-effort last-used updates.
+`/providers/universal`, `/providers/universal/item`, and
+`/providers/universal/sync` manage universal-provider JSON and can sync enabled
+Claude/Codex/Gemini apps into concrete router providers named
+`universal-claude-*`, `universal-codex-*`, and `universal-gemini-*`.
+`/providers/endpoints/list`, `/providers/endpoints`, and
+`/providers/endpoints/touch` manage provider custom endpoint metadata, including
+URL normalization, newest-first listing, and best-effort last-used updates.
 `/usage/logs` returns
 recent `proxy_request_logs` rows with ccs-style provider/app/model, token,
 cache-token, cost, latency, status, session, streaming, and data-source fields.
