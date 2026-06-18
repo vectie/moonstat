@@ -97,33 +97,25 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /participant/register")))
   assert_true(routes.contains(Json::string("GET /stats")))
   assert_true(routes.contains(Json::string("GET /metrics")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/logs")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/summary")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/summary/by-app")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/trends")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/provider-limits")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/provider-stats")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/model-stats")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/data-sources")))
+  assert_true(routes.contains(Json::string("GET /usage/logs")))
+  assert_true(routes.contains(Json::string("GET /usage/summary")))
+  assert_true(routes.contains(Json::string("GET /usage/summary/by-app")))
+  assert_true(routes.contains(Json::string("GET /usage/trends")))
+  assert_true(routes.contains(Json::string("GET /usage/provider-limits")))
+  assert_true(routes.contains(Json::string("GET /usage/provider-stats")))
+  assert_true(routes.contains(Json::string("GET /usage/model-stats")))
+  assert_true(routes.contains(Json::string("GET /usage/data-sources")))
   assert_true(routes.contains(Json::string("POST /usage/sync-session")))
   assert_true(routes.contains(Json::string("GET /usage/model-pricing")))
   assert_true(routes.contains(Json::string("POST /usage/model-pricing")))
   assert_true(routes.contains(Json::string("DELETE /usage/model-pricing")))
   assert_true(routes.contains(Json::string("GET /usage/request-detail/*path")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/provider-usage")))
-  assert_true(routes.contains(Json::string("GET|POST /usage/balance")))
-  assert_true(
-    routes.contains(Json::string("GET|POST /usage/subscription-quota")),
-  )
-  assert_true(
-    routes.contains(Json::string("GET|POST /usage/codex-oauth-quota")),
-  )
-  assert_true(
-    routes.contains(Json::string("GET|POST /usage/codex-oauth-models")),
-  )
-  assert_true(
-    routes.contains(Json::string("GET|POST /usage/coding-plan-quota")),
-  )
+  assert_true(routes.contains(Json::string("GET /usage/provider-usage")))
+  assert_true(routes.contains(Json::string("GET /usage/balance")))
+  assert_true(routes.contains(Json::string("GET /usage/subscription-quota")))
+  assert_true(routes.contains(Json::string("GET /usage/codex-oauth-quota")))
+  assert_true(routes.contains(Json::string("GET /usage/codex-oauth-models")))
+  assert_true(routes.contains(Json::string("GET /usage/coding-plan-quota")))
   assert_true(routes.contains(Json::string("POST /usage/test-script")))
   assert_true(
     routes.contains(Json::string("GET|POST /proxy/stream-check/provider")),
