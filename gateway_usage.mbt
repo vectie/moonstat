@@ -854,8 +854,8 @@ async fn Gateway::query_provider_usage_standalone(
 }
 
 ///|
-async fn Gateway::handle_test_usage_script(
-  self : Gateway,
+async fn UsageService::handle_test_usage_script(
+  self : UsageService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -885,7 +885,7 @@ async fn Gateway::handle_test_usage_script(
           )
       }
   }
-  self.usage.usage_cache.put_script(app_type, provider_id, result)
+  self.usage_cache.put_script(app_type, provider_id, result)
   write_usage_json(w, result.to_json())
 }
 

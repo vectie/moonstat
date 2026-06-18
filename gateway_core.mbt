@@ -1234,7 +1234,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_get_coding_plan_quota(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/testUsageScript", (r, w) => {
-    self.handle_test_usage_script(r, w)
+    self.usage.handle_test_usage_script(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/usage/sync-session", (r, w) => {
     self.usage.handle_usage_sync_session(r, w)
