@@ -3970,8 +3970,8 @@ async fn ConfigService::handle_enable_prompt(
 }
 
 ///|
-async fn Gateway::handle_scan_local_proxies(
-  self : Gateway,
+async fn ProxyService::handle_scan_local_proxies(
+  self : ProxyService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -4414,8 +4414,8 @@ async fn ConfigService::handle_clear_claude_onboarding_skip(
 }
 
 ///|
-async fn Gateway::handle_test_api_endpoints(
-  self : Gateway,
+async fn ProxyService::handle_test_api_endpoints(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -4432,8 +4432,8 @@ async fn Gateway::handle_test_api_endpoints(
 }
 
 ///|
-async fn Gateway::handle_get_custom_endpoints(
-  self : Gateway,
+async fn ProxyService::handle_get_custom_endpoints(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -4448,13 +4448,13 @@ async fn Gateway::handle_get_custom_endpoints(
   }
   write_usage_json(
     w,
-    self.proxy.provider_router.custom_endpoints_json(app_type, provider_id),
+    self.provider_router.custom_endpoints_json(app_type, provider_id),
   )
 }
 
 ///|
-async fn Gateway::handle_add_custom_endpoint(
-  self : Gateway,
+async fn ProxyService::handle_add_custom_endpoint(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -4471,7 +4471,7 @@ async fn Gateway::handle_add_custom_endpoint(
     write_usage_bad_request(w, "missing_url")
     return
   }
-  if !self.proxy.provider_router.add_custom_endpoint(app_type, provider_id, url) {
+  if !self.provider_router.add_custom_endpoint(app_type, provider_id, url) {
     write_usage_bad_request(w, "invalid_url")
     return
   }
@@ -4479,8 +4479,8 @@ async fn Gateway::handle_add_custom_endpoint(
 }
 
 ///|
-async fn Gateway::handle_remove_custom_endpoint(
-  self : Gateway,
+async fn ProxyService::handle_remove_custom_endpoint(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -4497,13 +4497,13 @@ async fn Gateway::handle_remove_custom_endpoint(
     write_usage_bad_request(w, "missing_url")
     return
   }
-  self.proxy.provider_router.remove_custom_endpoint(app_type, provider_id, url)
+  self.provider_router.remove_custom_endpoint(app_type, provider_id, url)
   write_usage_json(w, Json::null())
 }
 
 ///|
-async fn Gateway::handle_update_endpoint_last_used(
-  self : Gateway,
+async fn ProxyService::handle_update_endpoint_last_used(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -4520,9 +4520,7 @@ async fn Gateway::handle_update_endpoint_last_used(
     write_usage_bad_request(w, "missing_url")
     return
   }
-  self.proxy.provider_router.update_endpoint_last_used(
-    app_type, provider_id, url,
-  )
+  self.provider_router.update_endpoint_last_used(app_type, provider_id, url)
   write_usage_json(w, Json::null())
 }
 

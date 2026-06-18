@@ -670,7 +670,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.proxy.handle_get_upstream_proxy_status(w)
   })
   router.add_handler(@httpx.Method::Get, "/scan_local_proxies", (_, w) => {
-    self.handle_scan_local_proxies(w)
+    self.proxy.handle_scan_local_proxies(w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/app-config", (r, w) => {
     self.proxy.handle_proxy_app_config(r, w)
@@ -1079,31 +1079,31 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.proxy.handle_get_provider_presets(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/test_api_endpoints", (r, w) => {
-    self.handle_test_api_endpoints(r, w)
+    self.proxy.handle_test_api_endpoints(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/test_api_endpoints", (r, w) => {
-    self.handle_test_api_endpoints(r, w)
+    self.proxy.handle_test_api_endpoints(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/update_providers_sort_order", (r, w) => {
     self.proxy.handle_update_providers_sort_order(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_custom_endpoints", (r, w) => {
-    self.handle_get_custom_endpoints(r, w)
+    self.proxy.handle_get_custom_endpoints(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_custom_endpoints", (r, w) => {
-    self.handle_get_custom_endpoints(r, w)
+    self.proxy.handle_get_custom_endpoints(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/add_custom_endpoint", (r, w) => {
-    self.handle_add_custom_endpoint(r, w)
+    self.proxy.handle_add_custom_endpoint(r, w)
   })
   router.add_handler(@httpx.Method::Delete, "/remove_custom_endpoint", (r, w) => {
-    self.handle_remove_custom_endpoint(r, w)
+    self.proxy.handle_remove_custom_endpoint(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/remove_custom_endpoint", (r, w) => {
-    self.handle_remove_custom_endpoint(r, w)
+    self.proxy.handle_remove_custom_endpoint(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/update_endpoint_last_used", (r, w) => {
-    self.handle_update_endpoint_last_used(r, w)
+    self.proxy.handle_update_endpoint_last_used(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/running", (_, w) => {
     self.proxy.handle_proxy_running(w)

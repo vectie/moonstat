@@ -2253,12 +2253,15 @@ async test "external utility endpoints are owned by proxy service" {
 async test "provider config endpoints are owned by proxy service" {
   let provider_source = @fsx.read_file("gateway_provider.mbt")
   let config_source = @fsx.read_file("gateway_config.mbt")
-  let sources = provider_source + config_source
+  let misc_source = @fsx.read_file("gateway_misc.mbt")
+  let sources = provider_source + config_source + misc_source
   let core_source = @fsx.read_file("gateway_core.mbt")
   for
     handler in [
       "handle_import_default_config", "handle_import_claude_desktop_providers_from_claude",
-      "handle_ensure_claude_desktop_official_provider",
+      "handle_ensure_claude_desktop_official_provider", "handle_scan_local_proxies",
+      "handle_test_api_endpoints", "handle_get_custom_endpoints", "handle_add_custom_endpoint",
+      "handle_remove_custom_endpoint", "handle_update_endpoint_last_used",
     ] {
     assert_true(sources.contains("async fn ProxyService::\{handler}("))
     assert_false(sources.contains("async fn Gateway::\{handler}("))
@@ -2283,6 +2286,22 @@ async test "provider config endpoints are owned by proxy service" {
     core_source.contains(
       "self.proxy.handle_ensure_claude_desktop_official_provider(w)",
     ),
+  )
+  assert_true(core_source.contains("self.proxy.handle_scan_local_proxies(w)"))
+  assert_true(
+    core_source.contains("self.proxy.handle_test_api_endpoints(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.proxy.handle_get_custom_endpoints(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.proxy.handle_add_custom_endpoint(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.proxy.handle_remove_custom_endpoint(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.proxy.handle_update_endpoint_last_used(r, w)"),
   )
 }
 
