@@ -594,7 +594,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "POST /skills/backups/restore", "POST /skills/install-unified", "POST /skills/uninstall-unified",
     "POST /skills/toggle-app", "GET /skills/unmanaged", "POST /skills/import-apps",
     "GET /skills/discover", "GET /skills/updates", "POST /skills/update", "POST /skills/migrate-storage",
-    "GET|POST /skills/search", "GET /skills", "GET /skills/app", "GET /skills/repos",
+    "GET /skills/search", "GET /skills", "GET /skills/app", "GET /skills/repos",
     "POST /skills/repos", "POST /skills/repos/remove", "POST /skills/install-zip",
     "GET /proxy/status", "POST /proxy/start", "POST /proxy/stop", "POST /proxy/stop-with-restore",
     "GET|POST /proxy/global-config", "GET|POST /proxy/global-url", "POST /proxy/test-url",
@@ -639,7 +639,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "POST /openclaw/model-catalog", "GET /openclaw/agents-defaults", "POST /openclaw/agents-defaults",
     "GET /openclaw/env", "POST /openclaw/env", "GET /openclaw/tools", "POST /openclaw/tools",
     "GET /hermes/model-config", "GET /hermes/memory", "POST /hermes/memory", "GET /hermes/memory-limits",
-    "POST /hermes/memory-enabled", "GET|POST /hermes/web-ui", "POST /hermes/dashboard",
+    "POST /hermes/memory-enabled", "POST /hermes/web-ui", "POST /hermes/dashboard",
     "POST /config/models", "ANY /v1beta/*path", "ANY /gemini/v1beta/*path", "ANY /gemini/v1/*path",
   ]
 }

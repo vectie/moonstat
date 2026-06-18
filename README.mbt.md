@@ -146,7 +146,7 @@ Moonstat currently exposes the standalone local routes below:
 - `POST /hermes/memory?kind=memory&content=...`
 - `GET /hermes/memory-limits`
 - `POST /hermes/memory-enabled?kind=user&enabled=false`
-- `GET /hermes/web-ui?path=/`
+- `POST /hermes/web-ui?path=/`
 - `POST /hermes/dashboard`
 - `GET /config/claude/status`
 - `GET /config/status?appType=codex`
@@ -180,7 +180,7 @@ Moonstat currently exposes the standalone local routes below:
 - `GET /skills/updates`
 - `POST /skills/update?id=traffic-stats`
 - `POST /skills/migrate-storage`
-- `GET|POST /skills/search?query=proxy&limit=10`
+- `GET /skills/search?query=proxy&limit=10`
 - `GET /skills`
 - `GET /skills/app?appType=codex`
 - `GET /skills/repos`

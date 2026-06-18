@@ -46,9 +46,6 @@ fn SkillService::register_routes(
   router.add_handler(Get, "/skills/search", (r, w) => {
     self.handle_search_skills_sh(r, w)
   })
-  router.add_handler(Post, "/skills/search", (r, w) => {
-    self.handle_search_skills_sh(r, w)
-  })
   router.add_handler(Get, "/skills", (_, w) => self.handle_get_skills(w))
   router.add_handler(Get, "/skills/app", (_, w) => self.handle_get_skills(w))
   router.add_handler(Get, "/skills/repos", (_, w) => {

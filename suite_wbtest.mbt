@@ -187,7 +187,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /skills/backups")))
   assert_true(routes.contains(Json::string("POST /skills/install-unified")))
   assert_true(routes.contains(Json::string("POST /skills/toggle-app")))
-  assert_true(routes.contains(Json::string("GET|POST /skills/search")))
+  assert_true(routes.contains(Json::string("GET /skills/search")))
   assert_true(routes.contains(Json::string("GET /skills/repos")))
   assert_true(routes.contains(Json::string("POST /skills/install-zip")))
   assert_true(routes.contains(Json::string("GET /proxy/status")))

@@ -134,7 +134,8 @@ async fn run_workspace_cli_command(
     "get_hermes_memory_limits" =>
       check_usage_endpoint(args, "/hermes/memory-limits")
     "set_hermes_memory_enabled" => set_hermes_memory_enabled(args)
-    "open_hermes_web_ui" => check_usage_endpoint(args, hermes_web_ui_path(args))
+    "open_hermes_web_ui" =>
+      check_json_post_endpoint(args, hermes_web_ui_path(args), "Hermes")
     "launch_hermes_dashboard" =>
       check_json_post_endpoint(args, "/hermes/dashboard", "Hermes")
     "save_file_dialog" =>

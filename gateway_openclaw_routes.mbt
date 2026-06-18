@@ -51,9 +51,6 @@ fn OpenClawService::register_routes(
   router.add_handler(Post, "/hermes/memory-enabled", (r, w) => {
     self.handle_set_hermes_memory_enabled(r, w)
   })
-  router.add_handler(Get, "/hermes/web-ui", (r, w) => {
-    self.handle_open_hermes_web_ui(r, w)
-  })
   router.add_handler(Post, "/hermes/web-ui", (r, w) => {
     self.handle_open_hermes_web_ui(r, w)
   })
