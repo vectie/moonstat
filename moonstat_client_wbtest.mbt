@@ -82,6 +82,10 @@ test "moonstat client builds required endpoint parameters" {
     "http://127.0.0.1:4199/usage/provider-limits?appType=claude&providerId=provider%2Fa%20b",
   )
   assert_eq(
+    client.usage_provider_usage_url("claude", "provider/a b"),
+    "http://127.0.0.1:4199/usage/provider-usage?appType=claude&providerId=provider%2Fa%20b",
+  )
+  assert_eq(
     client.usage_request_detail_url("req/a b"),
     "http://127.0.0.1:4199/usage/request-detail/req%2Fa%20b",
   )

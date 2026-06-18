@@ -238,6 +238,27 @@ pub fn MoonstatClient::usage_provider_limits_url(
 }
 
 ///|
+pub fn MoonstatClient::usage_provider_usage_url(
+  self : MoonstatClient,
+  app_type : String,
+  provider_id : String,
+) -> String {
+  let query = {
+    start_date: None,
+    end_date: None,
+    app_type: Some(app_type),
+    provider_id: Some(provider_id),
+    page: None,
+    page_size: None,
+  }
+  moonstat_client_url_with_query(
+    self.base_url,
+    "/usage/provider-usage",
+    Some(query),
+  )
+}
+
+///|
 pub fn MoonstatClient::usage_provider_stats_url(
   self : MoonstatClient,
   query? : MoonstatUsageQuery? = None,
@@ -399,6 +420,25 @@ pub async fn MoonstatClient::usage_provider_limits(
   }
   self.get_json_path(
     moonstat_client_path_with_query("/usage/provider-limits", Some(query)),
+  )
+}
+
+///|
+pub async fn MoonstatClient::usage_provider_usage(
+  self : MoonstatClient,
+  app_type : String,
+  provider_id : String,
+) -> Result[Json, String] {
+  let query = {
+    start_date: None,
+    end_date: None,
+    app_type: Some(app_type),
+    provider_id: Some(provider_id),
+    page: None,
+    page_size: None,
+  }
+  self.get_json_path(
+    moonstat_client_path_with_query("/usage/provider-usage", Some(query)),
   )
 }
 
