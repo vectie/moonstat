@@ -261,23 +261,23 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("pick_directory"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "copy_text_to_clipboard"]) ==
+    registered_cli_command_id(["moonstat", "runtime", "copy-text"]) ==
     Some("copy_text_to_clipboard"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "check-for-updates"]) ==
+    registered_cli_command_id(["moonstat", "runtime", "updates", "check"]) ==
     Some("check_for_updates"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "get_tool_versions"]) ==
+    registered_cli_command_id(["moonstat", "tools", "versions"]) ==
     Some("get_tool_versions"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "run-tool-lifecycle-action"]) ==
+    registered_cli_command_id(["moonstat", "tools", "lifecycle-action"]) ==
     Some("run_tool_lifecycle_action"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "enter_lightweight_mode"]) ==
+    registered_cli_command_id(["moonstat", "runtime", "lightweight", "enter"]) ==
     Some("enter_lightweight_mode"),
   )
   assert_true(
@@ -1472,24 +1472,28 @@ test "usage coding plan command builds quota path" {
 ///|
 test "top level moonstat app shell commands build paths" {
   assert_eq(
-    open_external_path(["moonstat", "open_external", "--url", "github.com/a b"]),
-    "/open_external?url=github.com%2Fa%20b",
+    open_external_path([
+      "moonstat", "runtime", "open-external", "--url", "github.com/a b",
+    ]),
+    "/runtime/open-external?url=github.com%2Fa%20b",
   )
   assert_eq(
     copy_text_to_clipboard_path([
-      "moonstat", "copy_text_to_clipboard", "--text", "hello world",
+      "moonstat", "runtime", "copy-text", "--text", "hello world",
     ]),
-    "/copy_text_to_clipboard?text=hello%20world",
+    "/runtime/clipboard/text?text=hello%20world",
   )
   assert_eq(
     tool_versions_path([
-      "moonstat", "get_tool_versions", "--tools", "codex,claude",
+      "moonstat", "tools", "versions", "--tools", "codex,claude",
     ]),
-    "/get_tool_versions?tools=codex%2Cclaude",
+    "/tools/versions?tools=codex%2Cclaude",
   )
   assert_eq(
-    window_theme_path(["moonstat", "set_window_theme", "--theme", "dark"]),
-    "/set_window_theme?theme=dark",
+    window_theme_path([
+      "moonstat", "runtime", "window-theme", "set", "--theme", "dark",
+    ]),
+    "/runtime/window-theme?theme=dark",
   )
   assert_eq(
     save_file_dialog_path([

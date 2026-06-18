@@ -632,24 +632,24 @@ fn pick_directory_path(args : Array[String]) -> String {
 ///|
 fn open_external_path(args : Array[String]) -> String {
   match parse_string_arg(args, "--url") {
-    Some(url) => "/open_external?\{cli_query_pair("url", url)}"
-    None => "/open_external"
+    Some(url) => "/runtime/open-external?\{cli_query_pair("url", url)}"
+    None => "/runtime/open-external"
   }
 }
 
 ///|
 fn copy_text_to_clipboard_path(args : Array[String]) -> String {
   match parse_string_arg(args, "--text") {
-    Some(text) => "/copy_text_to_clipboard?\{cli_query_pair("text", text)}"
-    None => "/copy_text_to_clipboard"
+    Some(text) => "/runtime/clipboard/text?\{cli_query_pair("text", text)}"
+    None => "/runtime/clipboard/text"
   }
 }
 
 ///|
 fn tool_versions_path(args : Array[String]) -> String {
   match parse_string_arg(args, "--tools") {
-    Some(tools) => "/get_tool_versions?\{cli_query_pair("tools", tools)}"
-    None => "/get_tool_versions"
+    Some(tools) => "/tools/versions?\{cli_query_pair("tools", tools)}"
+    None => "/tools/versions"
   }
 }
 
@@ -671,22 +671,22 @@ fn tool_lifecycle_path(args : Array[String]) -> String? {
     Some(tools) => query.push(cli_query_pair("tools", tools))
     None => ()
   }
-  Some(cli_path_with_query("/run_tool_lifecycle_action", query))
+  Some(cli_path_with_query("/tools/lifecycle-action", query))
 }
 
 ///|
 fn tool_installations_path(args : Array[String]) -> String {
   match parse_string_arg(args, "--tools") {
-    Some(tools) => "/probe_tool_installations?\{cli_query_pair("tools", tools)}"
-    None => "/probe_tool_installations"
+    Some(tools) => "/tools/probe?\{cli_query_pair("tools", tools)}"
+    None => "/tools/probe"
   }
 }
 
 ///|
 fn window_theme_path(args : Array[String]) -> String {
   match parse_string_arg(args, "--theme") {
-    Some(theme) => "/set_window_theme?\{cli_query_pair("theme", theme)}"
-    None => "/set_window_theme"
+    Some(theme) => "/runtime/window-theme?\{cli_query_pair("theme", theme)}"
+    None => "/runtime/window-theme"
   }
 }
 

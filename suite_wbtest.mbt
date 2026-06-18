@@ -153,14 +153,14 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /copilot/token")))
   assert_true(routes.contains(Json::string("GET /copilot/models")))
   assert_true(routes.contains(Json::string("GET /copilot/usage")))
-  assert_true(routes.contains(Json::string("GET|POST /get_tool_versions")))
-  assert_true(routes.contains(Json::string("POST /run_tool_lifecycle_action")))
+  assert_true(routes.contains(Json::string("GET|POST /tools/versions")))
+  assert_true(routes.contains(Json::string("POST /tools/lifecycle-action")))
+  assert_true(routes.contains(Json::string("GET|POST /tools/probe")))
   assert_true(
-    routes.contains(Json::string("GET|POST /probe_tool_installations")),
+    routes.contains(Json::string("GET|POST /runtime/tray-menu/update")),
   )
-  assert_true(routes.contains(Json::string("GET|POST /update_tray_menu")))
-  assert_true(routes.contains(Json::string("GET|POST /open_external")))
-  assert_true(routes.contains(Json::string("GET /is_lightweight_mode")))
+  assert_true(routes.contains(Json::string("GET|POST /runtime/open-external")))
+  assert_true(routes.contains(Json::string("GET /runtime/lightweight-mode")))
   assert_true(routes.contains(Json::string("GET|POST /export_config_to_file")))
   assert_true(
     routes.contains(Json::string("GET|POST /import_config_from_file")),
@@ -522,7 +522,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(commands["skills_repos"], Json::string("moonstat skills repos"))
   assert_eq(
     commands["update_tray_menu"],
-    Json::string("moonstat update_tray_menu"),
+    Json::string("moonstat runtime tray-menu update"),
   )
   assert_eq(
     commands["suite_write_status"],
@@ -599,37 +599,34 @@ fn moon_tauri_command_surface() -> Array[String] {
     "get_claude_desktop_status", "get_claude_desktop_default_routes", "import_claude_desktop_providers_from_claude",
     "ensure_claude_desktop_official_provider", "get_claude_config_status", "get_config_status",
     "get_claude_code_config_path", "get_config_dir", "open_config_folder", "pick_directory",
-    "open_external", "get_init_error", "get_migration_result", "get_skills_migration_result",
     "get_app_config_path", "open_app_config_folder", "get_claude_common_config_snippet",
     "set_claude_common_config_snippet", "get_common_config_snippet", "set_common_config_snippet",
     "extract_common_config_snippet", "get_settings", "save_settings", "get_rectifier_config",
     "set_rectifier_config", "get_optimizer_config", "set_optimizer_config", "get_copilot_optimizer_config",
     "set_copilot_optimizer_config", "get_log_config", "set_log_config", "restart_app",
-    "install_update_and_restart", "check_for_updates", "is_portable_mode", "copy_text_to_clipboard",
-    "get_claude_plugin_status", "read_claude_plugin_config", "apply_claude_plugin_config",
-    "is_claude_plugin_applied", "apply_claude_onboarding_skip", "clear_claude_onboarding_skip",
-    "get_claude_mcp_status", "read_claude_mcp_config", "upsert_claude_mcp_server",
-    "delete_claude_mcp_server", "validate_mcp_command", "get_mcp_config", "upsert_mcp_server_in_config",
-    "delete_mcp_server_in_config", "set_mcp_enabled", "get_mcp_servers", "upsert_mcp_server",
-    "delete_mcp_server", "toggle_mcp_app", "import_mcp_from_apps", "get_prompts",
-    "upsert_prompt", "delete_prompt", "enable_prompt", "import_prompt_from_file",
-    "get_current_prompt_file_content", "fetch_models_for_config", "get_app_config_dir_override",
-    "set_app_config_dir_override", "export_config_to_file", "import_config_from_file",
-    "webdav_test_connection", "webdav_sync_upload", "webdav_sync_download", "webdav_sync_save_settings",
-    "webdav_sync_fetch_remote_info", "s3_test_connection", "s3_sync_upload", "s3_sync_download",
-    "s3_sync_save_settings", "s3_sync_fetch_remote_info", "save_file_dialog", "open_file_dialog",
-    "open_zip_file_dialog", "create_db_backup", "list_db_backups", "restore_db_backup",
-    "rename_db_backup", "delete_db_backup", "parse_deeplink", "merge_deeplink_config",
-    "import_from_deeplink", "import_from_deeplink_unified", "update_tray_menu", "check_env_conflicts",
-    "delete_env_vars", "restore_env_backup", "set_auto_launch", "get_auto_launch_status",
-    "list_sessions", "get_session_messages", "delete_session", "delete_sessions",
-    "launch_session_terminal", "get_tool_versions", "run_tool_lifecycle_action",
-    "probe_tool_installations", "set_window_theme", "read_omo_local_file", "get_current_omo_provider_id",
-    "disable_current_omo", "read_omo_slim_local_file", "get_current_omo_slim_provider_id",
-    "disable_current_omo_slim", "read_workspace_file", "write_workspace_file", "list_daily_memory_files",
-    "read_daily_memory_file", "write_daily_memory_file", "delete_daily_memory_file",
-    "search_daily_memory_files", "open_workspace_directory", "enter_lightweight_mode",
-    "exit_lightweight_mode", "is_lightweight_mode",
+    "install_update_and_restart", "get_claude_plugin_status", "read_claude_plugin_config",
+    "apply_claude_plugin_config", "is_claude_plugin_applied", "apply_claude_onboarding_skip",
+    "clear_claude_onboarding_skip", "get_claude_mcp_status", "read_claude_mcp_config",
+    "upsert_claude_mcp_server", "delete_claude_mcp_server", "validate_mcp_command",
+    "get_mcp_config", "upsert_mcp_server_in_config", "delete_mcp_server_in_config",
+    "set_mcp_enabled", "get_mcp_servers", "upsert_mcp_server", "delete_mcp_server",
+    "toggle_mcp_app", "import_mcp_from_apps", "get_prompts", "upsert_prompt", "delete_prompt",
+    "enable_prompt", "import_prompt_from_file", "get_current_prompt_file_content",
+    "fetch_models_for_config", "get_app_config_dir_override", "set_app_config_dir_override",
+    "export_config_to_file", "import_config_from_file", "webdav_test_connection",
+    "webdav_sync_upload", "webdav_sync_download", "webdav_sync_save_settings", "webdav_sync_fetch_remote_info",
+    "s3_test_connection", "s3_sync_upload", "s3_sync_download", "s3_sync_save_settings",
+    "s3_sync_fetch_remote_info", "save_file_dialog", "open_file_dialog", "open_zip_file_dialog",
+    "create_db_backup", "list_db_backups", "restore_db_backup", "rename_db_backup",
+    "delete_db_backup", "parse_deeplink", "merge_deeplink_config", "import_from_deeplink",
+    "import_from_deeplink_unified", "check_env_conflicts", "delete_env_vars", "restore_env_backup",
+    "set_auto_launch", "get_auto_launch_status", "list_sessions", "get_session_messages",
+    "delete_session", "delete_sessions", "launch_session_terminal", "read_omo_local_file",
+    "get_current_omo_provider_id", "disable_current_omo", "read_omo_slim_local_file",
+    "get_current_omo_slim_provider_id", "disable_current_omo_slim", "read_workspace_file",
+    "write_workspace_file", "list_daily_memory_files", "read_daily_memory_file",
+    "write_daily_memory_file", "delete_daily_memory_file", "search_daily_memory_files",
+    "open_workspace_directory",
   ]
 }
 
@@ -643,7 +640,7 @@ test "suite manifest covers current Moonstat command surface" {
   guard manifest is Object(obj) else { fail("expected manifest object") }
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
   let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 121)
+  assert_eq(moon_commands.length(), 106)
   for command in moon_commands {
     assert_true(suite_routes_include_path(routes, "/\{command}"))
   }
@@ -664,7 +661,7 @@ fn gateway_source_registers_path(source : String, path : String) -> Bool {
 async test "gateway registers current Moonstat command handlers" {
   let source = @fsx.read_file("gateway_core.mbt")
   let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 121)
+  assert_eq(moon_commands.length(), 106)
   for command in moon_commands {
     assert_true(gateway_source_registers_path(source, "/\{command}"))
   }

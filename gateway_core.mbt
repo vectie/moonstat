@@ -145,76 +145,76 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(Post, "/pick_directory", (r, w) => {
     self.runtime.handle_pick_directory(r, w)
   })
-  router.add_handler(Get, "/open_external", (r, w) => {
+  router.add_handler(Get, "/runtime/open-external", (r, w) => {
     self.proxy.handle_open_external(r, w)
   })
-  router.add_handler(Post, "/open_external", (r, w) => {
+  router.add_handler(Post, "/runtime/open-external", (r, w) => {
     self.proxy.handle_open_external(r, w)
   })
-  router.add_handler(Post, "/copy_text_to_clipboard", (r, w) => {
+  router.add_handler(Post, "/runtime/clipboard/text", (r, w) => {
     self.runtime.handle_copy_text_to_clipboard(r, w)
   })
-  router.add_handler(Get, "/copy_text_to_clipboard", (r, w) => {
+  router.add_handler(Get, "/runtime/clipboard/text", (r, w) => {
     self.runtime.handle_copy_text_to_clipboard(r, w)
   })
-  router.add_handler(Post, "/check_for_updates", (_, w) => {
+  router.add_handler(Post, "/runtime/updates/check", (_, w) => {
     self.proxy.handle_check_for_updates(w)
   })
-  router.add_handler(Get, "/check_for_updates", (_, w) => {
+  router.add_handler(Get, "/runtime/updates/check", (_, w) => {
     self.proxy.handle_check_for_updates(w)
   })
-  router.add_handler(Post, "/update_tray_menu", (_, w) => {
+  router.add_handler(Post, "/runtime/tray-menu/update", (_, w) => {
     self.runtime.handle_update_tray_menu(w)
   })
-  router.add_handler(Get, "/update_tray_menu", (_, w) => {
+  router.add_handler(Get, "/runtime/tray-menu/update", (_, w) => {
     self.runtime.handle_update_tray_menu(w)
   })
-  router.add_handler(Get, "/is_portable_mode", (_, w) => {
+  router.add_handler(Get, "/runtime/portable-mode", (_, w) => {
     self.runtime.handle_is_portable_mode(w)
   })
-  router.add_handler(Get, "/get_init_error", (_, w) => {
+  router.add_handler(Get, "/runtime/init-error", (_, w) => {
     self.runtime.handle_get_init_error(w)
   })
-  router.add_handler(Get, "/get_migration_result", (_, w) => {
+  router.add_handler(Get, "/runtime/migration-result", (_, w) => {
     self.runtime.handle_get_migration_result(w)
   })
-  router.add_handler(Get, "/get_skills_migration_result", (_, w) => {
+  router.add_handler(Get, "/runtime/skills-migration-result", (_, w) => {
     self.runtime.handle_get_skills_migration_result(w)
   })
-  router.add_handler(Get, "/get_tool_versions", (r, w) => {
+  router.add_handler(Get, "/tools/versions", (r, w) => {
     self.runtime.handle_get_tool_versions(r, w)
   })
-  router.add_handler(Post, "/get_tool_versions", (r, w) => {
+  router.add_handler(Post, "/tools/versions", (r, w) => {
     self.runtime.handle_get_tool_versions(r, w)
   })
-  router.add_handler(Post, "/run_tool_lifecycle_action", (r, w) => {
+  router.add_handler(Post, "/tools/lifecycle-action", (r, w) => {
     self.runtime.handle_run_tool_lifecycle_action(r, w)
   })
-  router.add_handler(Get, "/probe_tool_installations", (r, w) => {
+  router.add_handler(Get, "/tools/probe", (r, w) => {
     self.runtime.handle_probe_tool_installations(r, w)
   })
-  router.add_handler(Post, "/probe_tool_installations", (r, w) => {
+  router.add_handler(Post, "/tools/probe", (r, w) => {
     self.runtime.handle_probe_tool_installations(r, w)
   })
-  router.add_handler(Post, "/set_window_theme", (r, w) => {
+  router.add_handler(Post, "/runtime/window-theme", (r, w) => {
     self.config.handle_set_window_theme(r, w)
   })
-  router.add_handler(Get, "/set_window_theme", (r, w) => {
+  router.add_handler(Get, "/runtime/window-theme", (r, w) => {
     self.config.handle_set_window_theme(r, w)
   })
-  router.add_handler(Post, "/enter_lightweight_mode", (_, w) => {
+  router.add_handler(Post, "/runtime/lightweight-mode/enter", (_, w) => {
     self.config.handle_enter_lightweight_mode(w)
   })
-  router.add_handler(Get, "/enter_lightweight_mode", (_, w) => {
+  router.add_handler(Get, "/runtime/lightweight-mode/enter", (_, w) => {
     self.config.handle_enter_lightweight_mode(w)
   })
-  router.add_handler(Post, "/exit_lightweight_mode", (_, w) => {
+  router.add_handler(Post, "/runtime/lightweight-mode/exit", (_, w) => {
     self.config.handle_exit_lightweight_mode(w)
   })
-  router.add_handler(Get, "/exit_lightweight_mode", (_, w) => {
+  router.add_handler(Get, "/runtime/lightweight-mode/exit", (_, w) => {
     self.config.handle_exit_lightweight_mode(w)
   })
-  router.add_handler(Get, "/is_lightweight_mode", (_, w) => {
+  router.add_handler(Get, "/runtime/lightweight-mode", (_, w) => {
     self.config.handle_is_lightweight_mode(w)
   })
   router.add_handler(Post, "/save_file_dialog", (r, w) => {

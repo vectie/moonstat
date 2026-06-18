@@ -385,60 +385,24 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       patterns: ["open_config_folder", "open-config-folder"],
     },
     { id: "pick_directory", patterns: ["pick_directory", "pick-directory"] },
-    { id: "open_external", patterns: ["open_external", "open-external"] },
-    {
-      id: "copy_text_to_clipboard",
-      patterns: ["copy_text_to_clipboard", "copy-text-to-clipboard"],
-    },
-    {
-      id: "check_for_updates",
-      patterns: ["check_for_updates", "check-for-updates"],
-    },
-    {
-      id: "update_tray_menu",
-      patterns: ["update_tray_menu", "update-tray-menu"],
-    },
-    {
-      id: "is_portable_mode",
-      patterns: ["is_portable_mode", "is-portable-mode"],
-    },
-    { id: "get_init_error", patterns: ["get_init_error", "get-init-error"] },
-    {
-      id: "get_migration_result",
-      patterns: ["get_migration_result", "get-migration-result"],
-    },
+    { id: "open_external", patterns: ["runtime open-external"] },
+    { id: "copy_text_to_clipboard", patterns: ["runtime copy-text"] },
+    { id: "check_for_updates", patterns: ["runtime updates check"] },
+    { id: "update_tray_menu", patterns: ["runtime tray-menu update"] },
+    { id: "is_portable_mode", patterns: ["runtime portable-mode"] },
+    { id: "get_init_error", patterns: ["runtime init-error"] },
+    { id: "get_migration_result", patterns: ["runtime migration-result"] },
     {
       id: "get_skills_migration_result",
-      patterns: ["get_skills_migration_result", "get-skills-migration-result"],
+      patterns: ["runtime skills-migration-result"],
     },
-    {
-      id: "get_tool_versions",
-      patterns: ["get_tool_versions", "get-tool-versions"],
-    },
-    {
-      id: "run_tool_lifecycle_action",
-      patterns: ["run_tool_lifecycle_action", "run-tool-lifecycle-action"],
-    },
-    {
-      id: "probe_tool_installations",
-      patterns: ["probe_tool_installations", "probe-tool-installations"],
-    },
-    {
-      id: "set_window_theme",
-      patterns: ["set_window_theme", "set-window-theme"],
-    },
-    {
-      id: "enter_lightweight_mode",
-      patterns: ["enter_lightweight_mode", "enter-lightweight-mode"],
-    },
-    {
-      id: "exit_lightweight_mode",
-      patterns: ["exit_lightweight_mode", "exit-lightweight-mode"],
-    },
-    {
-      id: "is_lightweight_mode",
-      patterns: ["is_lightweight_mode", "is-lightweight-mode"],
-    },
+    { id: "get_tool_versions", patterns: ["tools versions"] },
+    { id: "run_tool_lifecycle_action", patterns: ["tools lifecycle-action"] },
+    { id: "probe_tool_installations", patterns: ["tools probe"] },
+    { id: "set_window_theme", patterns: ["runtime window-theme set"] },
+    { id: "enter_lightweight_mode", patterns: ["runtime lightweight enter"] },
+    { id: "exit_lightweight_mode", patterns: ["runtime lightweight exit"] },
+    { id: "is_lightweight_mode", patterns: ["runtime lightweight status"] },
     {
       id: "save_file_dialog",
       patterns: ["save_file_dialog", "save-file-dialog"],
@@ -1494,27 +1458,27 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("check_for_updates") => {
-      check_json_post_endpoint(args, "/check_for_updates", "App shell")
+      check_json_post_endpoint(args, "/runtime/updates/check", "App shell")
       true
     }
     Some("update_tray_menu") => {
-      check_json_post_endpoint(args, "/update_tray_menu", "App shell")
+      check_json_post_endpoint(args, "/runtime/tray-menu/update", "App shell")
       true
     }
     Some("is_portable_mode") => {
-      check_usage_endpoint(args, "/is_portable_mode")
+      check_usage_endpoint(args, "/runtime/portable-mode")
       true
     }
     Some("get_init_error") => {
-      check_usage_endpoint(args, "/get_init_error")
+      check_usage_endpoint(args, "/runtime/init-error")
       true
     }
     Some("get_migration_result") => {
-      check_usage_endpoint(args, "/get_migration_result")
+      check_usage_endpoint(args, "/runtime/migration-result")
       true
     }
     Some("get_skills_migration_result") => {
-      check_usage_endpoint(args, "/get_skills_migration_result")
+      check_usage_endpoint(args, "/runtime/skills-migration-result")
       true
     }
     Some("get_tool_versions") => {
@@ -1534,15 +1498,19 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("enter_lightweight_mode") => {
-      check_json_post_endpoint(args, "/enter_lightweight_mode", "App shell")
+      check_json_post_endpoint(
+        args, "/runtime/lightweight-mode/enter", "App shell",
+      )
       true
     }
     Some("exit_lightweight_mode") => {
-      check_json_post_endpoint(args, "/exit_lightweight_mode", "App shell")
+      check_json_post_endpoint(
+        args, "/runtime/lightweight-mode/exit", "App shell",
+      )
       true
     }
     Some("is_lightweight_mode") => {
-      check_usage_endpoint(args, "/is_lightweight_mode")
+      check_usage_endpoint(args, "/runtime/lightweight-mode")
       true
     }
     Some("save_file_dialog") => {
