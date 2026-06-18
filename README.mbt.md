@@ -478,8 +478,8 @@ Gemini routes proxy to `https://generativelanguage.googleapis.com` by default
 and accept either a `?key=` query parameter or `GEMINI_API_KEY` /
 `GOOGLE_API_KEY` in the environment. Set `GOOGLE_GEMINI_BASE_URL` or
 `GEMINI_BASE_URL` to route through another Gemini-compatible base URL. Set
-`MOONSTAT_GEMINI_FULL_URL=1` or `GEMINI_FULL_URL=1` when the base URL is an
-opaque relay endpoint that should not have the Gemini model path appended.
+`MOONSTAT_GEMINI_FULL_URL=1` when the base URL is an opaque relay endpoint that
+should not have the Gemini model path appended.
 Aliased `/gemini/v1beta/...` and `/gemini/v1/...` requests are normalized back
 to the upstream `/v1beta/...` and `/v1/...` paths.
 

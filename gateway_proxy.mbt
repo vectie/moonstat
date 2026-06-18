@@ -113,30 +113,12 @@ fn provider_cost_multiplier_from_default(
 
 ///|
 fn default_cost_multiplier_for_app(app_type : String) -> String {
-  let global_keys = [
-    "MOONSTAT_DEFAULT_COST_MULTIPLIER", "MOONSTAT_COST_MULTIPLIER",
-  ]
+  let global_keys = ["MOONSTAT_DEFAULT_COST_MULTIPLIER"]
   let app_keys = match app_type {
-    "claude" | "claude-desktop" =>
-      [
-        "MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER", "MOONSTAT_CLAUDE_COST_MULTIPLIER",
-        "ANTHROPIC_DEFAULT_COST_MULTIPLIER", "ANTHROPIC_COST_MULTIPLIER",
-      ]
-    "codex" =>
-      [
-        "MOONSTAT_CODEX_DEFAULT_COST_MULTIPLIER", "MOONSTAT_CODEX_COST_MULTIPLIER",
-        "CODEX_DEFAULT_COST_MULTIPLIER", "CODEX_COST_MULTIPLIER",
-      ]
-    "gemini" =>
-      [
-        "MOONSTAT_GEMINI_DEFAULT_COST_MULTIPLIER", "MOONSTAT_GEMINI_COST_MULTIPLIER",
-        "GEMINI_DEFAULT_COST_MULTIPLIER", "GEMINI_COST_MULTIPLIER",
-      ]
-    "opencode" =>
-      [
-        "MOONSTAT_OPENCODE_DEFAULT_COST_MULTIPLIER", "MOONSTAT_OPENCODE_COST_MULTIPLIER",
-        "OPENCODE_DEFAULT_COST_MULTIPLIER", "OPENCODE_COST_MULTIPLIER",
-      ]
+    "claude" | "claude-desktop" => ["MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER"]
+    "codex" => ["MOONSTAT_CODEX_DEFAULT_COST_MULTIPLIER"]
+    "gemini" => ["MOONSTAT_GEMINI_DEFAULT_COST_MULTIPLIER"]
+    "opencode" => ["MOONSTAT_OPENCODE_DEFAULT_COST_MULTIPLIER"]
     _ => []
   }
   match env_first_non_negative_decimal(app_keys) {
@@ -170,20 +152,14 @@ fn provider_pricing_model_source_from_default(
   }
   match settings {
     Object(obj) => {
-      match
-        json_string_from_map_any(obj, [
-          "pricingModelSource", "pricing_model_source",
-        ]) {
+      match json_string_from_map(obj, "pricingModelSource") {
         Some(value) if pricing_model_source_is_valid(value) =>
           return value.trim().to_owned()
         _ => ()
       }
       match obj.get("meta") {
         Some(Object(meta)) =>
-          match
-            json_string_from_map_any(meta, [
-              "pricingModelSource", "pricing_model_source",
-            ]) {
+          match json_string_from_map(meta, "pricingModelSource") {
             Some(value) if pricing_model_source_is_valid(value) =>
               value.trim().to_owned()
             _ => default_source
@@ -197,30 +173,12 @@ fn provider_pricing_model_source_from_default(
 
 ///|
 fn default_pricing_model_source_for_app(app_type : String) -> String {
-  let global_keys = [
-    "MOONSTAT_PRICING_MODEL_SOURCE", "MOONSTAT_DEFAULT_PRICING_MODEL_SOURCE",
-  ]
+  let global_keys = ["MOONSTAT_PRICING_MODEL_SOURCE"]
   let app_keys = match app_type {
-    "claude" | "claude-desktop" =>
-      [
-        "MOONSTAT_CLAUDE_PRICING_MODEL_SOURCE", "MOONSTAT_CLAUDE_DEFAULT_PRICING_MODEL_SOURCE",
-        "ANTHROPIC_PRICING_MODEL_SOURCE", "ANTHROPIC_DEFAULT_PRICING_MODEL_SOURCE",
-      ]
-    "codex" =>
-      [
-        "MOONSTAT_CODEX_PRICING_MODEL_SOURCE", "MOONSTAT_CODEX_DEFAULT_PRICING_MODEL_SOURCE",
-        "CODEX_PRICING_MODEL_SOURCE", "CODEX_DEFAULT_PRICING_MODEL_SOURCE",
-      ]
-    "gemini" =>
-      [
-        "MOONSTAT_GEMINI_PRICING_MODEL_SOURCE", "MOONSTAT_GEMINI_DEFAULT_PRICING_MODEL_SOURCE",
-        "GEMINI_PRICING_MODEL_SOURCE", "GEMINI_DEFAULT_PRICING_MODEL_SOURCE",
-      ]
-    "opencode" =>
-      [
-        "MOONSTAT_OPENCODE_PRICING_MODEL_SOURCE", "MOONSTAT_OPENCODE_DEFAULT_PRICING_MODEL_SOURCE",
-        "OPENCODE_PRICING_MODEL_SOURCE", "OPENCODE_DEFAULT_PRICING_MODEL_SOURCE",
-      ]
+    "claude" | "claude-desktop" => ["MOONSTAT_CLAUDE_PRICING_MODEL_SOURCE"]
+    "codex" => ["MOONSTAT_CODEX_PRICING_MODEL_SOURCE"]
+    "gemini" => ["MOONSTAT_GEMINI_PRICING_MODEL_SOURCE"]
+    "opencode" => ["MOONSTAT_OPENCODE_PRICING_MODEL_SOURCE"]
     _ => []
   }
   match env_first_pricing_model_source(app_keys) {

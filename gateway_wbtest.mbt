@@ -4321,6 +4321,104 @@ test "claude provider env carries moonstat settings config" {
 }
 
 ///|
+test "moonstat env providers ignore app native provider aliases" {
+  let old_moon_codex_base = @os.getenv("MOONSTAT_CODEX_BASE_URL") catch {
+    _ => None
+  }
+  let old_moon_codex_key = @os.getenv("MOONSTAT_CODEX_API_KEY") catch {
+    _ => None
+  }
+  let old_code_base = @os.getenv("CODEX_BASE_URL") catch { _ => None }
+  let old_code_key = @os.getenv("CODEX_API_KEY") catch { _ => None }
+  let old_openai_base = @os.getenv("OPENAI_BASE_URL") catch { _ => None }
+  let old_openai_key = @os.getenv("OPENAI_API_KEY") catch { _ => None }
+  let old_moon_claude_base = @os.getenv("MOONSTAT_CLAUDE_BASE_URL") catch {
+    _ => None
+  }
+  let old_moon_claude_key = @os.getenv("MOONSTAT_CLAUDE_API_KEY") catch {
+    _ => None
+  }
+  let old_anthropic_base = @os.getenv("ANTHROPIC_BASE_URL") catch { _ => None }
+  let old_anthropic_key = @os.getenv("ANTHROPIC_API_KEY") catch { _ => None }
+  let old_anthropic_token = @os.getenv("ANTHROPIC_AUTH_TOKEN") catch {
+    _ => None
+  }
+  @os.unsetenv("MOONSTAT_CODEX_BASE_URL") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_CODEX_API_KEY") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_CLAUDE_BASE_URL") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_CLAUDE_API_KEY") catch {
+    _ => ()
+  }
+  @os.setenv("CODEX_BASE_URL", "https://codex.example/v1", overwrite=true)
+  @os.setenv("CODEX_API_KEY", "codex-key", overwrite=true)
+  @os.setenv("OPENAI_BASE_URL", "https://openai.example/v1", overwrite=true)
+  @os.setenv("OPENAI_API_KEY", "openai-key", overwrite=true)
+  @os.setenv("ANTHROPIC_BASE_URL", "https://anthropic.example", overwrite=true)
+  @os.setenv("ANTHROPIC_API_KEY", "anthropic-key", overwrite=true)
+  @os.setenv("ANTHROPIC_AUTH_TOKEN", "anthropic-token", overwrite=true)
+  assert_true(codex_provider_from_env() is None)
+  assert_true(claude_provider_from_env("claude") is None)
+  moon_wbtest_restore_env("MOONSTAT_CODEX_BASE_URL", old_moon_codex_base)
+  moon_wbtest_restore_env("MOONSTAT_CODEX_API_KEY", old_moon_codex_key)
+  moon_wbtest_restore_env("CODEX_BASE_URL", old_code_base)
+  moon_wbtest_restore_env("CODEX_API_KEY", old_code_key)
+  moon_wbtest_restore_env("OPENAI_BASE_URL", old_openai_base)
+  moon_wbtest_restore_env("OPENAI_API_KEY", old_openai_key)
+  moon_wbtest_restore_env("MOONSTAT_CLAUDE_BASE_URL", old_moon_claude_base)
+  moon_wbtest_restore_env("MOONSTAT_CLAUDE_API_KEY", old_moon_claude_key)
+  moon_wbtest_restore_env("ANTHROPIC_BASE_URL", old_anthropic_base)
+  moon_wbtest_restore_env("ANTHROPIC_API_KEY", old_anthropic_key)
+  moon_wbtest_restore_env("ANTHROPIC_AUTH_TOKEN", old_anthropic_token)
+}
+
+///|
+test "moonstat full url flags ignore app native aliases" {
+  let old_moon_gemini = @os.getenv("MOONSTAT_GEMINI_FULL_URL") catch {
+    _ => None
+  }
+  let old_gemini = @os.getenv("GEMINI_FULL_URL") catch { _ => None }
+  let old_moon_codex = @os.getenv("MOONSTAT_CODEX_FULL_URL") catch { _ => None }
+  let old_codex = @os.getenv("CODEX_FULL_URL") catch { _ => None }
+  let old_moon_claude = @os.getenv("MOONSTAT_CLAUDE_FULL_URL") catch {
+    _ => None
+  }
+  let old_anthropic = @os.getenv("ANTHROPIC_FULL_URL") catch { _ => None }
+  @os.unsetenv("MOONSTAT_GEMINI_FULL_URL") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_CODEX_FULL_URL") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_CLAUDE_FULL_URL") catch {
+    _ => ()
+  }
+  @os.setenv("GEMINI_FULL_URL", "1", overwrite=true)
+  @os.setenv("CODEX_FULL_URL", "1", overwrite=true)
+  @os.setenv("ANTHROPIC_FULL_URL", "1", overwrite=true)
+  assert_false(gemini_base_is_full_url())
+  assert_false(codex_base_is_full_url())
+  assert_false(claude_base_is_full_url())
+  @os.setenv("MOONSTAT_GEMINI_FULL_URL", "1", overwrite=true)
+  @os.setenv("MOONSTAT_CODEX_FULL_URL", "1", overwrite=true)
+  @os.setenv("MOONSTAT_CLAUDE_FULL_URL", "1", overwrite=true)
+  assert_true(gemini_base_is_full_url())
+  assert_true(codex_base_is_full_url())
+  assert_true(claude_base_is_full_url())
+  moon_wbtest_restore_env("MOONSTAT_GEMINI_FULL_URL", old_moon_gemini)
+  moon_wbtest_restore_env("GEMINI_FULL_URL", old_gemini)
+  moon_wbtest_restore_env("MOONSTAT_CODEX_FULL_URL", old_moon_codex)
+  moon_wbtest_restore_env("CODEX_FULL_URL", old_codex)
+  moon_wbtest_restore_env("MOONSTAT_CLAUDE_FULL_URL", old_moon_claude)
+  moon_wbtest_restore_env("ANTHROPIC_FULL_URL", old_anthropic)
+}
+
+///|
 test "moonstat default cost multiplier env falls back per app" {
   let keys = [
     "MOONSTAT_CLAUDE_DEFAULT_COST_MULTIPLIER", "MOONSTAT_DEFAULT_COST_MULTIPLIER",
@@ -4349,6 +4447,82 @@ test "moonstat default cost multiplier env falls back per app" {
       _ => ()
     }
   }
+}
+
+///|
+test "moonstat pricing defaults ignore short and app native aliases" {
+  let old_moon_codex_cost = @os.getenv("MOONSTAT_CODEX_DEFAULT_COST_MULTIPLIER") catch {
+    _ => None
+  }
+  let old_moon_default_cost = @os.getenv("MOONSTAT_DEFAULT_COST_MULTIPLIER") catch {
+    _ => None
+  }
+  let old_short_codex_cost = @os.getenv("MOONSTAT_CODEX_COST_MULTIPLIER") catch {
+    _ => None
+  }
+  let old_app_codex_cost = @os.getenv("CODEX_COST_MULTIPLIER") catch {
+    _ => None
+  }
+  let old_moon_codex_source = @os.getenv("MOONSTAT_CODEX_PRICING_MODEL_SOURCE") catch {
+    _ => None
+  }
+  let old_moon_default_source = @os.getenv("MOONSTAT_PRICING_MODEL_SOURCE") catch {
+    _ => None
+  }
+  let old_short_codex_source = @os.getenv(
+    "MOONSTAT_CODEX_DEFAULT_PRICING_MODEL_SOURCE",
+  ) catch {
+    _ => None
+  }
+  let old_app_codex_source = @os.getenv("CODEX_PRICING_MODEL_SOURCE") catch {
+    _ => None
+  }
+  @os.unsetenv("MOONSTAT_CODEX_DEFAULT_COST_MULTIPLIER") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_DEFAULT_COST_MULTIPLIER") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_CODEX_PRICING_MODEL_SOURCE") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_PRICING_MODEL_SOURCE") catch {
+    _ => ()
+  }
+  @os.setenv("MOONSTAT_CODEX_COST_MULTIPLIER", "7.5", overwrite=true)
+  @os.setenv("CODEX_COST_MULTIPLIER", "8.5", overwrite=true)
+  @os.setenv(
+    "MOONSTAT_CODEX_DEFAULT_PRICING_MODEL_SOURCE",
+    "request",
+    overwrite=true,
+  )
+  @os.setenv("CODEX_PRICING_MODEL_SOURCE", "request", overwrite=true)
+  assert_eq(default_cost_multiplier_for_app("codex"), "1.0")
+  assert_eq(default_pricing_model_source_for_app("codex"), "response")
+  @os.setenv("MOONSTAT_CODEX_DEFAULT_COST_MULTIPLIER", "1.25", overwrite=true)
+  @os.setenv("MOONSTAT_CODEX_PRICING_MODEL_SOURCE", "request", overwrite=true)
+  assert_eq(default_cost_multiplier_for_app("codex"), "1.25")
+  assert_eq(default_pricing_model_source_for_app("codex"), "request")
+  moon_wbtest_restore_env(
+    "MOONSTAT_CODEX_DEFAULT_COST_MULTIPLIER", old_moon_codex_cost,
+  )
+  moon_wbtest_restore_env(
+    "MOONSTAT_DEFAULT_COST_MULTIPLIER", old_moon_default_cost,
+  )
+  moon_wbtest_restore_env(
+    "MOONSTAT_CODEX_COST_MULTIPLIER", old_short_codex_cost,
+  )
+  moon_wbtest_restore_env("CODEX_COST_MULTIPLIER", old_app_codex_cost)
+  moon_wbtest_restore_env(
+    "MOONSTAT_CODEX_PRICING_MODEL_SOURCE", old_moon_codex_source,
+  )
+  moon_wbtest_restore_env(
+    "MOONSTAT_PRICING_MODEL_SOURCE", old_moon_default_source,
+  )
+  moon_wbtest_restore_env(
+    "MOONSTAT_CODEX_DEFAULT_PRICING_MODEL_SOURCE", old_short_codex_source,
+  )
+  moon_wbtest_restore_env("CODEX_PRICING_MODEL_SOURCE", old_app_codex_source)
 }
 
 ///|

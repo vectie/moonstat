@@ -521,17 +521,17 @@ fn gemini_base_url() -> String {
 
 ///|
 fn gemini_base_is_full_url() -> Bool {
-  env_bool("MOONSTAT_GEMINI_FULL_URL") || env_bool("GEMINI_FULL_URL")
+  env_bool("MOONSTAT_GEMINI_FULL_URL")
 }
 
 ///|
 fn codex_base_is_full_url() -> Bool {
-  env_bool("MOONSTAT_CODEX_FULL_URL") || env_bool("CODEX_FULL_URL")
+  env_bool("MOONSTAT_CODEX_FULL_URL")
 }
 
 ///|
 fn claude_base_is_full_url() -> Bool {
-  env_bool("MOONSTAT_CLAUDE_FULL_URL") || env_bool("ANTHROPIC_FULL_URL")
+  env_bool("MOONSTAT_CLAUDE_FULL_URL")
 }
 
 ///|

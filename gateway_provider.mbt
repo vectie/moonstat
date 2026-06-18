@@ -706,55 +706,41 @@ fn provider_base_is_full_endpoint(base_url : String) -> Bool {
 
 ///|
 fn codex_provider_from_env() -> ProviderRouteTarget? {
-  guard env_first_non_empty([
-      "MOONSTAT_CODEX_BASE_URL", "CODEX_BASE_URL", "OPENAI_BASE_URL",
-    ])
-    is Some(base_url) else {
+  guard env_first_non_empty(["MOONSTAT_CODEX_BASE_URL"]) is Some(base_url) else {
     return None
   }
-  guard env_first_non_empty([
-      "MOONSTAT_CODEX_API_KEY", "CODEX_API_KEY", "OPENAI_API_KEY",
-    ])
-    is Some(api_key) else {
+  guard env_first_non_empty(["MOONSTAT_CODEX_API_KEY"]) is Some(api_key) else {
     return None
   }
   Some(
     ProviderRouteTarget::new(
       app_type="codex",
-      provider_id=env_first_non_empty([
-        "MOONSTAT_CODEX_PROVIDER_ID", "CODEX_PROVIDER_ID",
-      ]).unwrap_or("codex-compatible"),
-      provider_name=env_first_non_empty([
-        "MOONSTAT_CODEX_PROVIDER_NAME", "CODEX_PROVIDER_NAME",
-      ]).unwrap_or("Codex Compatible"),
+      provider_id=env_first_non_empty(["MOONSTAT_CODEX_PROVIDER_ID"]).unwrap_or(
+        "codex-compatible",
+      ),
+      provider_name=env_first_non_empty(["MOONSTAT_CODEX_PROVIDER_NAME"]).unwrap_or(
+        "Codex Compatible",
+      ),
       provider_type=Some(
-        env_first_non_empty([
-          "MOONSTAT_CODEX_PROVIDER_TYPE", "CODEX_PROVIDER_TYPE",
-        ]).unwrap_or("codex"),
+        env_first_non_empty(["MOONSTAT_CODEX_PROVIDER_TYPE"]).unwrap_or("codex"),
       ),
       base_url=Some(base_url),
       api_key=Some(api_key),
-      api_format=env_first_non_empty([
-        "MOONSTAT_CODEX_API_FORMAT", "CODEX_API_FORMAT", "OPENAI_API_FORMAT",
-      ]),
+      api_format=env_first_non_empty(["MOONSTAT_CODEX_API_FORMAT"]),
       is_full_url=codex_base_is_full_url(),
-      settings_config=provider_settings_config_from_env([
-        "MOONSTAT_CODEX_SETTINGS_CONFIG", "CODEX_SETTINGS_CONFIG", "OPENAI_SETTINGS_CONFIG",
-      ]),
+      settings_config=provider_settings_config_from_env(
+        "MOONSTAT_CODEX_SETTINGS_CONFIG",
+      ),
     ),
   )
 }
 
 ///|
 fn claude_provider_from_env(app_type : String) -> ProviderRouteTarget? {
-  guard env_first_non_empty(["MOONSTAT_CLAUDE_BASE_URL", "ANTHROPIC_BASE_URL"])
-    is Some(base_url) else {
+  guard env_first_non_empty(["MOONSTAT_CLAUDE_BASE_URL"]) is Some(base_url) else {
     return None
   }
-  guard env_first_non_empty([
-      "MOONSTAT_CLAUDE_API_KEY", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
-    ])
-    is Some(api_key) else {
+  guard env_first_non_empty(["MOONSTAT_CLAUDE_API_KEY"]) is Some(api_key) else {
     return None
   }
   let provider_id_prefix = if app_type == "claude-desktop" {
@@ -765,41 +751,38 @@ fn claude_provider_from_env(app_type : String) -> ProviderRouteTarget? {
   Some(
     ProviderRouteTarget::new(
       app_type~,
-      provider_id=env_first_non_empty([
-        "MOONSTAT_CLAUDE_PROVIDER_ID", "ANTHROPIC_PROVIDER_ID",
-      ]).unwrap_or("\{provider_id_prefix}-compatible"),
-      provider_name=env_first_non_empty([
-        "MOONSTAT_CLAUDE_PROVIDER_NAME", "ANTHROPIC_PROVIDER_NAME",
-      ]).unwrap_or("Claude Compatible"),
+      provider_id=env_first_non_empty(["MOONSTAT_CLAUDE_PROVIDER_ID"]).unwrap_or(
+        "\{provider_id_prefix}-compatible",
+      ),
+      provider_name=env_first_non_empty(["MOONSTAT_CLAUDE_PROVIDER_NAME"]).unwrap_or(
+        "Claude Compatible",
+      ),
       provider_type=Some(
-        env_first_non_empty([
-          "MOONSTAT_CLAUDE_PROVIDER_TYPE", "ANTHROPIC_PROVIDER_TYPE",
-        ]).unwrap_or("anthropic"),
+        env_first_non_empty(["MOONSTAT_CLAUDE_PROVIDER_TYPE"]).unwrap_or(
+          "anthropic",
+        ),
       ),
       api_format=Some(
-        env_first_non_empty([
-          "MOONSTAT_CLAUDE_API_FORMAT", "ANTHROPIC_API_FORMAT",
-        ]).unwrap_or("anthropic"),
+        env_first_non_empty(["MOONSTAT_CLAUDE_API_FORMAT"]).unwrap_or(
+          "anthropic",
+        ),
       ),
-      prompt_cache_key=env_first_non_empty([
-        "MOONSTAT_CLAUDE_PROMPT_CACHE_KEY", "ANTHROPIC_PROMPT_CACHE_KEY",
-      ]),
-      codex_fast_mode=env_bool("MOONSTAT_CODEX_FAST_MODE") ||
-        env_bool("CODEX_FAST_MODE"),
+      prompt_cache_key=env_first_non_empty(["MOONSTAT_CLAUDE_PROMPT_CACHE_KEY"]),
+      codex_fast_mode=env_bool("MOONSTAT_CODEX_FAST_MODE"),
       base_url=Some(base_url),
       api_key=Some(api_key),
       is_full_url=claude_base_is_full_url(),
       model_mapping=moon_model_mapping_from_env(),
-      settings_config=provider_settings_config_from_env([
-        "MOONSTAT_CLAUDE_SETTINGS_CONFIG", "ANTHROPIC_SETTINGS_CONFIG",
-      ]),
+      settings_config=provider_settings_config_from_env(
+        "MOONSTAT_CLAUDE_SETTINGS_CONFIG",
+      ),
     ),
   )
 }
 
 ///|
-fn provider_settings_config_from_env(keys : Array[String]) -> Json? {
-  match env_first_non_empty(keys) {
+fn provider_settings_config_from_env(key : String) -> Json? {
+  match env_first_non_empty([key]) {
     Some(raw) => Some(@json.parse(raw)) catch { _ => None }
     None => None
   }
