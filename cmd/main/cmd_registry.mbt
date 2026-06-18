@@ -149,31 +149,19 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "is_live_takeover_active", patterns: ["proxy live-takeover-active"] },
     { id: "switch_proxy_provider", patterns: ["proxy switch-provider"] },
     { id: "is_proxy_running", patterns: ["proxy running"] },
-    { id: "get_providers", patterns: ["provider list", "providers list"] },
-    {
-      id: "get_current_provider",
-      patterns: ["provider current", "providers current"],
-    },
-    { id: "add_provider", patterns: ["provider add", "providers add"] },
-    { id: "update_provider", patterns: ["provider update", "providers update"] },
-    { id: "delete_provider", patterns: ["provider delete", "providers delete"] },
+    { id: "get_providers", patterns: ["provider list"] },
+    { id: "get_current_provider", patterns: ["provider current"] },
+    { id: "add_provider", patterns: ["provider add"] },
+    { id: "update_provider", patterns: ["provider update"] },
+    { id: "delete_provider", patterns: ["provider delete"] },
     {
       id: "remove_provider_from_live_config",
-      patterns: ["provider remove-live", "providers remove-live"],
+      patterns: ["provider remove-live"],
     },
-    { id: "switch_provider", patterns: ["provider switch", "providers switch"] },
-    {
-      id: "sync_current_providers_live",
-      patterns: ["provider sync-live", "providers sync-live"],
-    },
-    {
-      id: "read_live_provider_settings",
-      patterns: ["provider live-settings", "providers live-settings"],
-    },
-    {
-      id: "open_provider_terminal",
-      patterns: ["provider terminal", "providers terminal"],
-    },
+    { id: "switch_provider", patterns: ["provider switch"] },
+    { id: "sync_current_providers_live", patterns: ["provider sync-live"] },
+    { id: "read_live_provider_settings", patterns: ["provider live-settings"] },
+    { id: "open_provider_terminal", patterns: ["provider terminal"] },
     { id: "import_default_config", patterns: ["proxy import-default-config"] },
     {
       id: "get_claude_desktop_status",
@@ -191,18 +179,9 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       id: "ensure_claude_desktop_official_provider",
       patterns: ["providers claude-desktop official"],
     },
-    {
-      id: "provider_live_ids",
-      patterns: ["provider live-ids", "providers live-ids"],
-    },
-    {
-      id: "provider_live_get",
-      patterns: ["provider live-get", "providers live-get"],
-    },
-    {
-      id: "provider_import_live",
-      patterns: ["provider import-live", "providers import-live"],
-    },
+    { id: "provider_live_ids", patterns: ["provider live-ids"] },
+    { id: "provider_live_get", patterns: ["provider live-get"] },
+    { id: "provider_import_live", patterns: ["provider import-live"] },
     {
       id: "get_opencode_live_provider_ids",
       patterns: ["provider opencode live-ids"],
@@ -232,54 +211,18 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       id: "import_hermes_providers_from_live",
       patterns: ["provider hermes import-live"],
     },
-    {
-      id: "get_universal_providers",
-      patterns: ["provider universal list", "providers universal list"],
-    },
-    {
-      id: "get_universal_provider",
-      patterns: ["provider universal get", "providers universal get"],
-    },
-    {
-      id: "upsert_universal_provider",
-      patterns: ["provider universal upsert", "providers universal upsert"],
-    },
-    {
-      id: "delete_universal_provider",
-      patterns: ["provider universal delete", "providers universal delete"],
-    },
-    {
-      id: "sync_universal_provider",
-      patterns: ["provider universal sync", "providers universal sync"],
-    },
-    {
-      id: "get_provider_presets",
-      patterns: ["provider presets list", "providers presets list"],
-    },
-    {
-      id: "test_api_endpoints",
-      patterns: ["provider test-endpoints", "providers test-endpoints"],
-    },
-    {
-      id: "update_providers_sort_order",
-      patterns: ["provider sort-order set", "providers sort-order set"],
-    },
-    {
-      id: "get_custom_endpoints",
-      patterns: ["provider endpoints list", "providers endpoints list"],
-    },
-    {
-      id: "add_custom_endpoint",
-      patterns: ["provider endpoints add", "providers endpoints add"],
-    },
-    {
-      id: "remove_custom_endpoint",
-      patterns: ["provider endpoints remove", "providers endpoints remove"],
-    },
-    {
-      id: "update_endpoint_last_used",
-      patterns: ["provider endpoints touch", "providers endpoints touch"],
-    },
+    { id: "get_universal_providers", patterns: ["provider universal list"] },
+    { id: "get_universal_provider", patterns: ["provider universal get"] },
+    { id: "upsert_universal_provider", patterns: ["provider universal upsert"] },
+    { id: "delete_universal_provider", patterns: ["provider universal delete"] },
+    { id: "sync_universal_provider", patterns: ["provider universal sync"] },
+    { id: "get_provider_presets", patterns: ["provider presets list"] },
+    { id: "test_api_endpoints", patterns: ["provider test-endpoints"] },
+    { id: "update_providers_sort_order", patterns: ["provider sort-order set"] },
+    { id: "get_custom_endpoints", patterns: ["provider endpoints list"] },
+    { id: "add_custom_endpoint", patterns: ["provider endpoints add"] },
+    { id: "remove_custom_endpoint", patterns: ["provider endpoints remove"] },
+    { id: "update_endpoint_last_used", patterns: ["provider endpoints touch"] },
     { id: "fetch_models", patterns: ["models fetch"] },
     { id: "model_candidates", patterns: ["models candidates"] },
     { id: "scan_openclaw_config_health", patterns: ["openclaw config-health"] },
@@ -473,15 +416,10 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "suite_manifest", patterns: ["suite manifest"] },
     { id: "suite_status", patterns: ["suite status"] },
     { id: "suite_write_status", patterns: ["suite write-status"] },
-    {
-      id: "suite_moonclaw_providers",
-      patterns: ["suite moonclaw-providers", "suite provider-manifest"],
-    },
+    { id: "suite_moonclaw_providers", patterns: ["suite moonclaw-providers"] },
     {
       id: "suite_write_moonclaw_providers",
-      patterns: [
-        "suite write-moonclaw-providers", "suite write-provider-manifest",
-      ],
+      patterns: ["suite write-moonclaw-providers"],
     },
     { id: "status", patterns: ["status"] },
     { id: "health", patterns: ["health"] },

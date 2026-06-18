@@ -89,12 +89,12 @@ test "registered cli commands match suite command aliases and status commands" {
   )
   assert_false(cli_args_match_pattern(["moonstat", "suite"], "suite status"))
   assert_true(
-    registered_cli_command_id(["moonstat", "suite", "provider-manifest"]) ==
+    registered_cli_command_id(["moonstat", "suite", "moonclaw-providers"]) ==
     Some("suite_moonclaw_providers"),
   )
   assert_true(
     registered_cli_command_id([
-      "moonstat", "suite", "write-provider-manifest", "--path", "/tmp/providers.json",
+      "moonstat", "suite", "write-moonclaw-providers", "--path", "/tmp/providers.json",
     ]) ==
     Some("suite_write_moonclaw_providers"),
   )
@@ -177,7 +177,7 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("get_providers"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "providers", "universal", "upsert"]) ==
+    registered_cli_command_id(["moonstat", "provider", "universal", "upsert"]) ==
     Some("upsert_universal_provider"),
   )
   assert_true(
