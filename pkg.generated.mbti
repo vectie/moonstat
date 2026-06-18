@@ -114,6 +114,8 @@ pub fn moon_strip_hop_by_hop_response_headers(Map[String, String]) -> Map[String
 
 pub fn moonstat_base_url_from_suite_status(Json) -> String?
 
+pub fn moonstat_models_from_json(Json) -> Result[Array[MoonstatModel], String]
+
 pub fn moonstat_moonclaw_providers_file_json(host? : String, port? : Int, model? : String) -> Json
 
 pub fn moonstat_suite_manifest_json(host? : String, port? : Int, model? : String) -> Json
@@ -469,6 +471,7 @@ pub async fn MoonstatClient::health(Self) -> Result[Json, String]
 pub fn MoonstatClient::health_url(Self) -> String
 pub async fn MoonstatClient::metrics(Self) -> Result[String, String]
 pub fn MoonstatClient::metrics_url(Self) -> String
+pub async fn MoonstatClient::model_catalog(Self) -> Result[Array[MoonstatModel], String]
 pub async fn MoonstatClient::models(Self) -> Result[Json, String]
 pub fn MoonstatClient::models_url(Self) -> String
 pub fn MoonstatClient::new(base_url? : String, api_key? : String?, user_agent? : String?) -> Self
@@ -498,12 +501,20 @@ pub fn MoonstatClient::usage_request_detail_url(Self, String) -> String
 pub async fn MoonstatClient::usage_summary(Self, query? : MoonstatUsageQuery?) -> Result[Json, String]
 pub async fn MoonstatClient::usage_summary_by_app(Self, query? : MoonstatUsageQuery?) -> Result[Json, String]
 pub fn MoonstatClient::usage_summary_by_app_url(Self, query? : MoonstatUsageQuery?) -> String
+pub async fn MoonstatClient::usage_summary_typed(Self, query? : MoonstatUsageQuery?) -> Result[MoonstatUsageSummary, String]
 pub fn MoonstatClient::usage_summary_url(Self, query? : MoonstatUsageQuery?) -> String
 pub async fn MoonstatClient::usage_sync_session(Self, query? : MoonstatSessionSyncQuery?) -> Result[Json, String]
 pub fn MoonstatClient::usage_sync_session_url(Self, query? : MoonstatSessionSyncQuery?) -> String
 pub async fn MoonstatClient::usage_trends(Self, query? : MoonstatUsageQuery?) -> Result[Json, String]
 pub fn MoonstatClient::usage_trends_url(Self, query? : MoonstatUsageQuery?) -> String
 pub async fn MoonstatClient::usage_update_model_pricing(Self, ModelPricing) -> Result[Json, String]
+
+pub struct MoonstatModel {
+  id : String
+  owner : String?
+  context_window : Int?
+}
+pub fn MoonstatModel::from_json(Json) -> Result[Self, String]
 
 pub struct MoonstatSessionSyncQuery {
   projects_dir : String?
@@ -523,6 +534,19 @@ pub struct MoonstatUsageQuery {
   page_size : Int?
 }
 pub fn MoonstatUsageQuery::empty() -> Self
+
+pub struct MoonstatUsageSummary {
+  total_requests : Int
+  total_cost : String
+  total_input_tokens : Int64
+  total_output_tokens : Int64
+  total_cache_creation_tokens : Int64
+  total_cache_read_tokens : Int64
+  real_total_tokens : Int64
+  success_rate : Double
+  cache_hit_rate : Double
+}
+pub fn MoonstatUsageSummary::from_json(Json) -> Result[Self, String]
 
 pub struct OpenClawService {
   mut openclaw_default_model : Json?
