@@ -151,6 +151,19 @@ test "usage script request accepts raw moonstat script output" {
 }
 
 ///|
+async test "gateway startup publishes the bound port for suite discovery" {
+  let core_source = @fsx.read_file("gateway_core.mbt")
+  assert_true(core_source.contains("let bound_port = server.port()"))
+  assert_true(core_source.contains("port=bound_port"))
+  assert_true(
+    core_source.contains(
+      "self.usage.register_status_routes(\n    router,\n    self.auth,\n    self.proxy.provider_router,\n    self.host,\n    bound_port,",
+    ),
+  )
+  assert_false(core_source.contains("port=self.port"))
+}
+
+///|
 async test "usage script github copilot template uses standalone native query" {
   let path = "/usage/test-script?providerId=p1&appType=claude&templateType=github_copilot&accountId=moonstat-missing-account"
   guard test_usage_script_template_result(path, None) is Some(result) else {
@@ -2393,7 +2406,7 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   }
   assert_true(
     core_source.contains(
-      "self.config.register_routes(router, self.proxy, self.host, self.port)",
+      "self.config.register_routes(router, self.proxy, self.host, bound_port)",
     ),
   )
   assert_true(route_source.contains("self.handle_set_window_theme(r, w)"))
