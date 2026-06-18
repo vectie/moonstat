@@ -473,11 +473,10 @@ async fn Gateway::forward_non_streaming_chat_completion(
               if next is Some(_) {
                 continue
               }
-              self.usage.stats.record_upstream_error_status(
+              self.usage.record_upstream_error_status(
                 error_body.length(),
                 @status.BadGateway,
               )
-              self.usage.stats.save_persistent_store()
             } else {
               self.record_upstream_error_status(
                 error_body.length(),
@@ -554,11 +553,10 @@ async fn Gateway::forward_non_streaming_chat_completion(
       if next is Some(_) {
         continue
       }
-      self.usage.stats.record_upstream_error_status(
+      self.usage.record_upstream_error_status(
         response_body.length(),
         response.code,
       )
-      self.usage.stats.save_persistent_store()
     } else {
       self.record_upstream_error_status(response_body.length(), response.code)
     }
@@ -615,11 +613,10 @@ async fn Gateway::forward_streaming_chat_completion(
         if next is Some(_) {
           continue
         }
-        self.usage.stats.record_upstream_error_status(
+        self.usage.record_upstream_error_status(
           error_body.length(),
           response.code,
         )
-        self.usage.stats.save_persistent_store()
       } else {
         self.record_upstream_error_status(error_body.length(), response.code)
       }
@@ -643,11 +640,10 @@ async fn Gateway::forward_streaming_chat_completion(
           if next is Some(_) {
             continue
           }
-          self.usage.stats.record_upstream_error_status(
+          self.usage.record_upstream_error_status(
             error_body.length(),
             @status.BadGateway,
           )
-          self.usage.stats.save_persistent_store()
         } else {
           self.record_upstream_error_status(
             error_body.length(),
@@ -809,11 +805,10 @@ async fn Gateway::forward_non_streaming_codex_response(
               if next is Some(_) {
                 continue
               }
-              self.usage.stats.record_upstream_error_status(
+              self.usage.record_upstream_error_status(
                 error_body.length(),
                 @status.BadGateway,
               )
-              self.usage.stats.save_persistent_store()
             } else {
               self.record_upstream_error_status(
                 error_body.length(),
@@ -880,11 +875,10 @@ async fn Gateway::forward_non_streaming_codex_response(
       if next is Some(_) {
         continue
       }
-      self.usage.stats.record_upstream_error_status(
+      self.usage.record_upstream_error_status(
         response_body.length(),
         response.code,
       )
-      self.usage.stats.save_persistent_store()
     } else {
       self.record_upstream_error_status(response_body.length(), response.code)
     }
@@ -961,11 +955,10 @@ async fn Gateway::forward_streaming_codex_response(
               if next is Some(_) {
                 continue
               }
-              self.usage.stats.record_upstream_error_status(
+              self.usage.record_upstream_error_status(
                 error_body.length(),
                 @status.BadGateway,
               )
-              self.usage.stats.save_persistent_store()
             } else {
               self.record_upstream_error_status(
                 error_body.length(),
@@ -1013,11 +1006,10 @@ async fn Gateway::forward_streaming_codex_response(
         if next is Some(_) {
           continue
         }
-        self.usage.stats.record_upstream_error_status(
+        self.usage.record_upstream_error_status(
           error_body.length(),
           response.code,
         )
-        self.usage.stats.save_persistent_store()
       } else {
         self.record_upstream_error_status(error_body.length(), response.code)
       }
@@ -1041,11 +1033,10 @@ async fn Gateway::forward_streaming_codex_response(
           if next is Some(_) {
             continue
           }
-          self.usage.stats.record_upstream_error_status(
+          self.usage.record_upstream_error_status(
             error_body.length(),
             @status.BadGateway,
           )
-          self.usage.stats.save_persistent_store()
         } else {
           self.record_upstream_error_status(
             error_body.length(),
