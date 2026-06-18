@@ -14,12 +14,12 @@ fn provider_selection_is_all_circuits_open(
 }
 
 ///|
-fn Gateway::all_provider_circuits_open(
-  self : Gateway,
+fn ProxyService::all_provider_circuits_open(
+  self : ProxyService,
   app_type : String,
 ) -> Bool {
   provider_selection_is_all_circuits_open(
-    self.proxy.provider_router.select_providers(app_type),
+    self.provider_router.select_providers(app_type),
   )
 }
 
@@ -1708,11 +1708,6 @@ fn usage_pricing_validation_error_from_request(
     "cache_creation_cost",
     ["cache_creation_cost", "cacheCreationCost"],
   )
-}
-
-///|
-fn Gateway::pricing_override_rows(self : Gateway) -> Array[ModelPricing] {
-  self.usage.pricing_override_rows()
 }
 
 ///|

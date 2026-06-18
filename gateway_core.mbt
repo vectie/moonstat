@@ -17,7 +17,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   }
   self.usage.load_model_pricing_store()
   ignore(
-    self.usage.load_and_reconcile_persistent_store(self.pricing_override_rows()),
+    self.usage.load_and_reconcile_persistent_store(
+      self.usage.pricing_override_rows(),
+    ),
   )
   let creds_result : Result[@codex.Credentials, Error] = try? @codex.load_credentials()
   if creds_result is Ok(creds) {
@@ -1165,16 +1167,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.proxy.handle_proxy_running(w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/logs", (r, w) => {
-    self.usage.handle_usage_logs(r, w, self.pricing_override_rows())
+    self.usage.handle_usage_logs(r, w, self.usage.pricing_override_rows())
   })
   router.add_handler(@httpx.Method::Post, "/usage/logs", (r, w) => {
-    self.usage.handle_usage_logs(r, w, self.pricing_override_rows())
+    self.usage.handle_usage_logs(r, w, self.usage.pricing_override_rows())
   })
   router.add_handler(@httpx.Method::Get, "/get_request_logs", (r, w) => {
-    self.usage.handle_usage_logs(r, w, self.pricing_override_rows())
+    self.usage.handle_usage_logs(r, w, self.usage.pricing_override_rows())
   })
   router.add_handler(@httpx.Method::Post, "/get_request_logs", (r, w) => {
-    self.usage.handle_usage_logs(r, w, self.pricing_override_rows())
+    self.usage.handle_usage_logs(r, w, self.usage.pricing_override_rows())
   })
   router.add_handler(@httpx.Method::Get, "/usage/summary", (r, w) => {
     self.usage.handle_usage_summary(r, w)
@@ -1352,13 +1354,25 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.usage.handle_usage_delete_model_pricing(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/request-detail/*path", (r, w) => {
-    self.usage.handle_usage_request_detail(r, w, self.pricing_override_rows())
+    self.usage.handle_usage_request_detail(
+      r,
+      w,
+      self.usage.pricing_override_rows(),
+    )
   })
   router.add_handler(@httpx.Method::Get, "/get_request_detail", (r, w) => {
-    self.usage.handle_usage_request_detail(r, w, self.pricing_override_rows())
+    self.usage.handle_usage_request_detail(
+      r,
+      w,
+      self.usage.pricing_override_rows(),
+    )
   })
   router.add_handler(@httpx.Method::Post, "/get_request_detail", (r, w) => {
-    self.usage.handle_usage_request_detail(r, w, self.pricing_override_rows())
+    self.usage.handle_usage_request_detail(
+      r,
+      w,
+      self.usage.pricing_override_rows(),
+    )
   })
   router.add_handler(@httpx.Method::Post, "/stream_check_provider", (r, w) => {
     self.proxy.handle_stream_check_provider(

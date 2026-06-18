@@ -5152,7 +5152,7 @@ async fn Gateway::handle_messages(
   self.usage.record_inbound(body_str.length())
   let active_provider = self.proxy.activate_provider(self.usage, app_type)
   self.usage.record_request_context(app_type, self.model)
-  if active_provider is None && self.all_provider_circuits_open(app_type) {
+  if active_provider is None && self.proxy.all_provider_circuits_open(app_type) {
     self.usage.write_provider_selection_error(
       self.proxy,
       app_type,
