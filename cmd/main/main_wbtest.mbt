@@ -18,8 +18,15 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("status_claude_desktop"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "codex", "remove"]) ==
+    registered_cli_command_id(["moonstat", "codex", "uninstall"]) ==
     Some("uninstall_codex"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "codex", "remove"]) is None,
+  )
+  assert_true(registered_cli_command_id(["moonstat", "remove"]) is None)
+  assert_true(
+    registered_cli_command_id(["moonstat", "claude-desktop", "remove"]) is None,
   )
   assert_true(registered_cli_command_id(["moonstat", "--help"]) == Some("help"))
   assert_true(
@@ -398,6 +405,12 @@ test "registered cli commands match suite command aliases and status commands" {
   assert_true(
     registered_cli_command_id(["moonstat", "prompt", "current"]) ==
     Some("get_current_prompt_file_content"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "prompts", "current"]) is None,
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "prompts", "import"]) is None,
   )
   assert_true(
     registered_cli_command_id(["moonstat", "usage", "summary"]) ==

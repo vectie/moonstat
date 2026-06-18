@@ -1,4 +1,34 @@
 ///|
+fn runtime_cli_commands() -> Array[CliCommandSpec] {
+  [
+    { id: "pick_directory", patterns: ["files directory pick"] },
+    { id: "open_external", patterns: ["runtime open-external"] },
+    { id: "copy_text_to_clipboard", patterns: ["runtime copy-text"] },
+    { id: "check_for_updates", patterns: ["runtime updates check"] },
+    { id: "update_tray_menu", patterns: ["runtime tray-menu update"] },
+    { id: "is_portable_mode", patterns: ["runtime portable-mode"] },
+    { id: "get_init_error", patterns: ["runtime init-error"] },
+    { id: "get_migration_result", patterns: ["runtime migration-result"] },
+    {
+      id: "get_skills_migration_result",
+      patterns: ["runtime skills-migration-result"],
+    },
+    { id: "get_tool_versions", patterns: ["tools versions"] },
+    { id: "run_tool_lifecycle_action", patterns: ["tools lifecycle-action"] },
+    { id: "probe_tool_installations", patterns: ["tools probe"] },
+    { id: "set_window_theme", patterns: ["runtime window-theme set"] },
+    { id: "enter_lightweight_mode", patterns: ["runtime lightweight enter"] },
+    { id: "exit_lightweight_mode", patterns: ["runtime lightweight exit"] },
+    { id: "is_lightweight_mode", patterns: ["runtime lightweight status"] },
+    { id: "restart_app", patterns: ["runtime restart"] },
+    {
+      id: "install_update_and_restart",
+      patterns: ["runtime updates install-restart"],
+    },
+  ]
+}
+
+///|
 fn cli_runtime_command_id(command_id : String) -> Bool {
   match command_id {
     "pick_directory"
