@@ -138,7 +138,7 @@ test "usage query helpers parse moonstat provider limit parameters" {
 
 ///|
 test "usage script request accepts raw moonstat script output" {
-  let path = "/usage/test-script?providerId=p1&app=codex&scriptCode=%5B%7B%22planName%22%3A%22Team%22%2C%22total%22%3A100%2C%22used%22%3A40%2C%22remaining%22%3A60%2C%22unit%22%3A%22%25%22%7D%5D"
+  let path = "/usage/test-script?providerId=p1&appType=codex&scriptCode=%5B%7B%22planName%22%3A%22Team%22%2C%22total%22%3A100%2C%22used%22%3A40%2C%22remaining%22%3A60%2C%22unit%22%3A%22%25%22%7D%5D"
   guard usage_result_from_request(path, None) is Some(result) else {
     fail("expected usage result")
   }
@@ -152,7 +152,7 @@ test "usage script request accepts raw moonstat script output" {
 
 ///|
 async test "usage script github copilot template uses standalone native query" {
-  let path = "/usage/test-script?providerId=p1&app=claude&templateType=github_copilot&accountId=moonstat-missing-account"
+  let path = "/usage/test-script?providerId=p1&appType=claude&templateType=github_copilot&accountId=moonstat-missing-account"
   guard test_usage_script_template_result(path, None) is Some(result) else {
     fail("expected template result")
   }
@@ -202,7 +202,7 @@ test "github copilot usage conversion reports malformed response" {
 
 ///|
 async test "usage script balance template uses standalone moonstat native query" {
-  let path = "/usage/test-script?providerId=p1&app=codex&templateType=balance&baseUrl=https%3A%2F%2Fopenrouter.ai%2Fapi%2Fv1&apiKey="
+  let path = "/usage/test-script?providerId=p1&appType=codex&templateType=balance&baseUrl=https%3A%2F%2Fopenrouter.ai%2Fapi%2Fv1&apiKey="
   guard test_usage_script_template_result(path, None) is Some(result) else {
     fail("expected template result")
   }
@@ -212,7 +212,7 @@ async test "usage script balance template uses standalone moonstat native query"
   )
   assert_true(
     test_usage_script_template_result(
-      "/usage/test-script?providerId=p1&app=codex&templateType=custom",
+      "/usage/test-script?providerId=p1&appType=codex&templateType=custom",
       None,
     )
     is None,
@@ -221,7 +221,7 @@ async test "usage script balance template uses standalone moonstat native query"
 
 ///|
 async test "usage script token plan template uses standalone moonstat native query" {
-  let path = "/usage/test-script?providerId=p1&app=codex&templateType=token_plan&baseUrl=https%3A%2F%2Fapi.kimi.com%2Fcoding&apiKey="
+  let path = "/usage/test-script?providerId=p1&appType=codex&templateType=token_plan&baseUrl=https%3A%2F%2Fapi.kimi.com%2Fcoding&apiKey="
   guard test_usage_script_template_result(path, None) is Some(result) else {
     fail("expected template result")
   }
@@ -230,7 +230,7 @@ async test "usage script token plan template uses standalone moonstat native que
 
 ///|
 async test "usage script official subscription template uses standalone moonstat native query" {
-  let path = "/usage/test-script?providerId=p1&app=unknown&templateType=official_subscription"
+  let path = "/usage/test-script?providerId=p1&tool=unknown&templateType=official_subscription"
   guard test_usage_script_template_result(path, None) is Some(result) else {
     fail("expected template result")
   }

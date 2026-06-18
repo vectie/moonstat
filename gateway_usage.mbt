@@ -950,8 +950,7 @@ async fn UsageService::handle_query_provider_usage(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  guard proxy_string_request(r.path, config, ["app", "appType"])
-    is Some(app_type) else {
+  guard proxy_string_request(r.path, config, ["appType"]) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app")
     return
   }
@@ -1011,8 +1010,7 @@ async fn UsageService::handle_get_subscription_quota(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, ["tool", "app", "appType"])
-    is Some(tool) else {
+  guard proxy_string_request(r.path, body, ["tool"]) is Some(tool) else {
     write_usage_bad_request(w, "missing_tool")
     return
   }
@@ -1054,8 +1052,7 @@ async fn UsageService::handle_test_usage_script(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  guard proxy_string_request(r.path, config, ["app", "appType"])
-    is Some(app_type) else {
+  guard proxy_string_request(r.path, config, ["appType"]) is Some(app_type) else {
     write_usage_bad_request(w, "missing_app")
     return
   }
@@ -1408,9 +1405,7 @@ async fn test_usage_script_template_result(
       )
     }
     "official_subscription" => {
-      let app_type = proxy_string_request(path, body, ["app", "appType", "tool"]).unwrap_or(
-        "",
-      )
+      let app_type = proxy_string_request(path, body, ["tool"]).unwrap_or("")
       Some(
         moon_subscription_usage_result_from_quota(
           moon_get_subscription_quota(app_type),
