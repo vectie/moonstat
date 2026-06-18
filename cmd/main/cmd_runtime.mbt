@@ -7,12 +7,6 @@ fn runtime_cli_commands() -> Array[CliCommandSpec] {
     { id: "check_for_updates", patterns: ["runtime updates check"] },
     { id: "update_tray_menu", patterns: ["runtime tray-menu update"] },
     { id: "is_portable_mode", patterns: ["runtime portable-mode"] },
-    { id: "get_init_error", patterns: ["runtime init-error"] },
-    { id: "get_migration_result", patterns: ["runtime migration-result"] },
-    {
-      id: "get_skills_migration_result",
-      patterns: ["runtime skills-migration-result"],
-    },
     { id: "get_tool_versions", patterns: ["tools versions"] },
     { id: "run_tool_lifecycle_action", patterns: ["tools lifecycle-action"] },
     { id: "probe_tool_installations", patterns: ["tools probe"] },
@@ -37,9 +31,6 @@ fn cli_runtime_command_id(command_id : String) -> Bool {
     | "check_for_updates"
     | "update_tray_menu"
     | "is_portable_mode"
-    | "get_init_error"
-    | "get_migration_result"
-    | "get_skills_migration_result"
     | "get_tool_versions"
     | "run_tool_lifecycle_action"
     | "probe_tool_installations"
@@ -68,11 +59,6 @@ async fn run_runtime_cli_command(
     "update_tray_menu" =>
       check_json_post_endpoint(args, "/runtime/tray-menu/update", "App shell")
     "is_portable_mode" => check_usage_endpoint(args, "/runtime/portable-mode")
-    "get_init_error" => check_usage_endpoint(args, "/runtime/init-error")
-    "get_migration_result" =>
-      check_usage_endpoint(args, "/runtime/migration-result")
-    "get_skills_migration_result" =>
-      check_usage_endpoint(args, "/runtime/skills-migration-result")
     "get_tool_versions" => check_usage_endpoint(args, tool_versions_path(args))
     "run_tool_lifecycle_action" => run_tool_lifecycle_action(args)
     "probe_tool_installations" =>

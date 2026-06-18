@@ -27,10 +27,7 @@ test "moonstat requested tool names keeps valid unique tools" {
 }
 
 ///|
-test "moonstat standalone app shell defaults use tauri-compatible empty results" {
-  assert_eq(moon_init_error_json(), Json::null())
-  assert_eq(moon_migration_result_json(), Json::boolean(false))
-  assert_eq(moon_skills_migration_result_json(), Json::null())
+test "moonstat standalone app shell defaults use local dialog null results" {
   assert_eq(moon_dialog_result_json(), Json::null())
 }
 

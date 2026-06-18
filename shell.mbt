@@ -104,21 +104,6 @@ fn moon_update_url() -> String {
 }
 
 ///|
-fn moon_init_error_json() -> Json {
-  Json::null()
-}
-
-///|
-fn moon_migration_result_json() -> Json {
-  Json::boolean(false)
-}
-
-///|
-fn moon_skills_migration_result_json() -> Json {
-  Json::null()
-}
-
-///|
 fn moon_dialog_result_json() -> Json {
   Json::null()
 }

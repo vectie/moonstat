@@ -92,33 +92,6 @@ async fn RuntimeService::handle_is_portable_mode(
 }
 
 ///|
-async fn RuntimeService::handle_get_init_error(
-  self : RuntimeService,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  write_usage_json(w, moon_init_error_json())
-}
-
-///|
-async fn RuntimeService::handle_get_migration_result(
-  self : RuntimeService,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  write_usage_json(w, moon_migration_result_json())
-}
-
-///|
-async fn RuntimeService::handle_get_skills_migration_result(
-  self : RuntimeService,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  write_usage_json(w, moon_skills_migration_result_json())
-}
-
-///|
 async fn RuntimeService::handle_get_tool_versions(
   self : RuntimeService,
   r : @httpx.RequestReader,

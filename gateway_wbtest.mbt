@@ -2543,8 +2543,7 @@ async test "runtime endpoints are owned by runtime service" {
   for
     handler in [
       "handle_pick_directory", "handle_copy_text_to_clipboard", "handle_update_tray_menu",
-      "handle_is_portable_mode", "handle_get_init_error", "handle_get_migration_result",
-      "handle_get_skills_migration_result", "handle_get_tool_versions", "handle_run_tool_lifecycle_action",
+      "handle_is_portable_mode", "handle_get_tool_versions", "handle_run_tool_lifecycle_action",
       "handle_probe_tool_installations", "handle_restart_app", "handle_install_update_and_restart",
     ] {
     assert_true(runtime_source.contains("async fn RuntimeService::\{handler}("))

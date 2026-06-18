@@ -37,15 +37,6 @@ fn RuntimeService::register_routes(
   router.add_handler(Get, "/runtime/portable-mode", (_, w) => {
     self.handle_is_portable_mode(w)
   })
-  router.add_handler(Get, "/runtime/init-error", (_, w) => {
-    self.handle_get_init_error(w)
-  })
-  router.add_handler(Get, "/runtime/migration-result", (_, w) => {
-    self.handle_get_migration_result(w)
-  })
-  router.add_handler(Get, "/runtime/skills-migration-result", (_, w) => {
-    self.handle_get_skills_migration_result(w)
-  })
   router.add_handler(Get, "/tools/versions", (r, w) => {
     self.handle_get_tool_versions(r, w)
   })

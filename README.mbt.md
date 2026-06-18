@@ -159,9 +159,6 @@ Moonstat currently exposes the standalone local routes below:
 - `GET|POST /runtime/updates/check`
 - `GET|POST /runtime/tray-menu/update`
 - `GET /runtime/portable-mode`
-- `GET /runtime/init-error`
-- `GET /runtime/migration-result`
-- `GET /runtime/skills-migration-result`
 - `GET|POST /tools/versions?tools=codex,claude`
 - `GET|POST /runtime/window-theme?theme=dark`
 - `GET|POST /runtime/lightweight-mode/enter`
