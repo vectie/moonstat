@@ -973,7 +973,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.proxy.handle_get_live_provider(r, w, "openclaw")
   })
   router.add_handler(@httpx.Method::Get, "/scan_openclaw_config_health", (_, w) => {
-    self.handle_scan_openclaw_config_health(w)
+    self.openclaw.handle_scan_openclaw_config_health(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_openclaw_default_model", (_, w) => {
     self.openclaw.handle_get_openclaw_default_model(w)
@@ -1016,7 +1016,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.proxy.handle_get_live_provider(r, w, "hermes")
   })
   router.add_handler(@httpx.Method::Get, "/get_hermes_model_config", (_, w) => {
-    self.handle_get_hermes_model_config(w)
+    self.openclaw.handle_get_hermes_model_config(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_hermes_memory", (r, w) => {
     self.openclaw.handle_get_hermes_memory(r, w)
@@ -1320,10 +1320,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_stream_check_all_providers(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_stream_check_config", (_, w) => {
-    self.handle_get_stream_check_config(w)
+    self.config.handle_get_stream_check_config(w)
   })
   router.add_handler(@httpx.Method::Post, "/save_stream_check_config", (r, w) => {
-    self.handle_save_stream_check_config(r, w)
+    self.config.handle_save_stream_check_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/fetch_models_for_config", (r, w) => {
     self.handle_fetch_models_for_config(r, w)

@@ -1326,19 +1326,19 @@ async fn Gateway::handle_apply_claude_plugin_config(
 }
 
 ///|
-async fn Gateway::handle_scan_openclaw_config_health(
-  self : Gateway,
+async fn OpenClawService::handle_scan_openclaw_config_health(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   write_usage_json(w, self.openclaw_config_health_json())
 }
 
 ///|
-async fn Gateway::handle_get_hermes_model_config(
-  self : Gateway,
+async fn OpenClawService::handle_get_hermes_model_config(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw.hermes_model_config.unwrap_or(Json::null()))
+  write_usage_json(w, self.hermes_model_config.unwrap_or(Json::null()))
 }
 
 ///|
@@ -1410,28 +1410,24 @@ fn stream_check_config_from_request(
 }
 
 ///|
-async fn Gateway::handle_get_stream_check_config(
-  self : Gateway,
+async fn ConfigService::handle_get_stream_check_config(
+  self : ConfigService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.config.stream_check_config.to_json())
+  write_usage_json(w, self.stream_check_config.to_json())
 }
 
 ///|
-async fn Gateway::handle_save_stream_check_config(
-  self : Gateway,
+async fn ConfigService::handle_save_stream_check_config(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = r.body.read_all().text()
   match
-    stream_check_config_from_request(
-      r.path,
-      body,
-      self.config.stream_check_config,
-    ) {
+    stream_check_config_from_request(r.path, body, self.stream_check_config) {
     Some(config) => {
-      self.config.stream_check_config = config
+      self.stream_check_config = config
       write_usage_json(w, Json::null())
     }
     None => write_usage_bad_request(w, "invalid_stream_check_config")
@@ -1439,14 +1435,12 @@ async fn Gateway::handle_save_stream_check_config(
 }
 
 ///|
-fn Gateway::openclaw_config_health_json(self : Gateway) -> Json {
-  let defaults = self.openclaw.openclaw_agents_defaults.unwrap_or(
-    Json::object({}),
-  )
+fn OpenClawService::openclaw_config_health_json(self : OpenClawService) -> Json {
+  let defaults = self.openclaw_agents_defaults.unwrap_or(Json::object({}))
   let config = {
-    "tools": self.openclaw.openclaw_tools,
+    "tools": self.openclaw_tools,
     "agents": { "defaults": defaults }.to_json(),
-    "env": self.openclaw.openclaw_env,
+    "env": self.openclaw_env,
   }.to_json()
   openclaw_config_health_from_json(config)
 }

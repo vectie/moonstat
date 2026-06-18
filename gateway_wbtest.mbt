@@ -2126,7 +2126,7 @@ async test "settings mcp and prompt endpoints are owned by config service" {
       "handle_get_mcp_servers", "handle_upsert_mcp_server", "handle_toggle_mcp_app",
       "handle_import_mcp_from_apps", "handle_get_prompts", "handle_upsert_prompt",
       "handle_delete_prompt", "handle_enable_prompt", "handle_parse_deeplink", "handle_webdav_sync_save_settings",
-      "handle_s3_sync_save_settings",
+      "handle_s3_sync_save_settings", "handle_get_stream_check_config", "handle_save_stream_check_config",
     ] {
     assert_true(config_sources.contains("async fn ConfigService::\{handler}("))
     assert_false(config_sources.contains("async fn Gateway::\{handler}("))
@@ -2145,6 +2145,12 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   )
   assert_true(
     core_source.contains("self.config.handle_s3_sync_save_settings(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.config.handle_get_stream_check_config(w)"),
+  )
+  assert_true(
+    core_source.contains("self.config.handle_save_stream_check_config(r, w)"),
   )
   assert_true(
     core_source.contains("self.config.handle_get_auto_launch_status(w)"),
@@ -2243,6 +2249,31 @@ async test "skill endpoints are owned by skill service" {
     core_source.contains("self.skills.handle_install_skill_unified(r, w)"),
   )
   assert_true(core_source.contains("self.skills.handle_add_skill_repo(r, w)"))
+}
+
+///|
+async test "openclaw endpoints are owned by openclaw service" {
+  let config_source = @fsx.read_file("gateway_config.mbt")
+  let core_source = @fsx.read_file("gateway_core.mbt")
+  for
+    handler in [
+      "handle_scan_openclaw_config_health", "handle_get_hermes_model_config",
+    ] {
+    assert_true(config_source.contains("async fn OpenClawService::\{handler}("))
+    assert_false(config_source.contains("async fn Gateway::\{handler}("))
+  }
+  assert_true(
+    config_source.contains("fn OpenClawService::openclaw_config_health_json("),
+  )
+  assert_false(
+    config_source.contains("fn Gateway::openclaw_config_health_json("),
+  )
+  assert_true(
+    core_source.contains("self.openclaw.handle_scan_openclaw_config_health(w)"),
+  )
+  assert_true(
+    core_source.contains("self.openclaw.handle_get_hermes_model_config(w)"),
+  )
 }
 
 ///|
