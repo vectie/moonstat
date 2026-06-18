@@ -809,10 +809,11 @@ async fn Gateway::handle_usage_provider_limits(
 }
 
 ///|
-async fn Gateway::handle_query_provider_usage(
-  self : Gateway,
+async fn UsageService::handle_query_provider_usage(
+  self : UsageService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
+  provider_router : ProviderRouter,
 ) -> Unit {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
@@ -828,21 +829,24 @@ async fn Gateway::handle_query_provider_usage(
   }
   write_usage_json(
     w,
-    self.query_provider_usage_standalone(app_type, provider_id).to_json(),
+    self
+    .query_provider_usage_standalone(app_type, provider_id, provider_router)
+    .to_json(),
   )
 }
 
 ///|
-async fn Gateway::query_provider_usage_standalone(
-  self : Gateway,
+async fn UsageService::query_provider_usage_standalone(
+  self : UsageService,
   app_type : String,
   provider_id : String,
+  provider_router : ProviderRouter,
 ) -> UsageResult {
-  match self.usage.usage_cache.get_script(app_type, provider_id) {
+  match self.usage_cache.get_script(app_type, provider_id) {
     Some(result) => return result
     None => ()
   }
-  match self.proxy.provider_router.provider_by_id(app_type, provider_id) {
+  match provider_router.provider_by_id(app_type, provider_id) {
     Some(provider) =>
       match moon_provider_balance_query_credentials(provider) {
         Some((base_url, api_key)) => return moon_get_balance(base_url, api_key)

@@ -1570,7 +1570,8 @@ test "usage aggregate helpers prefer query params over ccs body args" {
 
 ///|
 async test "queryProviderUsage returns cached ccs script result first" {
-  let gateway = Gateway::new(port=17019, host="127.0.0.19", model="gpt-5")
+  let usage = UsageService::new()
+  let router = ProviderRouter::new()
   let cached = UsageResult::new(
     true,
     data=Some([
@@ -1582,10 +1583,10 @@ async test "queryProviderUsage returns cached ccs script result first" {
       ),
     ]),
   )
-  gateway.usage.usage_cache.put_script("codex", "cached-provider", cached)
+  usage.usage_cache.put_script("codex", "cached-provider", cached)
   assert_eq(
-    gateway
-    .query_provider_usage_standalone("codex", "cached-provider")
+    usage
+    .query_provider_usage_standalone("codex", "cached-provider", router)
     .to_json(),
     cached.to_json(),
   )
@@ -1593,8 +1594,9 @@ async test "queryProviderUsage returns cached ccs script result first" {
 
 ///|
 async test "queryProviderUsage falls back to ccs native balance credentials" {
-  let gateway = Gateway::new(port=17020, host="127.0.0.20", model="gpt-5")
-  gateway.proxy.provider_router.upsert_provider(
+  let usage = UsageService::new()
+  let router = ProviderRouter::new()
+  router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="codex",
       provider_id="openrouter-native",
@@ -1605,14 +1607,14 @@ async test "queryProviderUsage falls back to ccs native balance credentials" {
     ),
   )
   assert_eq(
-    gateway
-    .query_provider_usage_standalone("codex", "openrouter-native")
+    usage
+    .query_provider_usage_standalone("codex", "openrouter-native", router)
     .to_json(),
     UsageResult::new(false, error=Some("API key is empty")).to_json(),
   )
   assert_eq(
-    gateway
-    .query_provider_usage_standalone("codex", "missing-provider")
+    usage
+    .query_provider_usage_standalone("codex", "missing-provider", router)
     .to_json(),
     UsageResult::new(false, error=Some("Usage query is disabled")).to_json(),
   )
