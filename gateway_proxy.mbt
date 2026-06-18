@@ -626,8 +626,8 @@ fn proxy_test_result_json(url : String) -> Json {
 }
 
 ///|
-async fn Gateway::handle_proxy_app_config(
-  self : Gateway,
+async fn ProxyService::handle_proxy_app_config(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -636,24 +636,27 @@ async fn Gateway::handle_proxy_app_config(
     write_usage_bad_request(w, "missing_app_type")
     return
   }
-  write_usage_json(w, self.proxy_app_config_json(app_type))
+  write_usage_json(w, self.app_config_json(app_type))
 }
 
 ///|
-fn Gateway::proxy_app_config_json(self : Gateway, app_type : String) -> Json {
-  let circuit = self.proxy.provider_router.circuit_config_for_app(app_type)
-  let enabled = self.proxy_app_enabled_for_app(app_type)
-  let auto_failover_enabled = self.proxy.provider_router.auto_failover_enabled_for_app(
+fn ProxyService::app_config_json(
+  self : ProxyService,
+  app_type : String,
+) -> Json {
+  let circuit = self.provider_router.circuit_config_for_app(app_type)
+  let enabled = self.app_enabled_for_app(app_type)
+  let auto_failover_enabled = self.provider_router.auto_failover_enabled_for_app(
     app_type,
   )
-  let max_retries = self.proxy.provider_router.max_retries_for_app(app_type)
-  let streaming_first_byte_timeout = self.proxy.proxy_streaming_first_byte_timeout
+  let max_retries = self.provider_router.max_retries_for_app(app_type)
+  let streaming_first_byte_timeout = self.proxy_streaming_first_byte_timeout
     .get(app_type)
     .unwrap_or(moon_proxy_streaming_first_byte_timeout_default(app_type))
-  let streaming_idle_timeout = self.proxy.proxy_streaming_idle_timeout
+  let streaming_idle_timeout = self.proxy_streaming_idle_timeout
     .get(app_type)
     .unwrap_or(moon_proxy_streaming_idle_timeout_default(app_type))
-  let non_streaming_timeout = self.proxy.proxy_non_streaming_timeout
+  let non_streaming_timeout = self.proxy_non_streaming_timeout
     .get(app_type)
     .unwrap_or(moon_proxy_non_streaming_timeout_default(app_type))
   {
@@ -696,20 +699,20 @@ fn Gateway::proxy_app_config_json(self : Gateway, app_type : String) -> Json {
 }
 
 ///|
-async fn Gateway::handle_proxy_update_app_config(
-  self : Gateway,
+async fn ProxyService::handle_proxy_update_app_config(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match self.apply_proxy_app_config_request(r) {
+  match self.apply_app_config_request(r) {
     Some(_) => write_usage_json(w, moon_unit_success_json())
     None => write_usage_bad_request(w, "invalid_app_proxy_config")
   }
 }
 
 ///|
-async fn Gateway::handle_proxy_default_cost_multiplier(
-  self : Gateway,
+async fn ProxyService::handle_proxy_default_cost_multiplier(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -720,13 +723,13 @@ async fn Gateway::handle_proxy_default_cost_multiplier(
   }
   write_usage_json(
     w,
-    Json::string(self.proxy_default_cost_multiplier_for_app(app_type)),
+    Json::string(self.default_cost_multiplier_for_app(app_type)),
   )
 }
 
 ///|
-async fn Gateway::handle_proxy_set_default_cost_multiplier(
-  self : Gateway,
+async fn ProxyService::handle_proxy_set_default_cost_multiplier(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -745,13 +748,13 @@ async fn Gateway::handle_proxy_set_default_cost_multiplier(
     return
   }
   let trimmed = value.trim().to_owned()
-  self.proxy.proxy_default_cost_multipliers.set(app_type, trimmed)
+  self.proxy_default_cost_multipliers.set(app_type, trimmed)
   write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
-async fn Gateway::handle_proxy_set_default_cost_multiplier_unit(
-  self : Gateway,
+async fn ProxyService::handle_proxy_set_default_cost_multiplier_unit(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -769,16 +772,13 @@ async fn Gateway::handle_proxy_set_default_cost_multiplier_unit(
     write_usage_bad_request(w, "invalid_default_cost_multiplier")
     return
   }
-  self.proxy.proxy_default_cost_multipliers.set(
-    app_type,
-    value.trim().to_owned(),
-  )
+  self.proxy_default_cost_multipliers.set(app_type, value.trim().to_owned())
   write_usage_json(w, Json::null())
 }
 
 ///|
-async fn Gateway::handle_proxy_pricing_model_source(
-  self : Gateway,
+async fn ProxyService::handle_proxy_pricing_model_source(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -787,15 +787,12 @@ async fn Gateway::handle_proxy_pricing_model_source(
     write_usage_bad_request(w, "missing_app_type")
     return
   }
-  write_usage_json(
-    w,
-    Json::string(self.proxy_pricing_model_source_for_app(app_type)),
-  )
+  write_usage_json(w, Json::string(self.pricing_model_source_for_app(app_type)))
 }
 
 ///|
-async fn Gateway::handle_proxy_set_pricing_model_source(
-  self : Gateway,
+async fn ProxyService::handle_proxy_set_pricing_model_source(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -814,13 +811,13 @@ async fn Gateway::handle_proxy_set_pricing_model_source(
     return
   }
   let trimmed = value.trim().to_owned()
-  self.proxy.proxy_pricing_model_sources.set(app_type, trimmed)
+  self.proxy_pricing_model_sources.set(app_type, trimmed)
   write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
-async fn Gateway::handle_proxy_set_pricing_model_source_unit(
-  self : Gateway,
+async fn ProxyService::handle_proxy_set_pricing_model_source_unit(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -838,28 +835,28 @@ async fn Gateway::handle_proxy_set_pricing_model_source_unit(
     write_usage_bad_request(w, "invalid_pricing_model_source")
     return
   }
-  self.proxy.proxy_pricing_model_sources.set(app_type, value.trim().to_owned())
+  self.proxy_pricing_model_sources.set(app_type, value.trim().to_owned())
   write_usage_json(w, Json::null())
 }
 
 ///|
-fn Gateway::proxy_default_cost_multiplier_for_app(
-  self : Gateway,
+fn ProxyService::default_cost_multiplier_for_app(
+  self : ProxyService,
   app_type : String,
 ) -> String {
   let default_app_type = proxy_pricing_default_app_type(app_type)
-  self.proxy.proxy_default_cost_multipliers
+  self.proxy_default_cost_multipliers
   .get(default_app_type)
   .unwrap_or(default_cost_multiplier_for_app(app_type))
 }
 
 ///|
-fn Gateway::proxy_pricing_model_source_for_app(
-  self : Gateway,
+fn ProxyService::pricing_model_source_for_app(
+  self : ProxyService,
   app_type : String,
 ) -> String {
   let default_app_type = proxy_pricing_default_app_type(app_type)
-  self.proxy.proxy_pricing_model_sources
+  self.proxy_pricing_model_sources
   .get(default_app_type)
   .unwrap_or(default_pricing_model_source_for_app(app_type))
 }
@@ -874,8 +871,8 @@ fn proxy_pricing_default_app_type(app_type : String) -> String {
 }
 
 ///|
-async fn Gateway::apply_proxy_app_config_request(
-  self : Gateway,
+async fn ProxyService::apply_app_config_request(
+  self : ProxyService,
   r : @httpx.RequestReader,
 ) -> String? {
   let body = proxy_json_body(r)
@@ -885,7 +882,7 @@ async fn Gateway::apply_proxy_app_config_request(
     _ => return None
   }
   match proxy_bool_request(r.path, config, ["enabled"]) {
-    Some(enabled) => self.proxy.proxy_app_enabled.set(app_type, enabled)
+    Some(enabled) => self.proxy_app_enabled.set(app_type, enabled)
     None => ()
   }
   match
@@ -893,36 +890,35 @@ async fn Gateway::apply_proxy_app_config_request(
       "auto_failover_enabled", "autoFailoverEnabled",
     ]) {
     Some(enabled) =>
-      if !self.proxy.provider_router.set_auto_failover_ccs(app_type, enabled) {
+      if !self.provider_router.set_auto_failover_ccs(app_type, enabled) {
         return None
       }
     None => ()
   }
   match proxy_int_request(r.path, config, ["max_retries", "maxRetries"]) {
     Some(max_retries) if max_retries >= 0 =>
-      self.proxy.provider_router.set_max_retries(app_type, max_retries)
+      self.provider_router.set_max_retries(app_type, max_retries)
     Some(_) => return None
     None => ()
   }
-  if !self.apply_proxy_app_timeout_config(app_type, r.path, config) {
+  if !self.apply_app_timeout_config(app_type, r.path, config) {
     return None
   }
   match
     proxy_circuit_config_from_request(
       r.path,
       config,
-      self.proxy.provider_router.circuit_config_for_app(app_type),
+      self.provider_router.circuit_config_for_app(app_type),
     ) {
-    Some(config) =>
-      self.proxy.provider_router.update_app_configs(app_type, config)
+    Some(config) => self.provider_router.update_app_configs(app_type, config)
     None => ()
   }
   Some(app_type)
 }
 
 ///|
-fn Gateway::apply_proxy_app_timeout_config(
-  self : Gateway,
+fn ProxyService::apply_app_timeout_config(
+  self : ProxyService,
   app_type : String,
   path : StringView,
   config : Json?,
@@ -932,7 +928,7 @@ fn Gateway::apply_proxy_app_timeout_config(
       "streaming_first_byte_timeout", "streamingFirstByteTimeout",
     ]) {
     Some(timeout) if timeout > 0 =>
-      self.proxy.proxy_streaming_first_byte_timeout.set(app_type, timeout)
+      self.proxy_streaming_first_byte_timeout.set(app_type, timeout)
     Some(_) => return false
     None => ()
   }
@@ -941,7 +937,7 @@ fn Gateway::apply_proxy_app_timeout_config(
       "streaming_idle_timeout", "streamingIdleTimeout",
     ]) {
     Some(timeout) if timeout > 0 =>
-      self.proxy.proxy_streaming_idle_timeout.set(app_type, timeout)
+      self.proxy_streaming_idle_timeout.set(app_type, timeout)
     Some(_) => return false
     None => ()
   }
@@ -950,7 +946,7 @@ fn Gateway::apply_proxy_app_timeout_config(
       "non_streaming_timeout", "nonStreamingTimeout",
     ]) {
     Some(timeout) if timeout > 0 =>
-      self.proxy.proxy_non_streaming_timeout.set(app_type, timeout)
+      self.proxy_non_streaming_timeout.set(app_type, timeout)
     Some(_) => return false
     None => ()
   }
@@ -958,13 +954,51 @@ fn Gateway::apply_proxy_app_timeout_config(
 }
 
 ///|
+fn ProxyService::app_enabled_for_app(
+  self : ProxyService,
+  app_type : String,
+) -> Bool {
+  self.proxy_app_enabled
+  .get(app_type)
+  .unwrap_or(self.provider_router.has_configured_app(app_type))
+}
+
+///|
+fn ProxyService::can_set_auto_failover_ccs(
+  self : ProxyService,
+  app_type : String,
+  enabled : Bool,
+) -> Bool {
+  !enabled || self.app_enabled_for_app(app_type)
+}
+
+///|
+fn Gateway::proxy_app_config_json(self : Gateway, app_type : String) -> Json {
+  self.proxy.app_config_json(app_type)
+}
+
+///|
+fn Gateway::proxy_default_cost_multiplier_for_app(
+  self : Gateway,
+  app_type : String,
+) -> String {
+  self.proxy.default_cost_multiplier_for_app(app_type)
+}
+
+///|
+fn Gateway::proxy_pricing_model_source_for_app(
+  self : Gateway,
+  app_type : String,
+) -> String {
+  self.proxy.pricing_model_source_for_app(app_type)
+}
+
+///|
 fn Gateway::proxy_app_enabled_for_app(
   self : Gateway,
   app_type : String,
 ) -> Bool {
-  self.proxy.proxy_app_enabled
-  .get(app_type)
-  .unwrap_or(self.proxy.provider_router.has_configured_app(app_type))
+  self.proxy.app_enabled_for_app(app_type)
 }
 
 ///|
@@ -973,7 +1007,7 @@ fn Gateway::can_set_auto_failover_ccs(
   app_type : String,
   enabled : Bool,
 ) -> Bool {
-  !enabled || self.proxy_app_enabled_for_app(app_type)
+  self.proxy.can_set_auto_failover_ccs(app_type, enabled)
 }
 
 ///|

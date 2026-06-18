@@ -651,62 +651,62 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_scan_local_proxies(w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/app-config", (r, w) => {
-    self.handle_proxy_app_config(r, w)
+    self.proxy.handle_proxy_app_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_proxy_config_for_app", (r, w) => {
-    self.handle_proxy_app_config(r, w)
+    self.proxy.handle_proxy_app_config(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/proxy/app-config", (r, w) => {
-    self.handle_proxy_update_app_config(r, w)
+    self.proxy.handle_proxy_update_app_config(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/update_proxy_config_for_app", (r, w) => {
-    self.handle_proxy_update_app_config(r, w)
+    self.proxy.handle_proxy_update_app_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/default-cost-multiplier", (
     r,
     w,
-  ) => self.handle_proxy_default_cost_multiplier(r, w))
+  ) => self.proxy.handle_proxy_default_cost_multiplier(r, w))
   router.add_handler(@httpx.Method::Post, "/proxy/default-cost-multiplier", (
     r,
     w,
-  ) => self.handle_proxy_set_default_cost_multiplier(r, w))
+  ) => self.proxy.handle_proxy_set_default_cost_multiplier(r, w))
   router.add_handler(@httpx.Method::Post, "/set_default_cost_multiplier", (r, w) => {
-    self.handle_proxy_set_default_cost_multiplier(r, w)
+    self.proxy.handle_proxy_set_default_cost_multiplier(r, w)
   })
   router.add_handler(
     @httpx.Method::Get,
     "/get_default_cost_multiplier_test_hook",
-    (r, w) => self.handle_proxy_default_cost_multiplier(r, w),
+    (r, w) => self.proxy.handle_proxy_default_cost_multiplier(r, w),
   )
   router.add_handler(@httpx.Method::Get, "/get_default_cost_multiplier", (r, w) => {
-    self.handle_proxy_default_cost_multiplier(r, w)
+    self.proxy.handle_proxy_default_cost_multiplier(r, w)
   })
   router.add_handler(
     @httpx.Method::Post,
     "/set_default_cost_multiplier_test_hook",
-    (r, w) => self.handle_proxy_set_default_cost_multiplier_unit(r, w),
+    (r, w) => self.proxy.handle_proxy_set_default_cost_multiplier_unit(r, w),
   )
   router.add_handler(@httpx.Method::Get, "/proxy/pricing-model-source", (r, w) => {
-    self.handle_proxy_pricing_model_source(r, w)
+    self.proxy.handle_proxy_pricing_model_source(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/proxy/pricing-model-source", (r, w) => {
-    self.handle_proxy_set_pricing_model_source(r, w)
+    self.proxy.handle_proxy_set_pricing_model_source(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/set_pricing_model_source", (r, w) => {
-    self.handle_proxy_set_pricing_model_source(r, w)
+    self.proxy.handle_proxy_set_pricing_model_source(r, w)
   })
   router.add_handler(
     @httpx.Method::Get,
     "/get_pricing_model_source_test_hook",
-    (r, w) => self.handle_proxy_pricing_model_source(r, w),
+    (r, w) => self.proxy.handle_proxy_pricing_model_source(r, w),
   )
   router.add_handler(@httpx.Method::Get, "/get_pricing_model_source", (r, w) => {
-    self.handle_proxy_pricing_model_source(r, w)
+    self.proxy.handle_proxy_pricing_model_source(r, w)
   })
   router.add_handler(
     @httpx.Method::Post,
     "/set_pricing_model_source_test_hook",
-    (r, w) => self.handle_proxy_set_pricing_model_source_unit(r, w),
+    (r, w) => self.proxy.handle_proxy_set_pricing_model_source_unit(r, w),
   )
   router.add_handler(@httpx.Method::Get, "/proxy/provider-health", (r, w) => {
     self.handle_proxy_provider_health(r, w)

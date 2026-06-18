@@ -2012,9 +2012,9 @@ async test "ccs proxy mutation command handlers return unit success bodies" {
     entry in [
       ("ProxyService", "handle_proxy_update_config"),
       ("ProxyService", "handle_proxy_update_global_config"),
-      ("Gateway", "handle_proxy_update_app_config"),
-      ("Gateway", "handle_proxy_set_default_cost_multiplier"),
-      ("Gateway", "handle_proxy_set_pricing_model_source"),
+      ("ProxyService", "handle_proxy_update_app_config"),
+      ("ProxyService", "handle_proxy_set_default_cost_multiplier"),
+      ("ProxyService", "handle_proxy_set_pricing_model_source"),
       ("Gateway", "handle_proxy_update_circuit_breaker_config"),
       ("Gateway", "handle_proxy_set_takeover_for_app"),
       ("Gateway", "handle_proxy_switch_provider"),
