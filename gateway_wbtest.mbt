@@ -2333,6 +2333,7 @@ async test "workspace endpoints are owned by workspace service" {
 ///|
 async test "runtime endpoints are owned by runtime service" {
   let runtime_source = @fsx.read_file("gateway_misc.mbt")
+  let runtime_helper_source = @fsx.read_file("gateway_runtime.mbt")
   let core_source = @fsx.read_file("gateway_core.mbt")
   for
     handler in [
@@ -2353,6 +2354,14 @@ async test "runtime endpoints are owned by runtime service" {
     core_source.contains("self.runtime.handle_probe_tool_installations(r, w)"),
   )
   assert_true(core_source.contains("self.runtime.handle_restart_app(w)"))
+  assert_true(
+    runtime_helper_source.contains("fn RuntimeService::uptime_seconds("),
+  )
+  assert_false(runtime_helper_source.contains("fn Gateway::uptime_seconds("))
+  assert_false(runtime_source.contains("fn Gateway::uptime_seconds("))
+  assert_true(
+    core_source.contains("self.runtime.uptime_seconds(self.started_at_ms)"),
+  )
 }
 
 ///|
@@ -3263,7 +3272,7 @@ test "proxy status alias matches ccs proxy status shape" {
       gateway.usage,
       gateway.host,
       gateway.port,
-      gateway.uptime_seconds(),
+      gateway.runtime.uptime_seconds(gateway.started_at_ms),
     )
     is Object(status) else {
     fail("expected proxy status object")
@@ -3293,7 +3302,7 @@ test "proxy status running follows ccs start stop state" {
       gateway.usage,
       gateway.host,
       gateway.port,
-      gateway.uptime_seconds(),
+      gateway.runtime.uptime_seconds(gateway.started_at_ms),
     )
     is Object(stopped) else {
     fail("expected stopped proxy status")
@@ -3304,7 +3313,7 @@ test "proxy status running follows ccs start stop state" {
       gateway.usage,
       gateway.host,
       gateway.port,
-      gateway.uptime_seconds(),
+      gateway.runtime.uptime_seconds(gateway.started_at_ms),
     )
     is Object(started) else {
     fail("expected started proxy status")

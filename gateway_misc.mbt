@@ -5119,16 +5119,6 @@ fn claude_desktop_opus_route_alias_matches(
 }
 
 ///|
-fn Gateway::uptime_seconds(self : Gateway) -> Int {
-  let elapsed = @async.now().to_int() - self.started_at_ms
-  if elapsed < 0 {
-    0
-  } else {
-    elapsed / 1000
-  }
-}
-
-///|
 async fn Gateway::handle_messages(
   self : Gateway,
   r : @httpx.RequestReader,

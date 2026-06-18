@@ -103,7 +103,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       w,
       self.host,
       self.port,
-      self.uptime_seconds(),
+      self.runtime.uptime_seconds(self.started_at_ms),
       provider_routes=Some(self.proxy.provider_router.route_stats_json()),
     )
   })
@@ -609,7 +609,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       self.usage,
       self.host,
       self.port,
-      self.uptime_seconds(),
+      self.runtime.uptime_seconds(self.started_at_ms),
     )
   })
   router.add_handler(@httpx.Method::Get, "/get_proxy_status", (_, w) => {
@@ -618,7 +618,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       self.usage,
       self.host,
       self.port,
-      self.uptime_seconds(),
+      self.runtime.uptime_seconds(self.started_at_ms),
     )
   })
   router.add_handler(@httpx.Method::Post, "/start_proxy_server", (_, w) => {
