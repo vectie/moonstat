@@ -2111,11 +2111,13 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   let misc_source = @fsx.read_file("gateway_misc.mbt")
   let config_source = @fsx.read_file("gateway_config.mbt")
   let deeplink_source = @fsx.read_file("gateway_deeplink.mbt")
+  let deeplink_helpers_source = @fsx.read_file("deeplink.mbt")
   let import_export_source = @fsx.read_file("import_export.mbt")
   let sync_source = @fsx.read_file("sync.mbt")
   let config_sources = misc_source +
     config_source +
     deeplink_source +
+    deeplink_helpers_source +
     import_export_source +
     sync_source
   let core_source = @fsx.read_file("gateway_core.mbt")
@@ -2132,13 +2134,13 @@ async test "settings mcp and prompt endpoints are owned by config service" {
       "handle_get_mcp_servers", "handle_upsert_mcp_server", "handle_toggle_mcp_app",
       "handle_import_mcp_from_apps", "handle_get_prompts", "handle_upsert_prompt",
       "handle_delete_prompt", "handle_enable_prompt", "handle_parse_deeplink", "handle_webdav_sync_save_settings",
-      "handle_s3_sync_save_settings", "handle_get_stream_check_config", "handle_save_stream_check_config",
-      "handle_get_claude_plugin_status", "handle_read_claude_plugin_config", "handle_apply_claude_plugin_config",
-      "handle_is_claude_plugin_applied", "handle_apply_claude_onboarding_skip", "handle_clear_claude_onboarding_skip",
-      "handle_fetch_models_for_config", "handle_export_config_to_file", "handle_import_config_from_file",
-      "handle_create_db_backup", "handle_restore_db_backup", "handle_webdav_test_connection",
-      "handle_webdav_sync_operation", "handle_webdav_sync_fetch_remote_info", "handle_s3_test_connection",
-      "handle_s3_sync_operation", "handle_s3_sync_fetch_remote_info",
+      "handle_import_from_deeplink", "handle_s3_sync_save_settings", "handle_get_stream_check_config",
+      "handle_save_stream_check_config", "handle_get_claude_plugin_status", "handle_read_claude_plugin_config",
+      "handle_apply_claude_plugin_config", "handle_is_claude_plugin_applied", "handle_apply_claude_onboarding_skip",
+      "handle_clear_claude_onboarding_skip", "handle_fetch_models_for_config", "handle_export_config_to_file",
+      "handle_import_config_from_file", "handle_create_db_backup", "handle_restore_db_backup",
+      "handle_webdav_test_connection", "handle_webdav_sync_operation", "handle_webdav_sync_fetch_remote_info",
+      "handle_s3_test_connection", "handle_s3_sync_operation", "handle_s3_sync_fetch_remote_info",
     ] {
     assert_true(config_sources.contains("async fn ConfigService::\{handler}("))
     assert_false(config_sources.contains("async fn Gateway::\{handler}("))
@@ -2149,7 +2151,9 @@ async test "settings mcp and prompt endpoints are owned by config service" {
       "moon_apply_import_snapshot", "moon_create_db_backup_json", "moon_restore_db_backup_json",
       "moon_sync_build_local_snapshot", "moon_persist_webdav_sync_success", "moon_persist_s3_sync_success",
       "moon_webdav_sync_upload_json", "moon_s3_sync_upload_json", "moon_apply_webdav_snapshot",
-      "moon_webdav_sync_download_json", "moon_s3_sync_download_json",
+      "moon_webdav_sync_download_json", "moon_s3_sync_download_json", "moon_import_from_deeplink_json",
+      "moon_import_provider_deeplink", "moon_import_prompt_deeplink", "moon_import_mcp_deeplink",
+      "moon_import_skill_deeplink",
     ] {
     assert_true(config_sources.contains("ConfigService::\{helper}("))
     assert_false(config_sources.contains("Gateway::\{helper}("))
@@ -2171,6 +2175,16 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   assert_true(core_source.contains("self.config.handle_get_mcp_config(r, w)"))
   assert_true(core_source.contains("self.config.handle_upsert_prompt(r, w)"))
   assert_true(core_source.contains("self.config.handle_parse_deeplink(r, w)"))
+  assert_true(
+    core_source.contains(
+      "self.config.handle_import_from_deeplink(self.proxy, r, w, legacy=true)",
+    ),
+  )
+  assert_true(
+    core_source.contains(
+      "self.config.handle_import_from_deeplink(self.proxy, r, w, legacy=false)",
+    ),
+  )
   assert_true(
     core_source.contains("self.config.handle_webdav_sync_save_settings(r, w)"),
   )

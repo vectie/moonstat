@@ -17,8 +17,9 @@ async fn ConfigService::handle_parse_deeplink(
 }
 
 ///|
-async fn Gateway::handle_import_from_deeplink(
-  self : Gateway,
+async fn ConfigService::handle_import_from_deeplink(
+  self : ConfigService,
+  proxy : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
   legacy~ : Bool,
@@ -28,7 +29,7 @@ async fn Gateway::handle_import_from_deeplink(
     write_usage_bad_request(w, "invalid_deeplink")
     return
   }
-  match self.moon_import_from_deeplink_json(request) {
+  match self.moon_import_from_deeplink_json(proxy, request) {
     Some(Object(obj)) =>
       if legacy {
         match obj.get("id") {

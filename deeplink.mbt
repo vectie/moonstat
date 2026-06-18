@@ -362,8 +362,9 @@ fn moon_deeplink_padded_base64(encoded : String) -> String {
 }
 
 ///|
-async fn Gateway::moon_import_from_deeplink_json(
-  self : Gateway,
+async fn ConfigService::moon_import_from_deeplink_json(
+  self : ConfigService,
+  proxy : ProxyService,
   request : Json,
 ) -> Json? {
   guard moon_merge_deeplink_config_json(request) is Some(merged) else {
@@ -371,7 +372,7 @@ async fn Gateway::moon_import_from_deeplink_json(
   }
   guard merged is Object(obj) else { return None }
   match json_string_from_map_any(obj, ["resource"]) {
-    Some("provider") => self.moon_import_provider_deeplink(obj)
+    Some("provider") => self.moon_import_provider_deeplink(proxy, obj)
     Some("prompt") => self.moon_import_prompt_deeplink(obj)
     Some("mcp") => self.moon_import_mcp_deeplink(obj)
     Some("skill") => self.moon_import_skill_deeplink(obj)
@@ -380,10 +381,12 @@ async fn Gateway::moon_import_from_deeplink_json(
 }
 
 ///|
-fn Gateway::moon_import_provider_deeplink(
-  self : Gateway,
+fn ConfigService::moon_import_provider_deeplink(
+  self : ConfigService,
+  proxy : ProxyService,
   request : Map[String, Json],
 ) -> Json? {
+  ignore(self)
   guard json_string_from_map_any(request, ["app"]) is Some(app) else {
     return None
   }
@@ -409,10 +412,10 @@ fn Gateway::moon_import_provider_deeplink(
     api_key=Some(api_key),
     settings_config=Some(moon_deeplink_provider_settings(app_type, request)),
   )
-  self.proxy.provider_router.upsert_provider(target)
+  proxy.provider_router.upsert_provider(target)
   if json_bool_from_map_any(request, ["enabled"]).unwrap_or(false) ||
-    self.proxy.provider_router.current_provider_id(app_type) is None {
-    self.proxy.provider_router.set_current_provider(app_type, provider_id)
+    proxy.provider_router.current_provider_id(app_type) is None {
+    proxy.provider_router.set_current_provider(app_type, provider_id)
   }
   Json::object({
     "type": Json::string("provider"),
@@ -530,8 +533,8 @@ fn moon_deeplink_generated_id(name : String) -> String {
 }
 
 ///|
-fn Gateway::moon_import_prompt_deeplink(
-  self : Gateway,
+fn ConfigService::moon_import_prompt_deeplink(
+  self : ConfigService,
   request : Map[String, Json],
 ) -> Json? {
   guard json_string_from_map_any(request, ["app"]) is Some(app) else {
@@ -560,16 +563,14 @@ fn Gateway::moon_import_prompt_deeplink(
     None => ()
   }
   let app_type = moon_normalize_app_type(app)
-  self.config.prompts[moon_prompt_store_key(app_type, id)] = Json::object(
-    prompt,
-  )
+  self.prompts[moon_prompt_store_key(app_type, id)] = Json::object(prompt)
   Json::object({ "type": Json::string("prompt"), "id": Json::string(id) })
   |> Some
 }
 
 ///|
-fn Gateway::moon_import_mcp_deeplink(
-  self : Gateway,
+fn ConfigService::moon_import_mcp_deeplink(
+  self : ConfigService,
   request : Map[String, Json],
 ) -> Json? {
   guard json_string_from_map_any(request, ["apps"]) is Some(apps) else {
@@ -593,7 +594,7 @@ fn Gateway::moon_import_mcp_deeplink(
         server = moon_mcp_server_with_app(server, app, true)
       }
     }
-    self.config.mcp_servers[id] = server
+    self.mcp_servers[id] = server
     imported.push(Json::string(id))
   }
   Some(
@@ -607,8 +608,8 @@ fn Gateway::moon_import_mcp_deeplink(
 }
 
 ///|
-async fn Gateway::moon_import_skill_deeplink(
-  self : Gateway,
+async fn ConfigService::moon_import_skill_deeplink(
+  self : ConfigService,
   request : Map[String, Json],
 ) -> Json? {
   ignore(self)

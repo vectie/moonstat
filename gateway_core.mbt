@@ -291,12 +291,12 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.config.handle_merge_deeplink_config(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/import_from_deeplink", (r, w) => {
-    self.handle_import_from_deeplink(r, w, legacy=true)
+    self.config.handle_import_from_deeplink(self.proxy, r, w, legacy=true)
   })
   router.add_handler(@httpx.Method::Post, "/import_from_deeplink_unified", (
     r,
     w,
-  ) => self.handle_import_from_deeplink(r, w, legacy=false))
+  ) => self.config.handle_import_from_deeplink(self.proxy, r, w, legacy=false))
   router.add_handler(@httpx.Method::Post, "/webdav_test_connection", (r, w) => {
     self.config.handle_webdav_test_connection(r, w)
   })
