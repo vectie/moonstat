@@ -5364,7 +5364,7 @@ async fn ProxyService::forward_non_streaming_claude_compatible_request(
         match moon_rectifier_retry_body(final_response_body, upstream_body) {
           Some(rectifier_retry) => {
             logger.info(
-              "CCS rectifier retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
+              "Moonstat rectifier retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
             )
             let retry_outbound = self.claude_provider_outbound_body(
               self.gemini_shadow,
@@ -6752,7 +6752,7 @@ async fn ProxyService::forward_streaming_claude_compatible_request(
     match moon_rectifier_retry_body(error_body, upstream_body) {
       Some(rectifier_retry) => {
         logger.info(
-          "CCS rectifier stream retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
+          "Moonstat rectifier stream retry triggered: \{rectifier_retry.kind} (\{rectifier_retry.summary})",
         )
         let retry_outbound = self.claude_provider_outbound_body(
           self.gemini_shadow,
