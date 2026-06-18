@@ -532,40 +532,8 @@ fn registered_cli_command_id(args : Array[String]) -> String? {
 ///|
 async fn run_registered_cli_command(args : Array[String]) -> Bool {
   match registered_cli_command_id(args) {
-    Some("start") => {
-      start_gateway(args)
-      true
-    }
-    Some("install_reroute") => {
-      install_reroute(args)
-      true
-    }
-    Some("uninstall_reroute") => {
-      uninstall_reroute()
-      true
-    }
-    Some("install_claude_desktop") => {
-      install_claude_desktop(args)
-      true
-    }
-    Some("uninstall_claude_desktop") => {
-      uninstall_claude_desktop()
-      true
-    }
-    Some("status_claude_desktop") => {
-      status_claude_desktop()
-      true
-    }
-    Some("install_codex") => {
-      install_codex(args)
-      true
-    }
-    Some("uninstall_codex") => {
-      uninstall_codex()
-      true
-    }
-    Some("status_codex") => {
-      status_codex()
+    Some(command_id) if cli_install_command_id(command_id) => {
+      run_install_cli_command(command_id, args)
       true
     }
     Some(command_id) if cli_auth_command_id(command_id) => {
@@ -584,20 +552,8 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       run_config_cli_command(command_id, args)
       true
     }
-    Some("stream_check_provider") => {
-      stream_check_provider(args)
-      true
-    }
-    Some("stream_check_all_providers") => {
-      stream_check_all_providers(args)
-      true
-    }
-    Some("get_stream_check_config") => {
-      check_usage_endpoint(args, "/proxy/stream-check/config")
-      true
-    }
-    Some("save_stream_check_config") => {
-      save_stream_check_config(args)
+    Some(command_id) if cli_stream_check_command_id(command_id) => {
+      run_stream_check_cli_command(command_id, args)
       true
     }
     Some(command_id) if cli_proxy_command_id(command_id) => {

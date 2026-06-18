@@ -598,6 +598,28 @@ test "session cli dispatcher owns session and omo commands" {
 }
 
 ///|
+test "install cli dispatcher owns startup and app install commands" {
+  assert_true(cli_install_command_id("start"))
+  assert_true(cli_install_command_id("install_reroute"))
+  assert_true(cli_install_command_id("status_claude_desktop"))
+  assert_true(cli_install_command_id("install_codex"))
+  assert_false(cli_install_command_id("auth_get_status"))
+  assert_false(cli_install_command_id("get_usage_summary"))
+  assert_false(cli_install_command_id("read_workspace_file"))
+}
+
+///|
+test "stream check cli dispatcher owns stream check commands" {
+  assert_true(cli_stream_check_command_id("stream_check_provider"))
+  assert_true(cli_stream_check_command_id("stream_check_all_providers"))
+  assert_true(cli_stream_check_command_id("get_stream_check_config"))
+  assert_true(cli_stream_check_command_id("save_stream_check_config"))
+  assert_false(cli_stream_check_command_id("auth_get_status"))
+  assert_false(cli_stream_check_command_id("get_usage_summary"))
+  assert_false(cli_stream_check_command_id("read_workspace_file"))
+}
+
+///|
 test "usage sync path accepts standalone projects dir override" {
   assert_eq(
     usage_sync_path(["moonstat", "usage", "sync"]),
