@@ -65,6 +65,74 @@ fn UsageService::set_active_target(
 }
 
 ///|
+priv struct ProviderUsageContext {
+  app_type : String
+  provider_id : String
+  used_half_open_permit : Bool
+}
+
+///|
+fn UsageService::activate_provider_target(
+  self : UsageService,
+  app_type : String,
+  provider_id : String,
+  provider_name : String,
+  used_half_open_permit? : Bool = false,
+  cost_multiplier? : String = "1.0",
+  pricing_model_source? : String = "response",
+) -> Unit {
+  self.stats.current_request_used_half_open_permit = used_half_open_permit
+  self.stats.set_active_target(
+    app_type,
+    provider_id,
+    provider_name,
+    cost_multiplier~,
+    pricing_model_source~,
+  )
+}
+
+///|
+fn UsageService::provider_request_context(
+  self : UsageService,
+) -> ProviderUsageContext? {
+  guard self.stats.current_request_app_type is Some(app_type) else {
+    return None
+  }
+  guard self.stats.current_provider_id is Some(provider_id) else { return None }
+  Some({
+    app_type,
+    provider_id,
+    used_half_open_permit: self.stats.current_request_used_half_open_permit,
+  })
+}
+
+///|
+fn UsageService::current_provider_id(self : UsageService) -> String? {
+  self.stats.current_provider_id
+}
+
+///|
+fn UsageService::set_last_error(self : UsageService, error : String) -> Unit {
+  self.stats.last_error = Some(error)
+}
+
+///|
+fn UsageService::set_provider_limits(
+  self : UsageService,
+  provider_id : String,
+  app_type : String,
+  daily_limit_usd? : String? = None,
+  monthly_limit_usd? : String? = None,
+) -> Unit {
+  self.stats.set_provider_limits(
+    provider_id,
+    app_type,
+    daily_limit_usd~,
+    monthly_limit_usd~,
+  )
+}
+
+///|
 fn UsageService::pricing_override_rows(
   self : UsageService,
 ) -> Array[ModelPricing] {

@@ -140,11 +140,11 @@ fn Gateway::activate_provider_target(
     )
   }
   guard allow.allowed else { return false }
-  self.usage.stats.current_request_used_half_open_permit = allow.used_half_open_permit
-  self.usage.stats.set_active_target(
+  self.usage.activate_provider_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
+    used_half_open_permit=allow.used_half_open_permit,
     cost_multiplier=self.provider_cost_multiplier(provider),
     pricing_model_source=self.provider_pricing_model_source(provider),
   )
@@ -153,32 +153,22 @@ fn Gateway::activate_provider_target(
 
 ///|
 fn Gateway::record_provider_result(self : Gateway, success : Bool) -> Unit {
-  guard self.usage.stats.current_request_app_type is Some(app_type) else {
-    return
-  }
-  guard self.usage.stats.current_provider_id is Some(provider_id) else {
-    return
-  }
+  guard self.usage.provider_request_context() is Some(context) else { return }
   self.proxy.provider_router.record_result(
-    provider_id,
-    app_type,
-    self.usage.stats.current_request_used_half_open_permit,
+    context.provider_id,
+    context.app_type,
+    context.used_half_open_permit,
     success,
   )
 }
 
 ///|
 fn Gateway::release_provider_permit_neutral(self : Gateway) -> Unit {
-  guard self.usage.stats.current_request_app_type is Some(app_type) else {
-    return
-  }
-  guard self.usage.stats.current_provider_id is Some(provider_id) else {
-    return
-  }
+  guard self.usage.provider_request_context() is Some(context) else { return }
   self.proxy.provider_router.release_permit_neutral(
-    provider_id,
-    app_type,
-    self.usage.stats.current_request_used_half_open_permit,
+    context.provider_id,
+    context.app_type,
+    context.used_half_open_permit,
   )
 }
 
@@ -190,30 +180,30 @@ fn Gateway::activate_next_provider_after_upstream_status(
   attempted_provider_ids : Array[String],
   status_code : Int,
 ) -> ProviderRouteTarget? {
-  guard self.usage.stats.current_provider_id is Some(provider_id) else {
+  guard self.usage.provider_request_context() is Some(context) else {
     return None
   }
-  if !attempted_provider_ids.contains(provider_id) {
-    attempted_provider_ids.push(provider_id)
+  if !attempted_provider_ids.contains(context.provider_id) {
+    attempted_provider_ids.push(context.provider_id)
   }
   if moon_upstream_status_retryable(status_code) {
     self.proxy.provider_router.record_result(
-      provider_id,
+      context.provider_id,
       app_type,
-      self.usage.stats.current_request_used_half_open_permit,
+      context.used_half_open_permit,
       false,
     )
-    self.usage.stats.last_error = Some("upstream_error")
+    self.usage.set_last_error("upstream_error")
     self.activate_first_available_provider_excluding(
       app_type, providers, attempted_provider_ids,
     )
   } else {
     self.proxy.provider_router.release_permit_neutral(
-      provider_id,
+      context.provider_id,
       app_type,
-      self.usage.stats.current_request_used_half_open_permit,
+      context.used_half_open_permit,
     )
-    self.usage.stats.last_error = Some("upstream_error")
+    self.usage.set_last_error("upstream_error")
     None
   }
 }
@@ -274,7 +264,7 @@ async fn Gateway::write_provider_selection_error(
   let status_code = provider_selection_error_status(error)
   let body = provider_selection_error_json(error, app_type).stringify()
   self.record_upstream_error_status(body.length(), status_code)
-  self.usage.stats.last_error = Some(error.to_string())
+  self.usage.set_last_error(error.to_string())
   w.header().set("Content-Type", "application/json")
   w.write_header(status_code)
   w.write(body)
@@ -299,7 +289,7 @@ fn Gateway::active_provider_target(
   self : Gateway,
   providers : Array[ProviderRouteTarget],
 ) -> ProviderRouteTarget? {
-  guard self.usage.stats.current_provider_id is Some(provider_id) else {
+  guard self.usage.current_provider_id() is Some(provider_id) else {
     match providers.get(0) {
       Some(provider) => return Some(provider)
       None => return None
@@ -873,7 +863,7 @@ async fn Gateway::handle_switch_provider(
     return
   }
   self.proxy.provider_router.set_current_provider(app_type, provider_id)
-  self.usage.stats.set_active_target(
+  self.usage.set_active_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
@@ -1065,7 +1055,7 @@ async fn Gateway::handle_sync_current_providers_live(
 ) -> Unit {
   let targets = self.proxy.provider_router.sync_current_provider_targets()
   for target in targets {
-    self.usage.stats.set_active_target(
+    self.usage.set_active_target(
       target.app_type,
       target.provider_id,
       target.provider_name,
@@ -1792,7 +1782,7 @@ fn Gateway::sync_provider_limits_from_target(
     is Some(config) else {
     return
   }
-  self.usage.stats.set_provider_limits(
+  self.usage.set_provider_limits(
     target.provider_id,
     target.app_type,
     daily_limit_usd=config.daily_limit_usd,

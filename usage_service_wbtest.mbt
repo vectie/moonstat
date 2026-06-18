@@ -58,6 +58,44 @@ async test "usage service owns proxy status target and pricing state" {
 }
 
 ///|
+test "usage service owns provider bookkeeping context" {
+  let usage = UsageService::new()
+  assert_true(usage.provider_request_context() is None)
+  usage.activate_provider_target(
+    "codex",
+    "codex-oauth",
+    "Codex OAuth",
+    used_half_open_permit=true,
+    cost_multiplier="1.5",
+    pricing_model_source="request",
+  )
+  assert_true(usage.provider_request_context() is None)
+  assert_true(usage.current_provider_id() is Some("codex-oauth"))
+  assert_eq(usage.stats.current_request_cost_multiplier, "1.5")
+  assert_eq(usage.stats.current_request_pricing_model_source, "request")
+
+  usage.record_request_context("codex", "gpt-5")
+  guard usage.provider_request_context() is Some(context) else {
+    fail("expected provider context")
+  }
+  assert_eq(context.app_type, "codex")
+  assert_eq(context.provider_id, "codex-oauth")
+  assert_true(context.used_half_open_permit)
+
+  usage.set_last_error("upstream_error")
+  assert_true(usage.stats.last_error is Some("upstream_error"))
+  usage.set_provider_limits(
+    "codex-oauth",
+    "codex",
+    daily_limit_usd=Some("1.25"),
+    monthly_limit_usd=Some("9.50"),
+  )
+  let limit_status = usage.provider_limit_status_json("codex-oauth", "codex")
+  assert_true(limit_status.stringify().contains("1.25"))
+  assert_true(limit_status.stringify().contains("9.50"))
+}
+
+///|
 async test "usage service owns usage report json without gateway" {
   let usage = UsageService::new()
   usage.record_inbound(64)
@@ -130,7 +168,7 @@ async test "usage service owns usage report json without gateway" {
 async test "usage service owns completion and error accounting without gateway" {
   let usage = UsageService::new()
   usage.record_inbound(32)
-  usage.stats.set_active_target("codex", "openai", "OpenAI")
+  usage.set_active_target("codex", "openai", "OpenAI")
   usage.record_request_context(
     "codex",
     "gpt-5",
