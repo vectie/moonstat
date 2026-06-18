@@ -131,6 +131,15 @@ pub fn SessionService::new() -> SessionService {
 }
 
 ///|
+/// WorkspaceService handles local workspace, memory, and file-dialog endpoints.
+pub struct WorkspaceService {}
+
+///|
+pub fn WorkspaceService::new() -> WorkspaceService {
+  WorkspaceService::{  }
+}
+
+///|
 /// OpenClawService handles OpenClaw and Hermes provider configuration.
 pub struct OpenClawService {
   mut openclaw_default_model : Json?

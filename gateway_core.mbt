@@ -214,10 +214,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_is_lightweight_mode(w)
   })
   router.add_handler(@httpx.Method::Post, "/save_file_dialog", (r, w) => {
-    self.handle_save_file_dialog(r, w)
+    self.workspace.handle_save_file_dialog(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/save_file_dialog", (r, w) => {
-    self.handle_save_file_dialog(r, w)
+    self.workspace.handle_save_file_dialog(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/export_config_to_file", (r, w) => {
     self.handle_export_config_to_file(r, w)
@@ -300,10 +300,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_s3_sync_fetch_remote_info(w)
   })
   router.add_handler(@httpx.Method::Get, "/read_omo_local_file", (_, w) => {
-    self.handle_read_omo_local_file(w, slim=false)
+    self.workspace.handle_read_omo_local_file(w, slim=false)
   })
   router.add_handler(@httpx.Method::Post, "/read_omo_local_file", (_, w) => {
-    self.handle_read_omo_local_file(w, slim=false)
+    self.workspace.handle_read_omo_local_file(w, slim=false)
   })
   router.add_handler(@httpx.Method::Get, "/get_current_omo_provider_id", (_, w) => {
     self.handle_get_current_omo_provider_id(w, slim=false)
@@ -315,10 +315,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_disable_current_omo(w, slim=false)
   })
   router.add_handler(@httpx.Method::Get, "/read_omo_slim_local_file", (_, w) => {
-    self.handle_read_omo_local_file(w, slim=true)
+    self.workspace.handle_read_omo_local_file(w, slim=true)
   })
   router.add_handler(@httpx.Method::Post, "/read_omo_slim_local_file", (_, w) => {
-    self.handle_read_omo_local_file(w, slim=true)
+    self.workspace.handle_read_omo_local_file(w, slim=true)
   })
   router.add_handler(@httpx.Method::Get, "/get_current_omo_slim_provider_id", (
     _,
@@ -332,16 +332,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_disable_current_omo(w, slim=true)
   })
   router.add_handler(@httpx.Method::Post, "/open_file_dialog", (_, w) => {
-    self.handle_open_file_dialog(w)
+    self.workspace.handle_open_file_dialog(w)
   })
   router.add_handler(@httpx.Method::Get, "/open_file_dialog", (_, w) => {
-    self.handle_open_file_dialog(w)
+    self.workspace.handle_open_file_dialog(w)
   })
   router.add_handler(@httpx.Method::Post, "/open_zip_file_dialog", (_, w) => {
-    self.handle_open_zip_file_dialog(w)
+    self.workspace.handle_open_zip_file_dialog(w)
   })
   router.add_handler(@httpx.Method::Get, "/open_zip_file_dialog", (_, w) => {
-    self.handle_open_zip_file_dialog(w)
+    self.workspace.handle_open_zip_file_dialog(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_installed_skills", (_, w) => {
     self.handle_get_installed_skills(w)
@@ -920,43 +920,43 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     w,
   ) => self.handle_clear_claude_onboarding_skip(w))
   router.add_handler(@httpx.Method::Get, "/list_daily_memory_files", (_, w) => {
-    self.handle_list_daily_memory_files(w)
+    self.workspace.handle_list_daily_memory_files(w)
   })
   router.add_handler(@httpx.Method::Get, "/read_daily_memory_file", (r, w) => {
-    self.handle_read_daily_memory_file(r, w)
+    self.workspace.handle_read_daily_memory_file(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/read_daily_memory_file", (r, w) => {
-    self.handle_read_daily_memory_file(r, w)
+    self.workspace.handle_read_daily_memory_file(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/write_daily_memory_file", (r, w) => {
-    self.handle_write_daily_memory_file(r, w)
+    self.workspace.handle_write_daily_memory_file(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/search_daily_memory_files", (r, w) => {
-    self.handle_search_daily_memory_files(r, w)
+    self.workspace.handle_search_daily_memory_files(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/search_daily_memory_files", (r, w) => {
-    self.handle_search_daily_memory_files(r, w)
+    self.workspace.handle_search_daily_memory_files(r, w)
   })
   router.add_handler(@httpx.Method::Delete, "/delete_daily_memory_file", (r, w) => {
-    self.handle_delete_daily_memory_file(r, w)
+    self.workspace.handle_delete_daily_memory_file(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/delete_daily_memory_file", (r, w) => {
-    self.handle_delete_daily_memory_file(r, w)
+    self.workspace.handle_delete_daily_memory_file(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/read_workspace_file", (r, w) => {
-    self.handle_read_workspace_file(r, w)
+    self.workspace.handle_read_workspace_file(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/read_workspace_file", (r, w) => {
-    self.handle_read_workspace_file(r, w)
+    self.workspace.handle_read_workspace_file(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/write_workspace_file", (r, w) => {
-    self.handle_write_workspace_file(r, w)
+    self.workspace.handle_write_workspace_file(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/open_workspace_directory", (r, w) => {
-    self.handle_open_workspace_directory(r, w)
+    self.workspace.handle_open_workspace_directory(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/open_workspace_directory", (r, w) => {
-    self.handle_open_workspace_directory(r, w)
+    self.workspace.handle_open_workspace_directory(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_opencode_live_provider_ids", (
     _,

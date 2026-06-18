@@ -2107,6 +2107,35 @@ async test "copilot optimizer config endpoints are owned by config service" {
 }
 
 ///|
+async test "workspace endpoints are owned by workspace service" {
+  let workspace_source = @fsx.read_file("gateway_workspace.mbt")
+  let core_source = @fsx.read_file("gateway_core.mbt")
+  for
+    handler in [
+      "handle_save_file_dialog", "handle_read_omo_local_file", "handle_open_file_dialog",
+      "handle_open_zip_file_dialog", "handle_list_daily_memory_files", "handle_read_daily_memory_file",
+      "handle_write_daily_memory_file", "handle_search_daily_memory_files", "handle_delete_daily_memory_file",
+      "handle_read_workspace_file", "handle_write_workspace_file", "handle_open_workspace_directory",
+    ] {
+    assert_true(
+      workspace_source.contains("async fn WorkspaceService::\{handler}("),
+    )
+    assert_false(workspace_source.contains("async fn Gateway::\{handler}("))
+  }
+  assert_true(
+    core_source.contains("self.workspace.handle_save_file_dialog(r, w)"),
+  )
+  assert_true(
+    core_source.contains(
+      "self.workspace.handle_read_omo_local_file(w, slim=false)",
+    ),
+  )
+  assert_true(
+    core_source.contains("self.workspace.handle_open_workspace_directory(r, w)"),
+  )
+}
+
+///|
 test "standalone tray update mirrors ccs no tray result" {
   assert_eq(moon_update_tray_menu_result(), Json::boolean(false))
 }

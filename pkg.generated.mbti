@@ -391,6 +391,7 @@ pub struct Gateway {
   usage : UsageService
   config : ConfigService
   session : SessionService
+  workspace : WorkspaceService
   openclaw : OpenClawService
 }
 pub fn Gateway::host(Self) -> String
@@ -886,6 +887,10 @@ pub struct UsageService {
   pricing_deleted_model_ids : Map[String, Bool]
 }
 pub fn UsageService::new() -> Self
+
+pub struct WorkspaceService {
+}
+pub fn WorkspaceService::new() -> Self
 
 // Type aliases
 

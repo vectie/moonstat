@@ -299,8 +299,8 @@ async fn moon_current_prompt_file_content_json(
 }
 
 ///|
-async fn Gateway::handle_save_file_dialog(
-  self : Gateway,
+async fn WorkspaceService::handle_save_file_dialog(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -311,8 +311,8 @@ async fn Gateway::handle_save_file_dialog(
 }
 
 ///|
-async fn Gateway::handle_read_omo_local_file(
-  self : Gateway,
+async fn WorkspaceService::handle_read_omo_local_file(
+  self : WorkspaceService,
   w : @httpx.ResponseWriter,
   slim~ : Bool,
 ) -> Unit {
@@ -326,8 +326,8 @@ async fn Gateway::handle_read_omo_local_file(
 }
 
 ///|
-async fn Gateway::handle_open_file_dialog(
-  self : Gateway,
+async fn WorkspaceService::handle_open_file_dialog(
+  self : WorkspaceService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -335,8 +335,8 @@ async fn Gateway::handle_open_file_dialog(
 }
 
 ///|
-async fn Gateway::handle_open_zip_file_dialog(
-  self : Gateway,
+async fn WorkspaceService::handle_open_zip_file_dialog(
+  self : WorkspaceService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -382,8 +382,8 @@ async fn Gateway::handle_get_current_prompt_file_content(
 }
 
 ///|
-async fn Gateway::handle_list_daily_memory_files(
-  self : Gateway,
+async fn WorkspaceService::handle_list_daily_memory_files(
+  self : WorkspaceService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -391,8 +391,8 @@ async fn Gateway::handle_list_daily_memory_files(
 }
 
 ///|
-async fn Gateway::handle_read_daily_memory_file(
-  self : Gateway,
+async fn WorkspaceService::handle_read_daily_memory_file(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -418,8 +418,8 @@ async fn Gateway::handle_read_daily_memory_file(
 }
 
 ///|
-async fn Gateway::handle_write_daily_memory_file(
-  self : Gateway,
+async fn WorkspaceService::handle_write_daily_memory_file(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -445,8 +445,8 @@ async fn Gateway::handle_write_daily_memory_file(
 }
 
 ///|
-async fn Gateway::handle_search_daily_memory_files(
-  self : Gateway,
+async fn WorkspaceService::handle_search_daily_memory_files(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -457,8 +457,8 @@ async fn Gateway::handle_search_daily_memory_files(
 }
 
 ///|
-async fn Gateway::handle_delete_daily_memory_file(
-  self : Gateway,
+async fn WorkspaceService::handle_delete_daily_memory_file(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -482,8 +482,8 @@ async fn Gateway::handle_delete_daily_memory_file(
 }
 
 ///|
-async fn Gateway::handle_read_workspace_file(
-  self : Gateway,
+async fn WorkspaceService::handle_read_workspace_file(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -509,8 +509,8 @@ async fn Gateway::handle_read_workspace_file(
 }
 
 ///|
-async fn Gateway::handle_write_workspace_file(
-  self : Gateway,
+async fn WorkspaceService::handle_write_workspace_file(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -536,8 +536,8 @@ async fn Gateway::handle_write_workspace_file(
 }
 
 ///|
-async fn Gateway::handle_open_workspace_directory(
-  self : Gateway,
+async fn WorkspaceService::handle_open_workspace_directory(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {

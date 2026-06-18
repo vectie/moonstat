@@ -16,6 +16,8 @@ pub struct Gateway {
   config : ConfigService
   /// Session management
   session : SessionService
+  /// Local workspace and file dialog operations
+  workspace : WorkspaceService
   /// OpenClaw and Hermes provider config
   openclaw : OpenClawService
 }
@@ -39,6 +41,7 @@ pub fn Gateway::new(
     usage: UsageService::new(),
     config: ConfigService::new(),
     session: SessionService::new(),
+    workspace: WorkspaceService::new(),
     openclaw: OpenClawService::new(),
   }
 }
