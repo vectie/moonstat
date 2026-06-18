@@ -57,6 +57,26 @@ async fn AuthService::codex_client(
 }
 
 ///|
+async fn AuthService::load_startup_credentials(
+  self : AuthService,
+  logger : @pino.Logger,
+) -> Unit {
+  let creds_result : Result[@codex.Credentials, Error] = moon_async_result(() => {
+    @codex.load_credentials()
+  })
+  match creds_result {
+    Ok(creds) => {
+      self.credentials = Some(creds)
+      logger.info("Loaded Codex OAuth credentials")
+    }
+    Err(_) =>
+      logger.info(
+        "Codex OAuth credentials not loaded; standalone Moonstat remains available and codex-oauth routes can be enabled with: moonstat login",
+      )
+  }
+}
+
+///|
 fn normalize_codex_oauth_request(json : Json) -> Json {
   guard json is Object(obj) else { return json }
   obj["store"] = Json::boolean(false)

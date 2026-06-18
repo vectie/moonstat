@@ -1,25 +1,13 @@
 ///|
 pub async fn Gateway::start(self : Gateway) -> Unit {
-  self.logger.info(
-    "Starting Anthropic -> Codex OAuth Gateway on \{self.host}:\{self.port}",
-  )
+  self.logger.info("Starting Moonstat gateway on \{self.host}:\{self.port}")
   self.usage.load_model_pricing_store()
   ignore(
     self.usage.load_and_reconcile_persistent_store(
       self.usage.pricing_override_rows(),
     ),
   )
-  let creds_result : Result[@codex.Credentials, Error] = moon_async_result(() => {
-    @codex.load_credentials()
-  })
-  if creds_result is Ok(creds) {
-    self.auth.credentials = Some(creds)
-    self.logger.info("Loaded credentials from file")
-  } else {
-    self.logger.warn(
-      "No credentials found. Please login first with: moonstat login",
-    )
-  }
+  self.auth.load_startup_credentials(self.logger)
   let server = @httpx.Server::new(self.host, self.port, reuse_addr=true)
   let bound_port = server.port()
   try {

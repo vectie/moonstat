@@ -6,7 +6,7 @@ async fn main {
 
 ///|
 fn print_help() -> Unit {
-  println("Moonstat - Anthropic to OpenAI Codex OAuth Gateway")
+  println("Moonstat - local AI traffic gateway and usage statistics")
   println("")
   println("Usage: moonstat <command> [options]")
   println("")

@@ -2683,6 +2683,11 @@ async test "provider config endpoints are owned by proxy service" {
   assert_true(auth_source.contains("async fn AuthService::codex_client("))
   assert_false(misc_source.contains("async fn AuthService::codex_client("))
   assert_false(sources.contains("async fn Gateway::codex_client("))
+  assert_true(
+    auth_source.contains("async fn AuthService::load_startup_credentials("),
+  )
+  assert_true(core_source.contains("self.auth.load_startup_credentials("))
+  assert_false(core_source.contains("@codex.load_credentials()"))
   assert_true(core_source.contains("self.proxy.register_inference_routes("))
   assert_true(route_source.contains("self.handle_models(w)"))
   assert_true(route_source.contains("self.handle_gemini(usage, r, w)"))
