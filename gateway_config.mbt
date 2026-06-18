@@ -208,26 +208,10 @@ fn moon_rectifier_config_from_request(
 ) -> Json {
   moon_json_config_from_request(path, body, current, [
     ("enabled", ["enabled"], "bool"),
-    (
-      "requestThinkingSignature",
-      ["requestThinkingSignature", "request_thinking_signature"],
-      "bool",
-    ),
-    (
-      "requestThinkingBudget",
-      ["requestThinkingBudget", "request_thinking_budget"],
-      "bool",
-    ),
-    (
-      "requestMediaFallback",
-      ["requestMediaFallback", "request_media_fallback"],
-      "bool",
-    ),
-    (
-      "requestMediaHeuristic",
-      ["requestMediaHeuristic", "request_media_heuristic"],
-      "bool",
-    ),
+    ("requestThinkingSignature", ["requestThinkingSignature"], "bool"),
+    ("requestThinkingBudget", ["requestThinkingBudget"], "bool"),
+    ("requestMediaFallback", ["requestMediaFallback"], "bool"),
+    ("requestMediaHeuristic", ["requestMediaHeuristic"], "bool"),
   ])
 }
 
@@ -239,9 +223,9 @@ fn moon_optimizer_config_from_request(
 ) -> Json {
   moon_json_config_from_request(path, body, current, [
     ("enabled", ["enabled"], "bool"),
-    ("thinkingOptimizer", ["thinkingOptimizer", "thinking_optimizer"], "bool"),
-    ("cacheInjection", ["cacheInjection", "cache_injection"], "bool"),
-    ("cacheTtl", ["cacheTtl", "cache_ttl"], "string"),
+    ("thinkingOptimizer", ["thinkingOptimizer"], "bool"),
+    ("cacheInjection", ["cacheInjection"], "bool"),
+    ("cacheTtl", ["cacheTtl"], "string"),
   ])
 }
 
@@ -260,7 +244,7 @@ fn moon_log_config_from_request(
 ///|
 fn moon_optimizer_cache_ttl_valid(config : Json) -> Bool {
   guard config is Object(obj) else { return true }
-  match json_string_from_map_any(obj, ["cacheTtl", "cache_ttl"]) {
+  match json_string_from_map_any(obj, ["cacheTtl"]) {
     Some("5m") | Some("1h") | None => true
     _ => false
   }

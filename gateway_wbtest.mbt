@@ -637,15 +637,28 @@ test "ccs save settings merge preserves omitted sync secrets" {
 
 ///|
 test "ccs settings config query builders update defaults" {
+  let default_rectifier = moon_default_rectifier_config_json()
   guard moon_rectifier_config_from_request(
       "/settings/rectifier?requestThinkingSignature=false",
       None,
-      moon_default_rectifier_config_json(),
+      default_rectifier,
     )
     is Object(rectifier) else {
     fail("expected rectifier")
   }
   assert_eq(proxy_json_bool(rectifier, "requestThinkingSignature"), Some(false))
+  guard moon_rectifier_config_from_request(
+      "/settings/rectifier?request_thinking_signature=false",
+      None,
+      default_rectifier,
+    )
+    is Object(legacy_rectifier) else {
+    fail("expected legacy rectifier")
+  }
+  assert_eq(
+    proxy_json_bool(legacy_rectifier, "requestThinkingSignature"),
+    Some(true),
+  )
 
   let optimizer = moon_optimizer_config_from_request(
     "/settings/optimizer?enabled=true&cacheTtl=5m",
@@ -653,6 +666,17 @@ test "ccs settings config query builders update defaults" {
     moon_default_optimizer_config_json(),
   )
   assert_true(moon_optimizer_cache_ttl_valid(optimizer))
+  let legacy_optimizer_json = moon_optimizer_config_from_request(
+    "/settings/optimizer?cache_ttl=30m&thinking_optimizer=false",
+    None,
+    moon_default_optimizer_config_json(),
+  )
+  guard legacy_optimizer_json is Object(legacy_optimizer) else {
+    fail("expected legacy optimizer")
+  }
+  assert_true(moon_optimizer_cache_ttl_valid(legacy_optimizer_json))
+  assert_eq(json_string_from_map(legacy_optimizer, "cacheTtl"), Some("1h"))
+  assert_eq(proxy_json_bool(legacy_optimizer, "thinkingOptimizer"), Some(true))
   let invalid = moon_optimizer_config_from_request(
     "/settings/optimizer?cacheTtl=30m",
     None,
