@@ -1,6 +1,6 @@
 ///|
 fn moon_sync_default_remote_root() -> String {
-  "cc-switch-sync"
+  "moonstat-sync"
 }
 
 ///|
@@ -15,7 +15,7 @@ fn moon_sync_default_status_json() -> Json {
 
 ///|
 fn moon_sync_protocol_format() -> String {
-  "cc-switch-webdav-sync"
+  "moonstat-webdav-sync"
 }
 
 ///|

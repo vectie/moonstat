@@ -1,5 +1,5 @@
 ///|
-test "ccs webdav sync settings normalize and preserve password" {
+test "moonstat webdav sync settings normalize and preserve password" {
   let existing = {
     "enabled": Json::boolean(true),
     "baseUrl": Json::string("https://dav.example.com"),
@@ -26,7 +26,7 @@ test "ccs webdav sync settings normalize and preserve password" {
   )
   assert_eq(json_string_from_map(obj, "username"), Some("alice"))
   assert_eq(json_string_from_map(obj, "password"), Some("secret"))
-  assert_eq(json_string_from_map(obj, "remoteRoot"), Some("cc-switch-sync"))
+  assert_eq(json_string_from_map(obj, "remoteRoot"), Some("moonstat-sync"))
   assert_eq(json_string_from_map(obj, "profile"), Some("default"))
   guard obj.get("status") is Some(Object(status)) else {
     fail("expected preserved status")
@@ -36,7 +36,7 @@ test "ccs webdav sync settings normalize and preserve password" {
 }
 
 ///|
-test "ccs webdav sync validation and guard messages match ccs" {
+test "moonstat webdav sync validation and guard messages match moonstat" {
   assert_eq(
     moon_validate_webdav_sync_settings(
       { "username": Json::string("alice") }.to_json(),
@@ -61,7 +61,7 @@ test "ccs webdav sync validation and guard messages match ccs" {
 }
 
 ///|
-test "ccs s3 sync settings normalize and preserve secret" {
+test "moonstat s3 sync settings normalize and preserve secret" {
   let existing = {
     "secretAccessKey": Json::string("SECRET"),
     "status": { "lastRemoteEtag": Json::string("etag-1") }.to_json(),
@@ -88,7 +88,7 @@ test "ccs s3 sync settings normalize and preserve secret" {
     json_string_from_map(obj, "endpoint"),
     Some("https://s3.example.com"),
   )
-  assert_eq(json_string_from_map(obj, "remoteRoot"), Some("cc-switch-sync"))
+  assert_eq(json_string_from_map(obj, "remoteRoot"), Some("moonstat-sync"))
   guard obj.get("status") is Some(Object(status)) else {
     fail("expected preserved status")
   }
@@ -97,7 +97,7 @@ test "ccs s3 sync settings normalize and preserve secret" {
 }
 
 ///|
-test "ccs s3 sync validation and guard messages match ccs" {
+test "moonstat s3 sync validation and guard messages match moonstat" {
   assert_eq(
     moon_validate_s3_sync_settings(
       { "region": Json::string("us-east-1") }.to_json(),
@@ -131,7 +131,7 @@ test "ccs s3 sync validation and guard messages match ccs" {
 }
 
 ///|
-test "ccs s3 object urls and keys match ccs transport layout" {
+test "moonstat s3 object urls and keys match moonstat transport layout" {
   let aws = moon_s3_sync_settings_json(
     {
       "enabled": Json::boolean(true),
@@ -139,7 +139,7 @@ test "ccs s3 object urls and keys match ccs transport layout" {
       "bucket": Json::string("moonstat"),
       "accessKeyId": Json::string("AKID"),
       "secretAccessKey": Json::string("SECRET"),
-      "remoteRoot": Json::string("cc-switch-sync"),
+      "remoteRoot": Json::string("moonstat-sync"),
       "profile": Json::string("default"),
     }.to_json(),
     None,
@@ -147,20 +147,20 @@ test "ccs s3 object urls and keys match ccs transport layout" {
   )
   assert_eq(
     moon_s3_remote_file_key(aws, moon_sync_remote_manifest()),
-    Ok("cc-switch-sync/v2/db-v6/default/manifest.json"),
+    Ok("moonstat-sync/v2/db-v6/default/manifest.json"),
   )
   assert_eq(
     moon_s3_remote_dir_display(aws),
-    Ok("cc-switch-sync/v2/db-v6/default"),
+    Ok("moonstat-sync/v2/db-v6/default"),
   )
   assert_eq(
     moon_s3_bucket_url(aws),
     Ok("https://moonstat.s3.us-west-2.amazonaws.com/"),
   )
   assert_eq(
-    moon_s3_object_url(aws, "cc-switch-sync/v2/db-v6/default/manifest.json"),
+    moon_s3_object_url(aws, "moonstat-sync/v2/db-v6/default/manifest.json"),
     Ok(
-      "https://moonstat.s3.us-west-2.amazonaws.com/cc-switch-sync/v2/db-v6/default/manifest.json",
+      "https://moonstat.s3.us-west-2.amazonaws.com/moonstat-sync/v2/db-v6/default/manifest.json",
     ),
   )
   let custom = moon_s3_sync_settings_json(
@@ -186,7 +186,7 @@ test "ccs s3 object urls and keys match ccs transport layout" {
 }
 
 ///|
-test "ccs s3 curl requests use sigv4 and ccs transfer timeouts" {
+test "moonstat s3 curl requests use sigv4 and moonstat transfer timeouts" {
   let settings = moon_s3_sync_settings_json(
     {
       "enabled": Json::boolean(true),
@@ -207,29 +207,29 @@ test "ccs s3 curl requests use sigv4 and ccs transfer timeouts" {
     "30", "-I", "-o", "/dev/null", "-w", "%{http_code}", "https://moonstat.s3.us-east-1.amazonaws.com/",
   ])
   let put = moon_s3_curl_put_request(
-    settings, "https://moonstat.s3.us-east-1.amazonaws.com/cc-switch-sync/v2/db-v6/default/manifest.json",
+    settings, "https://moonstat.s3.us-east-1.amazonaws.com/moonstat-sync/v2/db-v6/default/manifest.json",
     "/tmp/manifest.json", "application/json",
   ).unwrap()
   assert_eq(put.args, [
     "-sS", "-L", "--aws-sigv4", "aws:amz:us-east-1:s3", "-u", "AKID:SECRET", "--max-time",
     "300", "-X", "PUT", "-H", "Content-Type: application/json", "--upload-file",
-    "/tmp/manifest.json", "-o", "/dev/null", "-w", "%{http_code}", "https://moonstat.s3.us-east-1.amazonaws.com/cc-switch-sync/v2/db-v6/default/manifest.json",
+    "/tmp/manifest.json", "-o", "/dev/null", "-w", "%{http_code}", "https://moonstat.s3.us-east-1.amazonaws.com/moonstat-sync/v2/db-v6/default/manifest.json",
   ])
   let get = moon_s3_curl_get_request(
     settings,
-    "https://moonstat.s3.us-east-1.amazonaws.com/cc-switch-sync/v2/db-v6/default/manifest.json",
+    "https://moonstat.s3.us-east-1.amazonaws.com/moonstat-sync/v2/db-v6/default/manifest.json",
     "/tmp/manifest.json",
     header_path="/tmp/headers",
   ).unwrap()
   assert_eq(get.args, [
     "-sS", "-L", "--aws-sigv4", "aws:amz:us-east-1:s3", "-u", "AKID:SECRET", "--max-time",
     "300", "-o", "/tmp/manifest.json", "-w", "%{http_code}", "-D", "/tmp/headers",
-    "https://moonstat.s3.us-east-1.amazonaws.com/cc-switch-sync/v2/db-v6/default/manifest.json",
+    "https://moonstat.s3.us-east-1.amazonaws.com/moonstat-sync/v2/db-v6/default/manifest.json",
   ])
 }
 
 ///|
-test "ccs s3 status and etag parsing match s3 transport behavior" {
+test "moonstat s3 status and etag parsing match s3 transport behavior" {
   assert_true(moon_s3_status_ok(200))
   assert_true(moon_s3_status_ok(204))
   assert_true(!moon_s3_status_ok(404))
@@ -248,48 +248,46 @@ test "ccs s3 status and etag parsing match s3 transport behavior" {
 }
 
 ///|
-test "ccs sync protocol paths match ccs v2 current and legacy layouts" {
+test "moonstat sync protocol paths match moonstat v2 current and legacy layouts" {
   assert_eq(
-    moon_sync_remote_dir_segments("cc-switch-sync", "default", "current"),
-    ["cc-switch-sync", "v2", "db-v6", "default"],
+    moon_sync_remote_dir_segments("moonstat-sync", "default", "current"),
+    ["moonstat-sync", "v2", "db-v6", "default"],
   )
   assert_eq(
-    moon_sync_remote_dir_segments(
-      "/cc-switch-sync/", "/team/default/", "legacy",
-    ),
-    ["cc-switch-sync", "v2", "team", "default"],
+    moon_sync_remote_dir_segments("/moonstat-sync/", "/team/default/", "legacy"),
+    ["moonstat-sync", "v2", "team", "default"],
   )
   assert_eq(
     moon_sync_remote_file_path(
-      "cc-switch-sync",
+      "moonstat-sync",
       "default",
       "current",
       moon_sync_remote_manifest(),
     ),
-    "cc-switch-sync/v2/db-v6/default/manifest.json",
+    "moonstat-sync/v2/db-v6/default/manifest.json",
   )
   assert_eq(
     moon_sync_remote_file_path(
-      "cc-switch-sync",
+      "moonstat-sync",
       "default",
       "current",
       moon_sync_remote_db_sql(),
     ),
-    "cc-switch-sync/v2/db-v6/default/db.sql",
+    "moonstat-sync/v2/db-v6/default/db.sql",
   )
   assert_eq(
     moon_sync_remote_file_path(
-      "cc-switch-sync",
+      "moonstat-sync",
       "default",
       "current",
       moon_sync_remote_skills_zip(),
     ),
-    "cc-switch-sync/v2/db-v6/default/skills.zip",
+    "moonstat-sync/v2/db-v6/default/skills.zip",
   )
 }
 
 ///|
-test "ccs webdav remote manifest url encodes path segments like ccs" {
+test "moonstat webdav remote manifest url encodes path segments like moonstat" {
   let settings = moon_webdav_sync_settings_json(
     {
       "enabled": Json::boolean(true),
@@ -327,7 +325,7 @@ test "ccs webdav remote manifest url encodes path segments like ccs" {
 }
 
 ///|
-test "ccs webdav basic auth header matches rfc7617" {
+test "moonstat webdav basic auth header matches rfc7617" {
   assert_eq(
     moon_webdav_basic_auth_header("alice", "secret"),
     "Basic YWxpY2U6c2VjcmV0",
@@ -335,14 +333,14 @@ test "ccs webdav basic auth header matches rfc7617" {
 }
 
 ///|
-test "ccs webdav connection command matches ccs methods" {
+test "moonstat webdav connection command matches moonstat methods" {
   let settings = moon_webdav_sync_settings_json(
     {
       "enabled": Json::boolean(true),
       "baseUrl": Json::string("https://dav.example.com/root/"),
       "username": Json::string("alice"),
       "password": Json::string("secret"),
-      "remoteRoot": Json::string("cc-switch-sync"),
+      "remoteRoot": Json::string("moonstat-sync"),
       "profile": Json::string("default"),
     }.to_json(),
     None,
@@ -350,7 +348,7 @@ test "ccs webdav connection command matches ccs methods" {
   )
   assert_eq(
     moon_webdav_remote_dir_url(settings, "current", 2),
-    Ok("https://dav.example.com/root/cc-switch-sync/v2/"),
+    Ok("https://dav.example.com/root/moonstat-sync/v2/"),
   )
   let request = moon_webdav_curl_status_request(
     settings,
@@ -381,7 +379,7 @@ test "ccs webdav connection command matches ccs methods" {
 }
 
 ///|
-test "ccs webdav status classes match ccs connection behavior" {
+test "moonstat webdav status classes match moonstat connection behavior" {
   assert_true(moon_webdav_status_ok_for_propfind(207))
   assert_true(moon_webdav_status_ok_for_propfind(204))
   assert_true(moon_webdav_status_ok_for_mkcol(201))
@@ -395,7 +393,7 @@ test "ccs webdav status classes match ccs connection behavior" {
 }
 
 ///|
-test "ccs sync sha256 and snapshot id match sync protocol" {
+test "moonstat sync sha256 and snapshot id match sync protocol" {
   assert_eq(
     moon_sync_sha256_hex(@encoding/utf8.encode("hello")),
     "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
@@ -410,7 +408,7 @@ test "ccs sync sha256 and snapshot id match sync protocol" {
 }
 
 ///|
-test "ccs sync manifest compatibility follows current and legacy db versions" {
+test "moonstat sync manifest compatibility follows current and legacy db versions" {
   let manifest_json = {
     "format": Json::string(moon_sync_protocol_format()),
     "version": Json::number(moon_sync_protocol_version().to_double()),
@@ -466,14 +464,14 @@ test "ccs sync manifest compatibility follows current and legacy db versions" {
 }
 
 ///|
-test "ccs webdav remote info maps manifest body" {
+test "moonstat webdav remote info maps manifest body" {
   let settings = moon_webdav_sync_settings_json(
     {
       "enabled": Json::boolean(true),
       "baseUrl": Json::string("https://dav.example.com"),
       "username": Json::string("alice"),
       "password": Json::string("secret"),
-      "remoteRoot": Json::string("cc-switch-sync"),
+      "remoteRoot": Json::string("moonstat-sync"),
       "profile": Json::string("default"),
     }.to_json(),
     None,
@@ -481,7 +479,7 @@ test "ccs webdav remote info maps manifest body" {
   )
   let body =
     #|{
-    #|  "format": "cc-switch-webdav-sync",
+    #|  "format": "moonstat-webdav-sync",
     #|  "version": 2,
     #|  "dbCompatVersion": 6,
     #|  "deviceName": "My MacBook",
@@ -499,7 +497,7 @@ test "ccs webdav remote info maps manifest body" {
   assert_eq(obj["deviceName"], Json::string("My MacBook"))
   assert_eq(obj["compatible"], Json::boolean(true))
   assert_eq(obj["layout"], Json::string("current"))
-  assert_eq(obj["remotePath"], Json::string("/cc-switch-sync/v2/db-v6/default"))
+  assert_eq(obj["remotePath"], Json::string("/moonstat-sync/v2/db-v6/default"))
   assert_eq(
     obj["artifacts"],
     Json::array([Json::string("db.sql"), Json::string("skills.zip")]),
@@ -507,7 +505,7 @@ test "ccs webdav remote info maps manifest body" {
 }
 
 ///|
-test "ccs sync remote info response mirrors ccs fetch remote info shape" {
+test "moonstat sync remote info response mirrors moonstat fetch remote info shape" {
   let manifest = moon_sync_manifest_info_from_json(
     {
       "format": Json::string(moon_sync_protocol_format()),
@@ -523,7 +521,7 @@ test "ccs sync remote info response mirrors ccs fetch remote info shape" {
     }.to_json(),
   ).unwrap()
   guard moon_sync_remote_info_json(
-      manifest, "current", "cc-switch-sync", "default",
+      manifest, "current", "moonstat-sync", "default",
     )
     is Object(obj) else {
     fail("expected remote info object")
@@ -534,7 +532,7 @@ test "ccs sync remote info response mirrors ccs fetch remote info shape" {
   assert_eq(obj["dbCompatVersion"], Json::number(6.0))
   assert_eq(obj["compatible"], Json::boolean(true))
   assert_eq(obj["layout"], Json::string("current"))
-  assert_eq(obj["remotePath"], Json::string("/cc-switch-sync/v2/db-v6/default"))
+  assert_eq(obj["remotePath"], Json::string("/moonstat-sync/v2/db-v6/default"))
   assert_eq(
     obj["artifacts"],
     Json::array([Json::string("db.sql"), Json::string("skills.zip")]),

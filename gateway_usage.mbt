@@ -1086,7 +1086,7 @@ async fn UsageService::handle_test_usage_script(
           UsageResult::new(
             false,
             error=Some(
-              "Usage script execution is unavailable in standalone Moonstat; provide a ccs UsageResult JSON object as result or scriptCode.",
+              "Usage script execution is unavailable in standalone Moonstat; provide a Moonstat UsageResult JSON object as result or scriptCode.",
             ),
           )
       }

@@ -293,6 +293,7 @@ pub struct ToolCallInfo {
   arguments : String
 }
 
+///|
 fn init {
   let tool_call : ToolCallInfo = { id: "id", name: "name", arguments: "{}" }
   ignore(tool_call)

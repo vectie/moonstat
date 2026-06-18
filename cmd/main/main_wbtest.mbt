@@ -507,7 +507,7 @@ test "usage sync path accepts standalone projects dir override" {
 }
 
 ///|
-test "usage pricing paths accept ccs editable pricing args" {
+test "usage pricing paths accept moonstat editable pricing args" {
   assert_eq(
     usage_pricing_update_path([
       "moonstat", "usage", "pricing", "set", "--model-id", "anthropic/claude&sonnet",
@@ -533,7 +533,7 @@ test "usage pricing paths accept ccs editable pricing args" {
 }
 
 ///|
-test "usage filter paths encode ccs query values" {
+test "usage filter paths encode moonstat query values" {
   assert_eq(
     usage_trends_path([
       "moonstat", "usage", "trends", "--start-date", "10", "--end-date", "20", "--app-type",
@@ -551,7 +551,7 @@ test "usage filter paths encode ccs query values" {
 }
 
 ///|
-test "stream check paths use ccs command names and camelCase args" {
+test "stream check paths use moonstat command names and camelCase args" {
   assert_eq(
     stream_check_provider_path([
       "moonstat", "stream-check", "provider", "--app-type", "codex", "--provider-id",
@@ -576,7 +576,7 @@ test "stream check paths use ccs command names and camelCase args" {
 }
 
 ///|
-test "usage aggregate paths accept ccs date and app filters" {
+test "usage aggregate paths accept moonstat date and app filters" {
   let args = [
     "moonstat", "usage", "summary", "--startDate", "10", "--endDate", "20", "--appType",
     "claude desktop",
@@ -600,7 +600,7 @@ test "usage aggregate paths accept ccs date and app filters" {
 }
 
 ///|
-test "usage logs path accepts ccs filters and pagination" {
+test "usage logs path accepts moonstat filters and pagination" {
   assert_eq(
     usage_logs_path([
       "moonstat", "usage", "logs", "--page", "2", "--page-size", "25", "--app-type",
@@ -612,7 +612,7 @@ test "usage logs path accepts ccs filters and pagination" {
 }
 
 ///|
-test "usage detail path encodes ccs request ids" {
+test "usage detail path encodes moonstat request ids" {
   assert_eq(
     "/usage/request-detail/\{cli_url_encode("session:msg/1")}",
     "/usage/request-detail/session%3Amsg%2F1",
@@ -620,7 +620,7 @@ test "usage detail path encodes ccs request ids" {
 }
 
 ///|
-test "usage aliases build same paths as ccs command names" {
+test "usage aliases build same paths as moonstat command names" {
   let args = [
     "moonstat", "usage", "get-usage-summary", "--startDate", "10", "--endDate", "20",
     "--appType", "codex",
@@ -670,7 +670,7 @@ test "usage aliases build same paths as ccs command names" {
 }
 
 ///|
-test "proxy config setter paths encode ccs command arguments" {
+test "proxy config setter paths encode moonstat command arguments" {
   assert_eq(
     proxy_global_config_update_path(
       [
@@ -800,7 +800,7 @@ test "proxy config setter paths encode ccs command arguments" {
 }
 
 ///|
-test "top level ccs proxy command names build command alias paths" {
+test "top level moonstat proxy command names build command alias paths" {
   assert_eq(
     proxy_global_config_update_path(
       [
@@ -944,7 +944,7 @@ test "top level ccs proxy command names build command alias paths" {
 }
 
 ///|
-test "top level ccs provider command names build command alias paths" {
+test "top level moonstat provider command names build command alias paths" {
   assert_eq(
     provider_app_path(
       ["moonstat", "get_providers", "--appType", "codex"],
@@ -1023,7 +1023,7 @@ test "top level ccs provider command names build command alias paths" {
 }
 
 ///|
-test "top level ccs usage command names build command alias paths" {
+test "top level moonstat usage command names build command alias paths" {
   assert_eq(
     usage_filtered_path(
       [
@@ -1081,7 +1081,7 @@ test "top level ccs usage command names build command alias paths" {
 }
 
 ///|
-test "top level ccs stream check command names build command alias paths" {
+test "top level moonstat stream check command names build command alias paths" {
   assert_eq(
     stream_check_provider_path([
       "moonstat", "stream_check_provider", "--appType", "codex", "--providerId",
@@ -1106,7 +1106,7 @@ test "top level ccs stream check command names build command alias paths" {
 }
 
 ///|
-test "top level ccs copilot command names build auth paths" {
+test "top level moonstat copilot command names build auth paths" {
   assert_eq(
     copilot_github_domain_path(
       [
@@ -1156,7 +1156,7 @@ test "top level ccs copilot command names build auth paths" {
 }
 
 ///|
-test "top level ccs config command names build config paths" {
+test "top level moonstat config command names build config paths" {
   assert_eq(
     config_app_path(
       ["moonstat", "get_config_status", "--appType", "codex"],
@@ -1247,11 +1247,11 @@ test "top level ccs config command names build config paths" {
   assert_eq(
     deeplink_url_path(
       [
-        "moonstat", "parse_deeplink", "--url", "ccswitch://v1/import?resource=skill&repo=vectie/skills",
+        "moonstat", "parse_deeplink", "--url", "moonstat://v1/import?resource=skill&repo=vectie/skills",
       ],
       "/parse_deeplink",
     ),
-    "/parse_deeplink?url=ccswitch%3A%2F%2Fv1%2Fimport%3Fresource%3Dskill%26repo%3Dvectie%2Fskills",
+    "/parse_deeplink?url=moonstat%3A%2F%2Fv1%2Fimport%3Fresource%3Dskill%26repo%3Dvectie%2Fskills",
   )
   assert_eq(
     deeplink_request_path(
@@ -1265,11 +1265,11 @@ test "top level ccs config command names build config paths" {
   assert_eq(
     deeplink_request_path(
       [
-        "moonstat", "import_from_deeplink_unified", "--url", "ccswitch://v1/import?resource=prompt&app=codex&name=Daily&content=SGVsbG8",
+        "moonstat", "import_from_deeplink_unified", "--url", "moonstat://v1/import?resource=prompt&app=codex&name=Daily&content=SGVsbG8",
       ],
       "/import_from_deeplink_unified",
     ),
-    "/import_from_deeplink_unified?url=ccswitch%3A%2F%2Fv1%2Fimport%3Fresource%3Dprompt%26app%3Dcodex%26name%3DDaily%26content%3DSGVsbG8",
+    "/import_from_deeplink_unified?url=moonstat%3A%2F%2Fv1%2Fimport%3Fresource%3Dprompt%26app%3Dcodex%26name%3DDaily%26content%3DSGVsbG8",
   )
   assert_eq(
     sync_settings_path(
@@ -1294,7 +1294,7 @@ test "top level ccs config command names build config paths" {
 }
 
 ///|
-test "top level ccs settings command names build settings paths" {
+test "top level moonstat settings command names build settings paths" {
   assert_eq(
     app_config_dir_override_path([
       "moonstat", "set_app_config_dir_override", "--path", "/tmp/cc switch",
@@ -1345,7 +1345,7 @@ test "top level ccs settings command names build settings paths" {
 }
 
 ///|
-test "top level ccs plugin command names build plugin paths" {
+test "top level moonstat plugin command names build plugin paths" {
   assert_eq(
     apply_claude_plugin_config_path([
       "moonstat", "apply_claude_plugin_config", "--official", "true",
@@ -1359,7 +1359,7 @@ test "top level ccs plugin command names build plugin paths" {
 }
 
 ///|
-test "top level ccs workspace command names build workspace paths" {
+test "top level moonstat workspace command names build workspace paths" {
   assert_eq(
     workspace_filename_path(
       ["moonstat", "read_workspace_file", "--filename", "AGENTS.md"],
@@ -1394,7 +1394,7 @@ test "top level ccs workspace command names build workspace paths" {
 }
 
 ///|
-test "top level ccs mcp command names build mcp paths" {
+test "top level moonstat mcp command names build mcp paths" {
   assert_eq(
     mcp_app_path(
       ["moonstat", "get_mcp_config", "--appType", "codex"],
@@ -1443,7 +1443,7 @@ test "top level ccs mcp command names build mcp paths" {
 }
 
 ///|
-test "top level ccs prompt command names build prompt paths" {
+test "top level moonstat prompt command names build prompt paths" {
   assert_eq(
     prompt_app_path(
       ["moonstat", "get_prompts", "--appType", "codex"],
@@ -1480,7 +1480,7 @@ test "top level ccs prompt command names build prompt paths" {
 }
 
 ///|
-test "top level ccs balance command builds balance path" {
+test "top level moonstat balance command builds balance path" {
   assert_eq(
     balance_path([
       "moonstat", "get_balance", "--baseUrl", "https://api.deepseek.com", "--apiKey",
@@ -1497,7 +1497,7 @@ test "top level ccs balance command builds balance path" {
 }
 
 ///|
-test "top level ccs subscription quota command builds quota path" {
+test "top level moonstat subscription quota command builds quota path" {
   assert_eq(
     subscription_quota_path([
       "moonstat", "get_subscription_quota", "--tool", "codex",
@@ -1514,7 +1514,7 @@ test "top level ccs subscription quota command builds quota path" {
 }
 
 ///|
-test "top level ccs codex oauth quota command builds quota path" {
+test "top level moonstat codex oauth quota command builds quota path" {
   assert_eq(
     codex_oauth_quota_path([
       "moonstat", "get_codex_oauth_quota", "--accountId", "acct 1",
@@ -1528,7 +1528,7 @@ test "top level ccs codex oauth quota command builds quota path" {
 }
 
 ///|
-test "top level ccs codex oauth models command builds models path" {
+test "top level moonstat codex oauth models command builds models path" {
   assert_eq(
     codex_oauth_models_path([
       "moonstat", "get_codex_oauth_models", "--account-id", "acct 1",
@@ -1542,7 +1542,7 @@ test "top level ccs codex oauth models command builds models path" {
 }
 
 ///|
-test "ccs auth commands build managed auth paths" {
+test "moonstat auth commands build managed auth paths" {
   assert_eq(
     auth_provider_path(
       ["moonstat", "auth_get_status", "--authProvider", "codex_oauth"],
@@ -1581,7 +1581,7 @@ test "ccs auth commands build managed auth paths" {
 }
 
 ///|
-test "top level ccs coding plan command builds quota path" {
+test "top level moonstat coding plan command builds quota path" {
   assert_eq(
     coding_plan_quota_path([
       "moonstat", "get_coding_plan_quota", "--baseUrl", "https://api.kimi.com/coding/v1",
@@ -1606,7 +1606,7 @@ test "top level ccs coding plan command builds quota path" {
 }
 
 ///|
-test "top level ccs app shell commands build paths" {
+test "top level moonstat app shell commands build paths" {
   assert_eq(
     open_external_path(["moonstat", "open_external", "--url", "github.com/a b"]),
     "/open_external?url=github.com%2Fa%20b",
@@ -1636,7 +1636,7 @@ test "top level ccs app shell commands build paths" {
 }
 
 ///|
-test "top level ccs skill commands build paths" {
+test "top level moonstat skill commands build paths" {
   assert_eq(
     skill_install_path(
       [
@@ -1685,7 +1685,7 @@ test "top level ccs skill commands build paths" {
 }
 
 ///|
-test "top level ccs provider test hook commands build paths" {
+test "top level moonstat provider test hook commands build paths" {
   assert_eq(
     proxy_app_value_update_path(
       [
