@@ -131,8 +131,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "packycode", "packycode",
     ),
     moon_provider_preset_summary_json(
-      "claude", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun/register?aff=CCSwitch",
-      "third_party", false, true, "apikeyfun", "apikeyfun",
+      "claude", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun", "third_party",
+      false, true, "apikeyfun", "apikeyfun",
     ),
     moon_provider_preset_summary_json(
       "claude", "APINebula", "", "https://apinebula.com", "https://apinebula.com/02rw5X",
@@ -168,8 +168,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "cubence", "cubence",
     ),
     moon_provider_preset_summary_json(
-      "claude", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com/invite/CC-SWITCH",
-      "third_party", false, true, "aigocode", "aigocode",
+      "claude", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com", "third_party",
+      false, true, "aigocode", "aigocode",
     ),
     moon_provider_preset_summary_json(
       "claude", "RightCode", "", "https://www.right.codes", "https://www.right.codes/register?aff=MOONSTAT",
@@ -395,7 +395,7 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "packycode", "packycode",
     ),
     moon_provider_preset_summary_json(
-      "claude-desktop", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun/register?aff=CCSwitch",
+      "claude-desktop", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun",
       "third_party", false, true, "apikeyfun", "apikeyfun",
     ),
     moon_provider_preset_summary_json(
@@ -432,7 +432,7 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "cubence", "cubence",
     ),
     moon_provider_preset_summary_json(
-      "claude-desktop", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com/invite/CC-SWITCH",
+      "claude-desktop", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com",
       "third_party", false, true, "aigocode", "aigocode",
     ),
     moon_provider_preset_summary_json(
@@ -637,8 +637,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "packycode", "packycode",
     ),
     moon_provider_preset_summary_json(
-      "codex", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun/register?aff=CCSwitch",
-      "third_party", false, true, "apikeyfun", "apikeyfun",
+      "codex", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun", "third_party",
+      false, true, "apikeyfun", "apikeyfun",
     ),
     moon_provider_preset_summary_json(
       "codex", "APINebula", "", "https://apinebula.com", "https://apinebula.com/02rw5X",
@@ -670,8 +670,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "cubence", "cubence",
     ),
     moon_provider_preset_summary_json(
-      "codex", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com/invite/CC-SWITCH",
-      "third_party", false, true, "aigocode", "aigocode",
+      "codex", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com", "third_party",
+      false, true, "aigocode", "aigocode",
     ),
     moon_provider_preset_summary_json(
       "codex", "RightCode", "", "https://www.right.codes", "https://www.right.codes/register?aff=MOONSTAT",
@@ -741,8 +741,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "packycode", "packycode",
     ),
     moon_provider_preset_summary_json(
-      "gemini", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun/register?aff=CCSwitch",
-      "third_party", false, true, "apikeyfun", "apikeyfun",
+      "gemini", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun", "third_party",
+      false, true, "apikeyfun", "apikeyfun",
     ),
     moon_provider_preset_summary_json(
       "gemini", "APINebula", "", "https://apinebula.com", "https://apinebula.com/02rw5X",
@@ -757,8 +757,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "cubence", "cubence",
     ),
     moon_provider_preset_summary_json(
-      "gemini", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com/invite/CC-SWITCH",
-      "third_party", false, true, "aigocode", "aigocode",
+      "gemini", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com", "third_party",
+      false, true, "aigocode", "aigocode",
     ),
     moon_provider_preset_summary_json(
       "gemini", "AICodeMirror", "", "https://www.aicodemirror.com", "https://www.aicodemirror.com/register?invitecode=9915W3",
@@ -932,8 +932,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "packycode", "packycode",
     ),
     moon_provider_preset_summary_json(
-      "opencode", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun/register?aff=CCSwitch",
-      "third_party", false, true, "apikeyfun", "apikeyfun",
+      "opencode", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun", "third_party",
+      false, true, "apikeyfun", "apikeyfun",
     ),
     moon_provider_preset_summary_json(
       "opencode", "APINebula", "", "https://apinebula.com", "https://apinebula.com/02rw5X",
@@ -953,7 +953,7 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "cubence", "cubence",
     ),
     moon_provider_preset_summary_json(
-      "opencode", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com/invite/CC-SWITCH",
+      "opencode", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com",
       "third_party", false, true, "aigocode", "aigocode",
     ),
     moon_provider_preset_summary_json(
@@ -1155,8 +1155,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "packycode", "packycode",
     ),
     moon_provider_preset_summary_json(
-      "openclaw", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun/register?aff=CCSwitch",
-      "third_party", false, true, "apikeyfun", "apikeyfun",
+      "openclaw", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun", "third_party",
+      false, true, "apikeyfun", "apikeyfun",
     ),
     moon_provider_preset_summary_json(
       "openclaw", "APINebula", "", "https://apinebula.com", "https://apinebula.com/02rw5X",
@@ -1176,7 +1176,7 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "cubence", "cubence",
     ),
     moon_provider_preset_summary_json(
-      "openclaw", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com/invite/CC-SWITCH",
+      "openclaw", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com",
       "third_party", false, true, "aigocode", "aigocode",
     ),
     moon_provider_preset_summary_json(
@@ -1347,8 +1347,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       "third_party", false, true, "packycode", "packycode",
     ),
     moon_provider_preset_summary_json(
-      "hermes", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun/register?aff=CCSwitch",
-      "third_party", false, true, "apikeyfun", "apikeyfun",
+      "hermes", "APIKEY.FUN", "", "https://apikey.fun", "https://apikey.fun", "third_party",
+      false, true, "apikeyfun", "apikeyfun",
     ),
     moon_provider_preset_summary_json(
       "hermes", "APINebula", "", "https://apinebula.com", "https://apinebula.com/02rw5X",
@@ -1376,8 +1376,8 @@ fn moon_provider_preset_summary_catalog() -> Array[Json] {
       false, true, "runapi", "runapi",
     ),
     moon_provider_preset_summary_json(
-      "hermes", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com/invite/CC-SWITCH",
-      "third_party", false, true, "aigocode", "aigocode",
+      "hermes", "AIGoCode", "", "https://aigocode.com", "https://aigocode.com", "third_party",
+      false, true, "aigocode", "aigocode",
     ),
     moon_provider_preset_summary_json(
       "hermes", "RightCode", "", "https://www.right.codes", "https://www.right.codes/register?aff=MOONSTAT",
