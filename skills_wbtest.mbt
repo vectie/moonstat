@@ -110,15 +110,15 @@ async test "ccs skills discovery and search expose ccs compatible shapes" {
 }
 
 ///|
-async test "ccs skill storage migration moves installed directories" {
+async test "moonstat skill storage migration moves installed directories" {
   @fsx.with_temporary_directory("moonstat-skill-storage-XXXXXX", async fn(
     tmpdir,
   ) {
     let state_path = @pathx.join(tmpdir, "skills_state.json")
-    let cc_switch_dir = @pathx.join(tmpdir, "cc-switch-skills")
+    let moonstat_dir = @pathx.join(tmpdir, "moonstat-skills")
     let unified_dir = @pathx.join(tmpdir, "unified-skills")
-    let movable_dir = @pathx.join(cc_switch_dir, "traffic-stats")
-    let skipped_source_dir = @pathx.join(cc_switch_dir, "already-there")
+    let movable_dir = @pathx.join(moonstat_dir, "traffic-stats")
+    let skipped_source_dir = @pathx.join(moonstat_dir, "already-there")
     let skipped_dest_dir = @pathx.join(unified_dir, "already-there")
     @fsx.make_directory(movable_dir, recursive=true, exists_ok=true)
     @fsx.make_directory(skipped_source_dir, recursive=true, exists_ok=true)
@@ -146,7 +146,7 @@ async test "ccs skill storage migration moves installed directories" {
           ]),
           "repos": Json::array([]),
           "backups": Json::array([]),
-          "skillStorageLocation": Json::string("cc_switch"),
+          "skillStorageLocation": Json::string("moonstat"),
         }.to_json(),
         path=state_path,
       ),
@@ -155,7 +155,7 @@ async test "ccs skill storage migration moves installed directories" {
     guard moon_migrate_skill_storage_json(
         "unified",
         state_path~,
-        cc_switch_dir~,
+        moonstat_dir~,
         unified_dir~,
       )
       is Object(result) else {
@@ -179,7 +179,7 @@ async test "ccs skill storage migration moves installed directories" {
     guard moon_migrate_skill_storage_json(
         "unified",
         state_path~,
-        cc_switch_dir~,
+        moonstat_dir~,
         unified_dir~,
       )
       is Object(noop) else {
@@ -192,13 +192,13 @@ async test "ccs skill storage migration moves installed directories" {
 }
 
 ///|
-async test "ccs install skills from zip source scans and copies skill dirs" {
+async test "moonstat install skills from zip source scans and copies skill dirs" {
   @fsx.with_temporary_directory("moonstat-skill-zip-XXXXXX", async fn(tmpdir) {
     let state_path = @pathx.join(tmpdir, "skills_state.json")
     let source_dir = @pathx.join(tmpdir, "bundle")
     let nested_skill = @pathx.join(source_dir, "packs/traffic-stats")
     let conflict_skill = @pathx.join(source_dir, "already-there")
-    let cc_switch_dir = @pathx.join(tmpdir, "cc-switch-skills")
+    let moonstat_dir = @pathx.join(tmpdir, "moonstat-skills")
     let unified_dir = @pathx.join(tmpdir, "unified-skills")
     let app_dir = @pathx.join(tmpdir, "codex-skills")
     @fsx.make_directory(nested_skill, recursive=true, exists_ok=true)
@@ -235,7 +235,7 @@ async test "ccs install skills from zip source scans and copies skill dirs" {
         source_dir,
         "codex",
         state_path~,
-        cc_switch_dir~,
+        moonstat_dir~,
         unified_dir~,
         app_dir~,
       )

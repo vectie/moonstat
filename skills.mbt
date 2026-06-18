@@ -68,7 +68,7 @@ fn moon_skill_state_default_json() -> Json {
     "installed": Json::array([]),
     "repos": Json::array(moon_skill_default_repos_json()),
     "backups": Json::array([]),
-    "skillStorageLocation": Json::string("cc_switch"),
+    "skillStorageLocation": Json::string("unified"),
   }.to_json()
 }
 
@@ -93,7 +93,7 @@ async fn moon_skill_state_load(
     obj["backups"] = Json::array([])
   }
   if obj.get("skillStorageLocation") is None {
-    obj["skillStorageLocation"] = Json::string("cc_switch")
+    obj["skillStorageLocation"] = Json::string("unified")
   }
   Json::object(obj)
 }
@@ -673,7 +673,7 @@ async fn moon_update_skill_json(
 async fn moon_migrate_skill_storage_json(
   target : String,
   state_path? : String = moon_skill_state_path(),
-  cc_switch_dir? : String = moon_cc_switch_skills_dir(),
+  moonstat_dir? : String = moon_moonstat_skills_dir(),
   unified_dir? : String = moon_unified_skills_dir(),
 ) -> Json {
   guard moon_normalize_skill_storage_location(target) is Some(target_location) else {
@@ -688,16 +688,16 @@ async fn moon_migrate_skill_storage_json(
     ])
   }
   let current_location = moon_normalize_skill_storage_location(
-    store_json_string_or_default(obj, "skillStorageLocation", "cc_switch"),
-  ).unwrap_or("cc_switch")
+    store_json_string_or_default(obj, "skillStorageLocation", "unified"),
+  ).unwrap_or("unified")
   if current_location == target_location {
     return moon_skill_migration_result_json(0, 0, [])
   }
   let source_dir = moon_skill_storage_dir(
-    current_location, cc_switch_dir, unified_dir,
+    current_location, moonstat_dir, unified_dir,
   )
   let dest_dir = moon_skill_storage_dir(
-    target_location, cc_switch_dir, unified_dir,
+    target_location, moonstat_dir, unified_dir,
   )
   moon_skill_make_directory(dest_dir) catch {
     err =>
@@ -757,14 +757,14 @@ async fn moon_migrate_skill_storage_json(
 ///|
 fn moon_normalize_skill_storage_location(value : String) -> String? {
   match value.trim().to_owned().to_lower() {
-    "cc_switch" | "cc-switch" | "ccswitch" => Some("cc_switch")
+    "moonstat" | "suite" | "local" => Some("moonstat")
     "unified" => Some("unified")
     _ => None
   }
 }
 
 ///|
-fn moon_cc_switch_skills_dir() -> String {
+fn moon_moonstat_skills_dir() -> String {
   @pathx.join(moon_app_config_dir(), "skills")
 }
 
@@ -776,13 +776,13 @@ fn moon_unified_skills_dir() -> String {
 ///|
 fn moon_skill_storage_dir(
   location : String,
-  cc_switch_dir : String,
+  moonstat_dir : String,
   unified_dir : String,
 ) -> String {
   if location == "unified" {
     unified_dir
   } else {
-    cc_switch_dir
+    moonstat_dir
   }
 }
 
@@ -1032,7 +1032,7 @@ async fn moon_install_skills_from_zip_json(
   file_path : String,
   current_app : String,
   state_path? : String = moon_skill_state_path(),
-  cc_switch_dir? : String = moon_cc_switch_skills_dir(),
+  moonstat_dir? : String = moon_moonstat_skills_dir(),
   unified_dir? : String = moon_unified_skills_dir(),
   app_dir? : String = moon_app_skills_dir(current_app),
 ) -> Json {
@@ -1044,7 +1044,7 @@ async fn moon_install_skills_from_zip_json(
       file_path,
       current_app,
       state_path~,
-      cc_switch_dir~,
+      moonstat_dir~,
       unified_dir~,
       app_dir~,
       source_name=@pathx.basename(file_path).to_owned(),
@@ -1059,7 +1059,7 @@ async fn moon_install_skills_from_zip_json(
       tmpdir,
       current_app,
       state_path~,
-      cc_switch_dir~,
+      moonstat_dir~,
       unified_dir~,
       app_dir~,
       source_name=@pathx.basename(file_path).to_owned(),
@@ -1072,7 +1072,7 @@ async fn moon_install_skills_from_extracted_dir_json(
   root_dir : String,
   current_app : String,
   state_path? : String = moon_skill_state_path(),
-  cc_switch_dir? : String = moon_cc_switch_skills_dir(),
+  moonstat_dir? : String = moon_moonstat_skills_dir(),
   unified_dir? : String = moon_unified_skills_dir(),
   app_dir? : String = moon_app_skills_dir(current_app),
   source_name? : String = @pathx.basename(root_dir).to_owned(),
@@ -1085,7 +1085,7 @@ async fn moon_install_skills_from_extracted_dir_json(
   guard state is Object(state_obj) else { return Json::array([]) }
   let storage_dir = moon_skill_storage_dir_for_state(
     Json::object(state_obj),
-    cc_switch_dir,
+    moonstat_dir,
     unified_dir,
   )
   let existing : Array[Json] = match state_obj.get("installed") {
@@ -1239,14 +1239,14 @@ fn moon_installed_skill_directory_exists(
 ///|
 fn moon_skill_storage_dir_for_state(
   state : Json,
-  cc_switch_dir : String,
+  moonstat_dir : String,
   unified_dir : String,
 ) -> String {
-  guard state is Object(obj) else { return cc_switch_dir }
+  guard state is Object(obj) else { return unified_dir }
   let location = moon_normalize_skill_storage_location(
-    store_json_string_or_default(obj, "skillStorageLocation", "cc_switch"),
-  ).unwrap_or("cc_switch")
-  moon_skill_storage_dir(location, cc_switch_dir, unified_dir)
+    store_json_string_or_default(obj, "skillStorageLocation", "unified"),
+  ).unwrap_or("unified")
+  moon_skill_storage_dir(location, moonstat_dir, unified_dir)
 }
 
 ///|

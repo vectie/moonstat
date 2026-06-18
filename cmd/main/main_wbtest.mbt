@@ -983,9 +983,9 @@ test "proxy grouped commands build canonical paths" {
   )
   assert_eq(
     migrate_skill_storage_path([
-      "moonstat", "skills", "migrate-storage", "--target", "cc switch",
+      "moonstat", "skills", "migrate-storage", "--target", "moonstat",
     ]),
-    Some("/skills/migrate-storage?target=cc%20switch"),
+    Some("/skills/migrate-storage?target=moonstat"),
   )
   assert_eq(
     migrate_skill_storage_path(["moonstat", "skills", "migrate-storage"]),

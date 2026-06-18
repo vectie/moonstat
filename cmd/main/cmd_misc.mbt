@@ -182,7 +182,7 @@ fn print_help() -> Unit {
   println("  --conflicts <json>  JSON conflict array for env delete")
   println("  --imports <json>    JSON import array for skill import")
   println("  --items <json>      JSON item array for bulk commands")
-  println("  --target <loc>      Skill storage target: cc_switch or unified")
+  println("  --target <loc>      Skill storage target: moonstat or unified")
   println("  --script-code <json> JSON UsageResult for usage script tests")
   println("  --value <value>    Value for proxy scalar setter commands")
   println(
