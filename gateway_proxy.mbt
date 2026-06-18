@@ -1011,8 +1011,8 @@ fn Gateway::can_set_auto_failover_ccs(
 }
 
 ///|
-async fn Gateway::handle_proxy_provider_health(
-  self : Gateway,
+async fn ProxyService::handle_proxy_provider_health(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1023,7 +1023,7 @@ async fn Gateway::handle_proxy_provider_health(
   }
   write_usage_json(
     w,
-    self.proxy.provider_router.provider_health_json(
+    self.provider_router.provider_health_json(
       query.provider_id,
       query.app_type,
       @async.now().to_string(),
@@ -1032,16 +1032,16 @@ async fn Gateway::handle_proxy_provider_health(
 }
 
 ///|
-async fn Gateway::handle_proxy_circuit_breaker_config(
-  self : Gateway,
+async fn ProxyService::handle_proxy_circuit_breaker_config(
+  self : ProxyService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.proxy.provider_router.circuit_config.to_json())
+  write_usage_json(w, self.provider_router.circuit_config.to_json())
 }
 
 ///|
-async fn Gateway::handle_proxy_update_circuit_breaker_config(
-  self : Gateway,
+async fn ProxyService::handle_proxy_update_circuit_breaker_config(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1064,13 +1064,13 @@ async fn Gateway::handle_proxy_update_circuit_breaker_config(
     write_usage_bad_request(w, "invalid_circuit_breaker_config")
     return
   }
-  self.proxy.provider_router.update_all_configs(config)
+  self.provider_router.update_all_configs(config)
   write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
-async fn Gateway::handle_proxy_circuit_breaker_stats(
-  self : Gateway,
+async fn ProxyService::handle_proxy_circuit_breaker_stats(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1080,7 +1080,7 @@ async fn Gateway::handle_proxy_circuit_breaker_stats(
     return
   }
   let body = match
-    self.proxy.provider_router.get_circuit_breaker_stats(
+    self.provider_router.get_circuit_breaker_stats(
       query.provider_id,
       query.app_type,
     ) {
@@ -1091,8 +1091,8 @@ async fn Gateway::handle_proxy_circuit_breaker_stats(
 }
 
 ///|
-async fn Gateway::handle_proxy_circuit_breaker_stats_moon_alias(
-  self : Gateway,
+async fn ProxyService::handle_proxy_circuit_breaker_stats_moon_alias(
+  self : ProxyService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -1105,8 +1105,8 @@ fn moon_circuit_breaker_stats_command_json() -> Json {
 }
 
 ///|
-async fn Gateway::handle_proxy_reset_circuit_breaker(
-  self : Gateway,
+async fn ProxyService::handle_proxy_reset_circuit_breaker(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1115,19 +1115,19 @@ async fn Gateway::handle_proxy_reset_circuit_breaker(
     write_usage_bad_request(w, "missing_provider_id_or_app_type")
     return
   }
-  let app_enabled = self.proxy_app_enabled_for_app(query.app_type)
-  let _switched = self.proxy.provider_router.reset_provider_breaker_ccs(
+  let app_enabled = self.app_enabled_for_app(query.app_type)
+  let _switched = self.provider_router.reset_provider_breaker_ccs(
     query.provider_id,
     query.app_type,
     app_enabled~,
-    proxy_running=self.proxy.proxy_enabled,
+    proxy_running=self.proxy_enabled,
   )
   write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
-async fn Gateway::handle_proxy_failover_queue(
-  self : Gateway,
+async fn ProxyService::handle_proxy_failover_queue(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1136,65 +1136,12 @@ async fn Gateway::handle_proxy_failover_queue(
     write_usage_bad_request(w, "missing_app_type")
     return
   }
-  write_usage_json(w, self.proxy.provider_router.failover_queue_json(app_type))
+  write_usage_json(w, self.provider_router.failover_queue_json(app_type))
 }
 
 ///|
-async fn Gateway::handle_proxy_available_failover_providers(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  guard proxy_app_type_from_request(r.path, body) is Some(app_type) else {
-    write_usage_bad_request(w, "missing_app_type")
-    return
-  }
-  write_usage_json(
-    w,
-    self.proxy.provider_router.available_failover_providers_json(app_type),
-  )
-}
-
-///|
-async fn Gateway::handle_proxy_add_failover_queue(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  guard proxy_provider_query_from_request(r.path, body) is Some(query) else {
-    write_usage_bad_request(w, "missing_provider_id_or_app_type")
-    return
-  }
-  self.proxy.provider_router.add_to_failover_queue(
-    query.app_type,
-    query.provider_id,
-  )
-  write_usage_json(w, moon_unit_success_json())
-}
-
-///|
-async fn Gateway::handle_proxy_remove_failover_queue(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  guard proxy_provider_query_from_request(r.path, body) is Some(query) else {
-    write_usage_bad_request(w, "missing_provider_id_or_app_type")
-    return
-  }
-  self.proxy.provider_router.remove_from_failover_queue(
-    query.app_type,
-    query.provider_id,
-  )
-  write_usage_json(w, moon_unit_success_json())
-}
-
-///|
-async fn Gateway::handle_proxy_auto_failover_enabled(
-  self : Gateway,
+async fn ProxyService::handle_proxy_available_failover_providers(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1205,15 +1152,63 @@ async fn Gateway::handle_proxy_auto_failover_enabled(
   }
   write_usage_json(
     w,
-    Json::boolean(
-      self.proxy.provider_router.auto_failover_enabled_for_app(app_type),
-    ),
+    self.provider_router.available_failover_providers_json(app_type),
   )
 }
 
 ///|
-async fn Gateway::handle_proxy_set_auto_failover_enabled(
-  self : Gateway,
+async fn ProxyService::handle_proxy_add_failover_queue(
+  self : ProxyService,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_provider_query_from_request(r.path, body) is Some(query) else {
+    write_usage_bad_request(w, "missing_provider_id_or_app_type")
+    return
+  }
+  self.provider_router.add_to_failover_queue(query.app_type, query.provider_id)
+  write_usage_json(w, moon_unit_success_json())
+}
+
+///|
+async fn ProxyService::handle_proxy_remove_failover_queue(
+  self : ProxyService,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_provider_query_from_request(r.path, body) is Some(query) else {
+    write_usage_bad_request(w, "missing_provider_id_or_app_type")
+    return
+  }
+  self.provider_router.remove_from_failover_queue(
+    query.app_type,
+    query.provider_id,
+  )
+  write_usage_json(w, moon_unit_success_json())
+}
+
+///|
+async fn ProxyService::handle_proxy_auto_failover_enabled(
+  self : ProxyService,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard proxy_app_type_from_request(r.path, body) is Some(app_type) else {
+    write_usage_bad_request(w, "missing_app_type")
+    return
+  }
+  write_usage_json(
+    w,
+    Json::boolean(self.provider_router.auto_failover_enabled_for_app(app_type)),
+  )
+}
+
+///|
+async fn ProxyService::handle_proxy_set_auto_failover_enabled(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1230,9 +1225,7 @@ async fn Gateway::handle_proxy_set_auto_failover_enabled(
     write_usage_bad_request(w, "auto_failover_requires_proxy_takeover")
     return
   }
-  if !self.proxy.provider_router.set_auto_failover_command_ccs(
-      app_type, enabled,
-    ) {
+  if !self.provider_router.set_auto_failover_command_ccs(app_type, enabled) {
     write_usage_bad_request(w, "auto_failover_unavailable")
     return
   }
