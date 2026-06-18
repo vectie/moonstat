@@ -106,8 +106,7 @@ pub fn Gateway::port(self : Gateway) -> Int {
 ///|
 async fn Gateway::record_bad_request(self : Gateway) -> Unit {
   self.release_provider_permit_neutral()
-  self.usage.stats.record_bad_request()
-  self.usage.stats.save_persistent_store()
+  self.usage.record_bad_request()
 }
 
 ///|
@@ -121,15 +120,13 @@ async fn Gateway::record_upstream_error_status(
   } else {
     self.release_provider_permit_neutral()
   }
-  self.usage.stats.record_upstream_error_status(response_bytes, status_code)
-  self.usage.stats.save_persistent_store()
+  self.usage.record_upstream_error_status(response_bytes, status_code)
 }
 
 ///|
 async fn Gateway::record_internal_error(self : Gateway) -> Unit {
   self.release_provider_permit_neutral()
-  self.usage.stats.record_internal_error()
-  self.usage.stats.save_persistent_store()
+  self.usage.record_internal_error()
 }
 
 ///|

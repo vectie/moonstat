@@ -102,3 +102,49 @@ async test "usage service owns usage report json without gateway" {
   )
   assert_true(usage.data_sources_json().stringify().contains("proxy"))
 }
+
+///|
+async test "usage service owns completion and error accounting without gateway" {
+  let usage = UsageService::new()
+  usage.stats.record_inbound(32)
+  usage.stats.set_active_target("codex", "openai", "OpenAI")
+  usage.stats.record_request_context(
+    "codex",
+    "gpt-5",
+    provider_type=Some("openai_chat"),
+  )
+  usage.stats.record_stream_mode(false)
+  usage.record_success_usage(
+    TokenUsage::new(input_tokens=3, output_tokens=5, model=Some("gpt-5")),
+    64,
+    [],
+  )
+  assert_eq(usage.stats.total_requests, 1)
+  assert_eq(usage.stats.successful_responses, 1)
+  assert_eq(usage.stats.input_tokens, 3)
+  assert_eq(usage.stats.output_tokens, 5)
+  assert_eq(usage.stats.request_logs.length(), 1)
+
+  usage.stats.record_inbound(16)
+  usage.stats.record_request_context("codex", "gpt-5")
+  usage.stats.record_stream_mode(true)
+  usage.record_success_stream_usage(None, 24, [], skip_empty_usage=true)
+  assert_eq(usage.stats.total_requests, 2)
+  assert_eq(usage.stats.successful_responses, 2)
+  assert_eq(usage.stats.request_logs.length(), 1)
+
+  usage.stats.record_inbound(8)
+  usage.record_bad_request()
+  usage.stats.record_inbound(8)
+  usage.record_unauthorized()
+  usage.stats.record_inbound(8)
+  usage.record_upstream_error_status(19, 502)
+  usage.stats.record_inbound(8)
+  usage.record_internal_error()
+  assert_eq(usage.stats.total_requests, 6)
+  assert_eq(usage.stats.failed_responses, 4)
+  assert_eq(usage.stats.bad_requests, 1)
+  assert_eq(usage.stats.unauthorized_responses, 1)
+  assert_eq(usage.stats.upstream_errors, 1)
+  assert_eq(usage.stats.last_error, Some("internal_error"))
+}

@@ -5,13 +5,11 @@ async fn Gateway::record_success_usage(
   response_bytes : Int,
 ) -> Unit {
   self.record_provider_result(true)
-  self.usage.stats.record_success_usage_with_pricing(
+  self.usage.record_success_usage(
     usage,
     response_bytes,
     self.pricing_override_rows(),
-    self.usage.pricing_deleted_model_ids,
   )
-  self.usage.stats.save_persistent_store()
 }
 
 ///|
@@ -26,24 +24,13 @@ async fn Gateway::record_success_stream_usage(
   if record_provider {
     self.record_provider_result(true)
   }
-  if skip_empty_usage {
-    match usage {
-      Some(usage) if usage.has_billable_tokens() => ()
-      _ => {
-        self.usage.stats.record_success_without_usage_log(response_bytes)
-        self.usage.stats.save_persistent_store()
-        return
-      }
-    }
-  }
-  self.usage.stats.record_success_usage_with_pricing(
-    usage.unwrap_or(TokenUsage::empty()),
+  self.usage.record_success_stream_usage(
+    usage,
     response_bytes,
     self.pricing_override_rows(),
-    self.usage.pricing_deleted_model_ids,
     first_token_ms~,
+    skip_empty_usage~,
   )
-  self.usage.stats.save_persistent_store()
 }
 
 ///|
@@ -54,6 +41,79 @@ fn UsageService::stats_json(self : UsageService) -> Json {
 ///|
 fn UsageService::metrics_text(self : UsageService) -> String {
   self.stats.prometheus_metrics()
+}
+
+///|
+async fn UsageService::record_success_usage(
+  self : UsageService,
+  usage : TokenUsage,
+  response_bytes : Int,
+  pricing_overrides : Array[ModelPricing],
+) -> Unit {
+  self.stats.record_success_usage_with_pricing(
+    usage,
+    response_bytes,
+    pricing_overrides,
+    self.pricing_deleted_model_ids,
+  )
+  self.stats.save_persistent_store()
+}
+
+///|
+async fn UsageService::record_success_stream_usage(
+  self : UsageService,
+  usage : TokenUsage?,
+  response_bytes : Int,
+  pricing_overrides : Array[ModelPricing],
+  first_token_ms? : Int? = None,
+  skip_empty_usage? : Bool = false,
+) -> Unit {
+  if skip_empty_usage {
+    match usage {
+      Some(usage) if usage.has_billable_tokens() => ()
+      _ => {
+        self.stats.record_success_without_usage_log(response_bytes)
+        self.stats.save_persistent_store()
+        return
+      }
+    }
+  }
+  self.stats.record_success_usage_with_pricing(
+    usage.unwrap_or(TokenUsage::empty()),
+    response_bytes,
+    pricing_overrides,
+    self.pricing_deleted_model_ids,
+    first_token_ms~,
+  )
+  self.stats.save_persistent_store()
+}
+
+///|
+async fn UsageService::record_bad_request(self : UsageService) -> Unit {
+  self.stats.record_bad_request()
+  self.stats.save_persistent_store()
+}
+
+///|
+async fn UsageService::record_unauthorized(self : UsageService) -> Unit {
+  self.stats.record_unauthorized()
+  self.stats.save_persistent_store()
+}
+
+///|
+async fn UsageService::record_upstream_error_status(
+  self : UsageService,
+  response_bytes : Int,
+  status_code : Int,
+) -> Unit {
+  self.stats.record_upstream_error_status(response_bytes, status_code)
+  self.stats.save_persistent_store()
+}
+
+///|
+async fn UsageService::record_internal_error(self : UsageService) -> Unit {
+  self.stats.record_internal_error()
+  self.stats.save_persistent_store()
 }
 
 ///|

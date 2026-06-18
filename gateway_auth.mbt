@@ -1,8 +1,7 @@
 ///|
 async fn Gateway::record_unauthorized(self : Gateway) -> Unit {
   self.release_provider_permit_neutral()
-  self.usage.stats.record_unauthorized()
-  self.usage.stats.save_persistent_store()
+  self.usage.record_unauthorized()
 }
 
 ///|
