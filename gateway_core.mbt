@@ -427,28 +427,28 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/get_claude_common_config_snippet", (
     _,
     w,
-  ) => self.handle_get_common_config_snippet(w, "claude"))
+  ) => self.config.handle_get_common_config_snippet(w, "claude"))
   router.add_handler(@httpx.Method::Post, "/set_claude_common_config_snippet", (
     r,
     w,
-  ) => self.handle_set_common_config_snippet(r, w, "claude"))
+  ) => self.config.handle_set_common_config_snippet(r, w, "claude"))
   router.add_handler(@httpx.Method::Get, "/get_common_config_snippet", (r, w) => {
-    self.handle_get_common_config_snippet_request(r, w)
+    self.config.handle_get_common_config_snippet_request(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_common_config_snippet", (r, w) => {
-    self.handle_get_common_config_snippet_request(r, w)
+    self.config.handle_get_common_config_snippet_request(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/set_common_config_snippet", (r, w) => {
-    self.handle_set_common_config_snippet_request(r, w)
+    self.config.handle_set_common_config_snippet_request(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/extract_common_config_snippet", (
     r,
     w,
-  ) => self.handle_extract_common_config_snippet(r, w))
+  ) => self.config.handle_extract_common_config_snippet(r, w))
   router.add_handler(@httpx.Method::Post, "/extract_common_config_snippet", (
     r,
     w,
-  ) => self.handle_extract_common_config_snippet(r, w))
+  ) => self.config.handle_extract_common_config_snippet(r, w))
   router.add_handler(@httpx.Method::Get, "/check_env_conflicts", (r, w) => {
     self.config.handle_check_env_conflicts(r, w)
   })

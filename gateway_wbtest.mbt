@@ -2116,17 +2116,25 @@ async test "settings mcp and prompt endpoints are owned by config service" {
     handler in [
       "handle_set_window_theme", "handle_enter_lightweight_mode", "handle_exit_lightweight_mode",
       "handle_is_lightweight_mode", "handle_set_auto_launch", "handle_get_auto_launch_status",
-      "handle_check_env_conflicts", "handle_delete_env_vars", "handle_restore_env_backup",
-      "handle_get_claude_mcp_status", "handle_read_claude_mcp_config", "handle_upsert_claude_mcp_server",
-      "handle_delete_mcp_server", "handle_validate_mcp_command", "handle_get_mcp_config",
-      "handle_upsert_mcp_server_in_config", "handle_set_mcp_enabled", "handle_get_mcp_servers",
-      "handle_upsert_mcp_server", "handle_toggle_mcp_app", "handle_import_mcp_from_apps",
-      "handle_get_prompts", "handle_upsert_prompt", "handle_delete_prompt", "handle_enable_prompt",
+      "handle_get_common_config_snippet", "handle_get_common_config_snippet_request",
+      "handle_set_common_config_snippet", "handle_set_common_config_snippet_request",
+      "handle_extract_common_config_snippet", "handle_check_env_conflicts", "handle_delete_env_vars",
+      "handle_restore_env_backup", "handle_get_claude_mcp_status", "handle_read_claude_mcp_config",
+      "handle_upsert_claude_mcp_server", "handle_delete_mcp_server", "handle_validate_mcp_command",
+      "handle_get_mcp_config", "handle_upsert_mcp_server_in_config", "handle_set_mcp_enabled",
+      "handle_get_mcp_servers", "handle_upsert_mcp_server", "handle_toggle_mcp_app",
+      "handle_import_mcp_from_apps", "handle_get_prompts", "handle_upsert_prompt",
+      "handle_delete_prompt", "handle_enable_prompt",
     ] {
     assert_true(config_sources.contains("async fn ConfigService::\{handler}("))
     assert_false(config_sources.contains("async fn Gateway::\{handler}("))
   }
   assert_true(core_source.contains("self.config.handle_set_window_theme(r, w)"))
+  assert_true(
+    core_source.contains(
+      "self.config.handle_get_common_config_snippet(w, \"claude\")",
+    ),
+  )
   assert_true(core_source.contains("self.config.handle_get_mcp_config(r, w)"))
   assert_true(core_source.contains("self.config.handle_upsert_prompt(r, w)"))
   assert_true(

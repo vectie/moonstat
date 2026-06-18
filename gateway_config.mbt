@@ -1107,20 +1107,20 @@ async fn ConfigService::handle_set_log_config(
 }
 
 ///|
-async fn Gateway::handle_get_common_config_snippet(
-  self : Gateway,
+async fn ConfigService::handle_get_common_config_snippet(
+  self : ConfigService,
   w : @httpx.ResponseWriter,
   app_type : String,
 ) -> Unit {
-  match self.config.config_snippets.get(app_type) {
+  match self.config_snippets.get(app_type) {
     Some(snippet) => write_usage_json(w, Json::string(snippet))
     None => write_usage_json(w, Json::null())
   }
 }
 
 ///|
-async fn Gateway::handle_get_common_config_snippet_request(
-  self : Gateway,
+async fn ConfigService::handle_get_common_config_snippet_request(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1130,8 +1130,8 @@ async fn Gateway::handle_get_common_config_snippet_request(
 }
 
 ///|
-async fn Gateway::handle_set_common_config_snippet(
-  self : Gateway,
+async fn ConfigService::handle_set_common_config_snippet(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
   app_type : String,
@@ -1148,42 +1148,27 @@ async fn Gateway::handle_set_common_config_snippet(
     None => ()
   }
   if snippet.trim().is_empty() {
-    self.config.config_snippets.remove(app_type)
+    self.config_snippets.remove(app_type)
   } else {
-    self.config.config_snippets[app_type] = snippet
+    self.config_snippets[app_type] = snippet
   }
   write_usage_json(w, Json::null())
 }
 
 ///|
-async fn Gateway::handle_set_common_config_snippet_request(
-  self : Gateway,
+async fn ConfigService::handle_set_common_config_snippet_request(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
   let app_type = moon_config_app_from_request(r.path, body).unwrap_or("claude")
-  let snippet = proxy_string_request(r.path, body, [
-    "snippet", "content", "value",
-  ]).unwrap_or("")
-  match moon_validate_common_config_snippet(app_type, snippet) {
-    Some(error) => {
-      write_usage_bad_request(w, error)
-      return
-    }
-    None => ()
-  }
-  if snippet.trim().is_empty() {
-    self.config.config_snippets.remove(app_type)
-  } else {
-    self.config.config_snippets[app_type] = snippet
-  }
-  write_usage_json(w, Json::null())
+  self.handle_set_common_config_snippet(r, w, app_type)
 }
 
 ///|
-async fn Gateway::handle_extract_common_config_snippet(
-  self : Gateway,
+async fn ConfigService::handle_extract_common_config_snippet(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1200,7 +1185,7 @@ async fn Gateway::handle_extract_common_config_snippet(
         Err(error) => write_usage_bad_request(w, error)
       }
     None =>
-      match self.config.config_snippets.get(app_type) {
+      match self.config_snippets.get(app_type) {
         Some(snippet) => write_usage_json(w, Json::string(snippet))
         None => write_usage_json(w, Json::string(""))
       }
