@@ -796,6 +796,90 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       patterns: ["save_file_dialog", "save-file-dialog"],
     },
     {
+      id: "webdav_test_connection",
+      patterns: ["webdav_test_connection", "webdav-test-connection"],
+    },
+    {
+      id: "webdav_sync_upload",
+      patterns: ["webdav_sync_upload", "webdav-sync-upload"],
+    },
+    {
+      id: "webdav_sync_download",
+      patterns: ["webdav_sync_download", "webdav-sync-download"],
+    },
+    {
+      id: "webdav_sync_save_settings",
+      patterns: ["webdav_sync_save_settings", "webdav-sync-save-settings"],
+    },
+    {
+      id: "webdav_sync_fetch_remote_info",
+      patterns: [
+        "webdav_sync_fetch_remote_info", "webdav-sync-fetch-remote-info",
+      ],
+    },
+    {
+      id: "s3_test_connection",
+      patterns: ["s3_test_connection", "s3-test-connection"],
+    },
+    { id: "s3_sync_upload", patterns: ["s3_sync_upload", "s3-sync-upload"] },
+    {
+      id: "s3_sync_download",
+      patterns: ["s3_sync_download", "s3-sync-download"],
+    },
+    {
+      id: "s3_sync_save_settings",
+      patterns: ["s3_sync_save_settings", "s3-sync-save-settings"],
+    },
+    {
+      id: "s3_sync_fetch_remote_info",
+      patterns: ["s3_sync_fetch_remote_info", "s3-sync-fetch-remote-info"],
+    },
+    { id: "list_sessions", patterns: ["list_sessions", "list-sessions"] },
+    {
+      id: "get_session_messages",
+      patterns: ["get_session_messages", "get-session-messages"],
+    },
+    {
+      id: "launch_session_terminal",
+      patterns: ["launch_session_terminal", "launch-session-terminal"],
+    },
+    { id: "delete_session", patterns: ["delete_session", "delete-session"] },
+    { id: "delete_sessions", patterns: ["delete_sessions", "delete-sessions"] },
+    {
+      id: "read_omo_local_file",
+      patterns: ["read_omo_local_file", "read-omo-local-file"],
+    },
+    {
+      id: "get_current_omo_provider_id",
+      patterns: ["get_current_omo_provider_id", "get-current-omo-provider-id"],
+    },
+    {
+      id: "disable_current_omo",
+      patterns: ["disable_current_omo", "disable-current-omo"],
+    },
+    {
+      id: "read_omo_slim_local_file",
+      patterns: ["read_omo_slim_local_file", "read-omo-slim-local-file"],
+    },
+    {
+      id: "get_current_omo_slim_provider_id",
+      patterns: [
+        "get_current_omo_slim_provider_id", "get-current-omo-slim-provider-id",
+      ],
+    },
+    {
+      id: "disable_current_omo_slim",
+      patterns: ["disable_current_omo_slim", "disable-current-omo-slim"],
+    },
+    {
+      id: "open_file_dialog",
+      patterns: ["open_file_dialog", "open-file-dialog"],
+    },
+    {
+      id: "open_zip_file_dialog",
+      patterns: ["open_zip_file_dialog", "open-zip-file-dialog"],
+    },
+    {
       id: "export_config_to_file",
       patterns: ["export_config_to_file", "export-config-to-file"],
     },
@@ -1776,6 +1860,118 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
     }
     Some("save_file_dialog") => {
       check_usage_endpoint(args, save_file_dialog_path(args))
+      true
+    }
+    Some("webdav_test_connection") => {
+      check_json_post_endpoint(
+        args,
+        sync_settings_path(args, "/webdav_test_connection"),
+        "Sync",
+      )
+      true
+    }
+    Some("webdav_sync_upload") => {
+      check_json_post_endpoint(args, "/webdav_sync_upload", "Sync")
+      true
+    }
+    Some("webdav_sync_download") => {
+      check_json_post_endpoint(args, "/webdav_sync_download", "Sync")
+      true
+    }
+    Some("webdav_sync_save_settings") => {
+      check_json_post_endpoint(
+        args,
+        sync_settings_path(args, "/webdav_sync_save_settings"),
+        "Sync",
+      )
+      true
+    }
+    Some("webdav_sync_fetch_remote_info") => {
+      check_usage_endpoint(args, "/webdav_sync_fetch_remote_info")
+      true
+    }
+    Some("s3_test_connection") => {
+      check_json_post_endpoint(
+        args,
+        sync_settings_path(args, "/s3_test_connection"),
+        "Sync",
+      )
+      true
+    }
+    Some("s3_sync_upload") => {
+      check_json_post_endpoint(args, "/s3_sync_upload", "Sync")
+      true
+    }
+    Some("s3_sync_download") => {
+      check_json_post_endpoint(args, "/s3_sync_download", "Sync")
+      true
+    }
+    Some("s3_sync_save_settings") => {
+      check_json_post_endpoint(
+        args,
+        sync_settings_path(args, "/s3_sync_save_settings"),
+        "Sync",
+      )
+      true
+    }
+    Some("s3_sync_fetch_remote_info") => {
+      check_usage_endpoint(args, "/s3_sync_fetch_remote_info")
+      true
+    }
+    Some("list_sessions") => {
+      check_usage_endpoint(args, "/list_sessions")
+      true
+    }
+    Some("get_session_messages") => {
+      check_usage_endpoint(args, session_messages_path(args))
+      true
+    }
+    Some("launch_session_terminal") => {
+      check_json_post_endpoint(
+        args,
+        launch_session_terminal_path(args),
+        "Session",
+      )
+      true
+    }
+    Some("delete_session") => {
+      check_json_post_endpoint(args, delete_session_path(args), "Session")
+      true
+    }
+    Some("delete_sessions") => {
+      delete_sessions(args)
+      true
+    }
+    Some("read_omo_local_file") => {
+      check_usage_endpoint(args, "/read_omo_local_file")
+      true
+    }
+    Some("get_current_omo_provider_id") => {
+      check_usage_endpoint(args, "/get_current_omo_provider_id")
+      true
+    }
+    Some("disable_current_omo") => {
+      check_json_post_endpoint(args, "/disable_current_omo", "OMO")
+      true
+    }
+    Some("read_omo_slim_local_file") => {
+      check_usage_endpoint(args, "/read_omo_slim_local_file")
+      true
+    }
+    Some("get_current_omo_slim_provider_id") => {
+      check_usage_endpoint(args, "/get_current_omo_slim_provider_id")
+      true
+    }
+    Some("disable_current_omo_slim") => {
+      check_json_post_endpoint(args, "/disable_current_omo_slim", "OMO")
+      true
+    }
+    Some("open_file_dialog") => {
+      check_usage_endpoint(args, "/open_file_dialog")
+      true
+    }
+    Some("open_zip_file_dialog") => {
+      check_usage_endpoint(args, "/open_zip_file_dialog")
       true
     }
     Some("export_config_to_file") => {

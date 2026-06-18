@@ -26,6 +26,30 @@ test "registered cli commands match suite command aliases and status commands" {
     registered_cli_command_id(["moonstat", "--version"]) == Some("version"),
   )
   assert_true(
+    registered_cli_command_id(["moonstat", "webdav-sync-upload"]) ==
+    Some("webdav_sync_upload"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "s3_test_connection"]) ==
+    Some("s3_test_connection"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "list-sessions"]) ==
+    Some("list_sessions"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "launch_session_terminal"]) ==
+    Some("launch_session_terminal"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "read-omo-slim-local-file"]) ==
+    Some("read_omo_slim_local_file"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "open-zip-file-dialog"]) ==
+    Some("open_zip_file_dialog"),
+  )
+  assert_true(
     cli_args_match_pattern(
       ["moonstat", "suite", "manifest", "--host", "127.0.0.1"],
       "suite manifest",
