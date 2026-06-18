@@ -5,67 +5,36 @@ priv struct CliCommandSpec {
 }
 
 ///|
-fn cli_command_id_in_specs(
-  command_id : String,
-  specs : Array[CliCommandSpec],
-) -> Bool {
-  for command in specs {
-    if command.id == command_id {
-      return true
-    }
-  }
-  false
+priv struct CliCommandGroup {
+  family : String
+  commands : Array[CliCommandSpec]
 }
 
 ///|
-fn registered_cli_commands() -> Array[CliCommandSpec] {
-  let commands = [
-    { id: "help", patterns: ["help", "--help", "-h"] },
-    { id: "version", patterns: ["version", "--version", "-v"] },
+fn registered_cli_command_groups() -> Array[CliCommandGroup] {
+  [
+    {
+      family: "core",
+      commands: [
+        { id: "help", patterns: ["help", "--help", "-h"] },
+        { id: "version", patterns: ["version", "--version", "-v"] },
+      ],
+    },
+    { family: "provider", commands: provider_cli_commands() },
+    { family: "auth", commands: auth_cli_commands() },
+    { family: "copilot", commands: copilot_cli_commands() },
+    { family: "skill", commands: skill_cli_commands() },
+    { family: "proxy", commands: proxy_cli_commands() },
+    { family: "config", commands: config_cli_commands() },
+    { family: "usage", commands: usage_cli_commands() },
+    { family: "suite", commands: suite_cli_commands() },
+    { family: "install", commands: install_cli_commands() },
+    { family: "stream-check", commands: stream_check_cli_commands() },
+    { family: "sync", commands: sync_cli_commands() },
+    { family: "session", commands: session_cli_commands() },
+    { family: "runtime", commands: runtime_cli_commands() },
+    { family: "workspace", commands: workspace_cli_commands() },
   ]
-  for command in provider_cli_commands() {
-    commands.push(command)
-  }
-  for command in auth_cli_commands() {
-    commands.push(command)
-  }
-  for command in copilot_cli_commands() {
-    commands.push(command)
-  }
-  for command in skill_cli_commands() {
-    commands.push(command)
-  }
-  for command in proxy_cli_commands() {
-    commands.push(command)
-  }
-  for command in config_cli_commands() {
-    commands.push(command)
-  }
-  for command in usage_cli_commands() {
-    commands.push(command)
-  }
-  for command in suite_cli_commands() {
-    commands.push(command)
-  }
-  for command in install_cli_commands() {
-    commands.push(command)
-  }
-  for command in stream_check_cli_commands() {
-    commands.push(command)
-  }
-  for command in sync_cli_commands() {
-    commands.push(command)
-  }
-  for command in session_cli_commands() {
-    commands.push(command)
-  }
-  for command in runtime_cli_commands() {
-    commands.push(command)
-  }
-  for command in workspace_cli_commands() {
-    commands.push(command)
-  }
-  commands
 }
 
 ///|
@@ -103,9 +72,19 @@ fn cli_args_match_any_pattern(
 
 ///|
 fn registered_cli_command_id(args : Array[String]) -> String? {
-  for command in registered_cli_commands() {
-    if cli_args_match_any_pattern(args, command.patterns) {
-      return Some(command.id)
+  match registered_cli_command_route(args) {
+    Some((_, command_id)) => Some(command_id)
+    None => None
+  }
+}
+
+///|
+fn registered_cli_command_route(args : Array[String]) -> (String, String)? {
+  for group in registered_cli_command_groups() {
+    for command in group.commands {
+      if cli_args_match_any_pattern(args, command.patterns) {
+        return Some((group.family, command.id))
+      }
     }
   }
   None
@@ -113,68 +92,69 @@ fn registered_cli_command_id(args : Array[String]) -> String? {
 
 ///|
 async fn run_registered_cli_command(args : Array[String]) -> Bool {
-  match registered_cli_command_id(args) {
-    Some(command_id) if cli_install_command_id(command_id) => {
+  guard registered_cli_command_id(args) is Some(_) else { return false }
+  match registered_cli_command_route(args) {
+    Some(("install", command_id)) => {
       run_install_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_auth_command_id(command_id) => {
+    Some(("auth", command_id)) => {
       run_auth_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_copilot_command_id(command_id) => {
+    Some(("copilot", command_id)) => {
       run_copilot_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_skill_command_id(command_id) => {
+    Some(("skill", command_id)) => {
       run_skill_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_config_command_id(command_id) => {
+    Some(("config", command_id)) => {
       run_config_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_stream_check_command_id(command_id) => {
+    Some(("stream-check", command_id)) => {
       run_stream_check_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_proxy_command_id(command_id) => {
+    Some(("proxy", command_id)) => {
       run_proxy_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_provider_command_id(command_id) => {
+    Some(("provider", command_id)) => {
       run_provider_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_workspace_command_id(command_id) => {
+    Some(("workspace", command_id)) => {
       run_workspace_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_runtime_command_id(command_id) => {
+    Some(("runtime", command_id)) => {
       run_runtime_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_sync_command_id(command_id) => {
+    Some(("sync", command_id)) => {
       run_sync_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_session_command_id(command_id) => {
+    Some(("session", command_id)) => {
       run_session_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_usage_command_id(command_id) => {
+    Some(("usage", command_id)) => {
       run_usage_cli_command(command_id, args)
       true
     }
-    Some(command_id) if cli_suite_command_id(command_id) => {
+    Some(("suite", command_id)) => {
       run_suite_cli_command(command_id, args)
       true
     }
-    Some("help") => {
+    Some(("core", "help")) => {
       print_help()
       true
     }
-    Some("version") => {
+    Some(("core", "version")) => {
       println("moonstat v0.1.0")
       true
     }

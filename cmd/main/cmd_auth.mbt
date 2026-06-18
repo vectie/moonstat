@@ -28,11 +28,6 @@ fn auth_cli_commands() -> Array[CliCommandSpec] {
 }
 
 ///|
-fn cli_auth_command_id(command_id : String) -> Bool {
-  cli_command_id_in_specs(command_id, auth_cli_commands())
-}
-
-///|
 async fn run_auth_cli_command(
   command_id : String,
   args : Array[String],

@@ -7,7 +7,6 @@ test "has flag matches exact CLI option" {
 
 ///|
 test "registered cli commands match suite command aliases and status commands" {
-  assert_true(registered_cli_commands().length() >= 225)
   assert_true(registered_cli_command_id(["moonstat", "start"]) == Some("start"))
   assert_true(
     registered_cli_command_id(["moonstat", "install", "--port", "15721"]) ==
@@ -465,216 +464,41 @@ test "registered cli commands match suite command aliases and status commands" {
 }
 
 ///|
-test "cli command ownership comes from family specs" {
-  for command in auth_cli_commands() {
-    assert_true(cli_auth_command_id(command.id))
-  }
-  for command in copilot_cli_commands() {
-    assert_true(cli_copilot_command_id(command.id))
-  }
-  for command in skill_cli_commands() {
-    assert_true(cli_skill_command_id(command.id))
-  }
-  for command in proxy_cli_commands() {
-    assert_true(cli_proxy_command_id(command.id))
-  }
-  for command in config_cli_commands() {
-    assert_true(cli_config_command_id(command.id))
-  }
-  for command in usage_cli_commands() {
-    assert_true(cli_usage_command_id(command.id))
-  }
-  for command in suite_cli_commands() {
-    assert_true(cli_suite_command_id(command.id))
-  }
-  for command in install_cli_commands() {
-    assert_true(cli_install_command_id(command.id))
-  }
-  for command in stream_check_cli_commands() {
-    assert_true(cli_stream_check_command_id(command.id))
-  }
-  for command in sync_cli_commands() {
-    assert_true(cli_sync_command_id(command.id))
-  }
-  for command in session_cli_commands() {
-    assert_true(cli_session_command_id(command.id))
-  }
-  for command in runtime_cli_commands() {
-    assert_true(cli_runtime_command_id(command.id))
-  }
-  for command in workspace_cli_commands() {
-    assert_true(cli_workspace_command_id(command.id))
-  }
-  for command in provider_cli_commands() {
-    assert_true(cli_provider_command_id(command.id))
-  }
-}
-
-///|
-test "proxy cli dispatcher owns only proxy command family" {
-  assert_false(cli_proxy_command_id("update_proxy_config"))
-  assert_true(cli_proxy_command_id("set_proxy_takeover_for_app"))
-  assert_true(cli_proxy_command_id("switch_proxy_provider"))
-  assert_true(cli_proxy_command_id("get_proxy_running"))
-  assert_false(cli_proxy_command_id("get_providers"))
-  assert_false(cli_proxy_command_id("suite_manifest"))
-  assert_false(cli_proxy_command_id("auth_get_status"))
-}
-
-///|
-test "usage cli dispatcher owns usage and telemetry commands" {
-  assert_true(cli_usage_command_id("get_usage_summary"))
-  assert_true(cli_usage_command_id("get_request_logs"))
-  assert_true(cli_usage_command_id("query_provider_usage"))
-  assert_true(cli_usage_command_id("status"))
-  assert_true(cli_usage_command_id("health"))
-  assert_true(cli_usage_command_id("stats"))
-  assert_false(cli_usage_command_id("get_providers"))
-  assert_false(cli_usage_command_id("suite_manifest"))
-  assert_false(cli_usage_command_id("auth_get_status"))
-}
-
-///|
-test "auth cli dispatcher owns managed auth commands" {
-  assert_true(cli_auth_command_id("login"))
-  assert_true(cli_auth_command_id("auth_start_login"))
-  assert_true(cli_auth_command_id("auth_poll_for_account"))
-  assert_true(cli_auth_command_id("auth_get_status"))
-  assert_true(cli_auth_command_id("auth_logout"))
-  assert_false(cli_auth_command_id("copilot_get_models"))
-  assert_false(cli_auth_command_id("get_usage_summary"))
-  assert_false(cli_auth_command_id("get_providers"))
-}
-
-///|
-test "copilot cli dispatcher owns Copilot auth commands" {
-  assert_true(cli_copilot_command_id("copilot_start_device_flow"))
-  assert_true(cli_copilot_command_id("copilot_poll_for_account"))
-  assert_true(cli_copilot_command_id("copilot_get_token"))
-  assert_true(cli_copilot_command_id("copilot_get_usage"))
-  assert_false(cli_copilot_command_id("auth_get_status"))
-  assert_false(cli_copilot_command_id("get_usage_summary"))
-  assert_false(cli_copilot_command_id("get_providers"))
-}
-
-///|
-test "skill cli dispatcher owns skills commands" {
-  assert_true(cli_skill_command_id("get_installed_skills"))
-  assert_true(cli_skill_command_id("restore_skill_backup"))
-  assert_true(cli_skill_command_id("import_skills_from_apps"))
-  assert_true(cli_skill_command_id("migrate_skill_storage"))
-  assert_true(cli_skill_command_id("install_skills_from_zip"))
-  assert_false(cli_skill_command_id("auth_get_status"))
-  assert_false(cli_skill_command_id("get_usage_summary"))
-  assert_false(cli_skill_command_id("get_providers"))
-}
-
-///|
-test "workspace cli dispatcher owns suite workspace commands" {
-  assert_true(cli_workspace_command_id("scan_openclaw_config_health"))
-  assert_true(cli_workspace_command_id("set_openclaw_model_catalog"))
-  assert_true(cli_workspace_command_id("set_hermes_memory"))
-  assert_true(cli_workspace_command_id("save_file_dialog"))
-  assert_true(cli_workspace_command_id("read_workspace_file"))
-  assert_true(cli_workspace_command_id("import_prompt_from_file"))
-  assert_false(cli_workspace_command_id("auth_get_status"))
-  assert_false(cli_workspace_command_id("get_usage_summary"))
-  assert_false(cli_workspace_command_id("suite_manifest"))
-}
-
-///|
-test "suite cli dispatcher owns suite discovery commands" {
-  assert_true(cli_suite_command_id("suite_manifest"))
-  assert_true(cli_suite_command_id("suite_status"))
-  assert_true(cli_suite_command_id("suite_write_status"))
-  assert_true(cli_suite_command_id("suite_moonclaw_providers"))
-  assert_false(cli_suite_command_id("auth_get_status"))
-  assert_false(cli_suite_command_id("get_usage_summary"))
-  assert_false(cli_suite_command_id("read_workspace_file"))
-}
-
-///|
-test "config cli dispatcher owns config settings and mcp commands" {
-  assert_true(cli_config_command_id("get_config_status"))
-  assert_true(cli_config_command_id("save_settings"))
-  assert_true(cli_config_command_id("set_rectifier_config"))
-  assert_true(cli_config_command_id("get_claude_plugin_status"))
-  assert_true(cli_config_command_id("upsert_mcp_server"))
-  assert_true(cli_config_command_id("enable_prompt"))
-  assert_false(cli_config_command_id("auth_get_status"))
-  assert_false(cli_config_command_id("get_usage_summary"))
-  assert_false(cli_config_command_id("read_workspace_file"))
-}
-
-///|
-test "provider cli dispatcher owns provider and model commands" {
-  assert_true(cli_provider_command_id("get_providers"))
-  assert_true(cli_provider_command_id("switch_provider"))
-  assert_true(cli_provider_command_id("provider_import_live"))
-  assert_true(cli_provider_command_id("upsert_universal_provider"))
-  assert_true(cli_provider_command_id("test_api_endpoints"))
-  assert_true(cli_provider_command_id("fetch_models"))
-  assert_false(cli_provider_command_id("auth_get_status"))
-  assert_false(cli_provider_command_id("get_usage_summary"))
-  assert_false(cli_provider_command_id("read_workspace_file"))
-}
-
-///|
-test "runtime cli dispatcher owns app shell commands" {
-  assert_true(cli_runtime_command_id("pick_directory"))
-  assert_true(cli_runtime_command_id("check_for_updates"))
-  assert_true(cli_runtime_command_id("get_tool_versions"))
-  assert_true(cli_runtime_command_id("enter_lightweight_mode"))
-  assert_true(cli_runtime_command_id("restart_app"))
-  assert_true(cli_runtime_command_id("install_update_and_restart"))
-  assert_false(cli_runtime_command_id("auth_get_status"))
-  assert_false(cli_runtime_command_id("get_usage_summary"))
-  assert_false(cli_runtime_command_id("read_workspace_file"))
-}
-
-///|
-test "sync cli dispatcher owns remote sync commands" {
-  assert_true(cli_sync_command_id("webdav_test_connection"))
-  assert_true(cli_sync_command_id("webdav_sync_save_settings"))
-  assert_true(cli_sync_command_id("s3_test_connection"))
-  assert_true(cli_sync_command_id("s3_sync_fetch_remote_info"))
-  assert_false(cli_sync_command_id("auth_get_status"))
-  assert_false(cli_sync_command_id("get_usage_summary"))
-  assert_false(cli_sync_command_id("read_workspace_file"))
-}
-
-///|
-test "session cli dispatcher owns session and omo commands" {
-  assert_true(cli_session_command_id("list_sessions"))
-  assert_true(cli_session_command_id("get_session_messages"))
-  assert_true(cli_session_command_id("delete_sessions"))
-  assert_true(cli_session_command_id("read_omo_local_file"))
-  assert_true(cli_session_command_id("disable_current_omo_slim"))
-  assert_false(cli_session_command_id("auth_get_status"))
-  assert_false(cli_session_command_id("get_usage_summary"))
-  assert_false(cli_session_command_id("read_workspace_file"))
-}
-
-///|
-test "install cli dispatcher owns startup and app install commands" {
-  assert_true(cli_install_command_id("start"))
-  assert_true(cli_install_command_id("install_reroute"))
-  assert_true(cli_install_command_id("status_claude_desktop"))
-  assert_true(cli_install_command_id("install_codex"))
-  assert_false(cli_install_command_id("auth_get_status"))
-  assert_false(cli_install_command_id("get_usage_summary"))
-  assert_false(cli_install_command_id("read_workspace_file"))
-}
-
-///|
-test "stream check cli dispatcher owns stream check commands" {
-  assert_true(cli_stream_check_command_id("stream_check_provider"))
-  assert_true(cli_stream_check_command_id("stream_check_all_providers"))
-  assert_true(cli_stream_check_command_id("get_stream_check_config"))
-  assert_true(cli_stream_check_command_id("save_stream_check_config"))
-  assert_false(cli_stream_check_command_id("auth_get_status"))
-  assert_false(cli_stream_check_command_id("get_usage_summary"))
-  assert_false(cli_stream_check_command_id("read_workspace_file"))
+test "cli command route owns command family dispatch" {
+  assert_eq(registered_cli_command_groups().length(), 15)
+  assert_eq(
+    registered_cli_command_route(["moonstat", "provider", "list"]),
+    Some(("provider", "get_providers")),
+  )
+  assert_eq(
+    registered_cli_command_route(["moonstat", "settings", "get"]),
+    Some(("config", "get_settings")),
+  )
+  assert_eq(
+    registered_cli_command_route(["moonstat", "start"]),
+    Some(("install", "start")),
+  )
+  assert_eq(
+    registered_cli_command_route(["moonstat", "--help"]),
+    Some(("core", "help")),
+  )
+  assert_true(registered_cli_command_route(["moonstat", "not-real"]) is None)
+  assert_eq(
+    registered_cli_command_route(["moonstat", "usage", "summary"]),
+    Some(("usage", "get_usage_summary")),
+  )
+  assert_eq(
+    registered_cli_command_route(["moonstat", "proxy", "running"]),
+    Some(("proxy", "get_proxy_running")),
+  )
+  assert_eq(
+    registered_cli_command_route(["moonstat", "runtime", "restart"]),
+    Some(("runtime", "restart_app")),
+  )
+  assert_eq(
+    registered_cli_command_route(["moonstat", "stream-check", "all"]),
+    Some(("stream-check", "stream_check_all_providers")),
+  )
 }
 
 ///|

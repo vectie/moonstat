@@ -9,11 +9,6 @@ fn stream_check_cli_commands() -> Array[CliCommandSpec] {
 }
 
 ///|
-fn cli_stream_check_command_id(command_id : String) -> Bool {
-  cli_command_id_in_specs(command_id, stream_check_cli_commands())
-}
-
-///|
 async fn run_stream_check_cli_command(
   command_id : String,
   args : Array[String],

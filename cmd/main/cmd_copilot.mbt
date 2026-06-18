@@ -17,11 +17,6 @@ fn copilot_cli_commands() -> Array[CliCommandSpec] {
 }
 
 ///|
-fn cli_copilot_command_id(command_id : String) -> Bool {
-  cli_command_id_in_specs(command_id, copilot_cli_commands())
-}
-
-///|
 async fn run_copilot_cli_command(
   command_id : String,
   args : Array[String],

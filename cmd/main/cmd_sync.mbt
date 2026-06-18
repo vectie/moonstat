@@ -18,11 +18,6 @@ fn sync_cli_commands() -> Array[CliCommandSpec] {
 }
 
 ///|
-fn cli_sync_command_id(command_id : String) -> Bool {
-  cli_command_id_in_specs(command_id, sync_cli_commands())
-}
-
-///|
 async fn run_sync_cli_command(
   command_id : String,
   args : Array[String],
