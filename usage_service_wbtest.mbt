@@ -38,7 +38,13 @@ test "usage service exposes stats and metrics without gateway" {
 async test "usage service owns proxy status target and pricing state" {
   let usage = UsageService::new()
   usage.set_active_target("codex", "codex-oauth", "Codex OAuth")
-  guard usage.status_json("127.0.0.1", 4199, 12) is Object(status) else {
+  guard usage.status_json(
+      "127.0.0.1",
+      4199,
+      12,
+      provider_routes=Some({ "codex": Json::string("codex-oauth") }.to_json()),
+    )
+    is Object(status) else {
     fail("expected status object")
   }
   assert_true(status["running"] is true)
@@ -46,6 +52,7 @@ async test "usage service owns proxy status target and pricing state" {
   assert_true(status["port"] is Number(4199.0, ..))
   assert_true(status["uptime_seconds"] is Number(12.0, ..))
   assert_true(status["current_provider_id"] is String("codex-oauth"))
+  assert_true(status.get("provider_routes") is Some(Object(_)))
 
   usage.delete_model_pricing("moonstat-test-model")
   assert_true(
@@ -55,6 +62,18 @@ async test "usage service owns proxy status target and pricing state" {
   let _backfilled = usage.upsert_model_pricing(pricing)
   assert_eq(usage.pricing_override_rows().length(), 1)
   assert_true(usage.model_pricing_json().stringify().contains("Moonstat Test"))
+}
+
+///|
+test "usage service owns stream first-event timing" {
+  let usage = UsageService::new()
+  assert_true(usage.first_stream_event_ms(Some(12)) is Some(12))
+  assert_true(usage.first_stream_event_ms(None) is Some(0))
+  usage.record_inbound(4)
+  guard usage.first_stream_event_ms(None) is Some(elapsed) else {
+    fail("expected first event timing")
+  }
+  assert_true(elapsed >= 0)
 }
 
 ///|

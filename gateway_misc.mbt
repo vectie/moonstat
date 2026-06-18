@@ -164,7 +164,7 @@ async fn Gateway::handle_health(
     "status": Json::string("healthy"),
     "timestamp": Json::string(@async.now().to_string()),
     "credentials_loaded": Json::boolean(has_creds),
-    "stats": self.usage.stats.to_json(),
+    "stats": self.usage.stats_json(),
   }
   w.write(response.to_json().stringify())
   w.flush()
@@ -675,10 +675,7 @@ async fn Gateway::forward_streaming_chat_completion(
           let data = rest.trim().to_owned()
           if data != "[DONE]" {
             if push_sse_json_event(stream_events, data) {
-              first_token_ms = moon_first_stream_event_ms(
-                first_token_ms,
-                self.usage.stats.current_request_started_at_ms,
-              )
+              first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
             }
             if codex_stream_event_to_openai_chat_chunk(
                 data, id, response_model, created,
@@ -698,10 +695,7 @@ async fn Gateway::forward_streaming_chat_completion(
             break
           }
           if push_sse_json_event(stream_events, data) {
-            first_token_ms = moon_first_stream_event_ms(
-              first_token_ms,
-              self.usage.stats.current_request_started_at_ms,
-            )
+            first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
           }
           if codex_stream_event_to_openai_chat_chunk(
               data, id, response_model, created,
@@ -1070,17 +1064,13 @@ async fn Gateway::forward_streaming_codex_response(
             )
             response_bytes += bytes
             if stream_events.length() > before {
-              first_token_ms = moon_first_stream_event_ms(
-                first_token_ms,
-                self.usage.stats.current_request_started_at_ms,
-              )
+              first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
             }
           } else {
             if data != "[DONE]" {
               if push_sse_json_event(stream_events, data) {
-                first_token_ms = moon_first_stream_event_ms(
+                first_token_ms = self.usage.first_stream_event_ms(
                   first_token_ms,
-                  self.usage.stats.current_request_started_at_ms,
                 )
               }
             }
@@ -1106,10 +1096,7 @@ async fn Gateway::forward_streaming_codex_response(
             )
             response_bytes += bytes
             if stream_events.length() > before {
-              first_token_ms = moon_first_stream_event_ms(
-                first_token_ms,
-                self.usage.stats.current_request_started_at_ms,
-              )
+              first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
             }
             if done {
               break
@@ -1120,9 +1107,8 @@ async fn Gateway::forward_streaming_codex_response(
               let data = rest.trim().to_owned()
               if data != "[DONE]" {
                 if push_sse_json_event(stream_events, data) {
-                  first_token_ms = moon_first_stream_event_ms(
+                  first_token_ms = self.usage.first_stream_event_ms(
                     first_token_ms,
-                    self.usage.stats.current_request_started_at_ms,
                   )
                 }
               }
@@ -2897,7 +2883,7 @@ async fn Gateway::handle_status(
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
   w.write(
-    self.usage.stats
+    self.usage
     .status_json(
       self.host,
       self.port,
@@ -7013,10 +6999,7 @@ async fn Gateway::forward_successful_claude_compatible_stream(
     let reader = CodexStreamReader::new(client, request_model)
     let mut first_token_ms : Int? = None
     while reader.read() is Some(event) {
-      first_token_ms = moon_first_stream_event_ms(
-        first_token_ms,
-        self.usage.stats.current_request_started_at_ms,
-      )
+      first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
       w.flush()
@@ -7703,10 +7686,7 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
-    first_token_ms = moon_first_stream_event_ms(
-      first_token_ms,
-      self.usage.stats.current_request_started_at_ms,
-    )
+    first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
@@ -7737,10 +7717,7 @@ async fn Gateway::forward_anthropic_sse_passthrough(
       let parsed = @json.parse(data) catch { _ => Json::null() }
       if parsed != Json::null() {
         events.push(parsed)
-        first_token_ms = moon_first_stream_event_ms(
-          first_token_ms,
-          self.usage.stats.current_request_started_at_ms,
-        )
+        first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
       }
     }
     w.write(line)
@@ -7776,10 +7753,7 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
-    first_token_ms = moon_first_stream_event_ms(
-      first_token_ms,
-      self.usage.stats.current_request_started_at_ms,
-    )
+    first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
@@ -8756,10 +8730,7 @@ async fn Gateway::handle_streaming_request(
   self.record_provider_result(true)
   let mut first_token_ms : Int? = None
   while reader.read() is Some(event) {
-    first_token_ms = moon_first_stream_event_ms(
-      first_token_ms,
-      self.usage.stats.current_request_started_at_ms,
-    )
+    first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
     w.write("event: \{event.event_type}\n")
     w.write("data: \{event.data}\n\n")
     w.flush()

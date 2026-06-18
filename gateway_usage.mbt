@@ -50,8 +50,23 @@ fn UsageService::status_json(
   port : Int,
   uptime_seconds : Int,
   running? : Bool = true,
+  provider_routes? : Json? = None,
 ) -> Json {
-  self.stats.status_json(address, port, uptime_seconds, running~)
+  self.stats.status_json(
+    address,
+    port,
+    uptime_seconds,
+    running~,
+    provider_routes~,
+  )
+}
+
+///|
+fn UsageService::first_stream_event_ms(
+  self : UsageService,
+  current : Int?,
+) -> Int? {
+  moon_first_stream_event_ms(current, self.stats.current_request_started_at_ms)
 }
 
 ///|
