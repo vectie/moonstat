@@ -6,49 +6,6 @@ pub async fn start(args : ArrayView[String]) -> Unit {
   }
   match arr[1:] {
     ["start", ..] => start_gateway(arr)
-    ["login", ..] => do_login(arr)
-    ["auth", "start-login", ..] => auth_start_login(arr)
-    ["auth", "poll", ..] | ["auth", "poll-for-account", ..] =>
-      auth_poll_for_account(arr)
-    ["auth", "list", ..] | ["auth", "list-accounts", ..] =>
-      auth_list_accounts(arr)
-    ["auth", "status", ..] => auth_get_status(arr)
-    ["auth", "remove", ..] | ["auth", "remove-account", ..] =>
-      auth_remove_account(arr)
-    ["auth", "default", ..] | ["auth", "set-default-account", ..] =>
-      auth_set_default_account(arr)
-    ["auth", "logout", ..] => auth_logout(arr)
-    ["copilot", "start-device-flow", ..] => copilot_start_device_flow(arr)
-    ["copilot", "poll", ..] | ["copilot", "poll-for-account", ..] =>
-      copilot_poll_for_account(arr)
-    ["copilot", "poll-for-auth", ..] => copilot_poll_for_auth(arr)
-    ["copilot", "list", ..] | ["copilot", "list-accounts", ..] =>
-      check_usage_endpoint(arr, "/copilot_list_accounts")
-    ["copilot", "auth-status", ..] | ["copilot", "status", ..] =>
-      check_usage_endpoint(arr, "/copilot_get_auth_status")
-    ["copilot", "is-authenticated", ..] =>
-      check_usage_endpoint(arr, "/copilot_is_authenticated")
-    ["copilot", "logout", ..] =>
-      check_json_post_endpoint(arr, "/copilot_logout", "Copilot")
-    ["copilot", "remove", ..] | ["copilot", "remove-account", ..] =>
-      copilot_account_post(arr, "/copilot_remove_account")
-    ["copilot", "default", ..] | ["copilot", "set-default-account", ..] =>
-      copilot_account_post(arr, "/copilot_set_default_account")
-    ["copilot", "token", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_token"),
-      )
-    ["copilot", "models", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_models"),
-      )
-    ["copilot", "usage", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_usage"),
-      )
     ["install", ..] => install_reroute(arr)
     ["uninstall"] | ["remove"] => uninstall_reroute()
     ["claude-desktop", "install", ..] => install_claude_desktop(arr)
@@ -61,68 +18,6 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["models", "candidates", ..] => print_model_candidates(arr)
     ["fetch_models_for_config", ..] | ["fetch-models-for-config", ..] =>
       fetch_provider_models(arr)
-    ["auth_start_login", ..] | ["auth-start-login", ..] => auth_start_login(arr)
-    ["auth_poll_for_account", ..] | ["auth-poll-for-account", ..] =>
-      auth_poll_for_account(arr)
-    ["auth_list_accounts", ..] | ["auth-list-accounts", ..] =>
-      auth_list_accounts(arr)
-    ["auth_get_status", ..] | ["auth-get-status", ..] => auth_get_status(arr)
-    ["auth_remove_account", ..] | ["auth-remove-account", ..] =>
-      auth_remove_account(arr)
-    ["auth_set_default_account", ..] | ["auth-set-default-account", ..] =>
-      auth_set_default_account(arr)
-    ["auth_logout", ..] | ["auth-logout", ..] => auth_logout(arr)
-    ["copilot_start_device_flow", ..] | ["copilot-start-device-flow", ..] =>
-      copilot_start_device_flow(arr)
-    ["copilot_poll_for_auth", ..] | ["copilot-poll-for-auth", ..] =>
-      copilot_poll_for_auth(arr)
-    ["copilot_poll_for_account", ..] | ["copilot-poll-for-account", ..] =>
-      copilot_poll_for_account(arr)
-    ["copilot_list_accounts", ..] | ["copilot-list-accounts", ..] =>
-      check_usage_endpoint(arr, "/copilot_list_accounts")
-    ["copilot_get_auth_status", ..] | ["copilot-get-auth-status", ..] =>
-      check_usage_endpoint(arr, "/copilot_get_auth_status")
-    ["copilot_is_authenticated", ..] | ["copilot-is-authenticated", ..] =>
-      check_usage_endpoint(arr, "/copilot_is_authenticated")
-    ["copilot_logout", ..] | ["copilot-logout", ..] =>
-      check_json_post_endpoint(arr, "/copilot_logout", "Copilot")
-    ["copilot_remove_account", ..] | ["copilot-remove-account", ..] =>
-      copilot_account_post(arr, "/copilot_remove_account")
-    ["copilot_set_default_account", ..] | ["copilot-set-default-account", ..] =>
-      copilot_account_post(arr, "/copilot_set_default_account")
-    ["copilot_get_token", ..] | ["copilot-get-token", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_token"),
-      )
-    ["copilot_get_token_for_account", ..]
-    | ["copilot-get-token-for-account", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_token_for_account"),
-      )
-    ["copilot_get_models", ..] | ["copilot-get-models", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_models"),
-      )
-    ["copilot_get_models_for_account", ..]
-    | ["copilot-get-models-for-account", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_models_for_account"),
-      )
-    ["copilot_get_usage", ..] | ["copilot-get-usage", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_usage"),
-      )
-    ["copilot_get_usage_for_account", ..]
-    | ["copilot-get-usage-for-account", ..] =>
-      check_usage_endpoint(
-        arr,
-        copilot_account_optional_path(arr, "/copilot_get_usage_for_account"),
-      )
     ["stream-check", "provider", ..]
     | ["stream-check", "stream-check-provider", ..] =>
       stream_check_provider(arr)
