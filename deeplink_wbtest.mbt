@@ -1,5 +1,5 @@
 ///|
-test "ccs deeplink parser accepts provider urls" {
+test "moonstat deeplink parser accepts provider urls" {
   let url = "moonstat://v1/import?resource=provider&app=codex&name=OpenAI&endpoint=https%3A%2F%2Fapi.openai.com%2Fv1&apiKey=sk-test&enabled=true&usageAutoInterval=30"
   guard moon_parse_deeplink_url_json(url) is Some(Object(obj)) else {
     fail("expected provider deeplink request")
@@ -15,7 +15,7 @@ test "ccs deeplink parser accepts provider urls" {
 }
 
 ///|
-test "ccs deeplink parser decodes prompts and validates resources" {
+test "moonstat deeplink parser decodes prompts and validates resources" {
   let prompt_url = "moonstat://v1/import?resource=prompt&app=codex&name=Daily&content=SGVsbG8&enabled=false"
   guard moon_parse_deeplink_url_json(prompt_url) is Some(Object(prompt)) else {
     fail("expected prompt deeplink request")
@@ -34,7 +34,7 @@ test "ccs deeplink parser decodes prompts and validates resources" {
 }
 
 ///|
-test "ccs deeplink parser accepts mcp and skill requests" {
+test "moonstat deeplink parser accepts mcp and skill requests" {
   let mcp_url = "moonstat://v1/import?resource=mcp&apps=claude,codex&config=eyJtY3BTZXJ2ZXJzIjp7fX0"
   guard moon_parse_deeplink_url_json(mcp_url) is Some(Object(mcp)) else {
     fail("expected mcp deeplink request")
@@ -53,7 +53,7 @@ test "ccs deeplink parser accepts mcp and skill requests" {
 }
 
 ///|
-test "ccs deeplink merge imports claude env config fields" {
+test "moonstat deeplink merge imports claude env config fields" {
   let encoded = "eyJlbnYiOnsiQU5USFJPUElDX0FVVEhfVE9LRU4iOiJzay1jY3MiLCJBTlRIUk9QSUNfQkFTRV9VUkwiOiJodHRwczovL2FwaS5hbnRocm9waWMuY29tL3YxLyIsIkFOVEhST1BJQ19NT0RFTCI6ImNsYXVkZS1zb25uZXQifX0="
   let request = {
     "resource": Json::string("provider"),
@@ -69,4 +69,51 @@ test "ccs deeplink merge imports claude env config fields" {
   assert_eq(merged["endpoint"], Json::string("https://api.anthropic.com/v1/"))
   assert_eq(merged["model"], Json::string("claude-sonnet"))
   assert_eq(merged["homepage"], Json::string("https://anthropic.com"))
+}
+
+///|
+test "moonstat deeplink merge ignores legacy provider config keys" {
+  let encoded = "eyJhcGlfa2V5Ijoic2stbGVnYWN5IiwiYmFzZV91cmwiOiJodHRwczovL2xlZ2FjeS5leGFtcGxlL3YxIiwiYXBpS2V5Ijoic2stbmV3IiwiYmFzZVVybCI6Imh0dHBzOi8vbmV3LmV4YW1wbGUvdjEifQ=="
+  guard moon_merge_deeplink_config_json(
+      {
+        "resource": Json::string("provider"),
+        "app": Json::string("openclaw"),
+        "name": Json::string("OpenClaw"),
+        "config": Json::string(encoded),
+        "configFormat": Json::string("json"),
+      }.to_json(),
+    )
+    is Some(Object(merged)) else {
+    fail("expected merged openclaw config")
+  }
+  assert_eq(merged["apiKey"], Json::string("sk-new"))
+  assert_eq(merged["endpoint"], Json::string("https://new.example/v1"))
+  guard moon_merge_deeplink_config_json(
+      {
+        "resource": Json::string("provider"),
+        "app": Json::string("openclaw"),
+        "name": Json::string("OpenClaw"),
+        "config": Json::string(encoded),
+        "config_format": Json::string("toml"),
+      }.to_json(),
+    )
+    is Some(Object(legacy_format_ignored)) else {
+    fail("expected legacy config_format to be ignored")
+  }
+  assert_eq(
+    legacy_format_ignored["endpoint"],
+    Json::string("https://new.example/v1"),
+  )
+  assert_true(
+    ConfigService::new().moon_import_provider_deeplink(
+      ProxyService::new("127.0.0.1", 0),
+      {
+        "app": Json::string("openclaw"),
+        "name": Json::string("Legacy"),
+        "endpoint": Json::string("https://legacy.example/v1"),
+        "api_key": Json::string("sk-legacy"),
+      },
+    )
+    is None,
+  )
 }

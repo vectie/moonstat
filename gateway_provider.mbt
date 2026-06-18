@@ -1647,7 +1647,7 @@ fn provider_settings_base_url(app_type : String, settings : Json?) -> String? {
           json_non_empty_string_from_map_any(env, ["GOOGLE_GEMINI_BASE_URL"])
         _ => None
       }
-    "hermes" => json_non_empty_string_from_map_any(obj, ["base_url"])
+    "hermes" => json_non_empty_string_from_map_any(obj, ["baseUrl"])
     "opencode" | "omo" | "omo-slim" =>
       match obj.get("options") {
         Some(Object(options)) =>
@@ -1683,7 +1683,7 @@ fn provider_settings_api_key(app_type : String, settings : Json?) -> String? {
           ])
         _ => None
       }
-    "hermes" => json_non_empty_string_from_map_any(obj, ["api_key"])
+    "hermes" => json_non_empty_string_from_map_any(obj, ["apiKey"])
     "opencode" | "omo" | "omo-slim" =>
       match obj.get("options") {
         Some(Object(options)) =>
@@ -1709,14 +1709,13 @@ fn provider_settings_api_format(settings : Json?) -> String? {
   guard settings is Some(Object(obj)) else { return None }
   match obj.get("meta") {
     Some(Object(meta)) =>
-      match
-        json_non_empty_string_from_map_any(meta, ["apiFormat", "api_format"]) {
+      match json_non_empty_string_from_map_any(meta, ["apiFormat"]) {
         Some(api_format) => return Some(api_format)
         None => ()
       }
     _ => ()
   }
-  match json_non_empty_string_from_map_any(obj, ["api_format", "apiFormat"]) {
+  match json_non_empty_string_from_map_any(obj, ["apiFormat"]) {
     Some(api_format) => Some(api_format)
     None => None
   }
@@ -1735,19 +1734,13 @@ fn provider_explicit_type_from_request(
   guard settings is Some(Object(obj)) else { return None }
   match obj.get("meta") {
     Some(Object(meta)) => {
-      match
-        json_non_empty_string_from_map_any(meta, [
-          "providerType", "provider_type",
-        ]) {
+      match json_non_empty_string_from_map_any(meta, ["providerType"]) {
         Some(value) => return Some(provider_type_normalize(value))
         None => ()
       }
       match meta.get("authBinding") {
         Some(Object(binding)) =>
-          match
-            json_non_empty_string_from_map_any(binding, [
-              "authProvider", "auth_provider",
-            ]) {
+          match json_non_empty_string_from_map_any(binding, ["authProvider"]) {
             Some(value) => return Some(provider_type_normalize(value))
             None => ()
           }

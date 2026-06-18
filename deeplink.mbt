@@ -201,18 +201,16 @@ fn moon_deeplink_request_payload(path : StringView, body : Json?) -> Json? {
 fn moon_merge_deeplink_config_json(request : Json) -> Json? {
   guard request is Object(obj) else { return None }
   let next = obj
-  guard json_string_from_map_any(next, ["resource"]) is Some("provider") else {
+  guard json_string_from_map(next, "resource") is Some("provider") else {
     return Some(Json::object(next))
   }
-  let config = json_string_from_map_any(next, ["config"])
-  let format = json_string_from_map_any(next, ["configFormat", "config_format"]).unwrap_or(
-    "json",
-  )
+  let config = json_string_from_map(next, "config")
+  let format = json_string_from_map(next, "configFormat").unwrap_or("json")
   guard config is Some(encoded) else { return Some(Json::object(next)) }
   guard format == "json" else { return None }
   guard moon_deeplink_decode_json(encoded) is Some(decoded) else { return None }
   guard decoded is Object(config_obj) else { return None }
-  let app = json_string_from_map_any(next, ["app"]).unwrap_or("")
+  let app = json_string_from_map(next, "app").unwrap_or("")
   match moon_normalize_app_type(app) {
     "claude" | "claude-desktop" =>
       moon_merge_claude_deeplink_config(next, config_obj)
@@ -265,9 +263,7 @@ fn moon_merge_additive_deeplink_config(
   config : Map[String, Json],
 ) -> Unit {
   moon_deeplink_fill_string(request, "apiKey", config, "apiKey")
-  moon_deeplink_fill_string(request, "apiKey", config, "api_key")
   moon_deeplink_fill_string(request, "endpoint", config, "baseUrl")
-  moon_deeplink_fill_string(request, "endpoint", config, "base_url")
   moon_deeplink_fill_homepage(request)
 }
 
@@ -278,11 +274,11 @@ fn moon_deeplink_fill_string(
   source : Map[String, Json],
   source_key : String,
 ) -> Unit {
-  if json_string_from_map_any(request, [request_key]) is Some(value) &&
+  if json_string_from_map(request, request_key) is Some(value) &&
     !value.trim().is_empty() {
     return
   }
-  match json_string_from_map_any(source, [source_key]) {
+  match json_string_from_map(source, source_key) {
     Some(value) if !value.trim().is_empty() =>
       request[request_key] = Json::string(value)
     _ => ()
@@ -291,11 +287,11 @@ fn moon_deeplink_fill_string(
 
 ///|
 fn moon_deeplink_fill_homepage(request : Map[String, Json]) -> Unit {
-  if json_string_from_map_any(request, ["homepage"]) is Some(value) &&
+  if json_string_from_map(request, "homepage") is Some(value) &&
     !value.trim().is_empty() {
     return
   }
-  match json_string_from_map_any(request, ["endpoint"]) {
+  match json_string_from_map(request, "endpoint") {
     Some(endpoint) =>
       match moon_deeplink_infer_homepage(endpoint) {
         Some(homepage) => request["homepage"] = Json::string(homepage)
@@ -371,7 +367,7 @@ async fn ConfigService::moon_import_from_deeplink_json(
     return None
   }
   guard merged is Object(obj) else { return None }
-  match json_string_from_map_any(obj, ["resource"]) {
+  match json_string_from_map(obj, "resource") {
     Some("provider") => self.moon_import_provider_deeplink(proxy, obj)
     Some("prompt") => self.moon_import_prompt_deeplink(obj)
     Some("mcp") => self.moon_import_mcp_deeplink(obj)
@@ -387,17 +383,12 @@ fn ConfigService::moon_import_provider_deeplink(
   request : Map[String, Json],
 ) -> Json? {
   ignore(self)
-  guard json_string_from_map_any(request, ["app"]) is Some(app) else {
+  guard json_string_from_map(request, "app") is Some(app) else { return None }
+  guard json_string_from_map(request, "name") is Some(name) else { return None }
+  guard json_string_from_map(request, "apiKey") is Some(api_key) else {
     return None
   }
-  guard json_string_from_map_any(request, ["name"]) is Some(name) else {
-    return None
-  }
-  guard json_string_from_map_any(request, ["apiKey", "api_key"])
-    is Some(api_key) else {
-    return None
-  }
-  guard json_string_from_map_any(request, ["endpoint"]) is Some(endpoint) else {
+  guard json_string_from_map(request, "endpoint") is Some(endpoint) else {
     return None
   }
   let app_type = moon_normalize_app_type(app)
@@ -429,13 +420,11 @@ fn moon_deeplink_provider_settings(
   app_type : String,
   request : Map[String, Json],
 ) -> Json {
-  let api_key = json_string_from_map_any(request, ["apiKey", "api_key"]).unwrap_or(
-    "",
-  )
+  let api_key = json_string_from_map(request, "apiKey").unwrap_or("")
   let endpoint = moon_deeplink_primary_endpoint(
-    json_string_from_map_any(request, ["endpoint"]).unwrap_or(""),
+    json_string_from_map(request, "endpoint").unwrap_or(""),
   )
-  let model = json_string_from_map_any(request, ["model"])
+  let model = json_string_from_map(request, "model")
   match app_type {
     "codex" =>
       Json::object({
@@ -462,9 +451,9 @@ fn moon_deeplink_provider_settings(
       })
     "hermes" =>
       Json::object({
-        "base_url": Json::string(endpoint),
-        "api_key": Json::string(api_key),
-        "api_mode": Json::string("chat_completions"),
+        "baseUrl": Json::string(endpoint),
+        "apiKey": Json::string(api_key),
+        "apiMode": Json::string("chat_completions"),
       })
     _ => {
       let env : Map[String, Json] = {
@@ -496,7 +485,7 @@ fn moon_deeplink_fill_model_env(
   request_key : String,
   env_key : String,
 ) -> Unit {
-  match json_string_from_map_any(request, [request_key]) {
+  match json_string_from_map(request, request_key) {
     Some(value) => env[env_key] = Json::string(value)
     None => ()
   }

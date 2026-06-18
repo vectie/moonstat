@@ -1150,8 +1150,8 @@ test "provider target resolves ccs app settings credentials" {
           "provider": {
             "id": Json::string("hermes-native"),
             "settingsConfig": {
-              "base_url": Json::string("https://hermes.example/v1"),
-              "api_key": Json::string("sk-hermes"),
+              "baseUrl": Json::string("https://hermes.example/v1"),
+              "apiKey": Json::string("sk-hermes"),
             }.to_json(),
           }.to_json(),
         }.to_json(),
@@ -1163,6 +1163,26 @@ test "provider target resolves ccs app settings credentials" {
   }
   assert_eq(hermes.base_url, Some("https://hermes.example/v1"))
   assert_eq(hermes.api_key, Some("sk-hermes"))
+  guard provider_target_from_request(
+      "/providers",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("hermes-legacy"),
+            "settingsConfig": {
+              "base_url": Json::string("https://legacy.example/v1"),
+              "api_key": Json::string("sk-legacy"),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "hermes",
+    )
+    is Some(legacy_hermes) else {
+    fail("expected legacy hermes provider")
+  }
+  assert_eq(legacy_hermes.base_url, None)
+  assert_eq(legacy_hermes.api_key, None)
   guard provider_target_from_request(
       "/providers",
       Some(
@@ -1310,7 +1330,7 @@ test "provider target infers ccs proxy provider type from settings" {
           "provider": {
             "id": Json::string("claude-gemini"),
             "settingsConfig": {
-              "api_format": Json::string("gemini_native"),
+              "apiFormat": Json::string("gemini_native"),
               "env": {
                 "ANTHROPIC_BASE_URL": Json::string(
                   "https://generativelanguage.googleapis.com",
@@ -1329,6 +1349,31 @@ test "provider target infers ccs proxy provider type from settings" {
   assert_eq(claude_gemini.api_format, Some("gemini_native"))
   assert_eq(claude_gemini.api_key, Some("ya29.claude-gemini"))
   assert_eq(claude_gemini.provider_type, Some("gemini_cli"))
+  guard provider_target_from_request(
+      "/providers",
+      Some(
+        {
+          "provider": {
+            "id": Json::string("claude-gemini-legacy-format"),
+            "settingsConfig": {
+              "api_format": Json::string("gemini_native"),
+              "env": {
+                "ANTHROPIC_BASE_URL": Json::string(
+                  "https://generativelanguage.googleapis.com",
+                ),
+                "GEMINI_API_KEY": Json::string("ya29.legacy"),
+              }.to_json(),
+            }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "claude",
+    )
+    is Some(legacy_format) else {
+    fail("expected legacy format provider without api format")
+  }
+  assert_eq(legacy_format.api_format, None)
+  assert_eq(legacy_format.provider_type, None)
   guard provider_target_from_request(
       "/providers",
       Some(

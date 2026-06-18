@@ -286,9 +286,9 @@ fn moon_unity2_hermes_preset_json() -> Json {
     "hermes",
     {
       "name": Json::string("unity2"),
-      "base_url": Json::string("https://api.unity2.ai/v1"),
-      "api_key": Json::string(""),
-      "api_mode": Json::string("chat_completions"),
+      "baseUrl": Json::string("https://api.unity2.ai/v1"),
+      "apiKey": Json::string(""),
+      "apiMode": Json::string("chat_completions"),
       "models": Json::array([
         {
           "id": Json::string("gpt-5.5"),
