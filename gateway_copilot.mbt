@@ -41,24 +41,24 @@ fn moon_copilot_optimizer_config_from_request(
 }
 
 ///|
-async fn Gateway::handle_get_copilot_optimizer_config(
-  self : Gateway,
+async fn ConfigService::handle_get_copilot_optimizer_config(
+  self : ConfigService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.config.copilot_optimizer_config_json)
+  write_usage_json(w, self.copilot_optimizer_config_json)
 }
 
 ///|
-async fn Gateway::handle_set_copilot_optimizer_config(
-  self : Gateway,
+async fn ConfigService::handle_set_copilot_optimizer_config(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.config.copilot_optimizer_config_json = moon_copilot_optimizer_config_from_request(
+  self.copilot_optimizer_config_json = moon_copilot_optimizer_config_from_request(
     r.path,
     body,
-    self.config.copilot_optimizer_config_json,
+    self.copilot_optimizer_config_json,
   )
   write_usage_json(w, Json::boolean(true))
 }

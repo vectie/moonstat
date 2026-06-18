@@ -2086,6 +2086,27 @@ async test "auth endpoints are owned by auth service" {
 }
 
 ///|
+async test "copilot optimizer config endpoints are owned by config service" {
+  let copilot_source = @fsx.read_file("gateway_copilot.mbt")
+  let core_source = @fsx.read_file("gateway_core.mbt")
+  for
+    handler in [
+      "handle_get_copilot_optimizer_config", "handle_set_copilot_optimizer_config",
+    ] {
+    assert_true(copilot_source.contains("async fn ConfigService::\{handler}("))
+    assert_false(copilot_source.contains("async fn Gateway::\{handler}("))
+  }
+  assert_true(
+    core_source.contains("self.config.handle_get_copilot_optimizer_config(w)"),
+  )
+  assert_true(
+    core_source.contains(
+      "self.config.handle_set_copilot_optimizer_config(r, w)",
+    ),
+  )
+}
+
+///|
 test "standalone tray update mirrors ccs no tray result" {
   assert_eq(moon_update_tray_menu_result(), Json::boolean(false))
 }

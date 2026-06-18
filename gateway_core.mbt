@@ -642,12 +642,12 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.config.handle_set_optimizer_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_copilot_optimizer_config", (_, w) => {
-    self.handle_get_copilot_optimizer_config(w)
+    self.config.handle_get_copilot_optimizer_config(w)
   })
   router.add_handler(@httpx.Method::Post, "/set_copilot_optimizer_config", (
     r,
     w,
-  ) => self.handle_set_copilot_optimizer_config(r, w))
+  ) => self.config.handle_set_copilot_optimizer_config(r, w))
   router.add_handler(@httpx.Method::Get, "/get_log_config", (_, w) => {
     self.config.handle_get_log_config(w)
   })
