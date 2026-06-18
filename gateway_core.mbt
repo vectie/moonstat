@@ -102,28 +102,28 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.usage.handle_metrics(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_claude_config_status", (_, w) => {
-    self.handle_get_config_status(w, "claude")
+    self.config.handle_get_config_status(w, "claude")
   })
   router.add_handler(@httpx.Method::Get, "/get_config_status", (r, w) => {
-    self.handle_get_config_status_request(r, w)
+    self.config.handle_get_config_status_request(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_config_status", (r, w) => {
-    self.handle_get_config_status_request(r, w)
+    self.config.handle_get_config_status_request(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_claude_code_config_path", (_, w) => {
-    self.handle_get_claude_code_config_path(w)
+    self.config.handle_get_claude_code_config_path(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_config_dir", (r, w) => {
-    self.handle_get_config_dir(r, w)
+    self.config.handle_get_config_dir(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_config_dir", (r, w) => {
-    self.handle_get_config_dir(r, w)
+    self.config.handle_get_config_dir(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/open_config_folder", (r, w) => {
-    self.handle_open_config_folder(r, w)
+    self.config.handle_open_config_folder(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/open_config_folder", (r, w) => {
-    self.handle_open_config_folder(r, w)
+    self.config.handle_open_config_folder(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/pick_directory", (r, w) => {
     self.handle_pick_directory(r, w)
@@ -225,19 +225,19 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_create_db_backup(w)
   })
   router.add_handler(@httpx.Method::Get, "/list_db_backups", (_, w) => {
-    self.handle_list_db_backups(w)
+    self.config.handle_list_db_backups(w)
   })
   router.add_handler(@httpx.Method::Post, "/restore_db_backup", (r, w) => {
     self.handle_restore_db_backup(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/rename_db_backup", (r, w) => {
-    self.handle_rename_db_backup(r, w)
+    self.config.handle_rename_db_backup(r, w)
   })
   router.add_handler(@httpx.Method::Delete, "/delete_db_backup", (r, w) => {
-    self.handle_delete_db_backup(r, w)
+    self.config.handle_delete_db_backup(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/delete_db_backup", (r, w) => {
-    self.handle_delete_db_backup(r, w)
+    self.config.handle_delete_db_backup(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/parse_deeplink", (r, w) => {
     self.handle_parse_deeplink(r, w)
@@ -246,10 +246,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_parse_deeplink(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/merge_deeplink_config", (r, w) => {
-    self.handle_merge_deeplink_config(r, w)
+    self.config.handle_merge_deeplink_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/merge_deeplink_config", (r, w) => {
-    self.handle_merge_deeplink_config(r, w)
+    self.config.handle_merge_deeplink_config(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/import_from_deeplink", (r, w) => {
     self.handle_import_from_deeplink(r, w, legacy=true)
@@ -337,13 +337,13 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_get_installed_skills(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_skill_backups", (_, w) => {
-    self.handle_get_skill_backups(w)
+    self.config.handle_get_skill_backups(w)
   })
   router.add_handler(@httpx.Method::Post, "/delete_skill_backup", (r, w) => {
-    self.handle_delete_skill_backup(r, w)
+    self.config.handle_delete_skill_backup(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/restore_skill_backup", (r, w) => {
-    self.handle_restore_skill_backup(r, w)
+    self.config.handle_restore_skill_backup(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/install_skill_unified", (r, w) => {
     self.handle_install_skill_unified(r, w)
@@ -409,10 +409,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_install_skills_from_zip(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_app_config_path", (_, w) => {
-    self.handle_get_app_config_path(w)
+    self.config.handle_get_app_config_path(w)
   })
   router.add_handler(@httpx.Method::Get, "/open_app_config_folder", (_, w) => {
-    self.handle_open_app_config_folder(w)
+    self.config.handle_open_app_config_folder(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_claude_common_config_snippet", (
     _,
