@@ -50,10 +50,16 @@ async fn run_runtime_cli_command(
   args : Array[String],
 ) -> Unit {
   match command_id {
-    "pick_directory" => check_usage_endpoint(args, pick_directory_path(args))
-    "open_external" => check_usage_endpoint(args, open_external_path(args))
+    "pick_directory" =>
+      check_json_post_endpoint(args, pick_directory_path(args), "App shell")
+    "open_external" =>
+      check_json_post_endpoint(args, open_external_path(args), "App shell")
     "copy_text_to_clipboard" =>
-      check_usage_endpoint(args, copy_text_to_clipboard_path(args))
+      check_json_post_endpoint(
+        args,
+        copy_text_to_clipboard_path(args),
+        "App shell",
+      )
     "check_for_updates" =>
       check_json_post_endpoint(args, "/runtime/updates/check", "App shell")
     "update_tray_menu" =>
@@ -63,7 +69,8 @@ async fn run_runtime_cli_command(
     "run_tool_lifecycle_action" => run_tool_lifecycle_action(args)
     "probe_tool_installations" =>
       check_usage_endpoint(args, tool_installations_path(args))
-    "set_window_theme" => check_usage_endpoint(args, window_theme_path(args))
+    "set_window_theme" =>
+      check_json_post_endpoint(args, window_theme_path(args), "App shell")
     "enter_lightweight_mode" =>
       check_json_post_endpoint(
         args, "/runtime/lightweight-mode/enter", "App shell",

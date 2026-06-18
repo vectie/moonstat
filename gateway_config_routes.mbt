@@ -33,19 +33,10 @@ fn ConfigService::register_routes(
   router.add_handler(Post, "/runtime/window-theme", (r, w) => {
     self.handle_set_window_theme(r, w)
   })
-  router.add_handler(Get, "/runtime/window-theme", (r, w) => {
-    self.handle_set_window_theme(r, w)
-  })
   router.add_handler(Post, "/runtime/lightweight-mode/enter", (_, w) => {
     self.handle_enter_lightweight_mode(w)
   })
-  router.add_handler(Get, "/runtime/lightweight-mode/enter", (_, w) => {
-    self.handle_enter_lightweight_mode(w)
-  })
   router.add_handler(Post, "/runtime/lightweight-mode/exit", (_, w) => {
-    self.handle_exit_lightweight_mode(w)
-  })
-  router.add_handler(Get, "/runtime/lightweight-mode/exit", (_, w) => {
     self.handle_exit_lightweight_mode(w)
   })
   router.add_handler(Get, "/runtime/lightweight-mode", (_, w) => {

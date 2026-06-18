@@ -145,13 +145,11 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /copilot/token")))
   assert_true(routes.contains(Json::string("GET /copilot/models")))
   assert_true(routes.contains(Json::string("GET /copilot/usage")))
-  assert_true(routes.contains(Json::string("GET|POST /tools/versions")))
+  assert_true(routes.contains(Json::string("GET /tools/versions")))
   assert_true(routes.contains(Json::string("POST /tools/lifecycle-action")))
-  assert_true(routes.contains(Json::string("GET|POST /tools/probe")))
-  assert_true(
-    routes.contains(Json::string("GET|POST /runtime/tray-menu/update")),
-  )
-  assert_true(routes.contains(Json::string("GET|POST /runtime/open-external")))
+  assert_true(routes.contains(Json::string("GET /tools/probe")))
+  assert_true(routes.contains(Json::string("POST /runtime/tray-menu/update")))
+  assert_true(routes.contains(Json::string("POST /runtime/open-external")))
   assert_true(routes.contains(Json::string("GET /runtime/lightweight-mode")))
   assert_true(routes.contains(Json::string("GET|POST /config/files/export")))
   assert_true(routes.contains(Json::string("GET|POST /config/files/import")))
