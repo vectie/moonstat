@@ -1209,15 +1209,15 @@ test "provider target infers ccs proxy provider type from settings" {
 }
 
 ///|
-test "provider target accepts ccs legacy openrouter compat values" {
+test "provider target requires explicit moonstat api format" {
   guard provider_target_from_request(
       "/providers",
       Some(
         {
           "provider": {
-            "id": Json::string("openrouter-compat-number"),
+            "id": Json::string("openrouter-explicit-format"),
             "settingsConfig": {
-              "openrouter_compat_mode": Json::number(1),
+              "apiFormat": Json::string("openai_chat"),
               "env": {
                 "ANTHROPIC_BASE_URL": Json::string("https://proxy.example"),
               }.to_json(),
@@ -1227,19 +1227,18 @@ test "provider target accepts ccs legacy openrouter compat values" {
       ),
       "claude",
     )
-    is Some(number_provider) else {
-    fail("expected numeric legacy provider")
+    is Some(explicit_provider) else {
+    fail("expected explicit provider")
   }
-  assert_eq(number_provider.api_format, Some("openai_chat"))
+  assert_eq(explicit_provider.api_format, Some("openai_chat"))
 
   guard provider_target_from_request(
       "/providers",
       Some(
         {
           "provider": {
-            "id": Json::string("openrouter-compat-string"),
+            "id": Json::string("openrouter-missing-format"),
             "settingsConfig": {
-              "openrouter_compat_mode": Json::string("true"),
               "env": {
                 "ANTHROPIC_BASE_URL": Json::string("https://proxy.example"),
               }.to_json(),
@@ -1249,32 +1248,10 @@ test "provider target accepts ccs legacy openrouter compat values" {
       ),
       "claude",
     )
-    is Some(string_provider) else {
-    fail("expected string legacy provider")
+    is Some(missing_provider) else {
+    fail("expected provider without explicit api format")
   }
-  assert_eq(string_provider.api_format, Some("openai_chat"))
-
-  guard provider_target_from_request(
-      "/providers",
-      Some(
-        {
-          "provider": {
-            "id": Json::string("openrouter-compat-zero"),
-            "settingsConfig": {
-              "openrouter_compat_mode": Json::number(0),
-              "env": {
-                "ANTHROPIC_BASE_URL": Json::string("https://proxy.example"),
-              }.to_json(),
-            }.to_json(),
-          }.to_json(),
-        }.to_json(),
-      ),
-      "claude",
-    )
-    is Some(zero_provider) else {
-    fail("expected disabled numeric legacy provider")
-  }
-  assert_eq(zero_provider.api_format, None)
+  assert_eq(missing_provider.api_format, None)
 }
 
 ///|

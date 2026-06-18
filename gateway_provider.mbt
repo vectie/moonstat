@@ -1741,28 +1741,7 @@ fn provider_settings_api_format(settings : Json?) -> String? {
   }
   match json_non_empty_string_from_map_any(obj, ["api_format", "apiFormat"]) {
     Some(api_format) => Some(api_format)
-    None =>
-      if provider_settings_openrouter_compat_enabled(obj) {
-        Some("openai_chat")
-      } else {
-        None
-      }
-  }
-}
-
-///|
-fn provider_settings_openrouter_compat_enabled(obj : Map[String, Json]) -> Bool {
-  match obj.get("openrouter_compat_mode") {
-    Some(true) => true
-    Some(false) => false
-    Some(Number(value, ..)) => value != 0
-    Some(String(value)) =>
-      match parse_bool_value(value) {
-        Some(parsed) => parsed
-        None => false
-      }
-    None => false
-    _ => false
+    None => None
   }
 }
 
