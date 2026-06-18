@@ -2057,11 +2057,9 @@ async test "ccs proxy mutation command handlers return unit success bodies" {
     ] {
     assert_false(source.contains("async fn Gateway::\{handler}("))
   }
-  let core_source = @fsx.read_file("gateway_core.mbt")
+  let route_source = @fsx.read_file("gateway_proxy_routes.mbt")
   assert_true(
-    core_source.contains(
-      "self.proxy.handle_proxy_switch_provider(self.usage, r, w)",
-    ),
+    route_source.contains("self.handle_proxy_switch_provider(usage, r, w)"),
   )
 }
 
@@ -2480,48 +2478,34 @@ async test "provider config endpoints are owned by proxy service" {
   )
   assert_false(omo_source.contains("fn Gateway::current_omo_provider_id("))
   assert_false(omo_source.contains("fn Gateway::clear_current_omo_provider("))
+  assert_true(route_source.contains("self.handle_import_default_config(r, w)"))
+  assert_true(route_source.contains("self.handle_stream_check_provider("))
+  assert_true(route_source.contains("self.handle_stream_check_all_providers("))
   assert_true(
-    core_source.contains("self.proxy.handle_import_default_config(r, w)"),
-  )
-  assert_true(core_source.contains("self.proxy.handle_stream_check_provider("))
-  assert_true(
-    core_source.contains("self.proxy.handle_stream_check_all_providers("),
-  )
-  assert_true(
-    core_source.contains(
-      "self.proxy.handle_import_claude_desktop_providers_from_claude(w)",
+    route_source.contains(
+      "self.handle_import_claude_desktop_providers_from_claude(w)",
     ),
   )
   assert_true(
-    core_source.contains(
-      "self.proxy.handle_ensure_claude_desktop_official_provider(w)",
+    route_source.contains(
+      "self.handle_ensure_claude_desktop_official_provider(w)",
     ),
   )
-  assert_true(core_source.contains("self.proxy.handle_scan_local_proxies(w)"))
+  assert_true(route_source.contains("self.handle_scan_local_proxies(w)"))
+  assert_true(route_source.contains("self.handle_test_api_endpoints(r, w)"))
+  assert_true(route_source.contains("self.handle_get_custom_endpoints(r, w)"))
+  assert_true(route_source.contains("self.handle_add_custom_endpoint(r, w)"))
+  assert_true(route_source.contains("self.handle_remove_custom_endpoint(r, w)"))
   assert_true(
-    core_source.contains("self.proxy.handle_test_api_endpoints(r, w)"),
+    route_source.contains("self.handle_update_endpoint_last_used(r, w)"),
   )
   assert_true(
-    core_source.contains("self.proxy.handle_get_custom_endpoints(r, w)"),
-  )
-  assert_true(
-    core_source.contains("self.proxy.handle_add_custom_endpoint(r, w)"),
-  )
-  assert_true(
-    core_source.contains("self.proxy.handle_remove_custom_endpoint(r, w)"),
-  )
-  assert_true(
-    core_source.contains("self.proxy.handle_update_endpoint_last_used(r, w)"),
-  )
-  assert_true(
-    core_source.contains(
-      "self.proxy.handle_get_claude_desktop_status(self.host, self.port, w)",
+    route_source.contains(
+      "self.handle_get_claude_desktop_status(host, port, w)",
     ),
   )
   assert_true(
-    core_source.contains(
-      "self.proxy.handle_get_claude_desktop_default_routes(w)",
-    ),
+    route_source.contains("self.handle_get_claude_desktop_default_routes(w)"),
   )
   assert_true(
     core_source.contains(
