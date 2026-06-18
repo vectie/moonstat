@@ -575,6 +575,29 @@ test "runtime cli dispatcher owns app shell commands" {
 }
 
 ///|
+test "sync cli dispatcher owns remote sync commands" {
+  assert_true(cli_sync_command_id("webdav_test_connection"))
+  assert_true(cli_sync_command_id("webdav_sync_save_settings"))
+  assert_true(cli_sync_command_id("s3_test_connection"))
+  assert_true(cli_sync_command_id("s3_sync_fetch_remote_info"))
+  assert_false(cli_sync_command_id("auth_get_status"))
+  assert_false(cli_sync_command_id("get_usage_summary"))
+  assert_false(cli_sync_command_id("read_workspace_file"))
+}
+
+///|
+test "session cli dispatcher owns session and omo commands" {
+  assert_true(cli_session_command_id("list_sessions"))
+  assert_true(cli_session_command_id("get_session_messages"))
+  assert_true(cli_session_command_id("delete_sessions"))
+  assert_true(cli_session_command_id("read_omo_local_file"))
+  assert_true(cli_session_command_id("disable_current_omo_slim"))
+  assert_false(cli_session_command_id("auth_get_status"))
+  assert_false(cli_session_command_id("get_usage_summary"))
+  assert_false(cli_session_command_id("read_workspace_file"))
+}
+
+///|
 test "usage sync path accepts standalone projects dir override" {
   assert_eq(
     usage_sync_path(["moonstat", "usage", "sync"]),

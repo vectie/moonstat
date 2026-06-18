@@ -616,108 +616,12 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       run_runtime_cli_command(command_id, args)
       true
     }
-    Some("webdav_test_connection") => {
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/webdav/test"),
-        "Sync",
-      )
+    Some(command_id) if cli_sync_command_id(command_id) => {
+      run_sync_cli_command(command_id, args)
       true
     }
-    Some("webdav_sync_upload") => {
-      check_json_post_endpoint(args, "/sync/webdav/upload", "Sync")
-      true
-    }
-    Some("webdav_sync_download") => {
-      check_json_post_endpoint(args, "/sync/webdav/download", "Sync")
-      true
-    }
-    Some("webdav_sync_save_settings") => {
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/webdav/settings"),
-        "Sync",
-      )
-      true
-    }
-    Some("webdav_sync_fetch_remote_info") => {
-      check_usage_endpoint(args, "/sync/webdav/remote-info")
-      true
-    }
-    Some("s3_test_connection") => {
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/s3/test"),
-        "Sync",
-      )
-      true
-    }
-    Some("s3_sync_upload") => {
-      check_json_post_endpoint(args, "/sync/s3/upload", "Sync")
-      true
-    }
-    Some("s3_sync_download") => {
-      check_json_post_endpoint(args, "/sync/s3/download", "Sync")
-      true
-    }
-    Some("s3_sync_save_settings") => {
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/s3/settings"),
-        "Sync",
-      )
-      true
-    }
-    Some("s3_sync_fetch_remote_info") => {
-      check_usage_endpoint(args, "/sync/s3/remote-info")
-      true
-    }
-    Some("list_sessions") => {
-      check_usage_endpoint(args, "/sessions")
-      true
-    }
-    Some("get_session_messages") => {
-      check_usage_endpoint(args, session_messages_path(args))
-      true
-    }
-    Some("launch_session_terminal") => {
-      check_json_post_endpoint(
-        args,
-        launch_session_terminal_path(args),
-        "Session",
-      )
-      true
-    }
-    Some("delete_session") => {
-      check_json_post_endpoint(args, delete_session_path(args), "Session")
-      true
-    }
-    Some("delete_sessions") => {
-      delete_sessions(args)
-      true
-    }
-    Some("read_omo_local_file") => {
-      check_usage_endpoint(args, "/providers/omo/file")
-      true
-    }
-    Some("get_current_omo_provider_id") => {
-      check_usage_endpoint(args, "/providers/omo/current")
-      true
-    }
-    Some("disable_current_omo") => {
-      check_json_post_endpoint(args, "/providers/omo/disable", "OMO")
-      true
-    }
-    Some("read_omo_slim_local_file") => {
-      check_usage_endpoint(args, "/providers/omo-slim/file")
-      true
-    }
-    Some("get_current_omo_slim_provider_id") => {
-      check_usage_endpoint(args, "/providers/omo-slim/current")
-      true
-    }
-    Some("disable_current_omo_slim") => {
-      check_json_post_endpoint(args, "/providers/omo-slim/disable", "OMO")
+    Some(command_id) if cli_session_command_id(command_id) => {
+      run_session_cli_command(command_id, args)
       true
     }
     Some(command_id) if cli_usage_command_id(command_id) => {
