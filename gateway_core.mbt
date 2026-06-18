@@ -278,7 +278,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_webdav_sync_operation(w, "download")
   })
   router.add_handler(@httpx.Method::Post, "/webdav_sync_save_settings", (r, w) => {
-    self.handle_webdav_sync_save_settings(r, w)
+    self.config.handle_webdav_sync_save_settings(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/webdav_sync_fetch_remote_info", (
     _,
@@ -294,7 +294,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_s3_sync_operation(w, "download")
   })
   router.add_handler(@httpx.Method::Post, "/s3_sync_save_settings", (r, w) => {
-    self.handle_s3_sync_save_settings(r, w)
+    self.config.handle_s3_sync_save_settings(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/s3_sync_fetch_remote_info", (_, w) => {
     self.handle_s3_sync_fetch_remote_info(w)

@@ -2125,7 +2125,8 @@ async test "settings mcp and prompt endpoints are owned by config service" {
       "handle_get_mcp_config", "handle_upsert_mcp_server_in_config", "handle_set_mcp_enabled",
       "handle_get_mcp_servers", "handle_upsert_mcp_server", "handle_toggle_mcp_app",
       "handle_import_mcp_from_apps", "handle_get_prompts", "handle_upsert_prompt",
-      "handle_delete_prompt", "handle_enable_prompt", "handle_parse_deeplink",
+      "handle_delete_prompt", "handle_enable_prompt", "handle_parse_deeplink", "handle_webdav_sync_save_settings",
+      "handle_s3_sync_save_settings",
     ] {
     assert_true(config_sources.contains("async fn ConfigService::\{handler}("))
     assert_false(config_sources.contains("async fn Gateway::\{handler}("))
@@ -2139,6 +2140,12 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   assert_true(core_source.contains("self.config.handle_get_mcp_config(r, w)"))
   assert_true(core_source.contains("self.config.handle_upsert_prompt(r, w)"))
   assert_true(core_source.contains("self.config.handle_parse_deeplink(r, w)"))
+  assert_true(
+    core_source.contains("self.config.handle_webdav_sync_save_settings(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.config.handle_s3_sync_save_settings(r, w)"),
+  )
   assert_true(
     core_source.contains("self.config.handle_get_auto_launch_status(w)"),
   )

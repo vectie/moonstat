@@ -882,8 +882,8 @@ async fn ConfigService::handle_merge_deeplink_config(
 }
 
 ///|
-async fn Gateway::handle_webdav_sync_save_settings(
-  self : Gateway,
+async fn ConfigService::handle_webdav_sync_save_settings(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -894,14 +894,14 @@ async fn Gateway::handle_webdav_sync_save_settings(
   }
   let normalized = moon_webdav_sync_settings_json(
     settings,
-    moon_app_webdav_sync_json(self.config.app_settings),
+    moon_app_webdav_sync_json(self.app_settings),
     !moon_sync_password_touched_request(r.path, body),
   )
   match moon_validate_webdav_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None => {
-      self.config.app_settings = moon_app_settings_with_sync(
-        self.config.app_settings,
+      self.app_settings = moon_app_settings_with_sync(
+        self.app_settings,
         "webdavSync",
         normalized,
       )
@@ -911,8 +911,8 @@ async fn Gateway::handle_webdav_sync_save_settings(
 }
 
 ///|
-async fn Gateway::handle_s3_sync_save_settings(
-  self : Gateway,
+async fn ConfigService::handle_s3_sync_save_settings(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -923,14 +923,14 @@ async fn Gateway::handle_s3_sync_save_settings(
   }
   let normalized = moon_s3_sync_settings_json(
     settings,
-    moon_app_s3_sync_json(self.config.app_settings),
+    moon_app_s3_sync_json(self.app_settings),
     !moon_sync_password_touched_request(r.path, body),
   )
   match moon_validate_s3_sync_settings(normalized) {
     Some(error) => write_usage_bad_request(w, error)
     None => {
-      self.config.app_settings = moon_app_settings_with_sync(
-        self.config.app_settings,
+      self.app_settings = moon_app_settings_with_sync(
+        self.app_settings,
         "s3Sync",
         normalized,
       )
