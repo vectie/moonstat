@@ -158,6 +158,28 @@ pub fn MoonstatClient::models_url(self : MoonstatClient) -> String {
 }
 
 ///|
+pub fn MoonstatClient::route_chat_url(self : MoonstatClient) -> String {
+  self.endpoint("/v1/chat/completions")
+}
+
+///|
+pub fn MoonstatClient::route_response_url(self : MoonstatClient) -> String {
+  self.endpoint("/v1/responses")
+}
+
+///|
+pub fn MoonstatClient::route_response_compact_url(
+  self : MoonstatClient,
+) -> String {
+  self.endpoint("/v1/responses/compact")
+}
+
+///|
+pub fn MoonstatClient::route_messages_url(self : MoonstatClient) -> String {
+  self.endpoint("/v1/messages")
+}
+
+///|
 pub fn MoonstatClient::usage_logs_url(
   self : MoonstatClient,
   query? : MoonstatUsageQuery? = None,
@@ -461,6 +483,14 @@ pub async fn MoonstatClient::route_response(
   request : Json,
 ) -> Result[Json, String] {
   self.post_json_path("/v1/responses", request)
+}
+
+///|
+pub async fn MoonstatClient::route_response_compact(
+  self : MoonstatClient,
+  request : Json,
+) -> Result[Json, String] {
+  self.post_json_path("/v1/responses/compact", request)
 }
 
 ///|

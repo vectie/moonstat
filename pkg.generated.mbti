@@ -476,8 +476,13 @@ pub async fn MoonstatClient::models(Self) -> Result[Json, String]
 pub fn MoonstatClient::models_url(Self) -> String
 pub fn MoonstatClient::new(base_url? : String, api_key? : String?, user_agent? : String?) -> Self
 pub async fn MoonstatClient::route_chat(Self, Json) -> Result[Json, String]
+pub fn MoonstatClient::route_chat_url(Self) -> String
 pub async fn MoonstatClient::route_messages(Self, Json) -> Result[Json, String]
+pub fn MoonstatClient::route_messages_url(Self) -> String
 pub async fn MoonstatClient::route_response(Self, Json) -> Result[Json, String]
+pub async fn MoonstatClient::route_response_compact(Self, Json) -> Result[Json, String]
+pub fn MoonstatClient::route_response_compact_url(Self) -> String
+pub fn MoonstatClient::route_response_url(Self) -> String
 pub async fn MoonstatClient::stats(Self) -> Result[Json, String]
 pub fn MoonstatClient::stats_url(Self) -> String
 pub async fn MoonstatClient::status(Self) -> Result[Json, String]

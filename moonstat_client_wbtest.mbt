@@ -8,6 +8,16 @@ test "moonstat client builds core endpoint URLs" {
   assert_eq(client.metrics_url(), "http://127.0.0.1:4199/metrics")
   assert_eq(client.models_url(), "http://127.0.0.1:4199/v1/models")
   assert_eq(
+    client.route_chat_url(),
+    "http://127.0.0.1:4199/v1/chat/completions",
+  )
+  assert_eq(client.route_response_url(), "http://127.0.0.1:4199/v1/responses")
+  assert_eq(
+    client.route_response_compact_url(),
+    "http://127.0.0.1:4199/v1/responses/compact",
+  )
+  assert_eq(client.route_messages_url(), "http://127.0.0.1:4199/v1/messages")
+  assert_eq(
     client.usage_data_sources_url(),
     "http://127.0.0.1:4199/usage/data-sources",
   )
