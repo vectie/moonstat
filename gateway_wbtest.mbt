@@ -2369,6 +2369,7 @@ async test "external utility endpoints are owned by proxy service" {
 ///|
 async test "provider config endpoints are owned by proxy service" {
   let provider_source = @fsx.read_file("gateway_provider.mbt")
+  let claude_desktop_source = @fsx.read_file("gateway_claude_desktop.mbt")
   let proxy_source = @fsx.read_file("gateway_proxy.mbt")
   let config_source = @fsx.read_file("gateway_config.mbt")
   let misc_source = @fsx.read_file("gateway_misc.mbt")
@@ -2377,6 +2378,7 @@ async test "provider config endpoints are owned by proxy service" {
   let omo_source = @fsx.read_file("omo.mbt")
   let usage_source = @fsx.read_file("gateway_usage.mbt")
   let sources = provider_source +
+    claude_desktop_source +
     proxy_source +
     config_source +
     misc_source +
@@ -2502,6 +2504,20 @@ async test "provider config endpoints are owned by proxy service" {
   assert_true(
     route_source.contains("self.handle_get_claude_desktop_default_routes(w)"),
   )
+  for
+    handler in [
+      "handle_scan_local_proxies", "handle_get_claude_desktop_status", "handle_get_claude_desktop_default_routes",
+    ] {
+    assert_true(
+      claude_desktop_source.contains("async fn ProxyService::\{handler}("),
+    )
+    assert_false(misc_source.contains("async fn ProxyService::\{handler}("))
+  }
+  for
+    helper in ["claude_desktop_status_json", "claude_desktop_expected_base_url"] {
+    assert_true(claude_desktop_source.contains("fn ProxyService::\{helper}("))
+    assert_false(misc_source.contains("fn ProxyService::\{helper}("))
+  }
   assert_true(
     workspace_route_source.contains(
       "proxy.handle_get_current_omo_provider_id(w, slim=false)",
