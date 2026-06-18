@@ -12,19 +12,16 @@ fn moon_openclaw_memory_dir() -> String {
 }
 
 ///|
-async fn Gateway::handle_get_openclaw_default_model(
-  self : Gateway,
+async fn OpenClawService::handle_get_openclaw_default_model(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(
-    w,
-    self.openclaw.openclaw_default_model.unwrap_or(Json::null()),
-  )
+  write_usage_json(w, self.openclaw_default_model.unwrap_or(Json::null()))
 }
 
 ///|
-async fn Gateway::handle_set_openclaw_default_model(
-  self : Gateway,
+async fn OpenClawService::handle_set_openclaw_default_model(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -33,24 +30,21 @@ async fn Gateway::handle_set_openclaw_default_model(
     write_usage_bad_request(w, "invalid_openclaw_default_model")
     return
   }
-  self.openclaw.openclaw_default_model = Some(model)
+  self.openclaw_default_model = Some(model)
   write_usage_json(w, suite_write_outcome_json())
 }
 
 ///|
-async fn Gateway::handle_get_openclaw_model_catalog(
-  self : Gateway,
+async fn OpenClawService::handle_get_openclaw_model_catalog(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(
-    w,
-    self.openclaw.openclaw_model_catalog.unwrap_or(Json::null()),
-  )
+  write_usage_json(w, self.openclaw_model_catalog.unwrap_or(Json::null()))
 }
 
 ///|
-async fn Gateway::handle_set_openclaw_model_catalog(
-  self : Gateway,
+async fn OpenClawService::handle_set_openclaw_model_catalog(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -59,24 +53,21 @@ async fn Gateway::handle_set_openclaw_model_catalog(
     write_usage_bad_request(w, "invalid_openclaw_model_catalog")
     return
   }
-  self.openclaw.openclaw_model_catalog = Some(catalog)
+  self.openclaw_model_catalog = Some(catalog)
   write_usage_json(w, suite_write_outcome_json())
 }
 
 ///|
-async fn Gateway::handle_get_openclaw_agents_defaults(
-  self : Gateway,
+async fn OpenClawService::handle_get_openclaw_agents_defaults(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(
-    w,
-    self.openclaw.openclaw_agents_defaults.unwrap_or(Json::null()),
-  )
+  write_usage_json(w, self.openclaw_agents_defaults.unwrap_or(Json::null()))
 }
 
 ///|
-async fn Gateway::handle_set_openclaw_agents_defaults(
-  self : Gateway,
+async fn OpenClawService::handle_set_openclaw_agents_defaults(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -93,21 +84,21 @@ async fn Gateway::handle_set_openclaw_agents_defaults(
     write_usage_bad_request(w, "invalid_openclaw_agents_defaults")
     return
   }
-  self.openclaw.openclaw_agents_defaults = Some(defaults_json)
+  self.openclaw_agents_defaults = Some(defaults_json)
   write_usage_json(w, suite_write_outcome_json())
 }
 
 ///|
-async fn Gateway::handle_get_openclaw_env(
-  self : Gateway,
+async fn OpenClawService::handle_get_openclaw_env(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw.openclaw_env)
+  write_usage_json(w, self.openclaw_env)
 }
 
 ///|
-async fn Gateway::handle_set_openclaw_env(
-  self : Gateway,
+async fn OpenClawService::handle_set_openclaw_env(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -116,21 +107,21 @@ async fn Gateway::handle_set_openclaw_env(
     write_usage_bad_request(w, "invalid_openclaw_env")
     return
   }
-  self.openclaw.openclaw_env = env
+  self.openclaw_env = env
   write_usage_json(w, suite_write_outcome_json())
 }
 
 ///|
-async fn Gateway::handle_get_openclaw_tools(
-  self : Gateway,
+async fn OpenClawService::handle_get_openclaw_tools(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.openclaw.openclaw_tools)
+  write_usage_json(w, self.openclaw_tools)
 }
 
 ///|
-async fn Gateway::handle_set_openclaw_tools(
-  self : Gateway,
+async fn OpenClawService::handle_set_openclaw_tools(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -139,13 +130,13 @@ async fn Gateway::handle_set_openclaw_tools(
     write_usage_bad_request(w, "invalid_openclaw_tools")
     return
   }
-  self.openclaw.openclaw_tools = tools
+  self.openclaw_tools = tools
   write_usage_json(w, suite_write_outcome_json())
 }
 
 ///|
-async fn Gateway::handle_get_hermes_memory(
-  self : Gateway,
+async fn OpenClawService::handle_get_hermes_memory(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -154,15 +145,12 @@ async fn Gateway::handle_get_hermes_memory(
     write_usage_bad_request(w, "invalid_hermes_memory_kind")
     return
   }
-  write_usage_json(
-    w,
-    Json::string(self.openclaw.hermes_memory.get(kind).unwrap_or("")),
-  )
+  write_usage_json(w, Json::string(self.hermes_memory.get(kind).unwrap_or("")))
 }
 
 ///|
-async fn Gateway::handle_set_hermes_memory(
-  self : Gateway,
+async fn OpenClawService::handle_set_hermes_memory(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -174,24 +162,21 @@ async fn Gateway::handle_set_hermes_memory(
   let content = proxy_string_request(r.path, body, ["content", "value", "text"]).unwrap_or(
     "",
   )
-  self.openclaw.hermes_memory[kind] = content
+  self.hermes_memory[kind] = content
   write_usage_json(w, Json::null())
 }
 
 ///|
-async fn Gateway::handle_get_hermes_memory_limits(
-  self : Gateway,
+async fn OpenClawService::handle_get_hermes_memory_limits(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(
-    w,
-    hermes_memory_limits_json(self.openclaw.hermes_memory_enabled),
-  )
+  write_usage_json(w, hermes_memory_limits_json(self.hermes_memory_enabled))
 }
 
 ///|
-async fn Gateway::handle_set_hermes_memory_enabled(
-  self : Gateway,
+async fn OpenClawService::handle_set_hermes_memory_enabled(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -204,13 +189,13 @@ async fn Gateway::handle_set_hermes_memory_enabled(
     write_usage_bad_request(w, "missing_enabled")
     return
   }
-  self.openclaw.hermes_memory_enabled[kind] = enabled
+  self.hermes_memory_enabled[kind] = enabled
   write_usage_json(w, suite_write_outcome_json())
 }
 
 ///|
-async fn Gateway::handle_open_hermes_web_ui(
-  self : Gateway,
+async fn OpenClawService::handle_open_hermes_web_ui(
+  self : OpenClawService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -227,8 +212,8 @@ async fn Gateway::handle_open_hermes_web_ui(
 }
 
 ///|
-async fn Gateway::handle_launch_hermes_dashboard(
-  self : Gateway,
+async fn OpenClawService::handle_launch_hermes_dashboard(
+  self : OpenClawService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -236,6 +221,143 @@ async fn Gateway::handle_launch_hermes_dashboard(
     Ok(result) => write_usage_json(w, result)
     Err(error) => write_usage_bad_request(w, error)
   }
+}
+
+///|
+async fn Gateway::handle_get_openclaw_default_model(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_get_openclaw_default_model(w)
+}
+
+///|
+async fn Gateway::handle_set_openclaw_default_model(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_set_openclaw_default_model(r, w)
+}
+
+///|
+async fn Gateway::handle_get_openclaw_model_catalog(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_get_openclaw_model_catalog(w)
+}
+
+///|
+async fn Gateway::handle_set_openclaw_model_catalog(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_set_openclaw_model_catalog(r, w)
+}
+
+///|
+async fn Gateway::handle_get_openclaw_agents_defaults(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_get_openclaw_agents_defaults(w)
+}
+
+///|
+async fn Gateway::handle_set_openclaw_agents_defaults(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_set_openclaw_agents_defaults(r, w)
+}
+
+///|
+async fn Gateway::handle_get_openclaw_env(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_get_openclaw_env(w)
+}
+
+///|
+async fn Gateway::handle_set_openclaw_env(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_set_openclaw_env(r, w)
+}
+
+///|
+async fn Gateway::handle_get_openclaw_tools(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_get_openclaw_tools(w)
+}
+
+///|
+async fn Gateway::handle_set_openclaw_tools(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_set_openclaw_tools(r, w)
+}
+
+///|
+async fn Gateway::handle_get_hermes_memory(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_get_hermes_memory(r, w)
+}
+
+///|
+async fn Gateway::handle_set_hermes_memory(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_set_hermes_memory(r, w)
+}
+
+///|
+async fn Gateway::handle_get_hermes_memory_limits(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_get_hermes_memory_limits(w)
+}
+
+///|
+async fn Gateway::handle_set_hermes_memory_enabled(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_set_hermes_memory_enabled(r, w)
+}
+
+///|
+async fn Gateway::handle_open_hermes_web_ui(
+  self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_open_hermes_web_ui(r, w)
+}
+
+///|
+async fn Gateway::handle_launch_hermes_dashboard(
+  self : Gateway,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  self.openclaw.handle_launch_hermes_dashboard(w)
 }
 
 ///|
