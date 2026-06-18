@@ -1233,19 +1233,19 @@ async fn ProxyService::handle_proxy_set_auto_failover_enabled(
 }
 
 ///|
-async fn Gateway::handle_proxy_takeover_status(
-  self : Gateway,
+async fn ProxyService::handle_proxy_takeover_status(
+  self : ProxyService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   w.header().set("Content-Type", "application/json")
   w.write_header(@status.Ok)
-  w.write(self.proxy_takeover_status_json().stringify(indent=2))
+  w.write(self.takeover_status_json().stringify(indent=2))
   w.flush()
 }
 
 ///|
-async fn Gateway::handle_proxy_set_takeover_for_app(
-  self : Gateway,
+async fn ProxyService::handle_proxy_set_takeover_for_app(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1259,16 +1259,16 @@ async fn Gateway::handle_proxy_set_takeover_for_app(
     write_usage_bad_request(w, "missing_enabled")
     return
   }
-  self.proxy.proxy_takeover_enabled.set(app_type, enabled)
+  self.proxy_takeover_enabled.set(app_type, enabled)
   write_usage_json(w, moon_unit_success_json())
 }
 
 ///|
-async fn Gateway::handle_proxy_live_takeover_active(
-  self : Gateway,
+async fn ProxyService::handle_proxy_live_takeover_active(
+  self : ProxyService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, Json::boolean(self.proxy_takeover_active()))
+  write_usage_json(w, Json::boolean(self.takeover_active()))
 }
 
 ///|
@@ -1307,29 +1307,47 @@ async fn Gateway::handle_proxy_switch_provider(
 }
 
 ///|
-fn Gateway::proxy_takeover_status_json(self : Gateway) -> Json {
+fn ProxyService::takeover_status_json(self : ProxyService) -> Json {
   {
-    "claude": Json::boolean(self.proxy_takeover_for_app("claude")),
-    "codex": Json::boolean(self.proxy_takeover_for_app("codex")),
-    "gemini": Json::boolean(self.proxy_takeover_for_app("gemini")),
-    "opencode": Json::boolean(self.proxy_takeover_for_app("opencode")),
-    "openclaw": Json::boolean(self.proxy_takeover_for_app("openclaw")),
+    "claude": Json::boolean(self.takeover_for_app("claude")),
+    "codex": Json::boolean(self.takeover_for_app("codex")),
+    "gemini": Json::boolean(self.takeover_for_app("gemini")),
+    "opencode": Json::boolean(self.takeover_for_app("opencode")),
+    "openclaw": Json::boolean(self.takeover_for_app("openclaw")),
   }.to_json()
 }
 
 ///|
-fn Gateway::proxy_takeover_for_app(self : Gateway, app_type : String) -> Bool {
-  self.proxy.proxy_takeover_enabled.get(app_type).unwrap_or(false)
+fn ProxyService::takeover_for_app(
+  self : ProxyService,
+  app_type : String,
+) -> Bool {
+  self.proxy_takeover_enabled.get(app_type).unwrap_or(false)
 }
 
 ///|
-fn Gateway::proxy_takeover_active(self : Gateway) -> Bool {
+fn ProxyService::takeover_active(self : ProxyService) -> Bool {
   for app_type in ["claude", "codex", "gemini", "opencode", "openclaw"] {
-    if self.proxy_takeover_for_app(app_type) {
+    if self.takeover_for_app(app_type) {
       return true
     }
   }
   false
+}
+
+///|
+fn Gateway::proxy_takeover_status_json(self : Gateway) -> Json {
+  self.proxy.takeover_status_json()
+}
+
+///|
+fn Gateway::proxy_takeover_for_app(self : Gateway, app_type : String) -> Bool {
+  self.proxy.takeover_for_app(app_type)
+}
+
+///|
+fn Gateway::proxy_takeover_active(self : Gateway) -> Bool {
+  self.proxy.takeover_active()
 }
 
 ///|

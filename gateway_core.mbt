@@ -785,19 +785,19 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.proxy.handle_proxy_set_auto_failover_enabled(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/proxy/takeover-status", (_, w) => {
-    self.handle_proxy_takeover_status(w)
+    self.proxy.handle_proxy_takeover_status(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_proxy_takeover_status", (_, w) => {
-    self.handle_proxy_takeover_status(w)
+    self.proxy.handle_proxy_takeover_status(w)
   })
   router.add_handler(@httpx.Method::Get, "/is_live_takeover_active", (_, w) => {
-    self.handle_proxy_live_takeover_active(w)
+    self.proxy.handle_proxy_live_takeover_active(w)
   })
   router.add_handler(@httpx.Method::Post, "/proxy/takeover-status", (r, w) => {
-    self.handle_proxy_set_takeover_for_app(r, w)
+    self.proxy.handle_proxy_set_takeover_for_app(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/set_proxy_takeover_for_app", (r, w) => {
-    self.handle_proxy_set_takeover_for_app(r, w)
+    self.proxy.handle_proxy_set_takeover_for_app(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/switch_proxy_provider", (r, w) => {
     self.handle_proxy_switch_provider(r, w)

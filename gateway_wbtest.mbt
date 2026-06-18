@@ -2016,7 +2016,7 @@ async test "ccs proxy mutation command handlers return unit success bodies" {
       ("ProxyService", "handle_proxy_set_default_cost_multiplier"),
       ("ProxyService", "handle_proxy_set_pricing_model_source"),
       ("ProxyService", "handle_proxy_update_circuit_breaker_config"),
-      ("Gateway", "handle_proxy_set_takeover_for_app"),
+      ("ProxyService", "handle_proxy_set_takeover_for_app"),
       ("Gateway", "handle_proxy_switch_provider"),
     ] {
     let (owner, handler) = entry
