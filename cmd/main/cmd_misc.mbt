@@ -162,7 +162,7 @@ fn print_help() -> Unit {
   println("Proxy config options:")
   println("  --app-type <app>  App type for app-level proxy config")
   println("  --provider-id <id> Provider id for provider-level proxy commands")
-  println("  --id <id>          Provider id for provider CRUD commands")
+  println("  --provider-id <id> Provider id for provider CRUD commands")
   println("  --name <name>      Provider display name for provider add/update")
   println("  --base-url <url>   Provider API base URL for provider add/update")
   println("  --api-key <key>    Provider API key for provider add/update")
@@ -213,11 +213,11 @@ fn print_help() -> Unit {
   )
   println("  moonstat provider list --app-type codex")
   println(
-    "  moonstat provider add --app-type codex --id custom --name Custom --base-url https://api.example.com/v1 --api-key sk-...",
+    "  moonstat provider add --app-type codex --provider-id custom --name Custom --base-url https://api.example.com/v1 --api-key sk-...",
   )
-  println("  moonstat provider switch --app-type codex --id custom")
+  println("  moonstat provider switch --app-type codex --provider-id custom")
   println(
-    "  moonstat provider endpoints add --app-type codex --id custom --endpoint-url https://api.backup.example.com/v1",
+    "  moonstat provider endpoints add --app-type codex --provider-id custom --endpoint-url https://api.backup.example.com/v1",
   )
   println(
     "  moonstat stream-check provider --app-type codex --provider-id codex-oauth",

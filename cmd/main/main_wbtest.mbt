@@ -781,19 +781,29 @@ test "proxy config setter paths encode moonstat command arguments" {
   assert_eq(
     provider_id_path(
       [
-        "moonstat", "provider", "switch", "--app-type", "codex", "--id", "custom",
+        "moonstat", "provider", "switch", "--app-type", "codex", "--provider-id",
+        "custom",
       ],
       "/providers/switch",
     ),
     Some("/providers/switch?appType=codex&id=custom"),
   )
   assert_eq(
+    provider_id_path(
+      [
+        "moonstat", "provider", "switch", "--app-type", "codex", "--id", "custom",
+      ],
+      "/providers/switch",
+    ),
+    None,
+  )
+  assert_eq(
     provider_upsert_path(
       [
-        "moonstat", "provider", "add", "--app-type", "codex", "--id", "custom", "--name",
-        "Custom Provider", "--base-url", "https://api.example.com/v1", "--api-key",
-        "sk-test", "--provider-type", "custom", "--enabled", "true", "--add-to-live",
-        "false",
+        "moonstat", "provider", "add", "--app-type", "codex", "--provider-id", "custom",
+        "--name", "Custom Provider", "--base-url", "https://api.example.com/v1",
+        "--api-key", "sk-test", "--provider-type", "custom", "--enabled", "true",
+        "--add-to-live", "false",
       ],
       "/providers",
       require_original=false,
@@ -803,9 +813,17 @@ test "proxy config setter paths encode moonstat command arguments" {
     ),
   )
   assert_eq(
+    provider_upsert_path(
+      ["moonstat", "provider", "add", "--app-type", "codex", "--id", "custom"],
+      "/providers",
+      require_original=false,
+    ),
+    None,
+  )
+  assert_eq(
     provider_id_path(
       [
-        "moonstat", "provider", "endpoints", "list", "--app-type", "codex", "--id",
+        "moonstat", "provider", "endpoints", "list", "--app-type", "codex", "--provider-id",
         "custom",
       ],
       "/providers/endpoints/list",
@@ -815,7 +833,7 @@ test "proxy config setter paths encode moonstat command arguments" {
   assert_eq(
     provider_endpoint_url_path(
       [
-        "moonstat", "provider", "endpoints", "add", "--app-type", "codex", "--id",
+        "moonstat", "provider", "endpoints", "add", "--app-type", "codex", "--provider-id",
         "custom", "--endpoint-url", "https://backup.example.com/v1",
       ],
       "/providers/endpoints",
@@ -827,7 +845,7 @@ test "proxy config setter paths encode moonstat command arguments" {
   assert_eq(
     provider_endpoint_url_path(
       [
-        "moonstat", "provider", "endpoints", "touch", "--app-type", "codex", "--id",
+        "moonstat", "provider", "endpoints", "touch", "--app-type", "codex", "--provider-id",
         "custom", "--endpoint-url", "https://backup.example.com/v1",
       ],
       "/providers/endpoints/touch",
@@ -847,10 +865,16 @@ test "proxy config setter paths encode moonstat command arguments" {
   )
   assert_eq(
     provider_sort_order_path([
-      "moonstat", "provider", "sort-order", "set", "--app-type", "codex", "--id",
+      "moonstat", "provider", "sort-order", "set", "--app-type", "codex", "--provider-id",
       "custom", "--sort-index", "2",
     ]),
     Some("/providers/sort-order?appType=codex&id=custom&sortIndex=2"),
+  )
+  assert_eq(
+    stream_check_provider_path([
+      "moonstat", "stream-check", "provider", "--app-type", "codex", "--id", "codex-oauth",
+    ]),
+    None,
   )
 }
 
@@ -1047,7 +1071,9 @@ test "provider grouped commands build canonical paths" {
   )
   assert_eq(
     provider_live_provider_path(
-      ["moonstat", "provider", "hermes", "live-get", "--id", "hermes/a"],
+      [
+        "moonstat", "provider", "hermes", "live-get", "--provider-id", "hermes/a",
+      ],
       "hermes",
     ),
     Some("/providers/live-provider?appType=hermes&providerId=hermes%2Fa"),
@@ -1058,17 +1084,17 @@ test "provider grouped commands build canonical paths" {
   )
   assert_eq(
     universal_provider_id_path(
-      ["moonstat", "provider", "universal", "sync", "--id", "u 1"],
+      ["moonstat", "provider", "universal", "sync", "--provider-id", "u 1"],
       "/providers/universal/sync",
     ),
     Some("/providers/universal/sync?id=u%201"),
   )
   assert_eq(
     universal_provider_upsert_path([
-      "moonstat", "provider", "universal", "upsert", "--id", "u 1", "--name", "Universal One",
-      "--provider-type", "openai-compatible", "--apps", "claude,codex", "--base-url",
-      "https://api.example.com/v1", "--api-key", "sk-test", "--codex-model", "gpt-5",
-      "--reasoning-effort", "medium",
+      "moonstat", "provider", "universal", "upsert", "--provider-id", "u 1", "--name",
+      "Universal One", "--provider-type", "openai-compatible", "--apps", "claude,codex",
+      "--base-url", "https://api.example.com/v1", "--api-key", "sk-test", "--codex-model",
+      "gpt-5", "--reasoning-effort", "medium",
     ]),
     Some(
       "/providers/universal?id=u%201&name=Universal%20One&providerType=openai-compatible&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&apps=claude%2Ccodex&codexModel=gpt-5&reasoningEffort=medium",

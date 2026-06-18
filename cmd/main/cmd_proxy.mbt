@@ -347,7 +347,7 @@ async fn add_provider(args : Array[String]) -> Unit {
   guard provider_upsert_path(args, "/providers", require_original=false)
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required provider args: --id")
+    logger.error("Missing required provider args: --provider-id")
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -358,7 +358,7 @@ async fn update_provider(args : Array[String]) -> Unit {
   guard provider_upsert_path(args, "/providers/update", require_original=false)
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required provider args: --id")
+    logger.error("Missing required provider args: --provider-id")
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -368,7 +368,7 @@ async fn update_provider(args : Array[String]) -> Unit {
 async fn delete_provider(args : Array[String]) -> Unit {
   guard provider_id_path(args, "/providers") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_delete_endpoint(args, path, "Provider")
@@ -378,7 +378,7 @@ async fn delete_provider(args : Array[String]) -> Unit {
 async fn remove_provider_from_live_config(args : Array[String]) -> Unit {
   guard provider_id_path(args, "/providers/live") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_delete_endpoint(args, path, "Provider")
@@ -388,7 +388,7 @@ async fn remove_provider_from_live_config(args : Array[String]) -> Unit {
 async fn switch_provider(args : Array[String]) -> Unit {
   guard provider_id_path(args, "/providers/switch") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -435,7 +435,7 @@ async fn check_named_live_provider(
 ) -> Unit {
   guard provider_live_provider_path(args, app_type) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_endpoint(args, path, "Provider")
@@ -466,7 +466,7 @@ async fn check_provider_live_ids(args : Array[String]) -> Unit {
 async fn check_provider_live_provider(args : Array[String]) -> Unit {
   guard provider_live_provider_path(args, provider_app_arg(args)) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_endpoint(args, path, "Provider")
@@ -491,7 +491,7 @@ async fn check_universal_provider(args : Array[String]) -> Unit {
   guard universal_provider_id_path(args, "/providers/universal/item")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_endpoint(args, path, "Provider")
@@ -501,7 +501,7 @@ async fn check_universal_provider(args : Array[String]) -> Unit {
 async fn upsert_universal_provider(args : Array[String]) -> Unit {
   guard universal_provider_upsert_path(args) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required universal provider args: --id")
+    logger.error("Missing required universal provider args: --provider-id")
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -511,7 +511,7 @@ async fn upsert_universal_provider(args : Array[String]) -> Unit {
 async fn delete_universal_provider(args : Array[String]) -> Unit {
   guard universal_provider_id_path(args, "/providers/universal") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_delete_endpoint(args, path, "Provider")
@@ -522,7 +522,7 @@ async fn sync_universal_provider(args : Array[String]) -> Unit {
   guard universal_provider_id_path(args, "/providers/universal/sync")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -537,7 +537,9 @@ async fn check_provider_presets(args : Array[String]) -> Unit {
 async fn update_providers_sort_order(args : Array[String]) -> Unit {
   guard provider_sort_order_path(args) is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required provider sort args: --id --sort-index")
+    logger.error(
+      "Missing required provider sort args: --provider-id --sort-index",
+    )
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -547,7 +549,7 @@ async fn update_providers_sort_order(args : Array[String]) -> Unit {
 async fn check_provider_custom_endpoints(args : Array[String]) -> Unit {
   guard provider_id_path(args, "/providers/endpoints/list") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --id")
+    logger.error("Missing required --provider-id")
     return
   }
   check_json_endpoint(args, path, "Provider")
@@ -557,7 +559,9 @@ async fn check_provider_custom_endpoints(args : Array[String]) -> Unit {
 async fn add_provider_custom_endpoint(args : Array[String]) -> Unit {
   guard provider_endpoint_url_path(args, "/providers/endpoints") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required provider endpoint args: --id --endpoint-url")
+    logger.error(
+      "Missing required provider endpoint args: --provider-id --endpoint-url",
+    )
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -567,7 +571,9 @@ async fn add_provider_custom_endpoint(args : Array[String]) -> Unit {
 async fn remove_provider_custom_endpoint(args : Array[String]) -> Unit {
   guard provider_endpoint_url_path(args, "/providers/endpoints") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required provider endpoint args: --id --endpoint-url")
+    logger.error(
+      "Missing required provider endpoint args: --provider-id --endpoint-url",
+    )
     return
   }
   check_json_delete_endpoint(args, path, "Provider")
@@ -578,7 +584,9 @@ async fn update_provider_endpoint_last_used(args : Array[String]) -> Unit {
   guard provider_endpoint_url_path(args, "/providers/endpoints/touch")
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required provider endpoint args: --id --endpoint-url")
+    logger.error(
+      "Missing required provider endpoint args: --provider-id --endpoint-url",
+    )
     return
   }
   check_json_post_endpoint(args, path, "Provider")
@@ -637,10 +645,7 @@ fn provider_app_arg(args : Array[String]) -> String {
 
 ///|
 fn provider_id_arg(args : Array[String]) -> String? {
-  match parse_string_arg(args, "--id") {
-    Some(id) => Some(id)
-    None => parse_string_arg(args, "--provider-id")
-  }
+  parse_string_arg(args, "--provider-id")
 }
 
 ///|
@@ -989,10 +994,7 @@ fn proxy_auto_failover_enabled_path(args : Array[String]) -> String? {
 fn stream_check_provider_path(args : Array[String]) -> String? {
   let app_type = parse_string_arg(args, "--app-type")
   guard app_type is Some(app_type) else { return None }
-  let provider_id = match parse_string_arg(args, "--provider-id") {
-    Some(value) => Some(value)
-    None => parse_string_arg(args, "--id")
-  }
+  let provider_id = parse_string_arg(args, "--provider-id")
   guard provider_id is Some(provider_id) else { return None }
   Some(
     "/proxy/stream-check/provider?appType=\{cli_url_encode(app_type)}&providerId=\{cli_url_encode(provider_id)}",
