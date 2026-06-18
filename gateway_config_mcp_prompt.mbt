@@ -275,9 +275,7 @@ fn moon_mcp_server_from_request(
     _ => ()
   }
   guard proxy_string_request(path, body, "id") is Some(id) else { return None }
-  let spec = moon_json_request(path, body, ["spec", "server"]).unwrap_or(
-    Json::object({}),
-  )
+  let spec = moon_json_request(path, body, ["spec"]).unwrap_or(Json::object({}))
   Some((id, moon_mcp_server_from_spec(id, spec, default_app)))
 }
 

@@ -9707,6 +9707,24 @@ test "moonstat mcp request parser accepts canonical server JSON" {
   guard server is Object(obj) else { fail("expected normalized server") }
   assert_eq(obj["name"], Json::string("Shell"))
   assert_true(moon_mcp_app_enabled(server, "codex"))
+  let retired_spec = {
+    "id": Json::string("retired"),
+    "server": { "command": Json::string("sh") }.to_json(),
+  }.to_json()
+  guard moon_mcp_server_from_request(
+      "/mcp/servers?appType=codex",
+      Some(retired_spec),
+      "codex",
+    )
+    is Some((retired_id, retired_server)) else {
+    fail("expected parsed id-based server")
+  }
+  assert_eq(retired_id, "retired")
+  guard retired_server is Object(retired_obj) else {
+    fail("expected normalized retired server")
+  }
+  assert_eq(retired_obj["name"], Json::string("retired"))
+  assert_eq(retired_obj["server"], Json::object({}))
   assert_true(
     moon_mcp_server_from_request("/mcp/servers?server_id=legacy", None, "codex")
     is None,
