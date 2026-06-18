@@ -35,6 +35,20 @@ test "usage service exposes stats and metrics without gateway" {
 }
 
 ///|
+test "usage service owns health response shape" {
+  let usage = UsageService::new()
+  usage.record_inbound(24)
+  guard usage.health_json(true) is Object(health) else {
+    fail("expected health object")
+  }
+  assert_eq(health["status"], Json::string("healthy"))
+  assert_eq(health["credentials_loaded"], Json::boolean(true))
+  guard health["stats"] is Object(stats) else { fail("expected stats object") }
+  assert_eq(stats["total_requests"], Json::number(1.0))
+  assert_true(health["timestamp"] is String(_))
+}
+
+///|
 async test "usage service owns proxy status target and pricing state" {
   let usage = UsageService::new()
   usage.set_active_target("codex", "codex-oauth", "Codex OAuth")

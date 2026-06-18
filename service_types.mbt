@@ -14,6 +14,11 @@ pub fn AuthService::new() -> AuthService {
 }
 
 ///|
+fn AuthService::credentials_loaded(self : AuthService) -> Bool {
+  self.credentials is Some(_)
+}
+
+///|
 /// ProxyService handles provider routing, circuit breakers, failover, and proxy config.
 pub struct ProxyService {
   provider_router : ProviderRouter

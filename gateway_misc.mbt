@@ -157,17 +157,7 @@ async fn Gateway::handle_health(
   _r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  w.header().set("Content-Type", "application/json")
-  w.write_header(@status.Ok)
-  let has_creds = self.auth.credentials is Some(_)
-  let response : Map[String, Json] = {
-    "status": Json::string("healthy"),
-    "timestamp": Json::string(@async.now().to_string()),
-    "credentials_loaded": Json::boolean(has_creds),
-    "stats": self.usage.stats_json(),
-  }
-  w.write(response.to_json().stringify())
-  w.flush()
+  self.usage.handle_health(w, self.auth.credentials_loaded())
 }
 
 ///|

@@ -39,6 +39,19 @@ fn UsageService::stats_json(self : UsageService) -> Json {
 }
 
 ///|
+fn UsageService::health_json(
+  self : UsageService,
+  credentials_loaded : Bool,
+) -> Json {
+  {
+    "status": Json::string("healthy"),
+    "timestamp": Json::string(@async.now().to_string()),
+    "credentials_loaded": Json::boolean(credentials_loaded),
+    "stats": self.stats_json(),
+  }.to_json()
+}
+
+///|
 fn UsageService::metrics_text(self : UsageService) -> String {
   self.stats.prometheus_metrics()
 }
@@ -581,6 +594,15 @@ async fn UsageService::handle_stats(
   w.write_header(@status.Ok)
   w.write(self.stats_json().stringify(indent=2))
   w.flush()
+}
+
+///|
+async fn UsageService::handle_health(
+  self : UsageService,
+  w : @httpx.ResponseWriter,
+  credentials_loaded : Bool,
+) -> Unit {
+  write_usage_json(w, self.health_json(credentials_loaded))
 }
 
 ///|
