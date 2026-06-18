@@ -88,9 +88,6 @@ fn ProxyService::register_management_routes(
   router.add_handler(Get, "/proxy/config", (_, w) => {
     self.handle_proxy_config(w, live_takeover_active=self.takeover_active())
   })
-  router.add_handler(Post, "/proxy/config", (r, w) => {
-    self.handle_proxy_update_config(r, w)
-  })
   router.add_handler(Get, "/proxy/global-config", (_, w) => {
     self.handle_proxy_global_config(w)
   })

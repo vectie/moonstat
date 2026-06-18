@@ -607,7 +607,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "POST /skills/migrate-storage", "GET|POST /skills/search", "GET /skills", "GET /skills/app",
     "GET /skills/repos", "POST /skills/repos", "POST /skills/repos/remove", "POST /skills/install-zip",
     "GET /proxy/status", "POST /proxy/start", "POST /proxy/stop", "POST /proxy/stop-with-restore",
-    "GET|POST /proxy/config", "GET|POST /proxy/global-config", "GET|POST /proxy/global-url",
+    "GET /proxy/config", "GET|POST /proxy/global-config", "GET|POST /proxy/global-url",
     "GET|POST /proxy/test-url", "GET /proxy/upstream-status", "GET /proxy/local-proxies",
     "GET|POST /proxy/app-config", "GET|POST /proxy/default-cost-multiplier", "GET|POST /proxy/pricing-model-source",
     "GET /proxy/provider-health", "GET|POST /proxy/circuit-breaker-config", "GET /proxy/circuit-breaker-stats",

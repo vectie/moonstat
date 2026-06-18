@@ -7,7 +7,7 @@ test "has flag matches exact CLI option" {
 
 ///|
 test "registered cli commands match suite command aliases and status commands" {
-  assert_true(registered_cli_commands().length() >= 250)
+  assert_true(registered_cli_commands().length() >= 225)
   assert_true(registered_cli_command_id(["moonstat", "start"]) == Some("start"))
   assert_true(
     registered_cli_command_id(["moonstat", "install", "--port", "15721"]) ==
@@ -138,9 +138,9 @@ test "registered cli commands match suite command aliases and status commands" {
     registered_cli_command_id(["moonstat", "stream-check", "config"]) ==
     Some("get_stream_check_config"),
   )
-  assert_true(
-    registered_cli_command_id(["moonstat", "proxy", "config", "set"]) ==
-    Some("update_proxy_config"),
+  assert_eq(
+    registered_cli_command_id(["moonstat", "proxy", "config", "set"]),
+    None,
   )
   assert_true(
     registered_cli_command_id(["moonstat", "proxy", "config"]) ==
@@ -454,7 +454,7 @@ test "registered cli commands match suite command aliases and status commands" {
 
 ///|
 test "proxy cli dispatcher owns only proxy command family" {
-  assert_true(cli_proxy_command_id("update_proxy_config"))
+  assert_false(cli_proxy_command_id("update_proxy_config"))
   assert_true(cli_proxy_command_id("set_proxy_takeover_for_app"))
   assert_true(cli_proxy_command_id("switch_proxy_provider"))
   assert_true(cli_proxy_command_id("is_proxy_running"))

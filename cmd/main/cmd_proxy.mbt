@@ -24,15 +24,6 @@ async fn check_proxy_config(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn update_proxy_config(args : Array[String]) -> Unit {
-  check_json_post_endpoint(
-    args,
-    proxy_global_config_update_path(args, "/proxy/config"),
-    "Proxy",
-  )
-}
-
-///|
 async fn check_proxy_global_config(args : Array[String]) -> Unit {
   check_proxy_endpoint(args, "/proxy/global-config")
 }
@@ -227,8 +218,7 @@ async fn check_proxy_running(args : Array[String]) -> Unit {
 ///|
 fn cli_proxy_command_id(command_id : String) -> Bool {
   match command_id {
-    "update_proxy_config"
-    | "get_proxy_config"
+    "get_proxy_config"
     | "update_global_proxy_config"
     | "get_global_proxy_config"
     | "set_global_proxy_url"
@@ -272,7 +262,6 @@ async fn run_proxy_cli_command(
   args : Array[String],
 ) -> Unit {
   match command_id {
-    "update_proxy_config" => update_proxy_config(args)
     "get_proxy_config" => check_proxy_config(args)
     "update_global_proxy_config" => update_proxy_global_config(args)
     "get_global_proxy_config" => check_proxy_global_config(args)

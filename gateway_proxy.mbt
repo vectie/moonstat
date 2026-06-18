@@ -393,18 +393,6 @@ async fn ProxyService::handle_proxy_config(
 }
 
 ///|
-async fn ProxyService::handle_proxy_update_config(
-  self : ProxyService,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  match self.apply_global_config_request(r, legacy=true) {
-    true => write_usage_json(w, moon_unit_success_json())
-    false => write_usage_bad_request(w, "invalid_proxy_config")
-  }
-}
-
-///|
 async fn ProxyService::handle_proxy_global_config(
   self : ProxyService,
   w : @httpx.ResponseWriter,
@@ -492,7 +480,6 @@ async fn ProxyService::handle_get_upstream_proxy_status(
 async fn ProxyService::apply_global_config_request(
   self : ProxyService,
   r : @httpx.RequestReader,
-  legacy? : Bool = false,
 ) -> Bool {
   let body = proxy_json_body(r)
   let config = proxy_embedded_config(body)
@@ -510,11 +497,6 @@ async fn ProxyService::apply_global_config_request(
   ])
   if proxy_enabled is Some(enabled) {
     self.proxy_enabled = enabled
-  } else if legacy {
-    match proxy_bool_request(r.path, config, ["proxyEnabled"]) {
-      Some(enabled) => self.proxy_enabled = enabled
-      None => ()
-    }
   }
   if listen_address is Some(address) {
     if address.trim().is_empty() {

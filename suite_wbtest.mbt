@@ -207,7 +207,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("POST /proxy/start")))
   assert_true(routes.contains(Json::string("POST /proxy/stop")))
   assert_true(routes.contains(Json::string("POST /proxy/stop-with-restore")))
-  assert_true(routes.contains(Json::string("GET|POST /proxy/config")))
+  assert_true(routes.contains(Json::string("GET /proxy/config")))
   assert_true(routes.contains(Json::string("GET|POST /proxy/global-config")))
   assert_true(routes.contains(Json::string("GET|POST /proxy/global-url")))
   assert_true(routes.contains(Json::string("GET|POST /proxy/test-url")))
@@ -262,7 +262,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   let control_routes = [
     "GET /proxy/status", "POST /proxy/start", "POST /proxy/stop", "POST /proxy/stop-with-restore",
-    "GET|POST /proxy/config", "GET|POST /proxy/global-config", "GET|POST /proxy/app-config",
+    "GET /proxy/config", "GET|POST /proxy/global-config", "GET|POST /proxy/app-config",
     "GET|POST /proxy/default-cost-multiplier", "GET|POST /proxy/pricing-model-source",
     "GET /proxy/provider-health", "GET|POST /proxy/circuit-breaker-config", "GET /proxy/circuit-breaker-stats",
     "GET|POST|DELETE /proxy/failover-queue", "GET|POST /proxy/auto-failover-enabled",

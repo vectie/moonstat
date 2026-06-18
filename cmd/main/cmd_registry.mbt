@@ -82,7 +82,6 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "stream_check_all_providers", patterns: ["stream-check all"] },
     { id: "save_stream_check_config", patterns: ["stream-check config set"] },
     { id: "get_stream_check_config", patterns: ["stream-check config"] },
-    { id: "update_proxy_config", patterns: ["proxy config set"] },
     { id: "get_proxy_config", patterns: ["proxy config"] },
     { id: "update_global_proxy_config", patterns: ["proxy global-config set"] },
     { id: "get_global_proxy_config", patterns: ["proxy global-config"] },
@@ -500,6 +499,12 @@ fn cli_args_match_pattern(args : Array[String], pattern : String) -> Bool {
   }
   for index in 0..<tokens.length() {
     if args[index + 1] != tokens[index].to_owned() {
+      return false
+    }
+  }
+  if args.length() > tokens.length() + 1 {
+    let next = args[tokens.length() + 1]
+    if !next.has_prefix("-") {
       return false
     }
   }

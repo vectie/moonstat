@@ -2036,7 +2036,6 @@ async test "ccs proxy mutation command handlers return unit success bodies" {
       ("ProxyService", "handle_proxy_stop_server"),
       ("ProxyService", "handle_proxy_stop_with_restore"),
       ("ProxyService", "handle_proxy_running"),
-      ("ProxyService", "handle_proxy_update_config"),
       ("ProxyService", "handle_proxy_update_global_config"),
       ("ProxyService", "handle_proxy_update_app_config"),
       ("ProxyService", "handle_proxy_set_default_cost_multiplier"),

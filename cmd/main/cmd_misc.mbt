@@ -60,7 +60,6 @@ fn print_help() -> Unit {
     "  proxy stop-proxy-with-restore  Disable proxy routing and clear takeover state",
   )
   println("  proxy config           Show proxy server config")
-  println("  proxy config set       Update proxy server config")
   println("  proxy global-config    Show global proxy config")
   println("  proxy global-config set  Update global proxy config")
   println("  proxy app-config       Show app proxy config")
