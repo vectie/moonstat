@@ -1,5 +1,5 @@
 ///|
-pub struct AnthropicRequest {
+priv struct AnthropicRequest {
   model : String
   max_tokens : Int
   messages : Array[AnthropicMessage]
@@ -9,26 +9,7 @@ pub struct AnthropicRequest {
 }
 
 ///|
-pub impl ToJson for AnthropicRequest with fn to_json(self : AnthropicRequest) -> Json {
-  let json : Map[String, Json] = {
-    "model": Json::string(self.model),
-    "max_tokens": self.max_tokens.to_json(),
-    "messages": self.messages.to_json(),
-  }
-  if self.system is Some(system) {
-    json["system"] = Json::string(system)
-  }
-  if self.tools is Some(tools) && !tools.is_empty() {
-    json["tools"] = tools.to_json()
-  }
-  if self.stream is Some(stream) {
-    json["stream"] = stream.to_json()
-  }
-  Json::object(json)
-}
-
-///|
-pub impl FromJson for AnthropicRequest with fn from_json(
+impl FromJson for AnthropicRequest with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicRequest raise @json.JsonDecodeError {
@@ -76,23 +57,13 @@ pub impl FromJson for AnthropicRequest with fn from_json(
 }
 
 ///|
-pub struct AnthropicMessage {
+priv struct AnthropicMessage {
   role : String
   content : AnthropicContent
 }
 
 ///|
-pub impl ToJson for AnthropicMessage with fn to_json(self : AnthropicMessage) -> Json {
-  let json : Map[String, Json] = { "role": Json::string(self.role) }
-  match self.content {
-    Text(t) => json["content"] = Json::string(t)
-    Blocks(blocks) => json["content"] = blocks.to_json()
-  }
-  Json::object(json)
-}
-
-///|
-pub impl FromJson for AnthropicMessage with fn from_json(
+impl FromJson for AnthropicMessage with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicMessage raise @json.JsonDecodeError {
@@ -118,36 +89,19 @@ pub impl FromJson for AnthropicMessage with fn from_json(
 }
 
 ///|
-pub enum AnthropicContent {
+priv enum AnthropicContent {
   Text(String)
   Blocks(Array[AnthropicBlock])
 }
 
 ///|
-pub struct AnthropicBlock {
+priv struct AnthropicBlock {
   type_ : String
   text : String?
-  tool_use_id : String?
-  content : String?
 }
 
 ///|
-pub impl ToJson for AnthropicBlock with fn to_json(self : AnthropicBlock) -> Json {
-  let json : Map[String, Json] = { "type": Json::string(self.type_) }
-  if self.text is Some(text) {
-    json["text"] = Json::string(text)
-  }
-  if self.tool_use_id is Some(id) {
-    json["tool_use_id"] = Json::string(id)
-  }
-  if self.content is Some(content) {
-    json["content"] = Json::string(content)
-  }
-  Json::object(json)
-}
-
-///|
-pub impl FromJson for AnthropicBlock with fn from_json(
+impl FromJson for AnthropicBlock with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicBlock raise @json.JsonDecodeError {
@@ -162,38 +116,18 @@ pub impl FromJson for AnthropicBlock with fn from_json(
     Some(String(s)) => Some(s)
     _ => None
   }
-  let tool_use_id : String? = match obj.get("tool_use_id") {
-    Some(String(s)) => Some(s)
-    _ => None
-  }
-  let content : String? = match obj.get("content") {
-    Some(String(s)) => Some(s)
-    _ => None
-  }
-  { type_, text, tool_use_id, content }
+  { type_, text }
 }
 
 ///|
-pub struct AnthropicTool {
+priv struct AnthropicTool {
   name : String
   description : String?
   input_schema : Json
 }
 
 ///|
-pub impl ToJson for AnthropicTool with fn to_json(self : AnthropicTool) -> Json {
-  let json : Map[String, Json] = {
-    "name": Json::string(self.name),
-    "input_schema": self.input_schema,
-  }
-  if self.description is Some(desc) {
-    json["description"] = Json::string(desc)
-  }
-  Json::object(json)
-}
-
-///|
-pub impl FromJson for AnthropicTool with fn from_json(
+impl FromJson for AnthropicTool with fn from_json(
   json : Json,
   path : @json.JsonPath,
 ) -> AnthropicTool raise @json.JsonDecodeError {
@@ -216,7 +150,7 @@ pub impl FromJson for AnthropicTool with fn from_json(
 }
 
 ///|
-pub struct AnthropicResponse {
+priv struct AnthropicResponse {
   id : String
   type_ : String
   role : String
@@ -225,27 +159,27 @@ pub struct AnthropicResponse {
   stop_reason : String?
   stop_sequence : String?
   usage : AnthropicUsage
-} derive(FromJson, Debug, ToJson)
+} derive(ToJson)
 
 ///|
-pub struct AnthropicResponseBlock {
+priv struct AnthropicResponseBlock {
   type_ : String
   text : String?
   name : String?
   input : Json?
   id : String?
-} derive(FromJson, Debug, ToJson)
+} derive(ToJson)
 
 ///|
-pub struct AnthropicUsage {
+priv struct AnthropicUsage {
   input_tokens : Int
   output_tokens : Int
   cache_read_input_tokens : Int?
   cache_creation_input_tokens : Int?
-} derive(FromJson, Debug)
+}
 
 ///|
-pub impl ToJson for AnthropicUsage with fn to_json(self : AnthropicUsage) -> Json {
+impl ToJson for AnthropicUsage with fn to_json(self : AnthropicUsage) -> Json {
   let json : Map[String, Json] = {
     "input_tokens": Json::number(self.input_tokens.to_double()),
     "output_tokens": Json::number(self.output_tokens.to_double()),
@@ -258,19 +192,3 @@ pub impl ToJson for AnthropicUsage with fn to_json(self : AnthropicUsage) -> Jso
   }
   Json::object(json)
 }
-
-///|
-pub struct AnthropicStreamEvent {
-  type_ : String
-  index : Int?
-  delta : AnthropicDelta?
-  content_block : AnthropicResponseBlock?
-  message : AnthropicResponse?
-} derive(FromJson, Debug)
-
-///|
-pub struct AnthropicDelta {
-  type_ : String?
-  text : String?
-  stop_reason : String?
-} derive(FromJson, Debug)

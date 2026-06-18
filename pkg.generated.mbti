@@ -1,21 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "vectie/moonstat"
 
-import {
-  "moonbitlang/core/debug",
-  "moonbitlang/core/json",
-}
-
 // Values
-pub fn build_anthropic_response(String, String, String, Array[ToolCallInfo], Int, Int, cache_read_input_tokens? : Int, cache_creation_input_tokens? : Int) -> AnthropicResponse
-
-pub fn build_codex_request(CodexInput, String, Bool) -> Json
-
 pub fn build_models_url_candidates(String, Bool, String?) -> Result[Array[String], String]
 
 pub fn calculate_cost_for_app(String, TokenUsage, ModelPricing, cost_multiplier? : String) -> CostBreakdown
-
-pub fn convert_anthropic_to_codex(AnthropicRequest, String) -> CodexInput
 
 pub async fn copilot_get_auth_status() -> Json
 
@@ -123,30 +112,6 @@ pub fn static_model_pricing_json() -> Json
 
 pub fn strip_one_m_suffix_for_upstream(String) -> String
 
-pub fn token_usage_from_claude_response(Json) -> TokenUsage?
-
-pub fn token_usage_from_claude_stream_events(Array[Json]) -> TokenUsage?
-
-pub fn token_usage_from_codex_response(Json) -> TokenUsage?
-
-pub fn token_usage_from_codex_response_adjusted(Json) -> TokenUsage?
-
-pub fn token_usage_from_codex_response_auto(Json) -> TokenUsage?
-
-pub fn token_usage_from_codex_stream_events(Array[Json]) -> TokenUsage?
-
-pub fn token_usage_from_codex_stream_events_auto(Array[Json]) -> TokenUsage?
-
-pub fn token_usage_from_gemini_response(Json) -> TokenUsage?
-
-pub fn token_usage_from_gemini_stream_chunks(Array[Json]) -> TokenUsage?
-
-pub fn token_usage_from_openai_response(Json) -> TokenUsage?
-
-pub fn token_usage_from_openai_stream_events(Array[Json]) -> TokenUsage?
-
-pub fn token_usage_from_openrouter_response(Json) -> TokenUsage?
-
 pub fn transform_claude_request_for_api_format(Json, String, session_id? : String?, explicit_prompt_cache_key? : String?, is_codex_oauth? : Bool, codex_fast_mode? : Bool, gemini_shadow_turns? : Array[GeminiAssistantTurn]) -> Json
 
 pub async fn write_moonstat_moonclaw_providers_file(path? : String, host? : String, port? : Int, model? : String) -> String
@@ -166,87 +131,6 @@ pub struct AllowResult {
   allowed : Bool
   used_half_open_permit : Bool
 }
-
-pub struct AnthropicBlock {
-  type_ : String
-  text : String?
-  tool_use_id : String?
-  content : String?
-}
-pub impl ToJson for AnthropicBlock
-pub impl @json.FromJson for AnthropicBlock
-
-pub enum AnthropicContent {
-  Text(String)
-  Blocks(Array[AnthropicBlock])
-}
-
-pub struct AnthropicDelta {
-  type_ : String?
-  text : String?
-  stop_reason : String?
-} derive(@debug.Debug, @json.FromJson)
-
-pub struct AnthropicMessage {
-  role : String
-  content : AnthropicContent
-}
-pub impl ToJson for AnthropicMessage
-pub impl @json.FromJson for AnthropicMessage
-
-pub struct AnthropicRequest {
-  model : String
-  max_tokens : Int
-  messages : Array[AnthropicMessage]
-  system : String?
-  tools : Array[AnthropicTool]?
-  stream : Bool?
-}
-pub impl ToJson for AnthropicRequest
-pub impl @json.FromJson for AnthropicRequest
-
-pub struct AnthropicResponse {
-  id : String
-  type_ : String
-  role : String
-  content : Array[AnthropicResponseBlock]
-  model : String
-  stop_reason : String?
-  stop_sequence : String?
-  usage : AnthropicUsage
-} derive(ToJson, @debug.Debug, @json.FromJson)
-
-pub struct AnthropicResponseBlock {
-  type_ : String
-  text : String?
-  name : String?
-  input : Json?
-  id : String?
-} derive(ToJson, @debug.Debug, @json.FromJson)
-
-pub struct AnthropicStreamEvent {
-  type_ : String
-  index : Int?
-  delta : AnthropicDelta?
-  content_block : AnthropicResponseBlock?
-  message : AnthropicResponse?
-} derive(@debug.Debug, @json.FromJson)
-
-pub struct AnthropicTool {
-  name : String
-  description : String?
-  input_schema : Json
-}
-pub impl ToJson for AnthropicTool
-pub impl @json.FromJson for AnthropicTool
-
-pub struct AnthropicUsage {
-  input_tokens : Int
-  output_tokens : Int
-  cache_read_input_tokens : Int?
-  cache_creation_input_tokens : Int?
-} derive(@debug.Debug, @json.FromJson)
-pub impl ToJson for AnthropicUsage
 
 pub struct CircuitBreaker {
   mut state : CircuitState
@@ -299,28 +183,6 @@ pub struct ClaudeDesktopModelRoute {
   supports_1m : Bool?
 }
 pub fn ClaudeDesktopModelRoute::new(model~ : String, label_override? : String?, supports_1m? : Bool?) -> Self
-
-pub struct CodexInput {
-  messages : Array[CodexMessage]
-  tools : Array[CodexTool]?
-}
-
-pub struct CodexMessage {
-  role : String
-  content : String
-  tool_call_id : String?
-  name : String?
-  arguments : String?
-}
-pub impl ToJson for CodexMessage
-
-pub struct CodexTool {
-  type_ : String
-  name : String
-  description : String?
-  parameters : Json
-}
-pub impl ToJson for CodexTool
 
 pub struct CostBreakdown {
   input_cost_usd : String
@@ -657,12 +519,6 @@ pub fn TokenUsage::anthropic_input_tokens(Self) -> Int
 pub fn TokenUsage::empty() -> Self
 pub fn TokenUsage::has_billable_tokens(Self) -> Bool
 pub fn TokenUsage::new(input_tokens~ : Int, output_tokens~ : Int, cache_read_tokens? : Int, cache_creation_tokens? : Int, model? : String?, message_id? : String?) -> Self
-
-pub struct ToolCallInfo {
-  id : String
-  name : String
-  arguments : String
-}
 
 pub struct TrafficStats {
   mut active_connections : Int

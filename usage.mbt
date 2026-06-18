@@ -92,7 +92,7 @@ pub fn TokenUsage::anthropic_input_tokens(self : TokenUsage) -> Int {
 }
 
 ///|
-pub fn token_usage_from_claude_response(body : Json) -> TokenUsage? {
+fn token_usage_from_claude_response(body : Json) -> TokenUsage? {
   guard body is Object(obj) else { return None }
   guard obj.get("usage") is Some(Object(usage)) else { return None }
   let input_tokens = json_int(usage, "input_tokens")
@@ -115,7 +115,7 @@ pub fn token_usage_from_claude_response(body : Json) -> TokenUsage? {
 }
 
 ///|
-pub fn token_usage_from_codex_response(body : Json) -> TokenUsage? {
+fn token_usage_from_codex_response(body : Json) -> TokenUsage? {
   guard body is Object(obj) else { return None }
   guard obj.get("usage") is Some(Object(usage)) else { return None }
   let input_tokens = json_int(usage, "input_tokens")
@@ -145,24 +145,7 @@ pub fn token_usage_from_codex_response(body : Json) -> TokenUsage? {
 }
 
 ///|
-pub fn token_usage_from_codex_response_adjusted(body : Json) -> TokenUsage? {
-  guard token_usage_from_codex_response(body) is Some(usage) else {
-    return None
-  }
-  Some(
-    TokenUsage::new(
-      input_tokens=max_int(usage.input_tokens - usage.cache_read_tokens, 0),
-      output_tokens=usage.output_tokens,
-      cache_read_tokens=usage.cache_read_tokens,
-      cache_creation_tokens=usage.cache_creation_tokens,
-      model=usage.model,
-      message_id=usage.message_id,
-    ),
-  )
-}
-
-///|
-pub fn token_usage_from_openai_response(body : Json) -> TokenUsage? {
+fn token_usage_from_openai_response(body : Json) -> TokenUsage? {
   guard body is Object(obj) else { return None }
   guard obj.get("usage") is Some(Object(usage)) else { return None }
   let input_tokens = json_int(usage, "prompt_tokens")
@@ -185,12 +168,7 @@ pub fn token_usage_from_openai_response(body : Json) -> TokenUsage? {
 }
 
 ///|
-pub fn token_usage_from_openrouter_response(body : Json) -> TokenUsage? {
-  token_usage_from_openai_response(body)
-}
-
-///|
-pub fn token_usage_from_codex_response_auto(body : Json) -> TokenUsage? {
+fn token_usage_from_codex_response_auto(body : Json) -> TokenUsage? {
   guard body is Object(obj) else { return None }
   guard obj.get("usage") is Some(Object(usage)) else { return None }
   if usage.get("prompt_tokens") is Some(_) {
@@ -203,9 +181,7 @@ pub fn token_usage_from_codex_response_auto(body : Json) -> TokenUsage? {
 }
 
 ///|
-pub fn token_usage_from_claude_stream_events(
-  events : Array[Json],
-) -> TokenUsage? {
+fn token_usage_from_claude_stream_events(events : Array[Json]) -> TokenUsage? {
   let mut input_tokens = 0
   let mut output_tokens = 0
   let mut cache_read_tokens = 0
@@ -303,24 +279,7 @@ pub fn token_usage_from_claude_stream_events(
 }
 
 ///|
-pub fn token_usage_from_codex_stream_events(
-  events : Array[Json],
-) -> TokenUsage? {
-  for event in events {
-    guard event is Object(obj) else { continue }
-    if json_string(obj, "type") == Some("response.completed") {
-      match obj.get("response") {
-        Some(response) =>
-          return token_usage_from_codex_response_adjusted(response)
-        None => ()
-      }
-    }
-  }
-  None
-}
-
-///|
-pub fn token_usage_from_codex_stream_events_auto(
+fn token_usage_from_codex_stream_events_auto(
   events : Array[Json],
 ) -> TokenUsage? {
   for event in events {
@@ -336,9 +295,7 @@ pub fn token_usage_from_codex_stream_events_auto(
 }
 
 ///|
-pub fn token_usage_from_openai_stream_events(
-  events : Array[Json],
-) -> TokenUsage? {
+fn token_usage_from_openai_stream_events(events : Array[Json]) -> TokenUsage? {
   let mut i = events.length() - 1
   while i >= 0 {
     let event = events[i]
@@ -356,7 +313,7 @@ pub fn token_usage_from_openai_stream_events(
 }
 
 ///|
-pub fn token_usage_from_gemini_response(body : Json) -> TokenUsage? {
+fn token_usage_from_gemini_response(body : Json) -> TokenUsage? {
   guard body is Object(obj) else { return None }
   guard obj.get("usageMetadata") is Some(Object(usage)) else { return None }
   let prompt_tokens = json_int(usage, "promptTokenCount")
@@ -377,9 +334,7 @@ pub fn token_usage_from_gemini_response(body : Json) -> TokenUsage? {
 }
 
 ///|
-pub fn token_usage_from_gemini_stream_chunks(
-  chunks : Array[Json],
-) -> TokenUsage? {
+fn token_usage_from_gemini_stream_chunks(chunks : Array[Json]) -> TokenUsage? {
   let mut input_tokens = 0
   let mut total_tokens = 0
   let mut cache_read_tokens = 0

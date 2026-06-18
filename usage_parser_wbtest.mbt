@@ -72,22 +72,6 @@ test "openai usage maps prompt and completion tokens" {
 }
 
 ///|
-test "openrouter usage has moonstat named openai format parser" {
-  let body =
-    #|{
-    #|  "usage": {
-    #|    "prompt_tokens": 100,
-    #|    "completion_tokens": 50
-    #|  }
-    #|}
-  let usage = token_usage_from_openrouter_response(parse_json_for_test(body)).unwrap()
-  assert_eq(usage.input_tokens, 100)
-  assert_eq(usage.output_tokens, 50)
-  assert_eq(usage.cache_read_tokens, 0)
-  assert_eq(usage.cache_creation_tokens, 0)
-}
-
-///|
 test "usage parser rejects negative required token counts like moonstat" {
   let claude =
     #|{
@@ -161,62 +145,6 @@ test "usage parser treats invalid optional cache fields as absent like moonstat"
   assert_eq(usage.output_tokens, 2)
   assert_eq(usage.cache_read_tokens, 0)
   assert_eq(usage.cache_creation_tokens, 0)
-}
-
-///|
-test "codex adjusted usage subtracts cached tokens from details like moonstat" {
-  let body =
-    #|{
-    #|  "model": "gpt-5",
-    #|  "usage": {
-    #|    "input_tokens": 1000,
-    #|    "output_tokens": 500,
-    #|    "input_tokens_details": { "cached_tokens": 300 }
-    #|  }
-    #|}
-  let usage = token_usage_from_codex_response_adjusted(
-    parse_json_for_test(body),
-  ).unwrap()
-  assert_eq(usage.input_tokens, 700)
-  assert_eq(usage.output_tokens, 500)
-  assert_eq(usage.cache_read_tokens, 300)
-  assert_eq(usage.model, Some("gpt-5"))
-}
-
-///|
-test "codex adjusted usage prefers cache_read_input_tokens like moonstat" {
-  let body =
-    #|{
-    #|  "usage": {
-    #|    "input_tokens": 1000,
-    #|    "output_tokens": 500,
-    #|    "cache_read_input_tokens": 200
-    #|  }
-    #|}
-  let usage = token_usage_from_codex_response_adjusted(
-    parse_json_for_test(body),
-  ).unwrap()
-  assert_eq(usage.input_tokens, 800)
-  assert_eq(usage.output_tokens, 500)
-  assert_eq(usage.cache_read_tokens, 200)
-}
-
-///|
-test "codex adjusted usage saturates when cache exceeds input like moonstat" {
-  let body =
-    #|{
-    #|  "usage": {
-    #|    "input_tokens": 100,
-    #|    "output_tokens": 50,
-    #|    "input_tokens_details": { "cached_tokens": 200 }
-    #|  }
-    #|}
-  let usage = token_usage_from_codex_response_adjusted(
-    parse_json_for_test(body),
-  ).unwrap()
-  assert_eq(usage.input_tokens, 0)
-  assert_eq(usage.output_tokens, 50)
-  assert_eq(usage.cache_read_tokens, 200)
 }
 
 ///|
@@ -378,32 +306,6 @@ test "codex auto parser returns synthetic all-zero usage like moonstat" {
   assert_eq(usage.input_tokens, 0)
   assert_eq(usage.output_tokens, 0)
   assert_false(usage.has_billable_tokens())
-}
-
-///|
-test "codex stream adjusted parser returns moonstat adjusted input" {
-  let events = [
-    parse_json_for_test(
-      (
-        #|{
-        #|  "type": "response.completed",
-        #|  "response": {
-        #|    "model": "gpt-5",
-        #|    "usage": {
-        #|      "input_tokens": 10,
-        #|      "output_tokens": 2,
-        #|      "input_tokens_details": { "cached_tokens": 4 }
-        #|    }
-        #|  }
-        #|}
-      ),
-    ),
-  ]
-  let usage = token_usage_from_codex_stream_events(events).unwrap()
-  assert_eq(usage.input_tokens, 6)
-  assert_eq(usage.output_tokens, 2)
-  assert_eq(usage.cache_read_tokens, 4)
-  assert_eq(usage.model, Some("gpt-5"))
 }
 
 ///|

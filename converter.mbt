@@ -1,11 +1,11 @@
 ///|
-pub struct CodexInput {
+priv struct CodexInput {
   messages : Array[CodexMessage]
   tools : Array[CodexTool]?
 }
 
 ///|
-pub struct CodexMessage {
+priv struct CodexMessage {
   role : String
   content : String
   tool_call_id : String?
@@ -14,7 +14,7 @@ pub struct CodexMessage {
 }
 
 ///|
-pub impl ToJson for CodexMessage with fn to_json(self : CodexMessage) -> Json {
+impl ToJson for CodexMessage with fn to_json(self : CodexMessage) -> Json {
   let json : Map[String, Json] = {
     "role": Json::string(self.role),
     "content": Json::string(self.content),
@@ -32,7 +32,7 @@ pub impl ToJson for CodexMessage with fn to_json(self : CodexMessage) -> Json {
 }
 
 ///|
-pub struct CodexTool {
+priv struct CodexTool {
   type_ : String
   name : String
   description : String?
@@ -40,7 +40,7 @@ pub struct CodexTool {
 }
 
 ///|
-pub impl ToJson for CodexTool with fn to_json(self : CodexTool) -> Json {
+impl ToJson for CodexTool with fn to_json(self : CodexTool) -> Json {
   let json : Map[String, Json] = {
     "type": Json::string(self.type_),
     "name": Json::string(self.name),
@@ -53,7 +53,7 @@ pub impl ToJson for CodexTool with fn to_json(self : CodexTool) -> Json {
 }
 
 ///|
-pub fn convert_anthropic_to_codex(
+fn convert_anthropic_to_codex(
   request : AnthropicRequest,
   _model : String,
 ) -> CodexInput {
@@ -203,7 +203,7 @@ fn parse_tool_result(content : String) -> ToolResult {
 }
 
 ///|
-pub fn build_codex_request(
+fn build_codex_request(
   input : CodexInput,
   model : String,
   stream : Bool,
@@ -221,7 +221,7 @@ pub fn build_codex_request(
 }
 
 ///|
-pub fn build_anthropic_response(
+fn build_anthropic_response(
   id : String,
   model : String,
   content : String,
@@ -287,7 +287,7 @@ fn optional_positive_int(value : Int) -> Int? {
 }
 
 ///|
-pub struct ToolCallInfo {
+priv struct ToolCallInfo {
   id : String
   name : String
   arguments : String
