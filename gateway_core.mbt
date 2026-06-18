@@ -89,8 +89,8 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/participant/register", (_, w) => {
     self.handle_register_page(w)
   })
-  router.add_handler(@httpx.Method::Get, "/health", (r, w) => {
-    self.handle_health(r, w)
+  router.add_handler(@httpx.Method::Get, "/health", (_, w) => {
+    self.usage.handle_health(w, self.auth.credentials_loaded())
   })
   router.add_handler(@httpx.Method::Get, "/status", (_, w) => {
     self.usage.handle_status(

@@ -152,15 +152,6 @@ async fn Gateway::handle_register_page(
 }
 
 ///|
-async fn Gateway::handle_health(
-  self : Gateway,
-  _r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  self.usage.handle_health(w, self.auth.credentials_loaded())
-}
-
-///|
 async fn Gateway::handle_codex_responses(
   self : Gateway,
   r : @httpx.RequestReader,
