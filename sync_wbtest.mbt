@@ -57,6 +57,28 @@ test "moonstat webdav sync settings ignore snake case compatibility keys" {
 }
 
 ///|
+test "moonstat sync settings request ignores config wrapper alias" {
+  let canonical = {
+    "settings": { "baseUrl": Json::string("https://dav.example.com") }.to_json(),
+  }.to_json()
+  guard moon_sync_settings_request("", Some(canonical)) is Some(Object(obj)) else {
+    fail("expected settings object")
+  }
+  assert_eq(
+    json_string_from_map(obj, "baseUrl"),
+    Some("https://dav.example.com"),
+  )
+  let retired = {
+    "config": { "baseUrl": Json::string("https://legacy.example") }.to_json(),
+  }.to_json()
+  guard moon_sync_settings_request("", Some(retired)) is Some(Object(obj)) else {
+    fail("expected direct body object")
+  }
+  assert_eq(json_string_from_map(obj, "baseUrl"), None)
+  assert_true(obj.get("config") is Some(_))
+}
+
+///|
 test "moonstat webdav sync validation and guard messages match moonstat" {
   assert_eq(
     moon_validate_webdav_sync_settings(
