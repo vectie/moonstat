@@ -2370,6 +2370,7 @@ async test "external utility endpoints are owned by proxy service" {
 async test "provider config endpoints are owned by proxy service" {
   let provider_source = @fsx.read_file("gateway_provider.mbt")
   let claude_desktop_source = @fsx.read_file("gateway_claude_desktop.mbt")
+  let endpoint_source = @fsx.read_file("gateway_provider_endpoints.mbt")
   let proxy_source = @fsx.read_file("gateway_proxy.mbt")
   let config_source = @fsx.read_file("gateway_config.mbt")
   let misc_source = @fsx.read_file("gateway_misc.mbt")
@@ -2379,6 +2380,7 @@ async test "provider config endpoints are owned by proxy service" {
   let usage_source = @fsx.read_file("gateway_usage.mbt")
   let sources = provider_source +
     claude_desktop_source +
+    endpoint_source +
     proxy_source +
     config_source +
     misc_source +
@@ -2403,6 +2405,14 @@ async test "provider config endpoints are owned by proxy service" {
     ] {
     assert_true(sources.contains("async fn ProxyService::\{handler}("))
     assert_false(sources.contains("async fn Gateway::\{handler}("))
+  }
+  for
+    handler in [
+      "handle_test_api_endpoints", "handle_get_custom_endpoints", "handle_add_custom_endpoint",
+      "handle_remove_custom_endpoint", "handle_update_endpoint_last_used",
+    ] {
+    assert_true(endpoint_source.contains("async fn ProxyService::\{handler}("))
+    assert_false(misc_source.contains("async fn ProxyService::\{handler}("))
   }
   for
     helper in [
