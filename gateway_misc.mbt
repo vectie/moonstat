@@ -6916,8 +6916,11 @@ async fn Gateway::forward_successful_claude_compatible_stream(
   self.usage.record_provider_result(self.proxy, true)
   let stream_events : Array[Json] = []
   if api_format == "openai_chat" {
-    let first_token_ms = self.forward_openai_chat_sse_as_anthropic(
-      client, stream_events, w,
+    let first_token_ms = self.proxy.forward_openai_chat_sse_as_anthropic(
+      self.usage,
+      client,
+      stream_events,
+      w,
     )
     self.usage.record_success_stream_usage_with_provider(
       self.proxy,
@@ -6928,8 +6931,14 @@ async fn Gateway::forward_successful_claude_compatible_stream(
       skip_empty_usage=true,
     )
   } else if api_format == "gemini_native" {
-    let first_token_ms = self.forward_gemini_native_sse_as_anthropic(
-      client, stream_events, provider_id, session_id, w,
+    let first_token_ms = self.proxy.forward_gemini_native_sse_as_anthropic(
+      self.usage,
+      self.gemini_shadow,
+      client,
+      stream_events,
+      provider_id,
+      session_id,
+      w,
     )
     self.usage.record_success_stream_usage_with_provider(
       self.proxy,
@@ -6958,8 +6967,11 @@ async fn Gateway::forward_successful_claude_compatible_stream(
       skip_empty_usage=true,
     )
   } else {
-    let first_token_ms = self.forward_anthropic_sse_passthrough(
-      client, stream_events, w,
+    let first_token_ms = self.proxy.forward_anthropic_sse_passthrough(
+      self.usage,
+      client,
+      stream_events,
+      w,
     )
     self.usage.record_success_stream_usage_with_provider(
       self.proxy,
@@ -7609,8 +7621,9 @@ fn matches_schema_name_map(key : String) -> Bool {
 }
 
 ///|
-async fn Gateway::forward_openai_chat_sse_as_anthropic(
-  self : Gateway,
+async fn ProxyService::forward_openai_chat_sse_as_anthropic(
+  _self : ProxyService,
+  usage : UsageService,
   reader : &@io.Reader,
   events : Array[Json],
   w : @httpx.ResponseWriter,
@@ -7632,7 +7645,7 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
-    first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
+    first_token_ms = usage.first_stream_event_ms(first_token_ms)
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
@@ -7650,8 +7663,9 @@ async fn Gateway::forward_openai_chat_sse_as_anthropic(
 }
 
 ///|
-async fn Gateway::forward_anthropic_sse_passthrough(
-  self : Gateway,
+async fn ProxyService::forward_anthropic_sse_passthrough(
+  _self : ProxyService,
+  usage : UsageService,
   reader : &@io.Reader,
   events : Array[Json],
   w : @httpx.ResponseWriter,
@@ -7663,7 +7677,7 @@ async fn Gateway::forward_anthropic_sse_passthrough(
       let parsed = @json.parse(data) catch { _ => Json::null() }
       if parsed != Json::null() {
         events.push(parsed)
-        first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
+        first_token_ms = usage.first_stream_event_ms(first_token_ms)
       }
     }
     w.write(line)
@@ -7674,8 +7688,10 @@ async fn Gateway::forward_anthropic_sse_passthrough(
 }
 
 ///|
-async fn Gateway::forward_gemini_native_sse_as_anthropic(
-  self : Gateway,
+async fn ProxyService::forward_gemini_native_sse_as_anthropic(
+  _self : ProxyService,
+  usage : UsageService,
+  gemini_shadow : GeminiShadowStore,
   reader : &@io.Reader,
   events : Array[Json],
   provider_id : String,
@@ -7699,7 +7715,7 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
     }
     let parsed = @json.parse(data) catch { _ => continue }
     events.push(parsed)
-    first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
+    first_token_ms = usage.first_stream_event_ms(first_token_ms)
     for event in state.push_chunk(parsed) {
       w.write("event: \{event.event_type}\n")
       w.write("data: \{event.data}\n\n")
@@ -7715,7 +7731,7 @@ async fn Gateway::forward_gemini_native_sse_as_anthropic(
   }
   match (session_id, state.shadow_turn()) {
     (Some(session_id), Some(turn)) =>
-      self.gemini_shadow.record_assistant_turn(provider_id, session_id, turn)
+      gemini_shadow.record_assistant_turn(provider_id, session_id, turn)
     _ => ()
   }
   first_token_ms
