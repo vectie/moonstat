@@ -1091,7 +1091,7 @@ fn stream_check_provider_path(args : Array[String]) -> String? {
   }
   guard provider_id is Some(provider_id) else { return None }
   Some(
-    "/stream_check_provider?appType=\{cli_url_encode(app_type)}&providerId=\{cli_url_encode(provider_id)}",
+    "/proxy/stream-check/provider?appType=\{cli_url_encode(app_type)}&providerId=\{cli_url_encode(provider_id)}",
   )
 }
 

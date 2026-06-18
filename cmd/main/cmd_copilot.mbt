@@ -2,14 +2,14 @@
 async fn copilot_start_device_flow(args : Array[String]) -> Unit {
   check_json_post_endpoint(
     args,
-    copilot_github_domain_path(args, "/copilot_start_device_flow"),
+    copilot_github_domain_path(args, "/copilot/device-flow"),
     "Copilot",
   )
 }
 
 ///|
 async fn copilot_poll_for_account(args : Array[String]) -> Unit {
-  guard copilot_device_path(args, "/copilot_poll_for_account") is Some(path) else {
+  guard copilot_device_path(args, "/copilot/poll-account") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required Copilot arg: --device-code")
     return

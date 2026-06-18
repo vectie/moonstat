@@ -113,7 +113,7 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("auth_poll_for_account"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "auth_get_status"]) ==
+    registered_cli_command_id(["moonstat", "auth", "status"]) ==
     Some("auth_get_status"),
   )
   assert_true(
@@ -123,8 +123,10 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("copilot_get_models"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "copilot-get-token-for-account"]) ==
-    Some("copilot_get_token_for_account"),
+    registered_cli_command_id([
+      "moonstat", "copilot", "token", "--account-id", "ghe:42",
+    ]) ==
+    Some("copilot_get_token"),
   )
   assert_true(
     registered_cli_command_id([
@@ -133,7 +135,7 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("stream_check_provider"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "stream_check_all_providers"]) ==
+    registered_cli_command_id(["moonstat", "stream-check", "all"]) ==
     Some("stream_check_all_providers"),
   )
   assert_true(
@@ -141,7 +143,7 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("save_stream_check_config"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "get-stream-check-config"]) ==
+    registered_cli_command_id(["moonstat", "stream-check", "config"]) ==
     Some("get_stream_check_config"),
   )
   assert_true(
@@ -553,21 +555,60 @@ test "stream check paths use moonstat command names and camelCase args" {
       "moonstat", "stream-check", "provider", "--app-type", "codex", "--provider-id",
       "codex oauth",
     ]),
-    Some("/stream_check_provider?appType=codex&providerId=codex%20oauth"),
+    Some("/proxy/stream-check/provider?appType=codex&providerId=codex%20oauth"),
   )
   assert_eq(
     stream_check_all_path([
       "moonstat", "stream-check", "all", "--appType", "claude", "--proxyTargetsOnly",
       "true",
     ]),
-    "/stream_check_all_providers?appType=claude&proxyTargetsOnly=true",
+    "/proxy/stream-check/all?appType=claude&proxyTargetsOnly=true",
   )
   assert_eq(
     stream_check_config_update_path([
       "moonstat", "stream-check", "config", "set", "--codex-model", "gpt/5", "--timeout-secs",
       "45", "--test-prompt", "Who are you?",
     ]),
-    "/save_stream_check_config?timeoutSecs=45&codexModel=gpt%2F5&testPrompt=Who%20are%20you%3F",
+    "/proxy/stream-check/config?timeoutSecs=45&codexModel=gpt%2F5&testPrompt=Who%20are%20you%3F",
+  )
+}
+
+///|
+test "copilot grouped commands build canonical auth paths" {
+  assert_eq(
+    copilot_github_domain_path(
+      [
+        "moonstat", "copilot", "login", "--githubDomain", "https://ghe.example.com",
+      ],
+      "/copilot/device-flow",
+    ),
+    "/copilot/device-flow?githubDomain=https%3A%2F%2Fghe.example.com",
+  )
+  assert_eq(
+    copilot_device_path(
+      [
+        "moonstat", "copilot", "poll", "--deviceCode", "dev 1", "--github-domain",
+        "ghe.example.com",
+      ],
+      "/copilot/poll-account",
+    ),
+    Some(
+      "/copilot/poll-account?deviceCode=dev%201&githubDomain=ghe.example.com",
+    ),
+  )
+  assert_eq(
+    copilot_account_path(
+      ["moonstat", "copilot", "remove", "--accountId", "ghe.example.com:42"],
+      "/copilot/account",
+    ),
+    Some("/copilot/account?accountId=ghe.example.com%3A42"),
+  )
+  assert_eq(
+    copilot_account_optional_path(
+      ["moonstat", "copilot", "models", "--account-id", "ghe.example.com:42"],
+      "/copilot/models",
+    ),
+    "/copilot/models?accountId=ghe.example.com%3A42",
   )
 }
 
@@ -1018,81 +1059,6 @@ test "top level moonstat provider command names build command alias paths" {
 }
 
 ///|
-test "top level moonstat stream check command names build command alias paths" {
-  assert_eq(
-    stream_check_provider_path([
-      "moonstat", "stream_check_provider", "--appType", "codex", "--providerId",
-      "codex oauth",
-    ]),
-    Some("/stream_check_provider?appType=codex&providerId=codex%20oauth"),
-  )
-  assert_eq(
-    stream_check_all_path([
-      "moonstat", "stream_check_all_providers", "--appType", "codex", "--proxyTargetsOnly",
-      "true",
-    ]),
-    "/stream_check_all_providers?appType=codex&proxyTargetsOnly=true",
-  )
-  assert_eq(
-    stream_check_config_update_path([
-      "moonstat", "save_stream_check_config", "--timeoutSecs", "60", "--geminiModel",
-      "gemini-test",
-    ]),
-    "/save_stream_check_config?timeoutSecs=60&geminiModel=gemini-test",
-  )
-}
-
-///|
-test "top level moonstat copilot command names build auth paths" {
-  assert_eq(
-    copilot_github_domain_path(
-      [
-        "moonstat", "copilot_start_device_flow", "--githubDomain", "https://ghe.example.com",
-      ],
-      "/copilot_start_device_flow",
-    ),
-    "/copilot_start_device_flow?githubDomain=https%3A%2F%2Fghe.example.com",
-  )
-  assert_eq(
-    copilot_device_path(
-      [
-        "moonstat", "copilot_poll_for_account", "--deviceCode", "dev 1", "--github-domain",
-        "ghe.example.com",
-      ],
-      "/copilot_poll_for_account",
-    ),
-    Some(
-      "/copilot_poll_for_account?deviceCode=dev%201&githubDomain=ghe.example.com",
-    ),
-  )
-  assert_eq(
-    copilot_account_path(
-      [
-        "moonstat", "copilot_remove_account", "--accountId", "ghe.example.com:42",
-      ],
-      "/copilot_remove_account",
-    ),
-    Some("/copilot_remove_account?accountId=ghe.example.com%3A42"),
-  )
-  assert_eq(
-    copilot_account_optional_path(
-      [
-        "moonstat", "copilot_get_models_for_account", "--account-id", "ghe.example.com:42",
-      ],
-      "/copilot_get_models_for_account",
-    ),
-    "/copilot_get_models_for_account?accountId=ghe.example.com%3A42",
-  )
-  assert_eq(
-    auth_provider_path(
-      ["moonstat", "auth_get_status", "--authProvider", "github_copilot"],
-      "/auth_get_status",
-    ),
-    "/auth_get_status?authProvider=github_copilot",
-  )
-}
-
-///|
 test "top level moonstat config command names build config paths" {
   assert_eq(
     config_app_path(
@@ -1478,38 +1444,33 @@ test "usage codex oauth models command builds models path" {
 test "moonstat auth commands build managed auth paths" {
   assert_eq(
     auth_provider_path(
-      ["moonstat", "auth_get_status", "--authProvider", "codex_oauth"],
-      "/auth_get_status",
+      ["moonstat", "auth", "status", "--authProvider", "codex_oauth"],
+      "/auth/status",
     ),
-    "/auth_get_status?authProvider=codex_oauth",
+    "/auth/status?authProvider=codex_oauth",
   )
   assert_eq(
-    auth_provider_path(["moonstat", "auth", "status"], "/auth_get_status"),
-    "/auth_get_status",
+    auth_provider_path(["moonstat", "auth", "status"], "/auth/status"),
+    "/auth/status",
   )
   assert_eq(
     auth_account_path(
       [
-        "moonstat", "auth_remove_account", "--account-id", "acct 1", "--auth-provider",
+        "moonstat", "auth", "remove", "--account-id", "acct 1", "--auth-provider",
         "codex_oauth",
       ],
-      "/auth_remove_account",
+      "/auth/account",
     ),
-    Some("/auth_remove_account?accountId=acct%201&authProvider=codex_oauth"),
+    Some("/auth/account?accountId=acct%201&authProvider=codex_oauth"),
   )
   assert_true(
-    auth_account_path(
-      ["moonstat", "auth_remove_account"],
-      "/auth_remove_account",
-    )
-    is None,
+    auth_account_path(["moonstat", "auth", "remove"], "/auth/account") is None,
   )
   assert_eq(
     auth_poll_path([
-      "moonstat", "auth_poll_for_account", "--device-code", "dev 1", "--user-code",
-      "USER-CODE",
+      "moonstat", "auth", "poll", "--device-code", "dev 1", "--user-code", "USER-CODE",
     ]),
-    Some("/auth_poll_for_account?deviceCode=dev%201&userCode=USER-CODE"),
+    Some("/auth/poll?deviceCode=dev%201&userCode=USER-CODE"),
   )
 }
 

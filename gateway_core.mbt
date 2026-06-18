@@ -1251,38 +1251,38 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       self.usage.pricing_override_rows(),
     )
   })
-  router.add_handler(Post, "/stream_check_provider", (r, w) => {
+  router.add_handler(Post, "/proxy/stream-check/provider", (r, w) => {
     self.proxy.handle_stream_check_provider(
       self.config.stream_check_config,
       r,
       w,
     )
   })
-  router.add_handler(Get, "/stream_check_provider", (r, w) => {
+  router.add_handler(Get, "/proxy/stream-check/provider", (r, w) => {
     self.proxy.handle_stream_check_provider(
       self.config.stream_check_config,
       r,
       w,
     )
   })
-  router.add_handler(Post, "/stream_check_all_providers", (r, w) => {
+  router.add_handler(Post, "/proxy/stream-check/all", (r, w) => {
     self.proxy.handle_stream_check_all_providers(
       self.config.stream_check_config,
       r,
       w,
     )
   })
-  router.add_handler(Get, "/stream_check_all_providers", (r, w) => {
+  router.add_handler(Get, "/proxy/stream-check/all", (r, w) => {
     self.proxy.handle_stream_check_all_providers(
       self.config.stream_check_config,
       r,
       w,
     )
   })
-  router.add_handler(Get, "/get_stream_check_config", (_, w) => {
+  router.add_handler(Get, "/proxy/stream-check/config", (_, w) => {
     self.config.handle_get_stream_check_config(w)
   })
-  router.add_handler(Post, "/save_stream_check_config", (r, w) => {
+  router.add_handler(Post, "/proxy/stream-check/config", (r, w) => {
     self.config.handle_save_stream_check_config(r, w)
   })
   router.add_handler(Get, "/fetch_models_for_config", (r, w) => {
@@ -1291,109 +1291,100 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(Post, "/fetch_models_for_config", (r, w) => {
     self.config.handle_fetch_models_for_config(r, w)
   })
-  router.add_handler(Get, "/auth_start_login", (r, w) => {
+  router.add_handler(Get, "/auth/login", (r, w) => {
     self.auth.handle_auth_start_login(r, w)
   })
-  router.add_handler(Post, "/auth_start_login", (r, w) => {
+  router.add_handler(Post, "/auth/login", (r, w) => {
     self.auth.handle_auth_start_login(r, w)
   })
-  router.add_handler(Get, "/auth_poll_for_account", (r, w) => {
+  router.add_handler(Get, "/auth/poll", (r, w) => {
     self.auth.handle_auth_poll_for_account(r, w)
   })
-  router.add_handler(Post, "/auth_poll_for_account", (r, w) => {
+  router.add_handler(Post, "/auth/poll", (r, w) => {
     self.auth.handle_auth_poll_for_account(r, w)
   })
-  router.add_handler(Get, "/auth_list_accounts", (r, w) => {
+  router.add_handler(Get, "/auth/accounts", (r, w) => {
     self.auth.handle_auth_list_accounts(r, w)
   })
-  router.add_handler(Post, "/auth_list_accounts", (r, w) => {
+  router.add_handler(Post, "/auth/accounts", (r, w) => {
     self.auth.handle_auth_list_accounts(r, w)
   })
-  router.add_handler(Get, "/auth_get_status", (r, w) => {
+  router.add_handler(Get, "/auth/status", (r, w) => {
     self.auth.handle_auth_get_status(r, w)
   })
-  router.add_handler(Post, "/auth_get_status", (r, w) => {
+  router.add_handler(Post, "/auth/status", (r, w) => {
     self.auth.handle_auth_get_status(r, w)
   })
-  router.add_handler(Delete, "/auth_remove_account", (r, w) => {
+  router.add_handler(Delete, "/auth/account", (r, w) => {
     self.auth.handle_auth_remove_account(r, w)
   })
-  router.add_handler(Post, "/auth_remove_account", (r, w) => {
+  router.add_handler(Post, "/auth/account", (r, w) => {
     self.auth.handle_auth_remove_account(r, w)
   })
-  router.add_handler(Post, "/auth_set_default_account", (r, w) => {
+  router.add_handler(Post, "/auth/default-account", (r, w) => {
     self.auth.handle_auth_set_default_account(r, w)
   })
-  router.add_handler(Get, "/auth_set_default_account", (r, w) => {
+  router.add_handler(Get, "/auth/default-account", (r, w) => {
     self.auth.handle_auth_set_default_account(r, w)
   })
-  router.add_handler(Post, "/auth_logout", (r, w) => {
+  router.add_handler(Post, "/auth/logout", (r, w) => {
     self.auth.handle_auth_logout(r, w)
   })
-  router.add_handler(Get, "/auth_logout", (r, w) => {
+  router.add_handler(Get, "/auth/logout", (r, w) => {
     self.auth.handle_auth_logout(r, w)
   })
-  router.add_handler(Get, "/copilot_start_device_flow", (r, w) => {
+  router.add_handler(Get, "/copilot/device-flow", (r, w) => {
     self.auth.handle_copilot_start_device_flow(r, w)
   })
-  router.add_handler(Post, "/copilot_start_device_flow", (r, w) => {
+  router.add_handler(Post, "/copilot/device-flow", (r, w) => {
     self.auth.handle_copilot_start_device_flow(r, w)
   })
-  router.add_handler(Get, "/copilot_poll_for_auth", (r, w) => {
+  router.add_handler(Get, "/copilot/poll-auth", (r, w) => {
     self.auth.handle_copilot_poll_for_auth(r, w)
   })
-  router.add_handler(Post, "/copilot_poll_for_auth", (r, w) => {
+  router.add_handler(Post, "/copilot/poll-auth", (r, w) => {
     self.auth.handle_copilot_poll_for_auth(r, w)
   })
-  router.add_handler(Get, "/copilot_poll_for_account", (r, w) => {
+  router.add_handler(Get, "/copilot/poll-account", (r, w) => {
     self.auth.handle_copilot_poll_for_account(r, w)
   })
-  router.add_handler(Post, "/copilot_poll_for_account", (r, w) => {
+  router.add_handler(Post, "/copilot/poll-account", (r, w) => {
     self.auth.handle_copilot_poll_for_account(r, w)
   })
-  router.add_handler(Get, "/copilot_list_accounts", (_, w) => {
+  router.add_handler(Get, "/copilot/accounts", (_, w) => {
     self.auth.handle_copilot_list_accounts(w)
   })
-  router.add_handler(Get, "/copilot_get_auth_status", (_, w) => {
+  router.add_handler(Get, "/copilot/status", (_, w) => {
     self.auth.handle_copilot_get_auth_status(w)
   })
-  router.add_handler(Get, "/copilot_is_authenticated", (_, w) => {
+  router.add_handler(Get, "/copilot/authenticated", (_, w) => {
     self.auth.handle_copilot_is_authenticated(w)
   })
-  router.add_handler(Post, "/copilot_logout", (_, w) => {
+  router.add_handler(Post, "/copilot/logout", (_, w) => {
     self.auth.handle_copilot_logout(w)
   })
-  router.add_handler(Get, "/copilot_logout", (_, w) => {
+  router.add_handler(Get, "/copilot/logout", (_, w) => {
     self.auth.handle_copilot_logout(w)
   })
-  router.add_handler(Delete, "/copilot_remove_account", (r, w) => {
+  router.add_handler(Delete, "/copilot/account", (r, w) => {
     self.auth.handle_copilot_remove_account(r, w)
   })
-  router.add_handler(Post, "/copilot_remove_account", (r, w) => {
+  router.add_handler(Post, "/copilot/account", (r, w) => {
     self.auth.handle_copilot_remove_account(r, w)
   })
-  router.add_handler(Get, "/copilot_set_default_account", (r, w) => {
+  router.add_handler(Get, "/copilot/default-account", (r, w) => {
     self.auth.handle_copilot_set_default_account(r, w)
   })
-  router.add_handler(Post, "/copilot_set_default_account", (r, w) => {
+  router.add_handler(Post, "/copilot/default-account", (r, w) => {
     self.auth.handle_copilot_set_default_account(r, w)
   })
-  router.add_handler(Get, "/copilot_get_token", (r, w) => {
+  router.add_handler(Get, "/copilot/token", (r, w) => {
     self.auth.handle_copilot_get_token(r, w)
   })
-  router.add_handler(Get, "/copilot_get_token_for_account", (r, w) => {
-    self.auth.handle_copilot_get_token(r, w)
-  })
-  router.add_handler(Get, "/copilot_get_models", (r, w) => {
+  router.add_handler(Get, "/copilot/models", (r, w) => {
     self.auth.handle_copilot_get_models(r, w)
   })
-  router.add_handler(Get, "/copilot_get_models_for_account", (r, w) => {
-    self.auth.handle_copilot_get_models(r, w)
-  })
-  router.add_handler(Get, "/copilot_get_usage", (r, w) => {
-    self.auth.handle_copilot_get_usage(r, w)
-  })
-  router.add_handler(Get, "/copilot_get_usage_for_account", (r, w) => {
+  router.add_handler(Get, "/copilot/usage", (r, w) => {
     self.auth.handle_copilot_get_usage(r, w)
   })
   router.add_handler(Get, "/models", (_, w) => self.proxy.handle_models(w))

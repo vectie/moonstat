@@ -20,125 +20,25 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "uninstall_codex", patterns: ["codex uninstall", "codex remove"] },
     { id: "status_codex", patterns: ["codex status"] },
     { id: "login", patterns: ["login"] },
-    {
-      id: "auth_start_login",
-      patterns: ["auth start-login", "auth_start_login", "auth-start-login"],
-    },
-    {
-      id: "auth_poll_for_account",
-      patterns: [
-        "auth poll", "auth poll-for-account", "auth_poll_for_account", "auth-poll-for-account",
-      ],
-    },
-    {
-      id: "auth_list_accounts",
-      patterns: [
-        "auth list", "auth list-accounts", "auth_list_accounts", "auth-list-accounts",
-      ],
-    },
-    {
-      id: "auth_get_status",
-      patterns: ["auth status", "auth_get_status", "auth-get-status"],
-    },
-    {
-      id: "auth_remove_account",
-      patterns: [
-        "auth remove", "auth remove-account", "auth_remove_account", "auth-remove-account",
-      ],
-    },
-    {
-      id: "auth_set_default_account",
-      patterns: [
-        "auth default", "auth set-default-account", "auth_set_default_account", "auth-set-default-account",
-      ],
-    },
-    {
-      id: "auth_logout",
-      patterns: ["auth logout", "auth_logout", "auth-logout"],
-    },
-    {
-      id: "copilot_start_device_flow",
-      patterns: [
-        "copilot start-device-flow", "copilot_start_device_flow", "copilot-start-device-flow",
-      ],
-    },
-    {
-      id: "copilot_poll_for_account",
-      patterns: [
-        "copilot poll", "copilot poll-for-account", "copilot_poll_for_account", "copilot-poll-for-account",
-      ],
-    },
-    {
-      id: "copilot_poll_for_auth",
-      patterns: [
-        "copilot poll-for-auth", "copilot_poll_for_auth", "copilot-poll-for-auth",
-      ],
-    },
-    {
-      id: "copilot_list_accounts",
-      patterns: [
-        "copilot list", "copilot list-accounts", "copilot_list_accounts", "copilot-list-accounts",
-      ],
-    },
-    {
-      id: "copilot_get_auth_status",
-      patterns: [
-        "copilot auth-status", "copilot status", "copilot_get_auth_status", "copilot-get-auth-status",
-      ],
-    },
-    {
-      id: "copilot_is_authenticated",
-      patterns: [
-        "copilot is-authenticated", "copilot_is_authenticated", "copilot-is-authenticated",
-      ],
-    },
-    {
-      id: "copilot_logout",
-      patterns: ["copilot logout", "copilot_logout", "copilot-logout"],
-    },
-    {
-      id: "copilot_remove_account",
-      patterns: [
-        "copilot remove", "copilot remove-account", "copilot_remove_account", "copilot-remove-account",
-      ],
-    },
-    {
-      id: "copilot_set_default_account",
-      patterns: [
-        "copilot default", "copilot set-default-account", "copilot_set_default_account",
-        "copilot-set-default-account",
-      ],
-    },
-    {
-      id: "copilot_get_token",
-      patterns: ["copilot token", "copilot_get_token", "copilot-get-token"],
-    },
-    {
-      id: "copilot_get_token_for_account",
-      patterns: [
-        "copilot_get_token_for_account", "copilot-get-token-for-account",
-      ],
-    },
-    {
-      id: "copilot_get_models",
-      patterns: ["copilot models", "copilot_get_models", "copilot-get-models"],
-    },
-    {
-      id: "copilot_get_models_for_account",
-      patterns: [
-        "copilot_get_models_for_account", "copilot-get-models-for-account",
-      ],
-    },
-    {
-      id: "copilot_get_usage",
-      patterns: ["copilot usage", "copilot_get_usage", "copilot-get-usage"],
-    },
-    {
-      id: "copilot_get_usage_for_account",
-      patterns: [
-        "copilot_get_usage_for_account", "copilot-get-usage-for-account",
-      ],
-    },
+    { id: "auth_start_login", patterns: ["auth login"] },
+    { id: "auth_poll_for_account", patterns: ["auth poll"] },
+    { id: "auth_list_accounts", patterns: ["auth accounts"] },
+    { id: "auth_get_status", patterns: ["auth status"] },
+    { id: "auth_remove_account", patterns: ["auth remove"] },
+    { id: "auth_set_default_account", patterns: ["auth default"] },
+    { id: "auth_logout", patterns: ["auth logout"] },
+    { id: "copilot_start_device_flow", patterns: ["copilot login"] },
+    { id: "copilot_poll_for_account", patterns: ["copilot poll"] },
+    { id: "copilot_poll_for_auth", patterns: ["copilot auth-poll"] },
+    { id: "copilot_list_accounts", patterns: ["copilot accounts"] },
+    { id: "copilot_get_auth_status", patterns: ["copilot status"] },
+    { id: "copilot_is_authenticated", patterns: ["copilot authenticated"] },
+    { id: "copilot_logout", patterns: ["copilot logout"] },
+    { id: "copilot_remove_account", patterns: ["copilot remove"] },
+    { id: "copilot_set_default_account", patterns: ["copilot default"] },
+    { id: "copilot_get_token", patterns: ["copilot token"] },
+    { id: "copilot_get_models", patterns: ["copilot models"] },
+    { id: "copilot_get_usage", patterns: ["copilot usage"] },
     {
       id: "get_installed_skills",
       patterns: [
@@ -316,34 +216,10 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
         "config env-restore", "restore_env_backup", "restore-env-backup",
       ],
     },
-    {
-      id: "stream_check_provider",
-      patterns: [
-        "stream-check provider", "stream-check stream-check-provider", "stream_check_provider",
-        "stream-check-provider",
-      ],
-    },
-    {
-      id: "stream_check_all_providers",
-      patterns: [
-        "stream-check all", "stream-check stream-check-all-providers", "stream_check_all_providers",
-        "stream-check-all-providers",
-      ],
-    },
-    {
-      id: "save_stream_check_config",
-      patterns: [
-        "stream-check config set", "stream-check save-stream-check-config", "save_stream_check_config",
-        "save-stream-check-config",
-      ],
-    },
-    {
-      id: "get_stream_check_config",
-      patterns: [
-        "stream-check config", "stream-check get-stream-check-config", "get_stream_check_config",
-        "get-stream-check-config",
-      ],
-    },
+    { id: "stream_check_provider", patterns: ["stream-check provider"] },
+    { id: "stream_check_all_providers", patterns: ["stream-check all"] },
+    { id: "save_stream_check_config", patterns: ["stream-check config set"] },
+    { id: "get_stream_check_config", patterns: ["stream-check config"] },
     {
       id: "update_proxy_config",
       patterns: [
@@ -1515,68 +1391,47 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("copilot_list_accounts") => {
-      check_usage_endpoint(args, "/copilot_list_accounts")
+      check_usage_endpoint(args, "/copilot/accounts")
       true
     }
     Some("copilot_get_auth_status") => {
-      check_usage_endpoint(args, "/copilot_get_auth_status")
+      check_usage_endpoint(args, "/copilot/status")
       true
     }
     Some("copilot_is_authenticated") => {
-      check_usage_endpoint(args, "/copilot_is_authenticated")
+      check_usage_endpoint(args, "/copilot/authenticated")
       true
     }
     Some("copilot_logout") => {
-      check_json_post_endpoint(args, "/copilot_logout", "Copilot")
+      check_json_post_endpoint(args, "/copilot/logout", "Copilot")
       true
     }
     Some("copilot_remove_account") => {
-      copilot_account_post(args, "/copilot_remove_account")
+      copilot_account_post(args, "/copilot/account")
       true
     }
     Some("copilot_set_default_account") => {
-      copilot_account_post(args, "/copilot_set_default_account")
+      copilot_account_post(args, "/copilot/default-account")
       true
     }
     Some("copilot_get_token") => {
       check_usage_endpoint(
         args,
-        copilot_account_optional_path(args, "/copilot_get_token"),
-      )
-      true
-    }
-    Some("copilot_get_token_for_account") => {
-      check_usage_endpoint(
-        args,
-        copilot_account_optional_path(args, "/copilot_get_token_for_account"),
+        copilot_account_optional_path(args, "/copilot/token"),
       )
       true
     }
     Some("copilot_get_models") => {
       check_usage_endpoint(
         args,
-        copilot_account_optional_path(args, "/copilot_get_models"),
-      )
-      true
-    }
-    Some("copilot_get_models_for_account") => {
-      check_usage_endpoint(
-        args,
-        copilot_account_optional_path(args, "/copilot_get_models_for_account"),
+        copilot_account_optional_path(args, "/copilot/models"),
       )
       true
     }
     Some("copilot_get_usage") => {
       check_usage_endpoint(
         args,
-        copilot_account_optional_path(args, "/copilot_get_usage"),
-      )
-      true
-    }
-    Some("copilot_get_usage_for_account") => {
-      check_usage_endpoint(
-        args,
-        copilot_account_optional_path(args, "/copilot_get_usage_for_account"),
+        copilot_account_optional_path(args, "/copilot/usage"),
       )
       true
     }
@@ -1764,7 +1619,7 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       true
     }
     Some("get_stream_check_config") => {
-      check_usage_endpoint(args, "/get_stream_check_config")
+      check_usage_endpoint(args, "/proxy/stream-check/config")
       true
     }
     Some("save_stream_check_config") => {

@@ -17,7 +17,7 @@ async fn do_login(_args : Array[String]) -> Unit {
 async fn auth_start_login(args : Array[String]) -> Unit {
   check_json_post_endpoint(
     args,
-    auth_provider_path(args, "/auth_start_login"),
+    auth_provider_path(args, "/auth/login"),
     "Auth",
   )
 }
@@ -34,25 +34,17 @@ async fn auth_poll_for_account(args : Array[String]) -> Unit {
 
 ///|
 async fn auth_list_accounts(args : Array[String]) -> Unit {
-  check_json_endpoint(
-    args,
-    auth_provider_path(args, "/auth_list_accounts"),
-    "Auth",
-  )
+  check_json_endpoint(args, auth_provider_path(args, "/auth/accounts"), "Auth")
 }
 
 ///|
 async fn auth_get_status(args : Array[String]) -> Unit {
-  check_json_endpoint(
-    args,
-    auth_provider_path(args, "/auth_get_status"),
-    "Auth",
-  )
+  check_json_endpoint(args, auth_provider_path(args, "/auth/status"), "Auth")
 }
 
 ///|
 async fn auth_remove_account(args : Array[String]) -> Unit {
-  guard auth_account_path(args, "/auth_remove_account") is Some(path) else {
+  guard auth_account_path(args, "/auth/account") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required auth account arg: --account-id")
     return
@@ -62,7 +54,7 @@ async fn auth_remove_account(args : Array[String]) -> Unit {
 
 ///|
 async fn auth_set_default_account(args : Array[String]) -> Unit {
-  guard auth_account_path(args, "/auth_set_default_account") is Some(path) else {
+  guard auth_account_path(args, "/auth/default-account") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required auth account arg: --account-id")
     return
@@ -74,14 +66,14 @@ async fn auth_set_default_account(args : Array[String]) -> Unit {
 async fn auth_logout(args : Array[String]) -> Unit {
   check_json_post_endpoint(
     args,
-    auth_provider_path(args, "/auth_logout"),
+    auth_provider_path(args, "/auth/logout"),
     "Auth",
   )
 }
 
 ///|
 async fn copilot_poll_for_auth(args : Array[String]) -> Unit {
-  guard copilot_device_path(args, "/copilot_poll_for_auth") is Some(path) else {
+  guard copilot_device_path(args, "/copilot/poll-auth") is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required Copilot arg: --device-code")
     return
@@ -158,5 +150,5 @@ fn auth_poll_path(args : Array[String]) -> String? {
     Some(value) => query.push(cli_query_pair("authProvider", value))
     None => ()
   }
-  Some(cli_path_with_query("/auth_poll_for_account", query))
+  Some(cli_path_with_query("/auth/poll", query))
 }

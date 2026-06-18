@@ -1217,7 +1217,7 @@ fn stream_check_all_path(args : Array[String]) -> String {
     Some(value) => query.push(cli_query_pair("proxyTargetsOnly", value))
     None => ()
   }
-  "/stream_check_all_providers?\{query.join("&")}"
+  "/proxy/stream-check/all?\{query.join("&")}"
 }
 
 ///|
@@ -1255,9 +1255,9 @@ fn stream_check_config_update_path(args : Array[String]) -> String {
     None => ()
   }
   if query.is_empty() {
-    "/save_stream_check_config"
+    "/proxy/stream-check/config"
   } else {
-    "/save_stream_check_config?\{query.join("&")}"
+    "/proxy/stream-check/config?\{query.join("&")}"
   }
 }
 

@@ -426,7 +426,7 @@ test "proxy failover command parsers accept ccs json payload keys" {
     proxy_bool_request("/set_auto_failover_enabled", body, ["enabled"]),
     Some(true),
   )
-  guard stream_check_provider_from_request("/stream_check_provider", body)
+  guard stream_check_provider_from_request("/proxy/stream-check/provider", body)
     is Some((stream_app, stream_provider)) else {
     fail("expected stream check provider query")
   }
@@ -434,7 +434,7 @@ test "proxy failover command parsers accept ccs json payload keys" {
   assert_eq(stream_provider, "codex-oauth")
   assert_eq(
     proxy_bool_request(
-      "/stream_check_all_providers",
+      "/proxy/stream-check/all",
       Some(
         {
           "appType": Json::string("claude"),
@@ -2676,7 +2676,7 @@ test "proxy app config circuit updates are app scoped" {
 ///|
 test "stream check config accepts ccs camelCase body and query fields" {
   let config = stream_check_config_from_request(
-    "/save_stream_check_config?geminiModel=gemini-test&testPrompt=Ping",
+    "/proxy/stream-check/config?geminiModel=gemini-test&testPrompt=Ping",
     (
       #|{"config":{"timeoutSecs":30,"maxRetries":1,"degradedThresholdMs":5000,"claudeModel":"claude-test","codexModel":"codex-test"}}
     ),
@@ -2692,7 +2692,7 @@ test "stream check config accepts ccs camelCase body and query fields" {
   assert_eq(config.test_prompt, "Ping")
   assert_true(
     stream_check_config_from_request(
-      "/save_stream_check_config?timeoutSecs=0",
+      "/proxy/stream-check/config?timeoutSecs=0",
       "",
       StreamCheckConfig::default(),
     )

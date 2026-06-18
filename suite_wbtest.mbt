@@ -43,15 +43,15 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     obj["stream_check_provider_url"],
-    Json::string("http://127.0.0.1:15721/stream_check_provider"),
+    Json::string("http://127.0.0.1:15721/proxy/stream-check/provider"),
   )
   assert_eq(
     obj["stream_check_all_providers_url"],
-    Json::string("http://127.0.0.1:15721/stream_check_all_providers"),
+    Json::string("http://127.0.0.1:15721/proxy/stream-check/all"),
   )
   assert_eq(
     obj["stream_check_config_url"],
-    Json::string("http://127.0.0.1:15721/get_stream_check_config"),
+    Json::string("http://127.0.0.1:15721/proxy/stream-check/config"),
   )
   assert_eq(
     obj["config_status_url"],
@@ -125,51 +125,34 @@ test "suite manifest publishes moonstat service contract" {
     routes.contains(Json::string("GET|POST /usage/coding-plan-quota")),
   )
   assert_true(routes.contains(Json::string("POST /usage/test-script")))
-  assert_true(routes.contains(Json::string("GET|POST /stream_check_provider")))
   assert_true(
-    routes.contains(Json::string("GET|POST /stream_check_all_providers")),
+    routes.contains(Json::string("GET|POST /proxy/stream-check/provider")),
   )
-  assert_true(routes.contains(Json::string("GET /get_stream_check_config")))
-  assert_true(routes.contains(Json::string("POST /save_stream_check_config")))
+  assert_true(routes.contains(Json::string("GET|POST /proxy/stream-check/all")))
+  assert_true(routes.contains(Json::string("GET /proxy/stream-check/config")))
+  assert_true(routes.contains(Json::string("POST /proxy/stream-check/config")))
   assert_true(routes.contains(Json::string("GET /get_provider_presets")))
-  assert_true(routes.contains(Json::string("GET|POST /auth_get_status")))
-  assert_true(routes.contains(Json::string("GET|POST /auth_list_accounts")))
-  assert_true(routes.contains(Json::string("GET|POST /auth_start_login")))
-  assert_true(routes.contains(Json::string("GET|POST /auth_poll_for_account")))
-  assert_true(routes.contains(Json::string("DELETE|POST /auth_remove_account")))
+  assert_true(routes.contains(Json::string("GET|POST /auth/status")))
+  assert_true(routes.contains(Json::string("GET|POST /auth/accounts")))
+  assert_true(routes.contains(Json::string("GET|POST /auth/login")))
+  assert_true(routes.contains(Json::string("GET|POST /auth/poll")))
+  assert_true(routes.contains(Json::string("DELETE|POST /auth/account")))
+  assert_true(routes.contains(Json::string("GET|POST /auth/default-account")))
+  assert_true(routes.contains(Json::string("GET|POST /auth/logout")))
+  assert_true(routes.contains(Json::string("GET /copilot/status")))
+  assert_true(routes.contains(Json::string("GET /copilot/accounts")))
+  assert_true(routes.contains(Json::string("GET /copilot/authenticated")))
+  assert_true(routes.contains(Json::string("GET|POST /copilot/device-flow")))
+  assert_true(routes.contains(Json::string("GET|POST /copilot/poll-auth")))
+  assert_true(routes.contains(Json::string("GET|POST /copilot/poll-account")))
+  assert_true(routes.contains(Json::string("GET|POST /copilot/logout")))
+  assert_true(routes.contains(Json::string("DELETE|POST /copilot/account")))
   assert_true(
-    routes.contains(Json::string("GET|POST /auth_set_default_account")),
+    routes.contains(Json::string("GET|POST /copilot/default-account")),
   )
-  assert_true(routes.contains(Json::string("GET|POST /auth_logout")))
-  assert_true(routes.contains(Json::string("GET /copilot_get_auth_status")))
-  assert_true(routes.contains(Json::string("GET /copilot_list_accounts")))
-  assert_true(routes.contains(Json::string("GET /copilot_is_authenticated")))
-  assert_true(
-    routes.contains(Json::string("GET|POST /copilot_start_device_flow")),
-  )
-  assert_true(routes.contains(Json::string("GET|POST /copilot_poll_for_auth")))
-  assert_true(
-    routes.contains(Json::string("GET|POST /copilot_poll_for_account")),
-  )
-  assert_true(routes.contains(Json::string("GET|POST /copilot_logout")))
-  assert_true(
-    routes.contains(Json::string("DELETE|POST /copilot_remove_account")),
-  )
-  assert_true(
-    routes.contains(Json::string("GET|POST /copilot_set_default_account")),
-  )
-  assert_true(routes.contains(Json::string("GET /copilot_get_token")))
-  assert_true(
-    routes.contains(Json::string("GET /copilot_get_token_for_account")),
-  )
-  assert_true(routes.contains(Json::string("GET /copilot_get_models")))
-  assert_true(
-    routes.contains(Json::string("GET /copilot_get_models_for_account")),
-  )
-  assert_true(routes.contains(Json::string("GET /copilot_get_usage")))
-  assert_true(
-    routes.contains(Json::string("GET /copilot_get_usage_for_account")),
-  )
+  assert_true(routes.contains(Json::string("GET /copilot/token")))
+  assert_true(routes.contains(Json::string("GET /copilot/models")))
+  assert_true(routes.contains(Json::string("GET /copilot/usage")))
   assert_true(routes.contains(Json::string("GET|POST /get_tool_versions")))
   assert_true(routes.contains(Json::string("POST /run_tool_lifecycle_action")))
   assert_true(
@@ -400,7 +383,7 @@ test "suite manifest publishes moonstat service contract" {
   }
   assert_eq(
     moontown["stream_check_all_providers_url"],
-    Json::string("http://127.0.0.1:15721/stream_check_all_providers"),
+    Json::string("http://127.0.0.1:15721/proxy/stream-check/all"),
   )
   assert_eq(
     moontown["usage_provider_limits_url"],
@@ -488,7 +471,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     moondesk["stream_check_config_url"],
-    Json::string("http://127.0.0.1:15721/get_stream_check_config"),
+    Json::string("http://127.0.0.1:15721/proxy/stream-check/config"),
   )
   assert_eq(
     moondesk["config_status_url"],
@@ -640,34 +623,26 @@ fn moon_tauri_command_surface() -> Array[String] {
     "switch_proxy_provider", "get_provider_health", "reset_circuit_breaker", "get_circuit_breaker_config",
     "update_circuit_breaker_config", "get_circuit_breaker_stats", "get_failover_queue",
     "get_available_providers_for_failover", "add_to_failover_queue", "remove_from_failover_queue",
-    "get_auto_failover_enabled", "set_auto_failover_enabled", "stream_check_provider",
-    "stream_check_all_providers", "get_stream_check_config", "save_stream_check_config",
-    "list_sessions", "get_session_messages", "delete_session", "delete_sessions",
-    "launch_session_terminal", "get_tool_versions", "run_tool_lifecycle_action",
-    "probe_tool_installations", "open_provider_terminal", "get_universal_providers",
-    "get_universal_provider", "upsert_universal_provider", "delete_universal_provider",
-    "sync_universal_provider", "import_opencode_providers_from_live", "get_opencode_live_provider_ids",
-    "import_openclaw_providers_from_live", "get_openclaw_live_provider_ids", "get_openclaw_live_provider",
-    "scan_openclaw_config_health", "get_openclaw_default_model", "set_openclaw_default_model",
-    "get_openclaw_model_catalog", "set_openclaw_model_catalog", "get_openclaw_agents_defaults",
-    "set_openclaw_agents_defaults", "get_openclaw_env", "set_openclaw_env", "get_openclaw_tools",
-    "set_openclaw_tools", "import_hermes_providers_from_live", "get_hermes_live_provider_ids",
-    "get_hermes_live_provider", "get_hermes_model_config", "open_hermes_web_ui",
-    "launch_hermes_dashboard", "get_hermes_memory", "set_hermes_memory", "get_hermes_memory_limits",
-    "set_hermes_memory_enabled", "get_global_proxy_url", "set_global_proxy_url",
-    "test_proxy_url", "get_upstream_proxy_status", "scan_local_proxies", "set_window_theme",
-    "auth_start_login", "auth_poll_for_account", "auth_list_accounts", "auth_get_status",
-    "auth_remove_account", "auth_set_default_account", "auth_logout", "copilot_start_device_flow",
-    "copilot_poll_for_auth", "copilot_poll_for_account", "copilot_list_accounts",
-    "copilot_remove_account", "copilot_set_default_account", "copilot_get_auth_status",
-    "copilot_logout", "copilot_is_authenticated", "copilot_get_token", "copilot_get_token_for_account",
-    "copilot_get_models", "copilot_get_models_for_account", "copilot_get_usage",
-    "copilot_get_usage_for_account", "read_omo_local_file", "get_current_omo_provider_id",
-    "disable_current_omo", "read_omo_slim_local_file", "get_current_omo_slim_provider_id",
-    "disable_current_omo_slim", "read_workspace_file", "write_workspace_file", "list_daily_memory_files",
-    "read_daily_memory_file", "write_daily_memory_file", "delete_daily_memory_file",
-    "search_daily_memory_files", "open_workspace_directory", "enter_lightweight_mode",
-    "exit_lightweight_mode", "is_lightweight_mode",
+    "get_auto_failover_enabled", "set_auto_failover_enabled", "list_sessions", "get_session_messages",
+    "delete_session", "delete_sessions", "launch_session_terminal", "get_tool_versions",
+    "run_tool_lifecycle_action", "probe_tool_installations", "open_provider_terminal",
+    "get_universal_providers", "get_universal_provider", "upsert_universal_provider",
+    "delete_universal_provider", "sync_universal_provider", "import_opencode_providers_from_live",
+    "get_opencode_live_provider_ids", "import_openclaw_providers_from_live", "get_openclaw_live_provider_ids",
+    "get_openclaw_live_provider", "scan_openclaw_config_health", "get_openclaw_default_model",
+    "set_openclaw_default_model", "get_openclaw_model_catalog", "set_openclaw_model_catalog",
+    "get_openclaw_agents_defaults", "set_openclaw_agents_defaults", "get_openclaw_env",
+    "set_openclaw_env", "get_openclaw_tools", "set_openclaw_tools", "import_hermes_providers_from_live",
+    "get_hermes_live_provider_ids", "get_hermes_live_provider", "get_hermes_model_config",
+    "open_hermes_web_ui", "launch_hermes_dashboard", "get_hermes_memory", "set_hermes_memory",
+    "get_hermes_memory_limits", "set_hermes_memory_enabled", "get_global_proxy_url",
+    "set_global_proxy_url", "test_proxy_url", "get_upstream_proxy_status", "scan_local_proxies",
+    "set_window_theme", "read_omo_local_file", "get_current_omo_provider_id", "disable_current_omo",
+    "read_omo_slim_local_file", "get_current_omo_slim_provider_id", "disable_current_omo_slim",
+    "read_workspace_file", "write_workspace_file", "list_daily_memory_files", "read_daily_memory_file",
+    "write_daily_memory_file", "delete_daily_memory_file", "search_daily_memory_files",
+    "open_workspace_directory", "enter_lightweight_mode", "exit_lightweight_mode",
+    "is_lightweight_mode",
   ]
 }
 
@@ -681,7 +656,7 @@ test "suite manifest covers current Moonstat command surface" {
   guard manifest is Object(obj) else { fail("expected manifest object") }
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
   let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 254)
+  assert_eq(moon_commands.length(), 228)
   for command in moon_commands {
     assert_true(suite_routes_include_path(routes, "/\{command}"))
   }
@@ -702,7 +677,7 @@ fn gateway_source_registers_path(source : String, path : String) -> Bool {
 async test "gateway registers current Moonstat command handlers" {
   let source = @fsx.read_file("gateway_core.mbt")
   let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 254)
+  assert_eq(moon_commands.length(), 228)
   for command in moon_commands {
     assert_true(gateway_source_registers_path(source, "/\{command}"))
   }
@@ -747,7 +722,7 @@ async test "suite status writes discovery file" {
     )
     assert_eq(
       obj["stream_check_all_providers_url"],
-      Json::string("http://127.0.0.1:17000/stream_check_all_providers"),
+      Json::string("http://127.0.0.1:17000/proxy/stream-check/all"),
     )
     assert_eq(
       obj["config_status_url"],
@@ -801,7 +776,7 @@ async test "suite status writes discovery file" {
     )
     assert_eq(
       moondesk["stream_check_provider_url"],
-      Json::string("http://127.0.0.1:17000/stream_check_provider"),
+      Json::string("http://127.0.0.1:17000/proxy/stream-check/provider"),
     )
     guard obj["commands"] is Object(commands) else { fail("expected commands") }
     assert_eq(commands["start"], Json::string("moonstat start --port 17000"))
