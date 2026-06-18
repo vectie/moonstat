@@ -7,7 +7,7 @@ test "has flag matches exact CLI option" {
 
 ///|
 test "registered cli commands match suite command aliases and status commands" {
-  assert_true(registered_cli_commands().length() >= 115)
+  assert_true(registered_cli_commands().length() >= 125)
   assert_true(
     cli_args_match_pattern(
       ["moonstat", "suite", "manifest", "--host", "127.0.0.1"],
@@ -186,6 +186,36 @@ test "registered cli commands match suite command aliases and status commands" {
   assert_true(
     registered_cli_command_id(["moonstat", "restart_app"]) ==
     Some("restart_app"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "plugin", "claude", "status"]) ==
+    Some("get_claude_plugin_status"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "apply_claude_plugin_config"]) ==
+    Some("apply_claude_plugin_config"),
+  )
+  assert_true(
+    registered_cli_command_id([
+      "moonstat", "plugin", "claude", "onboarding-skip",
+    ]) ==
+    Some("apply_claude_onboarding_skip"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "workspace", "memory", "list"]) ==
+    Some("list_daily_memory_files"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "workspace", "memory", "search"]) ==
+    Some("search_daily_memory_files"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "read_workspace_file"]) ==
+    Some("read_workspace_file"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "workspace", "open"]) ==
+    Some("open_workspace_directory"),
   )
   assert_true(
     registered_cli_command_id(["moonstat", "usage", "summary"]) == None,

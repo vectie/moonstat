@@ -709,6 +709,88 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       id: "get_log_config",
       patterns: ["settings log", "get_log_config", "get-log-config"],
     },
+    {
+      id: "get_claude_plugin_status",
+      patterns: [
+        "plugin claude status", "get_claude_plugin_status", "get-claude-plugin-status",
+      ],
+    },
+    {
+      id: "read_claude_plugin_config",
+      patterns: [
+        "plugin claude config", "read_claude_plugin_config", "read-claude-plugin-config",
+      ],
+    },
+    {
+      id: "apply_claude_plugin_config",
+      patterns: [
+        "plugin claude apply", "apply_claude_plugin_config", "apply-claude-plugin-config",
+      ],
+    },
+    {
+      id: "is_claude_plugin_applied",
+      patterns: [
+        "plugin claude applied", "is_claude_plugin_applied", "is-claude-plugin-applied",
+      ],
+    },
+    {
+      id: "apply_claude_onboarding_skip",
+      patterns: [
+        "plugin claude onboarding-skip", "apply_claude_onboarding_skip", "apply-claude-onboarding-skip",
+      ],
+    },
+    {
+      id: "clear_claude_onboarding_skip",
+      patterns: [
+        "plugin claude onboarding-clear", "clear_claude_onboarding_skip", "clear-claude-onboarding-skip",
+      ],
+    },
+    {
+      id: "list_daily_memory_files",
+      patterns: [
+        "workspace memory list", "list_daily_memory_files", "list-daily-memory-files",
+      ],
+    },
+    {
+      id: "read_daily_memory_file",
+      patterns: [
+        "workspace memory read", "read_daily_memory_file", "read-daily-memory-file",
+      ],
+    },
+    {
+      id: "write_daily_memory_file",
+      patterns: [
+        "workspace memory write", "write_daily_memory_file", "write-daily-memory-file",
+      ],
+    },
+    {
+      id: "search_daily_memory_files",
+      patterns: [
+        "workspace memory search", "search_daily_memory_files", "search-daily-memory-files",
+      ],
+    },
+    {
+      id: "delete_daily_memory_file",
+      patterns: [
+        "workspace memory delete", "delete_daily_memory_file", "delete-daily-memory-file",
+      ],
+    },
+    {
+      id: "read_workspace_file",
+      patterns: ["workspace read", "read_workspace_file", "read-workspace-file"],
+    },
+    {
+      id: "write_workspace_file",
+      patterns: [
+        "workspace write", "write_workspace_file", "write-workspace-file",
+      ],
+    },
+    {
+      id: "open_workspace_directory",
+      patterns: [
+        "workspace open", "open_workspace_directory", "open-workspace-directory",
+      ],
+    },
     { id: "suite_manifest", patterns: ["suite manifest"] },
     { id: "suite_status", patterns: ["suite status"] },
     { id: "suite_write_status", patterns: ["suite write-status"] },
@@ -1282,6 +1364,75 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
     }
     Some("get_log_config") => {
       check_usage_endpoint(args, "/get_log_config")
+      true
+    }
+    Some("get_claude_plugin_status") => {
+      check_usage_endpoint(args, "/get_claude_plugin_status")
+      true
+    }
+    Some("read_claude_plugin_config") => {
+      check_usage_endpoint(args, "/read_claude_plugin_config")
+      true
+    }
+    Some("apply_claude_plugin_config") => {
+      apply_claude_plugin_config(args)
+      true
+    }
+    Some("is_claude_plugin_applied") => {
+      check_usage_endpoint(args, "/is_claude_plugin_applied")
+      true
+    }
+    Some("apply_claude_onboarding_skip") => {
+      check_json_post_endpoint(args, "/apply_claude_onboarding_skip", "Plugin")
+      true
+    }
+    Some("clear_claude_onboarding_skip") => {
+      check_json_post_endpoint(args, "/clear_claude_onboarding_skip", "Plugin")
+      true
+    }
+    Some("list_daily_memory_files") => {
+      check_usage_endpoint(args, "/list_daily_memory_files")
+      true
+    }
+    Some("read_daily_memory_file") => {
+      check_usage_endpoint(
+        args,
+        workspace_filename_path(args, "/read_daily_memory_file"),
+      )
+      true
+    }
+    Some("write_daily_memory_file") => {
+      write_workspace_content(args, "/write_daily_memory_file", "Workspace")
+      true
+    }
+    Some("search_daily_memory_files") => {
+      check_usage_endpoint(
+        args,
+        workspace_query_path(args, "/search_daily_memory_files"),
+      )
+      true
+    }
+    Some("delete_daily_memory_file") => {
+      delete_workspace_resource(args, "/delete_daily_memory_file", "Workspace")
+      true
+    }
+    Some("read_workspace_file") => {
+      check_usage_endpoint(
+        args,
+        workspace_filename_path(args, "/read_workspace_file"),
+      )
+      true
+    }
+    Some("write_workspace_file") => {
+      write_workspace_content(args, "/write_workspace_file", "Workspace")
+      true
+    }
+    Some("open_workspace_directory") => {
+      check_json_post_endpoint(
+        args,
+        workspace_subdir_path(args, "/open_workspace_directory"),
+        "Workspace",
+      )
       true
     }
     Some("suite_manifest") => {

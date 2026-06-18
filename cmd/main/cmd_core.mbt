@@ -18,49 +18,6 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["models", "candidates", ..] => print_model_candidates(arr)
     ["fetch_models_for_config", ..] | ["fetch-models-for-config", ..] =>
       fetch_provider_models(arr)
-    ["get_claude_plugin_status", ..] | ["get-claude-plugin-status", ..] =>
-      check_usage_endpoint(arr, "/get_claude_plugin_status")
-    ["read_claude_plugin_config", ..] | ["read-claude-plugin-config", ..] =>
-      check_usage_endpoint(arr, "/read_claude_plugin_config")
-    ["apply_claude_plugin_config", ..] | ["apply-claude-plugin-config", ..] =>
-      apply_claude_plugin_config(arr)
-    ["is_claude_plugin_applied", ..] | ["is-claude-plugin-applied", ..] =>
-      check_usage_endpoint(arr, "/is_claude_plugin_applied")
-    ["apply_claude_onboarding_skip", ..]
-    | ["apply-claude-onboarding-skip", ..] =>
-      check_json_post_endpoint(arr, "/apply_claude_onboarding_skip", "Plugin")
-    ["clear_claude_onboarding_skip", ..]
-    | ["clear-claude-onboarding-skip", ..] =>
-      check_json_post_endpoint(arr, "/clear_claude_onboarding_skip", "Plugin")
-    ["list_daily_memory_files", ..] | ["list-daily-memory-files", ..] =>
-      check_usage_endpoint(arr, "/list_daily_memory_files")
-    ["read_daily_memory_file", ..] | ["read-daily-memory-file", ..] =>
-      check_usage_endpoint(
-        arr,
-        workspace_filename_path(arr, "/read_daily_memory_file"),
-      )
-    ["write_daily_memory_file", ..] | ["write-daily-memory-file", ..] =>
-      write_workspace_content(arr, "/write_daily_memory_file", "Workspace")
-    ["search_daily_memory_files", ..] | ["search-daily-memory-files", ..] =>
-      check_usage_endpoint(
-        arr,
-        workspace_query_path(arr, "/search_daily_memory_files"),
-      )
-    ["delete_daily_memory_file", ..] | ["delete-daily-memory-file", ..] =>
-      delete_workspace_resource(arr, "/delete_daily_memory_file", "Workspace")
-    ["read_workspace_file", ..] | ["read-workspace-file", ..] =>
-      check_usage_endpoint(
-        arr,
-        workspace_filename_path(arr, "/read_workspace_file"),
-      )
-    ["write_workspace_file", ..] | ["write-workspace-file", ..] =>
-      write_workspace_content(arr, "/write_workspace_file", "Workspace")
-    ["open_workspace_directory", ..] | ["open-workspace-directory", ..] =>
-      check_json_post_endpoint(
-        arr,
-        workspace_subdir_path(arr, "/open_workspace_directory"),
-        "Workspace",
-      )
     ["scan_openclaw_config_health", ..] | ["scan-openclaw-config-health", ..] =>
       check_usage_endpoint(arr, "/scan_openclaw_config_health")
     ["get_openclaw_default_model", ..] | ["get-openclaw-default-model", ..] =>
@@ -475,46 +432,6 @@ pub async fn start(args : ArrayView[String]) -> Unit {
       check_usage_endpoint(
         arr,
         prompt_file_path(arr, "/get_current_prompt_file_content"),
-      )
-    ["plugin", "claude", "status", ..] =>
-      check_usage_endpoint(arr, "/get_claude_plugin_status")
-    ["plugin", "claude", "config", ..] =>
-      check_usage_endpoint(arr, "/read_claude_plugin_config")
-    ["plugin", "claude", "apply", ..] => apply_claude_plugin_config(arr)
-    ["plugin", "claude", "applied", ..] =>
-      check_usage_endpoint(arr, "/is_claude_plugin_applied")
-    ["plugin", "claude", "onboarding-skip", ..] =>
-      check_json_post_endpoint(arr, "/apply_claude_onboarding_skip", "Plugin")
-    ["plugin", "claude", "onboarding-clear", ..] =>
-      check_json_post_endpoint(arr, "/clear_claude_onboarding_skip", "Plugin")
-    ["workspace", "memory", "list", ..] =>
-      check_usage_endpoint(arr, "/list_daily_memory_files")
-    ["workspace", "memory", "read", ..] =>
-      check_usage_endpoint(
-        arr,
-        workspace_filename_path(arr, "/read_daily_memory_file"),
-      )
-    ["workspace", "memory", "write", ..] =>
-      write_workspace_content(arr, "/write_daily_memory_file", "Workspace")
-    ["workspace", "memory", "search", ..] =>
-      check_usage_endpoint(
-        arr,
-        workspace_query_path(arr, "/search_daily_memory_files"),
-      )
-    ["workspace", "memory", "delete", ..] =>
-      delete_workspace_resource(arr, "/delete_daily_memory_file", "Workspace")
-    ["workspace", "read", ..] =>
-      check_usage_endpoint(
-        arr,
-        workspace_filename_path(arr, "/read_workspace_file"),
-      )
-    ["workspace", "write", ..] =>
-      write_workspace_content(arr, "/write_workspace_file", "Workspace")
-    ["workspace", "open", ..] =>
-      check_json_post_endpoint(
-        arr,
-        workspace_subdir_path(arr, "/open_workspace_directory"),
-        "Workspace",
       )
     ["usage", "logs", ..] => check_usage_logs(arr)
     ["usage", "get-request-logs", ..] => check_usage_logs(arr)
