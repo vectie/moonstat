@@ -2512,7 +2512,8 @@ async test "provider config endpoints are owned by proxy service" {
 
 ///|
 async test "skill endpoints are owned by skill service" {
-  let skill_source = @fsx.read_file("gateway_misc.mbt")
+  let skill_source = @fsx.read_file("gateway_skill.mbt")
+  let misc_source = @fsx.read_file("gateway_misc.mbt")
   let route_source = @fsx.read_file("gateway_skill_routes.mbt")
   let core_source = @fsx.read_file("gateway_core.mbt")
   for
@@ -2526,6 +2527,7 @@ async test "skill endpoints are owned by skill service" {
     ] {
     assert_true(skill_source.contains("async fn SkillService::\{handler}("))
     assert_false(skill_source.contains("async fn Gateway::\{handler}("))
+    assert_false(misc_source.contains("async fn SkillService::\{handler}("))
   }
   assert_true(
     core_source.contains("self.skills.register_routes(router, self.config)"),
