@@ -307,6 +307,162 @@ async fn ProxyService::handle_claude_desktop_models(
 }
 
 ///|
+async fn ProxyService::handle_gemini(
+  self : ProxyService,
+  usage : UsageService,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = r.body.read_all()
+  let body_str = body.text()
+  usage.record_inbound(body_str.length())
+  let _ = self.activate_provider(usage, "gemini")
+  usage.record_request_context("gemini", "gemini")
+  let request_json : Json = if body_str.is_empty() {
+    Json::null()
+  } else {
+    @json.parse(body_str) catch {
+      _ => {
+        usage.record_bad_request_with_provider(self)
+        w.header().set("Content-Type", "application/json")
+        w.write_header(@status.BadRequest)
+        w.write(
+          "{\"error\":{\"message\":\"Invalid JSON\",\"type\":\"invalid_request_error\"}}",
+        )
+        w.flush()
+        return
+      }
+    }
+  }
+  let endpoint = normalize_gemini_endpoint(r.path)
+  usage.record_request_context("gemini", gemini_model_from_endpoint(endpoint))
+  usage.record_stream_mode(gemini_request_is_stream(endpoint, request_json))
+  let url = match gemini_proxy_url(endpoint) {
+    Some(url) => url
+    None => {
+      usage.record_unauthorized_with_provider(self)
+      w.header().set("Content-Type", "application/json")
+      w.write_header(@status.Unauthorized)
+      w.write(
+        "{\"error\":{\"message\":\"Gemini API key not configured. Set GEMINI_API_KEY or pass ?key=.\",\"type\":\"authentication_error\"}}",
+      )
+      w.flush()
+      return
+    }
+  }
+  match r.method_ {
+    @httpx.Method::Get => self.forward_gemini_get(usage, url, w)
+    @httpx.Method::Post => self.forward_gemini_post(usage, url, request_json, w)
+    _ => {
+      usage.record_bad_request_with_provider(self)
+      w.header().set("Content-Type", "application/json")
+      w.write_header(@status.MethodNotAllowed)
+      w.write(
+        "{\"error\":{\"message\":\"Gemini proxy currently supports GET and POST\",\"type\":\"invalid_request_error\"}}",
+      )
+      w.flush()
+    }
+  }
+}
+
+///|
+async fn ProxyService::forward_gemini_get(
+  self : ProxyService,
+  usage : UsageService,
+  url : String,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let result = try? @http.get(url)
+  match result {
+    Err(error) => {
+      usage.record_upstream_error_status_with_provider(
+        self,
+        0,
+        @status.BadGateway,
+      )
+      w.header().set("Content-Type", "application/json")
+      w.write_header(@status.BadGateway)
+      w.write(
+        "{\"error\":{\"message\":\"Gemini upstream request failed: \{error}\",\"type\":\"upstream_error\"}}",
+      )
+    }
+    Ok((response, data)) => {
+      let response_body = data.text()
+      if response.code is (200..=299) {
+        usage.record_success_usage_with_provider(
+          self,
+          TokenUsage::empty(),
+          response_body.length(),
+        )
+      } else {
+        usage.record_upstream_error_status_with_provider(
+          self,
+          response_body.length(),
+          response.code,
+        )
+      }
+      w.header().set("Content-Type", "application/json")
+      w.write_header(response.code)
+      w.write(response_body)
+    }
+  }
+  w.flush()
+}
+
+///|
+async fn ProxyService::forward_gemini_post(
+  self : ProxyService,
+  usage : UsageService,
+  url : String,
+  request_json : Json,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let result = try? @http.post(url, request_json, headers={
+    "Content-Type": "application/json",
+  })
+  match result {
+    Err(error) => {
+      usage.record_upstream_error_status_with_provider(
+        self,
+        0,
+        @status.BadGateway,
+      )
+      w.header().set("Content-Type", "application/json")
+      w.write_header(@status.BadGateway)
+      w.write(
+        "{\"error\":{\"message\":\"Gemini upstream request failed: \{error}\",\"type\":\"upstream_error\"}}",
+      )
+    }
+    Ok((response, data)) => {
+      let response_body = data.text()
+      if response.code is (200..=299) {
+        let parsed = @json.parse(response_body) catch { _ => Json::null() }
+        let usage_record = token_usage_or_response_model(
+          token_usage_from_gemini_response(parsed),
+          parsed,
+          ["modelVersion"],
+        )
+        usage.record_success_usage_with_provider(
+          self,
+          usage_record,
+          response_body.length(),
+        )
+      } else {
+        usage.record_upstream_error_status_with_provider(
+          self,
+          response_body.length(),
+          response.code,
+        )
+      }
+      w.header().set("Content-Type", "application/json")
+      w.write_header(response.code)
+      w.write(response_body)
+    }
+  }
+  w.flush()
+}
+
+///|
 async fn ProxyService::post_codex_compatible_provider_json(
   self : ProxyService,
   provider : ProviderRouteTarget,

@@ -41,13 +41,13 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   })
   for method_ in @httpx.methods {
     router.add_handler(method_, "/v1beta/*path", (r, w) => {
-      self.handle_gemini(r, w)
+      self.proxy.handle_gemini(self.usage, r, w)
     })
     router.add_handler(method_, "/gemini/v1beta/*path", (r, w) => {
-      self.handle_gemini(r, w)
+      self.proxy.handle_gemini(self.usage, r, w)
     })
     router.add_handler(method_, "/gemini/v1/*path", (r, w) => {
-      self.handle_gemini(r, w)
+      self.proxy.handle_gemini(self.usage, r, w)
     })
   }
   router.add_handler(@httpx.Method::Post, "/chat/completions", (r, w) => {

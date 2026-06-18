@@ -2391,7 +2391,7 @@ async test "provider config endpoints are owned by proxy service" {
       "handle_remove_custom_endpoint", "handle_update_endpoint_last_used", "handle_get_claude_desktop_status",
       "handle_get_claude_desktop_default_routes", "handle_get_current_omo_provider_id",
       "handle_disable_current_omo", "handle_stream_check_provider", "handle_stream_check_all_providers",
-      "handle_models", "handle_claude_desktop_models",
+      "handle_models", "handle_claude_desktop_models", "handle_gemini",
     ] {
     assert_true(sources.contains("async fn ProxyService::\{handler}("))
     assert_false(sources.contains("async fn Gateway::\{handler}("))
@@ -2401,6 +2401,7 @@ async test "provider config endpoints are owned by proxy service" {
       "post_codex_compatible_provider_json", "post_codex_compatible_provider_stream",
       "post_claude_compatible_provider_json", "activate_provider", "activate_first_available_provider",
       "activate_first_available_provider_excluding", "activate_provider_target",
+      "forward_gemini_get", "forward_gemini_post",
     ] {
     assert_true(sources.contains("fn ProxyService::\{helper}("))
     assert_false(sources.contains("async fn Gateway::\{helper}("))
@@ -2413,6 +2414,9 @@ async test "provider config endpoints are owned by proxy service" {
     proxy_source.contains("fn ProxyService::provider_pricing_model_source("),
   )
   assert_true(core_source.contains("self.proxy.handle_models(w)"))
+  assert_true(
+    core_source.contains("self.proxy.handle_gemini(self.usage, r, w)"),
+  )
   assert_true(
     core_source.contains(
       "self.proxy.handle_claude_desktop_models(self.auth, self.usage, r, w)",
