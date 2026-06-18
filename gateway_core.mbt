@@ -298,13 +298,25 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     w,
   ) => self.handle_import_from_deeplink(r, w, legacy=false))
   router.add_handler(@httpx.Method::Post, "/webdav_test_connection", (r, w) => {
-    self.handle_webdav_test_connection(r, w)
+    self.config.handle_webdav_test_connection(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/webdav_sync_upload", (_, w) => {
-    self.handle_webdav_sync_operation(w, "upload")
+    self.config.handle_webdav_sync_operation(
+      self.proxy,
+      host=self.host,
+      port=self.port,
+      w,
+      "upload",
+    )
   })
   router.add_handler(@httpx.Method::Post, "/webdav_sync_download", (_, w) => {
-    self.handle_webdav_sync_operation(w, "download")
+    self.config.handle_webdav_sync_operation(
+      self.proxy,
+      host=self.host,
+      port=self.port,
+      w,
+      "download",
+    )
   })
   router.add_handler(@httpx.Method::Post, "/webdav_sync_save_settings", (r, w) => {
     self.config.handle_webdav_sync_save_settings(r, w)
@@ -312,21 +324,33 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Get, "/webdav_sync_fetch_remote_info", (
     _,
     w,
-  ) => self.handle_webdav_sync_fetch_remote_info(w))
+  ) => self.config.handle_webdav_sync_fetch_remote_info(w))
   router.add_handler(@httpx.Method::Post, "/s3_test_connection", (r, w) => {
-    self.handle_s3_test_connection(r, w)
+    self.config.handle_s3_test_connection(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/s3_sync_upload", (_, w) => {
-    self.handle_s3_sync_operation(w, "upload")
+    self.config.handle_s3_sync_operation(
+      self.proxy,
+      host=self.host,
+      port=self.port,
+      w,
+      "upload",
+    )
   })
   router.add_handler(@httpx.Method::Post, "/s3_sync_download", (_, w) => {
-    self.handle_s3_sync_operation(w, "download")
+    self.config.handle_s3_sync_operation(
+      self.proxy,
+      host=self.host,
+      port=self.port,
+      w,
+      "download",
+    )
   })
   router.add_handler(@httpx.Method::Post, "/s3_sync_save_settings", (r, w) => {
     self.config.handle_s3_sync_save_settings(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/s3_sync_fetch_remote_info", (_, w) => {
-    self.handle_s3_sync_fetch_remote_info(w)
+    self.config.handle_s3_sync_fetch_remote_info(w)
   })
   router.add_handler(@httpx.Method::Get, "/read_omo_local_file", (_, w) => {
     self.workspace.handle_read_omo_local_file(w, slim=false)

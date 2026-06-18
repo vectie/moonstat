@@ -1218,13 +1218,14 @@ async fn moon_s3_sync_test_connection_json(
 }
 
 ///|
-async fn Gateway::moon_sync_build_local_snapshot(
-  self : Gateway,
+async fn ConfigService::moon_sync_build_local_snapshot(
+  self : ConfigService,
+  proxy : ProxyService,
+  host~ : String,
+  port~ : Int,
 ) -> MoonLocalSyncSnapshot {
   let db_sql = @encoding/utf8.encode(
-    self.config
-    .moon_export_snapshot_json(self.proxy, host=self.host, port=self.port)
-    .stringify(indent=2) +
+    self.moon_export_snapshot_json(proxy, host~, port~).stringify(indent=2) +
     "\n",
   )
   let skills_zip = @encoding/utf8.encode(
@@ -1276,8 +1277,8 @@ fn moon_sync_settings_with_status(settings : Json, status : Json) -> Json {
 }
 
 ///|
-fn Gateway::moon_persist_webdav_sync_success(
-  self : Gateway,
+fn ConfigService::moon_persist_webdav_sync_success(
+  self : ConfigService,
   settings : Json,
   manifest_hash : String,
 ) -> Unit {
@@ -1285,16 +1286,16 @@ fn Gateway::moon_persist_webdav_sync_success(
     settings,
     moon_sync_success_status_json(manifest_hash),
   )
-  self.config.app_settings = moon_app_settings_with_sync(
-    self.config.app_settings,
+  self.app_settings = moon_app_settings_with_sync(
+    self.app_settings,
     "webdavSync",
     next,
   )
 }
 
 ///|
-fn Gateway::moon_persist_s3_sync_success(
-  self : Gateway,
+fn ConfigService::moon_persist_s3_sync_success(
+  self : ConfigService,
   settings : Json,
   manifest_hash : String,
   etag : String?,
@@ -1303,8 +1304,8 @@ fn Gateway::moon_persist_s3_sync_success(
     settings,
     moon_sync_success_status_json_with_etag(manifest_hash, etag),
   )
-  self.config.app_settings = moon_app_settings_with_sync(
-    self.config.app_settings,
+  self.app_settings = moon_app_settings_with_sync(
+    self.app_settings,
     "s3Sync",
     next,
   )
@@ -1451,15 +1452,18 @@ fn moon_s3_etag_from_header_text(content : String) -> String? {
 }
 
 ///|
-async fn Gateway::moon_webdav_sync_upload_json(
-  self : Gateway,
+async fn ConfigService::moon_webdav_sync_upload_json(
+  self : ConfigService,
+  proxy : ProxyService,
+  host~ : String,
+  port~ : Int,
   settings : Json,
 ) -> Result[Json, String] {
   match moon_webdav_sync_test_connection_json(settings) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
-  let snapshot = self.moon_sync_build_local_snapshot()
+  let snapshot = self.moon_sync_build_local_snapshot(proxy, host~, port~)
   match
     @fsx.with_temporary_directory("moonstat-webdav-upload-XXXXXX", async fn(
       tmp_dir,
@@ -1546,15 +1550,18 @@ async fn Gateway::moon_webdav_sync_upload_json(
 }
 
 ///|
-async fn Gateway::moon_s3_sync_upload_json(
-  self : Gateway,
+async fn ConfigService::moon_s3_sync_upload_json(
+  self : ConfigService,
+  proxy : ProxyService,
+  host~ : String,
+  port~ : Int,
   settings : Json,
 ) -> Result[Json, String] {
   match moon_s3_sync_test_connection_json(settings) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
-  let snapshot = self.moon_sync_build_local_snapshot()
+  let snapshot = self.moon_sync_build_local_snapshot(proxy, host~, port~)
   let manifest_key = match
     moon_s3_remote_file_key(settings, moon_sync_remote_manifest()) {
     Ok(key) => key
@@ -1946,8 +1953,9 @@ async fn moon_s3_download_artifact(
 }
 
 ///|
-async fn Gateway::moon_apply_webdav_snapshot(
-  self : Gateway,
+async fn ConfigService::moon_apply_webdav_snapshot(
+  self : ConfigService,
+  proxy : ProxyService,
   db_sql : Bytes,
   skills_zip : Bytes,
 ) -> Result[Unit, String] {
@@ -1966,13 +1974,14 @@ async fn Gateway::moon_apply_webdav_snapshot(
       return Err("Downloaded skills.zip is not valid Moonstat JSON: \{error}")
   }
   ignore(moon_skill_state_save(skills))
-  self.config.moon_apply_import_snapshot(self.proxy, snapshot)
+  self.moon_apply_import_snapshot(proxy, snapshot)
   Ok(())
 }
 
 ///|
-async fn Gateway::moon_webdav_sync_download_json(
-  self : Gateway,
+async fn ConfigService::moon_webdav_sync_download_json(
+  self : ConfigService,
+  proxy : ProxyService,
   settings : Json,
 ) -> Result[Json, String] {
   let remote = match moon_webdav_find_remote_snapshot(settings) {
@@ -2029,7 +2038,7 @@ async fn Gateway::moon_webdav_sync_download_json(
         Ok(_) => ()
         Err(error) => return Err(error)
       }
-      self.moon_apply_webdav_snapshot(db_sql, skills_zip)
+      self.moon_apply_webdav_snapshot(proxy, db_sql, skills_zip)
     }) {
     Ok(_) => ()
     Err(error) => return Err(error)
@@ -2056,8 +2065,9 @@ async fn Gateway::moon_webdav_sync_download_json(
 }
 
 ///|
-async fn Gateway::moon_s3_sync_download_json(
-  self : Gateway,
+async fn ConfigService::moon_s3_sync_download_json(
+  self : ConfigService,
+  proxy : ProxyService,
   settings : Json,
 ) -> Result[Json, String] {
   let remote = match moon_s3_fetch_manifest_snapshot(settings) {
@@ -2108,7 +2118,7 @@ async fn Gateway::moon_s3_sync_download_json(
         Ok(_) => ()
         Err(error) => return Err(error)
       }
-      self.moon_apply_webdav_snapshot(db_sql, skills_zip)
+      self.moon_apply_webdav_snapshot(proxy, db_sql, skills_zip)
     }) {
     Ok(_) => ()
     Err(error) => return Err(error)

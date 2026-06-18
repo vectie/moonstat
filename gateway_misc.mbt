@@ -3160,8 +3160,8 @@ async fn ConfigService::handle_is_lightweight_mode(
 }
 
 ///|
-async fn Gateway::handle_webdav_test_connection(
-  self : Gateway,
+async fn ConfigService::handle_webdav_test_connection(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -3172,7 +3172,7 @@ async fn Gateway::handle_webdav_test_connection(
   }
   let normalized = moon_webdav_sync_settings_json(
     settings,
-    moon_app_webdav_sync_json(self.config.app_settings),
+    moon_app_webdav_sync_json(self.app_settings),
     moon_sync_preserve_empty_password_request(r.path, body),
   )
   match moon_validate_webdav_sync_settings(normalized) {
@@ -3186,20 +3186,24 @@ async fn Gateway::handle_webdav_test_connection(
 }
 
 ///|
-async fn Gateway::handle_webdav_sync_operation(
-  self : Gateway,
+async fn ConfigService::handle_webdav_sync_operation(
+  self : ConfigService,
+  proxy : ProxyService,
+  host~ : String,
+  port~ : Int,
   w : @httpx.ResponseWriter,
   operation : String,
 ) -> Unit {
-  match moon_webdav_sync_required_error(self.config.app_settings) {
+  match moon_webdav_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_webdav_sync_json(self.config.app_settings) {
+      match moon_app_webdav_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "WebDAV sync is not configured.")
         Some(settings) => {
           let result = match operation {
-            "upload" => self.moon_webdav_sync_upload_json(settings)
-            "download" => self.moon_webdav_sync_download_json(settings)
+            "upload" =>
+              self.moon_webdav_sync_upload_json(proxy, host~, port~, settings)
+            "download" => self.moon_webdav_sync_download_json(proxy, settings)
             _ => Err("Unsupported WebDAV sync operation: \{operation}")
           }
           match result {
@@ -3212,14 +3216,14 @@ async fn Gateway::handle_webdav_sync_operation(
 }
 
 ///|
-async fn Gateway::handle_webdav_sync_fetch_remote_info(
-  self : Gateway,
+async fn ConfigService::handle_webdav_sync_fetch_remote_info(
+  self : ConfigService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match moon_webdav_sync_required_error(self.config.app_settings) {
+  match moon_webdav_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_webdav_sync_json(self.config.app_settings) {
+      match moon_app_webdav_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "WebDAV sync is not configured.")
         Some(settings) =>
           match moon_webdav_sync_fetch_remote_info_json(settings) {
@@ -3231,8 +3235,8 @@ async fn Gateway::handle_webdav_sync_fetch_remote_info(
 }
 
 ///|
-async fn Gateway::handle_s3_test_connection(
-  self : Gateway,
+async fn ConfigService::handle_s3_test_connection(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -3243,7 +3247,7 @@ async fn Gateway::handle_s3_test_connection(
   }
   let normalized = moon_s3_sync_settings_json(
     settings,
-    moon_app_s3_sync_json(self.config.app_settings),
+    moon_app_s3_sync_json(self.app_settings),
     moon_sync_preserve_empty_password_request(r.path, body),
   )
   match moon_validate_s3_sync_settings(normalized) {
@@ -3257,20 +3261,24 @@ async fn Gateway::handle_s3_test_connection(
 }
 
 ///|
-async fn Gateway::handle_s3_sync_operation(
-  self : Gateway,
+async fn ConfigService::handle_s3_sync_operation(
+  self : ConfigService,
+  proxy : ProxyService,
+  host~ : String,
+  port~ : Int,
   w : @httpx.ResponseWriter,
   operation : String,
 ) -> Unit {
-  match moon_s3_sync_required_error(self.config.app_settings) {
+  match moon_s3_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_s3_sync_json(self.config.app_settings) {
+      match moon_app_s3_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "S3 sync is not configured.")
         Some(settings) => {
           let result = match operation {
-            "upload" => self.moon_s3_sync_upload_json(settings)
-            "download" => self.moon_s3_sync_download_json(settings)
+            "upload" =>
+              self.moon_s3_sync_upload_json(proxy, host~, port~, settings)
+            "download" => self.moon_s3_sync_download_json(proxy, settings)
             _ => Err("Unsupported S3 sync operation: \{operation}")
           }
           match result {
@@ -3283,14 +3291,14 @@ async fn Gateway::handle_s3_sync_operation(
 }
 
 ///|
-async fn Gateway::handle_s3_sync_fetch_remote_info(
-  self : Gateway,
+async fn ConfigService::handle_s3_sync_fetch_remote_info(
+  self : ConfigService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match moon_s3_sync_required_error(self.config.app_settings) {
+  match moon_s3_sync_required_error(self.app_settings) {
     Some(error) => write_usage_bad_request(w, error)
     None =>
-      match moon_app_s3_sync_json(self.config.app_settings) {
+      match moon_app_s3_sync_json(self.app_settings) {
         None => write_usage_bad_request(w, "S3 sync is not configured.")
         Some(settings) =>
           match moon_s3_sync_fetch_remote_info_json(settings) {

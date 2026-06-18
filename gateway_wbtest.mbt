@@ -2112,10 +2112,12 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   let config_source = @fsx.read_file("gateway_config.mbt")
   let deeplink_source = @fsx.read_file("gateway_deeplink.mbt")
   let import_export_source = @fsx.read_file("import_export.mbt")
+  let sync_source = @fsx.read_file("sync.mbt")
   let config_sources = misc_source +
     config_source +
     deeplink_source +
-    import_export_source
+    import_export_source +
+    sync_source
   let core_source = @fsx.read_file("gateway_core.mbt")
   for
     handler in [
@@ -2134,7 +2136,9 @@ async test "settings mcp and prompt endpoints are owned by config service" {
       "handle_get_claude_plugin_status", "handle_read_claude_plugin_config", "handle_apply_claude_plugin_config",
       "handle_is_claude_plugin_applied", "handle_apply_claude_onboarding_skip", "handle_clear_claude_onboarding_skip",
       "handle_fetch_models_for_config", "handle_export_config_to_file", "handle_import_config_from_file",
-      "handle_create_db_backup", "handle_restore_db_backup",
+      "handle_create_db_backup", "handle_restore_db_backup", "handle_webdav_test_connection",
+      "handle_webdav_sync_operation", "handle_webdav_sync_fetch_remote_info", "handle_s3_test_connection",
+      "handle_s3_sync_operation", "handle_s3_sync_fetch_remote_info",
     ] {
     assert_true(config_sources.contains("async fn ConfigService::\{handler}("))
     assert_false(config_sources.contains("async fn Gateway::\{handler}("))
@@ -2143,6 +2147,9 @@ async test "settings mcp and prompt endpoints are owned by config service" {
     helper in [
       "moon_export_snapshot_json", "moon_export_config_to_file_json", "moon_import_config_from_file_json",
       "moon_apply_import_snapshot", "moon_create_db_backup_json", "moon_restore_db_backup_json",
+      "moon_sync_build_local_snapshot", "moon_persist_webdav_sync_success", "moon_persist_s3_sync_success",
+      "moon_webdav_sync_upload_json", "moon_s3_sync_upload_json", "moon_apply_webdav_snapshot",
+      "moon_webdav_sync_download_json", "moon_s3_sync_download_json",
     ] {
     assert_true(config_sources.contains("ConfigService::\{helper}("))
     assert_false(config_sources.contains("Gateway::\{helper}("))
@@ -2168,7 +2175,21 @@ async test "settings mcp and prompt endpoints are owned by config service" {
     core_source.contains("self.config.handle_webdav_sync_save_settings(r, w)"),
   )
   assert_true(
+    core_source.contains("self.config.handle_webdav_test_connection(r, w)"),
+  )
+  assert_true(core_source.contains("self.config.handle_webdav_sync_operation("))
+  assert_true(
+    core_source.contains("self.config.handle_webdav_sync_fetch_remote_info(w)"),
+  )
+  assert_true(
     core_source.contains("self.config.handle_s3_sync_save_settings(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.config.handle_s3_test_connection(r, w)"),
+  )
+  assert_true(core_source.contains("self.config.handle_s3_sync_operation("))
+  assert_true(
+    core_source.contains("self.config.handle_s3_sync_fetch_remote_info(w)"),
   )
   assert_true(
     core_source.contains("self.config.handle_get_stream_check_config(w)"),
