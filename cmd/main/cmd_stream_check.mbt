@@ -1,4 +1,14 @@
 ///|
+fn stream_check_cli_commands() -> Array[CliCommandSpec] {
+  [
+    { id: "stream_check_provider", patterns: ["stream-check provider"] },
+    { id: "stream_check_all_providers", patterns: ["stream-check all"] },
+    { id: "save_stream_check_config", patterns: ["stream-check config set"] },
+    { id: "get_stream_check_config", patterns: ["stream-check config"] },
+  ]
+}
+
+///|
 fn cli_stream_check_command_id(command_id : String) -> Bool {
   match command_id {
     "stream_check_provider"

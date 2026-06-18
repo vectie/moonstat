@@ -7,10 +7,6 @@ priv struct CliCommandSpec {
 ///|
 fn registered_cli_commands() -> Array[CliCommandSpec] {
   let commands = [
-    { id: "stream_check_provider", patterns: ["stream-check provider"] },
-    { id: "stream_check_all_providers", patterns: ["stream-check all"] },
-    { id: "save_stream_check_config", patterns: ["stream-check config set"] },
-    { id: "get_stream_check_config", patterns: ["stream-check config"] },
     { id: "scan_openclaw_config_health", patterns: ["openclaw config-health"] },
     {
       id: "set_openclaw_default_model",
@@ -149,6 +145,9 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     commands.push(command)
   }
   for command in install_cli_commands() {
+    commands.push(command)
+  }
+  for command in stream_check_cli_commands() {
     commands.push(command)
   }
   commands
