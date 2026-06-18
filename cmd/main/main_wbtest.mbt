@@ -6,8 +6,8 @@ test "has flag matches exact CLI option" {
 }
 
 ///|
-test "registered cli commands match suite command aliases" {
-  assert_true(registered_cli_commands().length() == 5)
+test "registered cli commands match suite command aliases and status commands" {
+  assert_true(registered_cli_commands().length() == 8)
   assert_true(
     cli_args_match_pattern(
       ["moonstat", "suite", "manifest", "--host", "127.0.0.1"],
@@ -28,6 +28,13 @@ test "registered cli commands match suite command aliases" {
   assert_true(
     registered_cli_command_id(["moonstat", "usage", "summary"]) == None,
   )
+  assert_true(
+    registered_cli_command_id(["moonstat", "status"]) == Some("status"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "health"]) == Some("health"),
+  )
+  assert_true(registered_cli_command_id(["moonstat", "stats"]) == Some("stats"))
 }
 
 ///|

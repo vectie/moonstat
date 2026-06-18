@@ -135,9 +135,6 @@ pub async fn start(args : ArrayView[String]) -> Unit {
     ["stream-check", "config", ..]
     | ["stream-check", "get-stream-check-config", ..] =>
       check_usage_endpoint(arr, "/get_stream_check_config")
-    ["status", ..] => check_status(arr)
-    ["health", ..] => check_health(arr)
-    ["stats", ..] => check_stats(arr)
     ["get_proxy_status", ..] | ["get-proxy-status", ..] =>
       check_proxy_status(arr)
     ["start_proxy_server", ..] | ["start-proxy-server", ..] =>

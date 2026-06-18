@@ -20,6 +20,9 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
         "suite write-moonclaw-providers", "suite write-provider-manifest",
       ],
     },
+    { id: "status", patterns: ["status"] },
+    { id: "health", patterns: ["health"] },
+    { id: "stats", patterns: ["stats"] },
   ]
 }
 
@@ -81,6 +84,18 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
     }
     Some("suite_write_moonclaw_providers") => {
       write_moonclaw_providers_file(args)
+      true
+    }
+    Some("status") => {
+      check_status(args)
+      true
+    }
+    Some("health") => {
+      check_health(args)
+      true
+    }
+    Some("stats") => {
+      check_stats(args)
       true
     }
     _ => false
