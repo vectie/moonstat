@@ -28,6 +28,11 @@ test "config service owns settings and config blob mutations" {
     None,
   )
   assert_eq(config.app_config_dir_override_json(), Json::null())
+  config.set_app_config_dir_override_from_request(
+    "/settings/app-config-dir?appConfigDir=/tmp/legacy",
+    None,
+  )
+  assert_eq(config.app_config_dir_override_json(), Json::null())
 
   config.set_rectifier_from_request(
     "/settings/rectifier?requestThinkingSignature=false",
