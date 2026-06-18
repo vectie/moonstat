@@ -19,26 +19,6 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "install_codex", patterns: ["codex install"] },
     { id: "uninstall_codex", patterns: ["codex uninstall", "codex remove"] },
     { id: "status_codex", patterns: ["codex status"] },
-    { id: "login", patterns: ["login"] },
-    { id: "auth_start_login", patterns: ["auth login"] },
-    { id: "auth_poll_for_account", patterns: ["auth poll"] },
-    { id: "auth_list_accounts", patterns: ["auth accounts"] },
-    { id: "auth_get_status", patterns: ["auth status"] },
-    { id: "auth_remove_account", patterns: ["auth remove"] },
-    { id: "auth_set_default_account", patterns: ["auth default"] },
-    { id: "auth_logout", patterns: ["auth logout"] },
-    { id: "copilot_start_device_flow", patterns: ["copilot login"] },
-    { id: "copilot_poll_for_account", patterns: ["copilot poll"] },
-    { id: "copilot_poll_for_auth", patterns: ["copilot auth-poll"] },
-    { id: "copilot_list_accounts", patterns: ["copilot accounts"] },
-    { id: "copilot_get_auth_status", patterns: ["copilot status"] },
-    { id: "copilot_is_authenticated", patterns: ["copilot authenticated"] },
-    { id: "copilot_logout", patterns: ["copilot logout"] },
-    { id: "copilot_remove_account", patterns: ["copilot remove"] },
-    { id: "copilot_set_default_account", patterns: ["copilot default"] },
-    { id: "copilot_get_token", patterns: ["copilot token"] },
-    { id: "copilot_get_models", patterns: ["copilot models"] },
-    { id: "copilot_get_usage", patterns: ["copilot usage"] },
     { id: "stream_check_provider", patterns: ["stream-check provider"] },
     { id: "stream_check_all_providers", patterns: ["stream-check all"] },
     { id: "save_stream_check_config", patterns: ["stream-check config set"] },
@@ -157,6 +137,12 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "version", patterns: ["version", "--version", "-v"] },
   ]
   for command in provider_cli_commands() {
+    commands.push(command)
+  }
+  for command in auth_cli_commands() {
+    commands.push(command)
+  }
+  for command in copilot_cli_commands() {
     commands.push(command)
   }
   for command in skill_cli_commands() {

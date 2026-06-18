@@ -14,6 +14,20 @@ async fn do_login(_args : Array[String]) -> Unit {
 }
 
 ///|
+fn auth_cli_commands() -> Array[CliCommandSpec] {
+  [
+    { id: "login", patterns: ["login"] },
+    { id: "auth_start_login", patterns: ["auth login"] },
+    { id: "auth_poll_for_account", patterns: ["auth poll"] },
+    { id: "auth_list_accounts", patterns: ["auth accounts"] },
+    { id: "auth_get_status", patterns: ["auth status"] },
+    { id: "auth_remove_account", patterns: ["auth remove"] },
+    { id: "auth_set_default_account", patterns: ["auth default"] },
+    { id: "auth_logout", patterns: ["auth logout"] },
+  ]
+}
+
+///|
 fn cli_auth_command_id(command_id : String) -> Bool {
   match command_id {
     "login"
