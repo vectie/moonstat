@@ -129,32 +129,35 @@ pub fn SessionService::new() -> SessionService {
 
 ///|
 /// WorkspaceService handles local workspace, memory, and file-dialog endpoints.
-pub struct WorkspaceService {}
+pub struct WorkspaceService {
+  priv _unit : Unit
+}
 
 ///|
-#warnings("-73")
 pub fn WorkspaceService::new() -> WorkspaceService {
-  WorkspaceService::{  }
+  { _unit: () }
 }
 
 ///|
 /// RuntimeService handles app runtime status and local tool lifecycle endpoints.
-pub struct RuntimeService {}
+pub struct RuntimeService {
+  priv _unit : Unit
+}
 
 ///|
-#warnings("-73")
 pub fn RuntimeService::new() -> RuntimeService {
-  RuntimeService::{  }
+  { _unit: () }
 }
 
 ///|
 /// SkillService handles skill discovery, install, migration, and repository endpoints.
-pub struct SkillService {}
+pub struct SkillService {
+  priv _unit : Unit
+}
 
 ///|
-#warnings("-73")
 pub fn SkillService::new() -> SkillService {
-  SkillService::{  }
+  { _unit: () }
 }
 
 ///|

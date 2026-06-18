@@ -694,6 +694,7 @@ pub fn RequestLog::new(request_id~ : String, provider_id~ : String, app_type~ : 
 pub fn RequestLog::to_json(Self) -> Json
 
 pub struct RuntimeService {
+  // private fields
 }
 pub fn RuntimeService::new() -> Self
 
@@ -718,6 +719,7 @@ pub fn SessionSyncResult::new() -> Self
 pub fn SessionSyncResult::to_json(Self) -> Json
 
 pub struct SkillService {
+  // private fields
 }
 pub fn SkillService::new() -> Self
 
@@ -902,6 +904,7 @@ pub struct UsageService {
 pub fn UsageService::new() -> Self
 
 pub struct WorkspaceService {
+  // private fields
 }
 pub fn WorkspaceService::new() -> Self
 

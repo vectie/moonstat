@@ -1,9 +1,10 @@
 ///|
-struct Epoch {}
+struct Epoch {
+  _unit : Unit
+}
 
 ///|
-#warnings("-73")
-pub let epoch : Epoch = Epoch::{  }
+pub let epoch : Epoch = { _unit: () }
 
 ///|
 pub impl Clock for Epoch with fn now(_ : Epoch) -> Timestamp {
