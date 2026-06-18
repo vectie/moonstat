@@ -133,7 +133,13 @@ fn moon_sync_json_string(
 
 ///|
 fn moon_sync_json_bool(obj : Map[String, Json], keys : Array[String]) -> Bool {
-  json_bool_from_map_any(obj, keys).unwrap_or(false)
+  for key in keys {
+    match json_bool_from_map(obj, key) {
+      Some(value) => return value
+      None => ()
+    }
+  }
+  false
 }
 
 ///|

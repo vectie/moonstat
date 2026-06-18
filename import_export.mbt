@@ -261,7 +261,7 @@ fn ProxyService::moon_apply_import_proxy(
   match proxy.get("takeoverStatus") {
     Some(Object(takeover)) =>
       for app in moon_suite_app_types() {
-        match json_bool_from_map_any(takeover, [app]) {
+        match json_bool_from_map(takeover, app) {
           Some(enabled) => self.proxy_takeover_enabled.set(app, enabled)
           None => ()
         }

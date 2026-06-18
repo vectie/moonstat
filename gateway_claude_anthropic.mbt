@@ -2133,10 +2133,11 @@ fn explicit_model_image_support_in_value(value : Json, model : String) -> Bool? 
 ///|
 fn explicit_image_support(entry : Json) -> Bool? {
   guard entry is Object(obj) else { return None }
-  match
-    json_bool_from_map_any(obj, ["supportsImage", "supports_image", "vision"]) {
-    Some(value) => return Some(value)
+  match obj.get("supportsImage") {
+    Some(true) => return Some(true)
+    Some(false) => return Some(false)
     None => ()
+    _ => ()
   }
   match obj.get("input") {
     Some(input) =>
@@ -2249,21 +2250,6 @@ fn model_id_tail(model : String) -> String {
     Some(part) => part.to_owned()
     None => model
   }
-}
-
-///|
-fn json_bool_from_map_any(
-  obj : Map[String, Json],
-  keys : Array[String],
-) -> Bool? {
-  for key in keys {
-    match obj.get(key) {
-      Some(true) => return Some(true)
-      Some(false) => return Some(false)
-      _ => ()
-    }
-  }
-  None
 }
 
 ///|

@@ -1472,7 +1472,7 @@ fn stream_check_effective_config_for_provider(
   guard meta.get("testConfig") is Some(Object(test_config)) else {
     return global_config
   }
-  if !json_bool_from_map_any(test_config, ["enabled"]).unwrap_or(false) {
+  if !json_bool_from_map(test_config, "enabled").unwrap_or(false) {
     return global_config
   }
   let mut config = global_config
@@ -2240,9 +2240,7 @@ fn ProxyService::claude_provider_outbound_body(
 fn provider_media_heuristic_enabled(provider : ProviderRouteTarget?) -> Bool {
   guard provider is Some(provider) else { return true }
   guard provider.settings_config is Some(Object(settings)) else { return true }
-  json_bool_from_map_any(settings, [
-    "requestMediaHeuristic", "request_media_heuristic",
-  ]).unwrap_or(true)
+  json_bool_from_map(settings, "requestMediaHeuristic").unwrap_or(true)
 }
 
 ///|

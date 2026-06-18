@@ -8321,6 +8321,74 @@ test "moonstat media retry ignores non media errors and bodies without images" {
 }
 
 ///|
+test "moonstat model image support only accepts canonical field" {
+  let canonical_provider = ProviderRouteTarget::new(
+    app_type="claude-desktop",
+    provider_id="catalog-canonical",
+    provider_name="Catalog Canonical",
+    settings_config=Some(
+      {
+        "modelCatalog": {
+          "models": [
+            {
+              "id": Json::string("catalog-model"),
+              "supportsImage": Json::boolean(false),
+            }.to_json(),
+          ],
+        }.to_json(),
+      }.to_json(),
+    ),
+  )
+  assert_true(
+    explicit_model_image_support(Some(canonical_provider), "catalog-model")
+    is Some(false),
+  )
+
+  let snake_case_provider = ProviderRouteTarget::new(
+    app_type="claude-desktop",
+    provider_id="catalog-snake",
+    provider_name="Catalog Snake",
+    settings_config=Some(
+      {
+        "modelCatalog": {
+          "models": [
+            {
+              "id": Json::string("catalog-model"),
+              "supports_image": Json::boolean(false),
+            }.to_json(),
+          ],
+        }.to_json(),
+      }.to_json(),
+    ),
+  )
+  assert_true(
+    explicit_model_image_support(Some(snake_case_provider), "catalog-model")
+    is None,
+  )
+
+  let vision_provider = ProviderRouteTarget::new(
+    app_type="claude-desktop",
+    provider_id="catalog-vision",
+    provider_name="Catalog Vision",
+    settings_config=Some(
+      {
+        "modelCatalog": {
+          "models": [
+            {
+              "id": Json::string("catalog-model"),
+              "vision": Json::boolean(false),
+            }.to_json(),
+          ],
+        }.to_json(),
+      }.to_json(),
+    ),
+  )
+  assert_true(
+    explicit_model_image_support(Some(vision_provider), "catalog-model") is None,
+  )
+}
+
+///|
 test "moonstat media retry replacement is unconditional" {
   let body = @json.parse(
     (

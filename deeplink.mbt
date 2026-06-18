@@ -406,7 +406,7 @@ fn ConfigService::moon_import_provider_deeplink(
     settings_config=Some(moon_deeplink_provider_settings(app_type, request)),
   )
   proxy.provider_router.upsert_provider(target)
-  if json_bool_from_map_any(request, ["enabled"]).unwrap_or(false) ||
+  if json_bool_from_map(request, "enabled").unwrap_or(false) ||
     proxy.provider_router.current_provider_id(app_type) is None {
     proxy.provider_router.set_current_provider(app_type, provider_id)
   }
@@ -539,7 +539,7 @@ fn ConfigService::moon_import_prompt_deeplink(
   }
   guard moon_deeplink_decode_utf8(encoded) is Some(content) else { return None }
   let id = moon_deeplink_generated_id(name)
-  let enabled = json_bool_from_map_any(request, ["enabled"]).unwrap_or(false)
+  let enabled = json_bool_from_map(request, "enabled").unwrap_or(false)
   let now = Json::string(@async.now().to_string())
   let prompt : Map[String, Json] = {
     "id": Json::string(id),
@@ -615,7 +615,7 @@ async fn ConfigService::moon_import_skill_deeplink(
     "name": Json::string(parts[1]),
     "branch": Json::string(branch),
     "enabled": Json::boolean(
-      json_bool_from_map_any(request, ["enabled"]).unwrap_or(true),
+      json_bool_from_map(request, "enabled").unwrap_or(true),
     ),
   })
   guard moon_add_skill_repo_json(repo_json) == Json::boolean(true) else {
