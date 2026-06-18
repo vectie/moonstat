@@ -2146,6 +2146,7 @@ async test "copilot optimizer config endpoints are owned by config service" {
 async test "settings mcp and prompt endpoints are owned by config service" {
   let misc_source = @fsx.read_file("gateway_misc.mbt")
   let config_source = @fsx.read_file("gateway_config.mbt")
+  let mcp_prompt_source = @fsx.read_file("gateway_config_mcp_prompt.mbt")
   let deeplink_source = @fsx.read_file("gateway_deeplink.mbt")
   let deeplink_helpers_source = @fsx.read_file("deeplink.mbt")
   let import_export_source = @fsx.read_file("import_export.mbt")
@@ -2153,6 +2154,7 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   let route_source = @fsx.read_file("gateway_config_routes.mbt")
   let config_sources = misc_source +
     config_source +
+    mcp_prompt_source +
     deeplink_source +
     deeplink_helpers_source +
     import_export_source +
@@ -2216,6 +2218,18 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   )
   assert_true(route_source.contains("self.handle_get_mcp_config(r, w)"))
   assert_true(route_source.contains("self.handle_upsert_prompt(r, w)"))
+  for
+    handler in [
+      "handle_get_claude_mcp_status", "handle_upsert_claude_mcp_server", "handle_delete_mcp_server",
+      "handle_validate_mcp_command", "handle_set_mcp_enabled", "handle_get_mcp_servers",
+      "handle_upsert_mcp_server", "handle_toggle_mcp_app", "handle_import_mcp_from_apps",
+      "handle_get_prompts", "handle_upsert_prompt", "handle_delete_prompt", "handle_enable_prompt",
+    ] {
+    assert_true(
+      mcp_prompt_source.contains("async fn ConfigService::\{handler}("),
+    )
+    assert_false(misc_source.contains("async fn ConfigService::\{handler}("))
+  }
   assert_true(route_source.contains("self.handle_parse_deeplink(r, w)"))
   assert_true(
     route_source.contains("self.handle_import_from_deeplink(proxy, r, w)"),
