@@ -4470,68 +4470,6 @@ async fn Gateway::handle_update_endpoint_last_used(
 }
 
 ///|
-async fn Gateway::handle_get_balance(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, ["baseUrl", "base_url"])
-    is Some(base_url) else {
-    write_usage_bad_request(w, "missing_base_url")
-    return
-  }
-  guard proxy_string_request(r.path, body, ["apiKey", "api_key"])
-    is Some(api_key) else {
-    write_usage_bad_request(w, "missing_api_key")
-    return
-  }
-  write_usage_json(w, moon_get_balance(base_url, api_key).to_json())
-}
-
-///|
-async fn Gateway::handle_get_subscription_quota(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, [
-      "tool", "app", "appType", "app_type",
-    ])
-    is Some(tool) else {
-    write_usage_bad_request(w, "missing_tool")
-    return
-  }
-  let quota = moon_get_subscription_quota(tool)
-  self.usage.usage_cache.put_subscription(quota.tool, quota)
-  write_usage_json(w, quota.to_json())
-}
-
-///|
-async fn Gateway::handle_get_coding_plan_quota(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, ["baseUrl", "base_url"])
-    is Some(base_url) else {
-    write_usage_bad_request(w, "missing_base_url")
-    return
-  }
-  guard proxy_string_request(r.path, body, ["apiKey", "api_key"])
-    is Some(api_key) else {
-    write_usage_bad_request(w, "missing_api_key")
-    return
-  }
-  let quota = moon_get_coding_plan_quota(base_url, api_key)
-  self.usage.usage_cache.put_subscription(quota.tool, quota)
-  write_usage_json(w, quota.to_json())
-}
-
-///|
 struct StreamCheckConfig {
   timeout_secs : Int
   max_retries : Int

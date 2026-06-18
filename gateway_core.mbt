@@ -1204,16 +1204,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.usage.handle_query_provider_usage(r, w, self.proxy.provider_router)
   })
   router.add_handler(@httpx.Method::Get, "/get_balance", (r, w) => {
-    self.handle_get_balance(r, w)
+    self.usage.handle_get_balance(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_balance", (r, w) => {
-    self.handle_get_balance(r, w)
+    self.usage.handle_get_balance(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_subscription_quota", (r, w) => {
-    self.handle_get_subscription_quota(r, w)
+    self.usage.handle_get_subscription_quota(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_subscription_quota", (r, w) => {
-    self.handle_get_subscription_quota(r, w)
+    self.usage.handle_get_subscription_quota(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_codex_oauth_quota", (r, w) => {
     self.handle_get_codex_oauth_quota(r, w)
@@ -1228,10 +1228,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_get_codex_oauth_models(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_coding_plan_quota", (r, w) => {
-    self.handle_get_coding_plan_quota(r, w)
+    self.usage.handle_get_coding_plan_quota(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_coding_plan_quota", (r, w) => {
-    self.handle_get_coding_plan_quota(r, w)
+    self.usage.handle_get_coding_plan_quota(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/testUsageScript", (r, w) => {
     self.usage.handle_test_usage_script(r, w)
