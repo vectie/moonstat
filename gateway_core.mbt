@@ -62,6 +62,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/codex/v1/chat/completions", (r, w) => {
     self.handle_chat_completions(r, w)
   })
+  router.add_handler(@httpx.Method::Post, "/openclaw/v1/chat/completions", (
+    r,
+    w,
+  ) => self.handle_chat_completions(r, w, app_type="openclaw"))
   router.add_handler(@httpx.Method::Post, "/responses", (r, w) => {
     self.handle_codex_responses(r, w)
   })

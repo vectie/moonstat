@@ -163,6 +163,11 @@ pub fn MoonstatClient::route_chat_url(self : MoonstatClient) -> String {
 }
 
 ///|
+pub fn MoonstatClient::route_openclaw_chat_url(self : MoonstatClient) -> String {
+  self.endpoint("/openclaw/v1/chat/completions")
+}
+
+///|
 pub fn MoonstatClient::route_response_url(self : MoonstatClient) -> String {
   self.endpoint("/v1/responses")
 }
@@ -475,6 +480,14 @@ pub async fn MoonstatClient::route_chat(
   request : Json,
 ) -> Result[Json, String] {
   self.post_json_path("/v1/chat/completions", request)
+}
+
+///|
+pub async fn MoonstatClient::route_openclaw_chat(
+  self : MoonstatClient,
+  request : Json,
+) -> Result[Json, String] {
+  self.post_json_path("/openclaw/v1/chat/completions", request)
 }
 
 ///|

@@ -216,12 +216,13 @@ async fn Gateway::handle_chat_completions(
   self : Gateway,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
+  app_type? : String = "codex",
 ) -> Unit {
   let body = r.body.read_all()
   let body_str = body.text()
   self.usage.record_inbound(body_str.length())
-  let _ = self.activate_provider("codex")
-  self.usage.record_request_context("codex", self.model)
+  let _ = self.activate_provider(app_type)
+  self.usage.record_request_context(app_type, self.model)
   let json_result : Result[Json, Error] = try? @json.parse(body_str)
   match json_result {
     Err(_) => {
@@ -249,7 +250,7 @@ async fn Gateway::handle_chat_completions(
       )
       let upstream_session_id = session.upstream_session_id()
       self.usage.record_request_context(
-        "codex",
+        app_type,
         response_model,
         session_id=Some(session.session_id),
       )
@@ -266,11 +267,11 @@ async fn Gateway::handle_chat_completions(
       }
       if stream {
         self.forward_streaming_chat_completion(
-          codex_request, response_model, upstream_session_id, w,
+          codex_request, response_model, upstream_session_id, app_type, w,
         )
       } else {
         self.forward_non_streaming_chat_completion(
-          codex_request, response_model, upstream_session_id, w,
+          codex_request, response_model, upstream_session_id, app_type, w,
         )
       }
     }
@@ -417,11 +418,12 @@ async fn Gateway::forward_non_streaming_chat_completion(
   request : Json,
   response_model : String,
   session_id : String?,
+  app_type : String,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let selection = self.proxy.provider_router.select_providers("codex")
+  let selection = self.proxy.provider_router.select_providers(app_type)
   if provider_selection_is_all_circuits_open(selection) {
-    self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
+    self.write_provider_selection_error(app_type, AllProvidersCircuitOpen, w)
     return
   }
   let providers = if selection.is_ok() { selection.providers } else { [] }
@@ -446,7 +448,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
             )
             if !providers.is_empty() {
               let next = self.activate_next_provider_after_upstream_status(
-                "codex",
+                app_type,
                 providers,
                 attempted_provider_ids,
                 @status.BadGateway,
@@ -526,7 +528,7 @@ async fn Gateway::forward_non_streaming_chat_completion(
     }
     if !providers.is_empty() {
       let next = self.activate_next_provider_after_upstream_status(
-        "codex",
+        app_type,
         providers,
         attempted_provider_ids,
         response.code,
@@ -555,38 +557,101 @@ async fn Gateway::forward_streaming_chat_completion(
   request : Json,
   response_model : String,
   session_id : String?,
+  app_type : String,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  guard self.auth.credentials is Some(creds) else {
-    self.record_unauthorized()
-    w.header().set("Content-Type", "application/json")
-    w.write_header(@status.Unauthorized)
-    w.write(
-      "{\"error\":{\"message\":\"Not authenticated. Please login first.\",\"type\":\"authentication_error\"}}",
-    )
-    w.flush()
-    return
-  }
-  let selection = self.proxy.provider_router.select_providers("codex")
+  let selection = self.proxy.provider_router.select_providers(app_type)
   if provider_selection_is_all_circuits_open(selection) {
-    self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
+    self.write_provider_selection_error(app_type, AllProvidersCircuitOpen, w)
     return
   }
   let providers = if selection.is_ok() { selection.providers } else { [] }
   let attempted_provider_ids : Array[String] = []
   for ;; {
-    let client = self.codex_client(
-      creds,
-      accept="text/event-stream",
-      session_id~,
-    )
-    let response = client.post("/backend-api/codex/responses", request)
+    let active_provider = self.active_provider_target(providers)
+    let (client, response, use_chat_bridge) = match active_provider {
+      Some(provider) if provider.can_use_codex_compatible_upstream() => {
+        let use_chat_bridge = provider.codex_uses_chat_completions()
+        let endpoint = if use_chat_bridge {
+          codex_compatible_chat_completions_endpoint(
+            "/backend-api/codex/responses",
+          )
+        } else {
+          codex_compatible_responses_endpoint("/backend-api/codex/responses")
+        }
+        let provider_request = if use_chat_bridge {
+          codex_responses_request_to_openai_chat_completion(
+            request, response_model,
+          ).unwrap_or(request)
+        } else {
+          request
+        }
+        match
+          self.post_codex_compatible_provider_stream(
+            provider, endpoint, provider_request,
+          ) {
+          Ok((client, response)) => (client, response, use_chat_bridge)
+          Err(error) => {
+            let error_body = codex_forward_failed_error_body(
+              provider,
+              response_model,
+              "/chat/completions",
+              "\{error}",
+            )
+            if !providers.is_empty() {
+              let next = self.activate_next_provider_after_upstream_status(
+                app_type,
+                providers,
+                attempted_provider_ids,
+                @status.BadGateway,
+              )
+              if next is Some(_) {
+                continue
+              }
+              self.usage.record_upstream_error_status(
+                error_body.length(),
+                @status.BadGateway,
+              )
+            } else {
+              self.record_upstream_error_status(
+                error_body.length(),
+                @status.BadGateway,
+              )
+            }
+            w.header().set("Content-Type", "application/json")
+            w.write_header(@status.BadGateway)
+            w.write(error_body)
+            w.flush()
+            return
+          }
+        }
+      }
+      _ => {
+        guard self.auth.credentials is Some(creds) else {
+          self.record_unauthorized()
+          w.header().set("Content-Type", "application/json")
+          w.write_header(@status.Unauthorized)
+          w.write(
+            "{\"error\":{\"message\":\"Not authenticated. Please login first.\",\"type\":\"authentication_error\"}}",
+          )
+          w.flush()
+          return
+        }
+        let client = self.codex_client(
+          creds,
+          accept="text/event-stream",
+          session_id~,
+        )
+        let response = client.post("/backend-api/codex/responses", request)
+        (client, response, false)
+      }
+    }
     if response.code != 200 {
       let error_body = client.read_all().text()
       client.close()
       if !providers.is_empty() {
         let next = self.activate_next_provider_after_upstream_status(
-          "codex",
+          app_type,
           providers,
           attempted_provider_ids,
           response.code,
@@ -613,7 +678,7 @@ async fn Gateway::forward_streaming_chat_completion(
         let error_body = "{\"error\":{\"message\":\"Streaming response ended before first chunk\",\"type\":\"upstream_error\"}}"
         if !providers.is_empty() {
           let next = self.activate_next_provider_after_upstream_status(
-            "codex",
+            app_type,
             providers,
             attempted_provider_ids,
             @status.BadGateway,
@@ -645,16 +710,26 @@ async fn Gateway::forward_streaming_chat_completion(
         let id = generate_chat_completion_id()
         let created = @os.unix_seconds()
         let stream_events : Array[Json] = []
-        w.write(
-          "data: \{openai_chat_role_chunk(id, response_model, created).stringify()}\n\n",
-        )
-        w.flush()
+        if !use_chat_bridge {
+          w.write(
+            "data: \{openai_chat_role_chunk(id, response_model, created).stringify()}\n\n",
+          )
+          w.flush()
+        }
         self.record_provider_result(true)
         let mut response_bytes = 0
         let mut first_token_ms : Int? = None
         if first_line is [.. "data: ", .. rest] {
           let data = rest.trim().to_owned()
-          if data != "[DONE]" {
+          if use_chat_bridge {
+            if push_sse_json_event(stream_events, data) {
+              first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
+            }
+            response_bytes += first_line.length() + 2
+            w.write(first_line)
+            w.write("\n\n")
+            w.flush()
+          } else if data != "[DONE]" {
             if push_sse_json_event(stream_events, data) {
               first_token_ms = self.usage.first_stream_event_ms(first_token_ms)
             }
@@ -672,6 +747,23 @@ async fn Gateway::forward_streaming_chat_completion(
         while client.read_until("\n") is Some(line) {
           guard line is [.. "data: ", .. rest] else { continue }
           let data = rest.trim().to_owned()
+          if use_chat_bridge {
+            response_bytes += line.length() + 2
+            if data != "[DONE]" {
+              if push_sse_json_event(stream_events, data) {
+                first_token_ms = self.usage.first_stream_event_ms(
+                  first_token_ms,
+                )
+              }
+            }
+            w.write(line)
+            w.write("\n\n")
+            w.flush()
+            if data == "[DONE]" {
+              break
+            }
+            continue
+          }
           if data == "[DONE]" {
             break
           }
@@ -698,7 +790,9 @@ async fn Gateway::forward_streaming_chat_completion(
           record_provider=false,
           first_token_ms~,
         )
-        w.write("data: [DONE]\n\n")
+        if !use_chat_bridge {
+          w.write("data: [DONE]\n\n")
+        }
         w.flush()
         return
       }
