@@ -2067,9 +2067,9 @@ async test "auth endpoints are owned by auth service" {
     ] {
     assert_true(route_source.contains("self.\{handler}("))
   }
-  let misc_source = @fsx.read_file("gateway_misc.mbt")
+  let claude_anthropic_source = @fsx.read_file("gateway_claude_anthropic.mbt")
   assert_true(
-    misc_source.contains(
+    claude_anthropic_source.contains(
       "auth.validate_claude_desktop_gateway_auth(self, usage, r, w)",
     ),
   )
@@ -2369,6 +2369,7 @@ async test "external utility endpoints are owned by proxy service" {
 ///|
 async test "provider config endpoints are owned by proxy service" {
   let codex_openai_source = @fsx.read_file("gateway_codex_openai.mbt")
+  let claude_anthropic_source = @fsx.read_file("gateway_claude_anthropic.mbt")
   let provider_source = @fsx.read_file("gateway_provider.mbt")
   let auth_source = @fsx.read_file("gateway_auth.mbt")
   let claude_desktop_source = @fsx.read_file("gateway_claude_desktop.mbt")
@@ -2382,6 +2383,7 @@ async test "provider config endpoints are owned by proxy service" {
   let omo_source = @fsx.read_file("omo.mbt")
   let usage_source = @fsx.read_file("gateway_usage.mbt")
   let sources = codex_openai_source +
+    claude_anthropic_source +
     provider_source +
     auth_source +
     claude_desktop_source +
@@ -2438,6 +2440,27 @@ async test "provider config endpoints are owned by proxy service" {
       "fn endpoint_with_request_query(", "fn codex_request_model(",
     ] {
     assert_true(codex_openai_source.contains(helper))
+    assert_false(misc_source.contains(helper))
+  }
+  for
+    handler in [
+      "handle_messages", "forward_non_streaming_claude_compatible_request", "handle_non_streaming_request",
+      "forward_streaming_claude_compatible_request", "forward_successful_claude_compatible_stream",
+      "handle_streaming_request", "forward_openai_chat_sse_as_anthropic", "forward_anthropic_sse_passthrough",
+      "forward_gemini_native_sse_as_anthropic",
+    ] {
+    assert_true(
+      claude_anthropic_source.contains("async fn ProxyService::\{handler}("),
+    )
+    assert_false(misc_source.contains("async fn ProxyService::\{handler}("))
+  }
+  for
+    helper in [
+      "fn ProxyService::upstream_claude_model(", "fn claude_request_json_for_upstream(",
+      "fn claude_compatible_response_to_anthropic(", "priv struct ResponsesStreamState",
+      "fn ResponsesStreamState::new(",
+    ] {
+    assert_true(claude_anthropic_source.contains(helper))
     assert_false(misc_source.contains(helper))
   }
   for
