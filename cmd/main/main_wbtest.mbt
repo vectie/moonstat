@@ -549,6 +549,19 @@ test "config cli dispatcher owns config settings and mcp commands" {
 }
 
 ///|
+test "provider cli dispatcher owns provider and model commands" {
+  assert_true(cli_provider_command_id("get_providers"))
+  assert_true(cli_provider_command_id("switch_provider"))
+  assert_true(cli_provider_command_id("provider_import_live"))
+  assert_true(cli_provider_command_id("upsert_universal_provider"))
+  assert_true(cli_provider_command_id("test_api_endpoints"))
+  assert_true(cli_provider_command_id("fetch_models"))
+  assert_false(cli_provider_command_id("auth_get_status"))
+  assert_false(cli_provider_command_id("get_usage_summary"))
+  assert_false(cli_provider_command_id("read_workspace_file"))
+}
+
+///|
 test "usage sync path accepts standalone projects dir override" {
   assert_eq(
     usage_sync_path(["moonstat", "usage", "sync"]),
