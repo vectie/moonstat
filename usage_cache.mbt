@@ -85,12 +85,10 @@ fn usage_data_from_json(json : Json) -> UsageData? {
   guard json is Object(obj) else { return None }
   Some(
     UsageData::new(
-      plan_name=usage_cache_json_string_any(obj, ["planName", "plan_name"]),
+      plan_name=usage_cache_json_string(obj, "planName"),
       extra=usage_cache_json_string(obj, "extra"),
-      is_valid=usage_cache_json_bool_any(obj, ["isValid", "is_valid"]),
-      invalid_message=usage_cache_json_string_any(obj, [
-        "invalidMessage", "invalid_message",
-      ]),
+      is_valid=usage_cache_json_bool(obj, "isValid"),
+      invalid_message=usage_cache_json_string(obj, "invalidMessage"),
       total=usage_cache_json_number(obj, "total"),
       used=usage_cache_json_number(obj, "used"),
       remaining=usage_cache_json_number(obj, "remaining"),
@@ -102,8 +100,8 @@ fn usage_data_from_json(json : Json) -> UsageData? {
 ///|
 fn usage_data_json_has_moon_field(obj : Map[String, Json]) -> Bool {
   [
-    "planName", "plan_name", "extra", "isValid", "is_valid", "invalidMessage", "invalid_message",
-    "total", "used", "remaining", "unit",
+    "planName", "extra", "isValid", "invalidMessage", "total", "used", "remaining",
+    "unit",
   ].any(key => obj.contains(key))
 }
 
@@ -396,40 +394,12 @@ fn usage_cache_json_string(obj : Map[String, Json], key : String) -> String? {
 }
 
 ///|
-fn usage_cache_json_string_any(
-  obj : Map[String, Json],
-  keys : Array[String],
-) -> String? {
-  for key in keys {
-    match usage_cache_json_string(obj, key) {
-      Some(value) => return Some(value)
-      None => ()
-    }
-  }
-  None
-}
-
-///|
 fn usage_cache_json_bool(obj : Map[String, Json], key : String) -> Bool? {
   match obj.get(key) {
     Some(True) => Some(true)
     Some(False) => Some(false)
     _ => None
   }
-}
-
-///|
-fn usage_cache_json_bool_any(
-  obj : Map[String, Json],
-  keys : Array[String],
-) -> Bool? {
-  for key in keys {
-    match usage_cache_json_bool(obj, key) {
-      Some(value) => return Some(value)
-      None => ()
-    }
-  }
-  None
 }
 
 ///|

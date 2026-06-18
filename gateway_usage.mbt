@@ -1326,7 +1326,7 @@ fn usage_decimal_validation_error(label : String, value : String) -> String? {
 
 ///|
 fn usage_result_from_request(path : StringView, body : Json?) -> UsageResult? {
-  for key in ["result", "usageResult", "scriptCode", "script_code"] {
+  for key in ["result", "usageResult", "scriptCode"] {
     match usage_query_value(path, key) {
       Some(value) =>
         match usage_result_from_string(value) {
@@ -1353,7 +1353,7 @@ fn usage_result_from_request(path : StringView, body : Json?) -> UsageResult? {
           None => ()
         }
       }
-      for key in ["scriptCode", "script_code"] {
+      for key in ["scriptCode"] {
         match obj.get(key) {
           Some(String(value)) =>
             match usage_result_from_string(value) {

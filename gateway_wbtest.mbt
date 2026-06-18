@@ -148,6 +148,20 @@ test "usage script request accepts raw moonstat script output" {
   assert_eq(rows[0].plan_name, Some("Team"))
   assert_eq(rows[0].remaining, Some(60.0))
   assert_eq(rows[0].unit, Some("%"))
+  assert_true(
+    usage_result_from_request(
+      "/usage/test-script?providerId=p1&appType=codex&script_code=%7B%22success%22%3Atrue%7D",
+      None,
+    )
+    is None,
+  )
+  assert_true(
+    usage_result_from_request(
+      "/usage/test-script",
+      Some({ "script_code": Json::string("{\"success\":true}") }.to_json()),
+    )
+    is None,
+  )
 }
 
 ///|

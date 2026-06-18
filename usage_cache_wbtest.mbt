@@ -85,6 +85,37 @@ test "usage script output wraps raw moonstat usage rows" {
 }
 
 ///|
+test "usage script output rejects snake case compatibility rows" {
+  let json = @json.parse(
+    (
+      #|[
+      #|  {
+      #|    "plan_name": "Team",
+      #|    "is_valid": true,
+      #|    "invalid_message": "old shape"
+      #|  }
+      #|]
+    ),
+  )
+  assert_true(usage_script_output_result_from_json(json) is None)
+  let mixed = @json.parse(
+    (
+      #|{
+      #|  "planName": "Team",
+      #|  "is_valid": true,
+      #|  "invalid_message": "old shape"
+      #|}
+    ),
+  )
+  guard usage_script_output_result_from_json(mixed) is Some(result) else {
+    fail("expected canonical field to identify row")
+  }
+  guard result.data is Some(rows) else { fail("expected data") }
+  assert_eq(rows[0].is_valid, None)
+  assert_eq(rows[0].invalid_message, None)
+}
+
+///|
 test "usage script output preserves moonstat empty usage arrays" {
   guard usage_script_output_result_from_json(@json.parse("[]")) is Some(result) else {
     fail("expected wrapped empty usage result")
