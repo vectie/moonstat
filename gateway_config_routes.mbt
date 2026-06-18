@@ -78,9 +78,6 @@ fn ConfigService::register_routes(
   router.add_handler(Delete, "/backups/db/delete", (r, w) => {
     self.handle_delete_db_backup(r, w)
   })
-  router.add_handler(Post, "/backups/db/delete", (r, w) => {
-    self.handle_delete_db_backup(r, w)
-  })
   router.add_handler(Post, "/deeplinks/parse", (r, w) => {
     self.handle_parse_deeplink(r, w)
   })

@@ -167,7 +167,8 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /backups/db")))
   assert_true(routes.contains(Json::string("POST /backups/db/restore")))
   assert_true(routes.contains(Json::string("POST /backups/db/rename")))
-  assert_true(routes.contains(Json::string("DELETE|POST /backups/db/delete")))
+  assert_true(routes.contains(Json::string("DELETE /backups/db/delete")))
+  assert_false(routes.contains(Json::string("DELETE|POST /backups/db/delete")))
   assert_true(routes.contains(Json::string("GET|POST /deeplinks/parse")))
   assert_true(routes.contains(Json::string("GET|POST /deeplinks/merge")))
   assert_true(routes.contains(Json::string("POST /deeplinks/import")))
@@ -656,6 +657,13 @@ async test "gateway omits legacy Moonstat command route handlers" {
     ] {
     assert_false(gateway_source_registers_path(proxy_routes, path))
   }
+  let config_routes = @fsx.read_file("gateway_config_routes.mbt")
+  assert_false(
+    config_routes.contains("router.add_handler(Post, \"/backups/db/delete\""),
+  )
+  assert_true(
+    config_routes.contains("router.add_handler(Delete, \"/backups/db/delete\""),
+  )
 }
 
 ///|

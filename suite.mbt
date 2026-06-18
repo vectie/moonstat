@@ -591,7 +591,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET|POST /tools/probe", "GET|POST /runtime/window-theme", "GET|POST /runtime/lightweight-mode/enter",
     "GET|POST /runtime/lightweight-mode/exit", "GET /runtime/lightweight-mode", "GET|POST /files/dialogs/save",
     "GET|POST /config/files/export", "GET|POST /config/files/import", "POST /backups/db",
-    "GET /backups/db", "POST /backups/db/restore", "POST /backups/db/rename", "DELETE|POST /backups/db/delete",
+    "GET /backups/db", "POST /backups/db/restore", "POST /backups/db/rename", "DELETE /backups/db/delete",
     "GET|POST /deeplinks/parse", "GET|POST /deeplinks/merge", "POST /deeplinks/import",
     "POST /sync/webdav/test", "POST /sync/webdav/upload", "POST /sync/webdav/download",
     "POST /sync/webdav/settings", "GET /sync/webdav/remote-info", "POST /sync/s3/test",
