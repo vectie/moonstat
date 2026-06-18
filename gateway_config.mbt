@@ -262,6 +262,126 @@ fn moon_optimizer_cache_ttl_valid(config : Json) -> Bool {
 }
 
 ///|
+fn moon_json_deep_copy(json : Json) -> Json {
+  match json {
+    Object(obj) => {
+      let copy : Map[String, Json] = Map([], capacity=obj.length())
+      for key, value in obj {
+        copy[key] = moon_json_deep_copy(value)
+      }
+      Json::object(copy)
+    }
+    Array(items) => {
+      let copy : Array[Json] = []
+      for item in items {
+        copy.push(moon_json_deep_copy(item))
+      }
+      Json::array(copy)
+    }
+    _ => json
+  }
+}
+
+///|
+fn ConfigService::settings_json(self : ConfigService) -> Json {
+  self.app_settings
+}
+
+///|
+fn ConfigService::save_settings_json(
+  self : ConfigService,
+  settings : Json,
+) -> Unit {
+  self.app_settings = moon_merge_settings_for_save(settings, self.app_settings)
+  match self.app_settings {
+    Object(obj) => {
+      match proxy_json_bool(obj, "launchOnStartup") {
+        Some(enabled) => self.auto_launch_enabled = enabled
+        None => ()
+      }
+      match proxy_json_bool(obj, "skipClaudeOnboarding") {
+        Some(skipped) => self.claude_onboarding_skipped = skipped
+        None => ()
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn ConfigService::app_config_dir_override_json(self : ConfigService) -> Json {
+  match self.app_config_dir_override {
+    Some(path) => Json::string(path)
+    None => Json::null()
+  }
+}
+
+///|
+fn ConfigService::set_app_config_dir_override_from_request(
+  self : ConfigService,
+  path : StringView,
+  body : Json?,
+) -> Unit {
+  self.app_config_dir_override = moon_optional_path_from_request(path, body)
+}
+
+///|
+fn ConfigService::rectifier_json(self : ConfigService) -> Json {
+  self.rectifier_config_json
+}
+
+///|
+fn ConfigService::set_rectifier_from_request(
+  self : ConfigService,
+  path : StringView,
+  body : Json?,
+) -> Unit {
+  self.rectifier_config_json = moon_rectifier_config_from_request(
+    path,
+    body,
+    self.rectifier_config_json,
+  )
+}
+
+///|
+fn ConfigService::optimizer_json(self : ConfigService) -> Json {
+  self.optimizer_config_json
+}
+
+///|
+fn ConfigService::set_optimizer_from_request(
+  self : ConfigService,
+  path : StringView,
+  body : Json?,
+) -> Bool {
+  let current = moon_json_deep_copy(self.optimizer_config_json)
+  let config = moon_optimizer_config_from_request(path, body, current)
+  if !moon_optimizer_cache_ttl_valid(config) {
+    return false
+  }
+  self.optimizer_config_json = config
+  true
+}
+
+///|
+fn ConfigService::log_json(self : ConfigService) -> Json {
+  self.log_config_json
+}
+
+///|
+fn ConfigService::set_log_from_request(
+  self : ConfigService,
+  path : StringView,
+  body : Json?,
+) -> Unit {
+  self.log_config_json = moon_log_config_from_request(
+    path,
+    body,
+    self.log_config_json,
+  )
+}
+
+///|
 async fn moon_config_status_json(app : String) -> Json {
   let normalized = moon_normalize_app_type(app)
   let path = match normalized {
@@ -889,7 +1009,7 @@ async fn Gateway::handle_get_settings(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.config.app_settings)
+  write_usage_json(w, self.config.settings_json())
 }
 
 ///|
@@ -900,23 +1020,7 @@ async fn Gateway::handle_save_settings(
 ) -> Unit {
   match proxy_json_body(r) {
     Some(settings) => {
-      self.config.app_settings = moon_merge_settings_for_save(
-        settings,
-        self.config.app_settings,
-      )
-      match self.config.app_settings {
-        Object(obj) => {
-          match proxy_json_bool(obj, "launchOnStartup") {
-            Some(enabled) => self.config.auto_launch_enabled = enabled
-            None => ()
-          }
-          match proxy_json_bool(obj, "skipClaudeOnboarding") {
-            Some(skipped) => self.config.claude_onboarding_skipped = skipped
-            None => ()
-          }
-        }
-        _ => ()
-      }
+      self.config.save_settings_json(settings)
       write_usage_json(w, Json::boolean(true))
     }
     None => write_usage_bad_request(w, "invalid_settings")
@@ -928,10 +1032,7 @@ async fn Gateway::handle_get_app_config_dir_override(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  match self.config.app_config_dir_override {
-    Some(path) => write_usage_json(w, Json::string(path))
-    None => write_usage_json(w, Json::null())
-  }
+  write_usage_json(w, self.config.app_config_dir_override_json())
 }
 
 ///|
@@ -941,10 +1042,7 @@ async fn Gateway::handle_set_app_config_dir_override(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.config.app_config_dir_override = moon_optional_path_from_request(
-    r.path,
-    body,
-  )
+  self.config.set_app_config_dir_override_from_request(r.path, body)
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -953,7 +1051,7 @@ async fn Gateway::handle_get_rectifier_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.config.rectifier_config_json)
+  write_usage_json(w, self.config.rectifier_json())
 }
 
 ///|
@@ -963,11 +1061,7 @@ async fn Gateway::handle_set_rectifier_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.config.rectifier_config_json = moon_rectifier_config_from_request(
-    r.path,
-    body,
-    self.config.rectifier_config_json,
-  )
+  self.config.set_rectifier_from_request(r.path, body)
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -976,7 +1070,7 @@ async fn Gateway::handle_get_optimizer_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.config.optimizer_config_json)
+  write_usage_json(w, self.config.optimizer_json())
 }
 
 ///|
@@ -986,16 +1080,10 @@ async fn Gateway::handle_set_optimizer_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  let config = moon_optimizer_config_from_request(
-    r.path,
-    body,
-    self.config.optimizer_config_json,
-  )
-  if !moon_optimizer_cache_ttl_valid(config) {
+  if !self.config.set_optimizer_from_request(r.path, body) {
     write_usage_bad_request(w, "invalid_optimizer_cache_ttl")
     return
   }
-  self.config.optimizer_config_json = config
   write_usage_json(w, Json::boolean(true))
 }
 
@@ -1004,7 +1092,7 @@ async fn Gateway::handle_get_log_config(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(w, self.config.log_config_json)
+  write_usage_json(w, self.config.log_json())
 }
 
 ///|
@@ -1014,11 +1102,7 @@ async fn Gateway::handle_set_log_config(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  self.config.log_config_json = moon_log_config_from_request(
-    r.path,
-    body,
-    self.config.log_config_json,
-  )
+  self.config.set_log_from_request(r.path, body)
   write_usage_json(w, Json::boolean(true))
 }
 
