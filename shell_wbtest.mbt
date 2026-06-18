@@ -32,7 +32,7 @@ test "moonstat standalone app shell defaults use local dialog null results" {
 }
 
 ///|
-test "moonstat tool lifecycle action and json tool parsing mirrors tauri command inputs" {
+test "moonstat tool lifecycle action and json tool parsing accepts standalone command inputs" {
   assert_true(moon_tool_lifecycle_action("install") is Some(Install))
   assert_true(moon_tool_lifecycle_action("update") is Some(Update))
   assert_eq(

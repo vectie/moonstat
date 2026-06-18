@@ -82,7 +82,6 @@ fn print_help() -> Unit {
   println("  proxy is-live-takeover-active  Show takeover active boolean")
   println("  proxy switch-proxy-provider  Hot-switch current app provider")
   println("  proxy running          Show proxy running boolean")
-  println("  proxy is-proxy-running Show proxy running boolean")
   println("  provider list          List providers")
   println("  provider current       Show current provider")
   println("  provider add           Add provider")

@@ -142,7 +142,7 @@ test "moonstat subscription credential parsers report deterministic status" {
 }
 
 ///|
-test "moonstat codex oauth account resolver matches tauri command fallback" {
+test "moonstat codex oauth account resolver uses managed account fallback" {
   assert_eq(
     moon_resolve_codex_oauth_account(
       Some(" acct-explicit "),

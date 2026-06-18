@@ -258,7 +258,7 @@ Moonstat currently exposes the standalone local routes below:
 - `GET /providers/universal`
 - `GET /providers/universal/item?id=custom`
 - `POST /providers/universal?id=custom&name=Custom&apps=claude,codex`
-- `DELETE|POST /providers/universal?id=custom`
+- `DELETE /providers/universal?id=custom`
 - `POST /providers/universal/sync?id=custom`
 - `GET|POST /providers/test-endpoints?urls=https://api.example.com/v1`
 - `POST /providers/sort-order?appType=codex&id=custom&sortIndex=0`
@@ -267,7 +267,6 @@ Moonstat currently exposes the standalone local routes below:
 - `DELETE /providers/endpoints?appType=codex&providerId=custom&url=https://api.backup.example.com/v1`
 - `POST /providers/endpoints/touch?appType=codex&providerId=custom&url=https://api.backup.example.com/v1`
 - `GET /proxy/running`
-- `GET /is_proxy_running`
 - `GET|POST /usage/logs`
 - `GET|POST /usage/summary`
 - `GET|POST /usage/summary/by-app`

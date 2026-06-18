@@ -278,7 +278,7 @@ fn proxy_cli_commands() -> Array[CliCommandSpec] {
     },
     { id: "is_live_takeover_active", patterns: ["proxy live-takeover-active"] },
     { id: "switch_proxy_provider", patterns: ["proxy switch-provider"] },
-    { id: "is_proxy_running", patterns: ["proxy running"] },
+    { id: "get_proxy_running", patterns: ["proxy running"] },
   ]
 }
 
@@ -317,7 +317,7 @@ fn cli_proxy_command_id(command_id : String) -> Bool {
     | "get_available_providers_for_failover"
     | "is_live_takeover_active"
     | "switch_proxy_provider"
-    | "is_proxy_running" => true
+    | "get_proxy_running" => true
     _ => false
   }
 }
@@ -363,7 +363,7 @@ async fn run_proxy_cli_command(
     "is_live_takeover_active" =>
       check_proxy_endpoint(args, "/proxy/takeover-status")
     "switch_proxy_provider" => switch_proxy_provider(args)
-    "is_proxy_running" => check_proxy_running(args)
+    "get_proxy_running" => check_proxy_running(args)
     _ => ()
   }
 }

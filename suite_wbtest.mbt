@@ -593,7 +593,7 @@ fn suite_routes_include_path(routes : Array[Json], path : String) -> Bool {
 }
 
 ///|
-fn moon_tauri_command_surface() -> Array[String] {
+fn moon_legacy_command_surface() -> Array[String] {
   [
     "get_claude_desktop_status", "get_claude_desktop_default_routes", "import_claude_desktop_providers_from_claude",
     "ensure_claude_desktop_official_provider", "get_claude_config_status", "get_config_status",
@@ -624,9 +624,9 @@ test "suite manifest omits legacy Moonstat command route surface" {
   )
   guard manifest is Object(obj) else { fail("expected manifest object") }
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
-  let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 59)
-  for command in moon_commands {
+  let legacy_commands = moon_legacy_command_surface()
+  assert_eq(legacy_commands.length(), 59)
+  for command in legacy_commands {
     assert_false(suite_routes_include_path(routes, "/\{command}"))
   }
 }
@@ -645,9 +645,9 @@ fn gateway_source_registers_path(source : String, path : String) -> Bool {
 ///|
 async test "gateway omits legacy Moonstat command route handlers" {
   let source = @fsx.read_file("gateway_core.mbt")
-  let moon_commands = moon_tauri_command_surface()
-  assert_eq(moon_commands.length(), 59)
-  for command in moon_commands {
+  let legacy_commands = moon_legacy_command_surface()
+  assert_eq(legacy_commands.length(), 59)
+  for command in legacy_commands {
     assert_false(gateway_source_registers_path(source, "/\{command}"))
   }
   let proxy_routes = @fsx.read_file("gateway_proxy_routes.mbt")

@@ -176,7 +176,7 @@ test "registered cli commands match suite command aliases and status commands" {
   )
   assert_true(
     registered_cli_command_id(["moonstat", "proxy", "running"]) ==
-    Some("is_proxy_running"),
+    Some("get_proxy_running"),
   )
   assert_true(
     registered_cli_command_id(["moonstat", "provider", "list"]) ==
@@ -469,7 +469,7 @@ test "proxy cli dispatcher owns only proxy command family" {
   assert_false(cli_proxy_command_id("update_proxy_config"))
   assert_true(cli_proxy_command_id("set_proxy_takeover_for_app"))
   assert_true(cli_proxy_command_id("switch_proxy_provider"))
-  assert_true(cli_proxy_command_id("is_proxy_running"))
+  assert_true(cli_proxy_command_id("get_proxy_running"))
   assert_false(cli_proxy_command_id("get_providers"))
   assert_false(cli_proxy_command_id("suite_manifest"))
   assert_false(cli_proxy_command_id("auth_get_status"))
