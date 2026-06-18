@@ -104,6 +104,72 @@ test "provider router current selection ignores metadata enabled flag like ccs" 
 }
 
 ///|
+test "provider router exports prometheus provider and circuit metrics" {
+  let router = ProviderRouter::new(circuit_config={
+    failure_threshold: 1,
+    success_threshold: 2,
+    timeout_seconds: 60,
+    error_rate_threshold: 0.6,
+    min_requests: 10,
+  })
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="codex-oauth",
+      provider_name="Codex OAuth",
+    ),
+  )
+  router.upsert_provider(
+    ProviderRouteTarget::new(
+      app_type="codex",
+      provider_id="backup",
+      provider_name="Backup",
+      enabled=false,
+    ),
+  )
+  router.set_current_provider("codex", "codex-oauth")
+  router.set_auto_failover("codex", true)
+  router.record_result("codex-oauth", "codex", false, false, now_ms=1000)
+  let metrics = provider_router_prometheus_metrics(router)
+  assert_true(metrics.contains("# TYPE moonstat_provider_configured gauge\n"))
+  assert_true(
+    metrics.contains(
+      "moonstat_provider_configured{app_type=\"codex\",provider_id=\"codex-oauth\"} 1",
+    ),
+  )
+  assert_true(
+    metrics.contains(
+      "moonstat_provider_enabled{app_type=\"codex\",provider_id=\"backup\"} 0",
+    ),
+  )
+  assert_true(
+    metrics.contains(
+      "moonstat_provider_current{app_type=\"codex\",provider_id=\"codex-oauth\"} 1",
+    ),
+  )
+  assert_true(
+    metrics.contains(
+      "moonstat_provider_auto_failover_enabled{app_type=\"codex\"} 1",
+    ),
+  )
+  assert_true(
+    metrics.contains(
+      "moonstat_provider_healthy{app_type=\"codex\",provider_id=\"codex-oauth\"} 0",
+    ),
+  )
+  assert_true(
+    metrics.contains(
+      "moonstat_provider_circuit_open{app_type=\"codex\",provider_id=\"codex-oauth\"} 1",
+    ),
+  )
+  assert_true(
+    metrics.contains(
+      "moonstat_provider_circuit_failed_requests_total{app_type=\"codex\",provider_id=\"codex-oauth\"} 1",
+    ),
+  )
+}
+
+///|
 test "provider router failover enabled uses ccs sorted queue ignoring current" {
   let router = ProviderRouter::new()
   router.upsert_provider(

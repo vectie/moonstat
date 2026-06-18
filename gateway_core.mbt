@@ -113,7 +113,12 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.usage.handle_stats(w)
   })
   router.add_handler(@httpx.Method::Get, "/metrics", (_, w) => {
-    self.usage.handle_metrics(w)
+    self.usage.handle_metrics(
+      w,
+      provider_metrics=provider_router_prometheus_metrics(
+        self.proxy.provider_router,
+      ),
+    )
   })
   router.add_handler(@httpx.Method::Get, "/get_claude_config_status", (_, w) => {
     self.config.handle_get_config_status(w, "claude")

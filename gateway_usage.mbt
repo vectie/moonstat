@@ -17,8 +17,15 @@ fn UsageService::health_json(
 }
 
 ///|
-fn UsageService::metrics_text(self : UsageService) -> String {
-  self.stats.prometheus_metrics()
+fn UsageService::metrics_text(
+  self : UsageService,
+  provider_metrics? : String = "",
+) -> String {
+  if provider_metrics.is_empty() {
+    self.stats.prometheus_metrics()
+  } else {
+    "\{self.stats.prometheus_metrics()}\n\{provider_metrics}"
+  }
 }
 
 ///|
@@ -714,10 +721,11 @@ async fn UsageService::handle_status(
 async fn UsageService::handle_metrics(
   self : UsageService,
   w : @httpx.ResponseWriter,
+  provider_metrics? : String = "",
 ) -> Unit {
   w.header().set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
   w.write_header(@status.Ok)
-  w.write(self.metrics_text())
+  w.write(self.metrics_text(provider_metrics~))
   w.flush()
 }
 

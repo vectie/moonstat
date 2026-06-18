@@ -1867,6 +1867,157 @@ pub fn ProviderRouter::route_stats_json(self : ProviderRouter) -> Json {
 }
 
 ///|
+fn provider_router_prometheus_metrics(router : ProviderRouter) -> String {
+  let out = StringBuilder::new()
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_configured", "Configured provider route entries.",
+  )
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_enabled", "Configured provider enabled flags.",
+  )
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_current", "Current provider selection by app.",
+  )
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_healthy", "Provider health including circuit breaker state.",
+  )
+  for app_type in router.providers.keys() {
+    guard router.providers.get(app_type) is Some(providers) else { continue }
+    let current_provider_id = router.current_provider_ids.get(app_type)
+    for provider_id in providers.keys() {
+      guard providers.get(provider_id) is Some(provider) else { continue }
+      let labels = provider_router_labels(app_type, provider_id)
+      provider_router_metric_sample(
+        out, "moonstat_provider_configured", labels, 1.0,
+      )
+      provider_router_metric_sample(
+        out,
+        "moonstat_provider_enabled",
+        labels,
+        if provider.enabled {
+          1.0
+        } else {
+          0.0
+        },
+      )
+      provider_router_metric_sample(
+        out,
+        "moonstat_provider_current",
+        labels,
+        match current_provider_id {
+          Some(current) if current == provider_id => 1.0
+          _ => 0.0
+        },
+      )
+      let health = router.provider_health_state(
+        provider_id, app_type, "metrics",
+      )
+      let stats = router.get_circuit_breaker_stats(provider_id, app_type)
+      let is_circuit_open = match stats {
+        Some(stats) => stats.state == Open
+        None => false
+      }
+      provider_router_metric_sample(
+        out,
+        "moonstat_provider_healthy",
+        labels,
+        if health.is_healthy && !is_circuit_open {
+          1.0
+        } else {
+          0.0
+        },
+      )
+    }
+  }
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_auto_failover_enabled", "Auto-failover enabled state by app.",
+  )
+  for app_type in router.auto_failover_enabled.keys() {
+    guard router.auto_failover_enabled.get(app_type) is Some(enabled) else {
+      continue
+    }
+    provider_router_metric_sample(
+      out,
+      "moonstat_provider_auto_failover_enabled",
+      provider_router_app_labels(app_type),
+      if enabled {
+        1.0
+      } else {
+        0.0
+      },
+    )
+  }
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_circuit_open", "Provider circuit breaker open state.",
+  )
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_circuit_half_open", "Provider circuit breaker half-open state.",
+  )
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_circuit_consecutive_failures", "Provider circuit breaker consecutive failures.",
+  )
+  provider_router_metric_header(
+    out, "gauge", "moonstat_provider_circuit_consecutive_successes", "Provider circuit breaker consecutive successes.",
+  )
+  provider_router_metric_header(
+    out, "counter", "moonstat_provider_circuit_requests_total", "Provider circuit breaker observed requests.",
+  )
+  provider_router_metric_header(
+    out, "counter", "moonstat_provider_circuit_failed_requests_total", "Provider circuit breaker observed failed requests.",
+  )
+  for key in router.circuit_breakers.keys() {
+    guard router.circuit_breakers.get(key) is Some(breaker) else { continue }
+    let labels = provider_router_key_labels(key)
+    let stats = breaker.get_stats()
+    provider_router_metric_sample(
+      out,
+      "moonstat_provider_circuit_open",
+      labels,
+      if stats.state == Open {
+        1.0
+      } else {
+        0.0
+      },
+    )
+    provider_router_metric_sample(
+      out,
+      "moonstat_provider_circuit_half_open",
+      labels,
+      if stats.state == HalfOpen {
+        1.0
+      } else {
+        0.0
+      },
+    )
+    provider_router_metric_sample(
+      out,
+      "moonstat_provider_circuit_consecutive_failures",
+      labels,
+      stats.consecutive_failures.to_double(),
+    )
+    provider_router_metric_sample(
+      out,
+      "moonstat_provider_circuit_consecutive_successes",
+      labels,
+      stats.consecutive_successes.to_double(),
+    )
+    provider_router_metric_sample(
+      out,
+      "moonstat_provider_circuit_requests_total",
+      labels,
+      stats.total_requests.to_double(),
+    )
+    provider_router_metric_sample(
+      out,
+      "moonstat_provider_circuit_failed_requests_total",
+      labels,
+      stats.failed_requests.to_double(),
+    )
+  }
+  out.to_string()
+}
+
+///|
 fn ProviderRouter::select_current_provider(
   self : ProviderRouter,
   app_type : String,
@@ -1945,6 +2096,66 @@ fn ProviderRouter::breaker_for(
 ///|
 fn circuit_key(app_type : String, provider_id : String) -> String {
   "\{app_type}:\{provider_id}"
+}
+
+///|
+fn provider_router_app_labels(app_type : String) -> String {
+  "app_type=\"\{prometheus_label_escape(app_type)}\""
+}
+
+///|
+fn provider_router_labels(app_type : String, provider_id : String) -> String {
+  "\{provider_router_app_labels(app_type)},provider_id=\"\{prometheus_label_escape(provider_id)}\""
+}
+
+///|
+fn provider_router_key_labels(key : String) -> String {
+  let parts : Array[String] = []
+  for part in key.split(":") {
+    parts.push(part.to_owned())
+  }
+  if parts.length() >= 2 {
+    let app_type = parts[0]
+    let provider_id = parts[1:].join(":")
+    provider_router_labels(app_type, provider_id)
+  } else {
+    provider_router_labels("", key)
+  }
+}
+
+///|
+fn prometheus_label_escape(value : String) -> String {
+  let out = StringBuilder::new()
+  for c in value {
+    match c {
+      '"' => out.write_string("\\\"")
+      '\\' => out.write_string("\\\\")
+      '\n' => out.write_string("\\n")
+      _ => out.write_char(c)
+    }
+  }
+  out.to_string()
+}
+
+///|
+fn provider_router_metric_header(
+  out : StringBuilder,
+  kind : String,
+  name : String,
+  help : String,
+) -> Unit {
+  out.write_string("# HELP \{name} \{help}\n")
+  out.write_string("# TYPE \{name} \{kind}\n")
+}
+
+///|
+fn provider_router_metric_sample(
+  out : StringBuilder,
+  name : String,
+  labels : String,
+  value : Double,
+) -> Unit {
+  out.write_string("\{name}{\{labels}} \{value}\n")
 }
 
 ///|

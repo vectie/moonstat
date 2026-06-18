@@ -32,6 +32,15 @@ test "usage service exposes stats and metrics without gateway" {
   let metrics = usage.metrics_text()
   assert_true(metrics.contains("moonstat_requests_total 1"))
   assert_true(metrics.contains("moonstat_successful_responses_total 1"))
+  let combined = usage.metrics_text(
+    provider_metrics="moonstat_provider_configured{app_type=\"codex\",provider_id=\"codex-oauth\"} 1\n",
+  )
+  assert_true(combined.contains("moonstat_requests_total 1"))
+  assert_true(
+    combined.contains(
+      "moonstat_provider_configured{app_type=\"codex\",provider_id=\"codex-oauth\"} 1",
+    ),
+  )
 }
 
 ///|
