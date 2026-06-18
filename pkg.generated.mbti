@@ -392,6 +392,7 @@ pub struct Gateway {
   config : ConfigService
   session : SessionService
   workspace : WorkspaceService
+  runtime : RuntimeService
   openclaw : OpenClawService
 }
 pub fn Gateway::host(Self) -> String
@@ -687,6 +688,10 @@ pub struct RequestLog {
 }
 pub fn RequestLog::new(request_id~ : String, provider_id~ : String, app_type~ : String, model~ : String, usage~ : TokenUsage, status_code~ : Int, latency_ms? : Int, first_token_ms? : Int?, duration_ms? : Int?, error_message? : String?, session_id? : String?, provider_name? : String?, provider_type? : String?, request_model? : String?, pricing_model? : String?, input_cost_usd? : String, output_cost_usd? : String, cache_read_cost_usd? : String, cache_creation_cost_usd? : String, total_cost_usd? : String, is_streaming? : Bool, cost_multiplier? : String, created_at? : Int, data_source? : String) -> Self
 pub fn RequestLog::to_json(Self) -> Json
+
+pub struct RuntimeService {
+}
+pub fn RuntimeService::new() -> Self
 
 pub struct SessionFileSyncState {
   last_modified : Int64

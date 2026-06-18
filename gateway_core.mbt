@@ -160,37 +160,37 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.handle_check_for_updates(w)
   })
   router.add_handler(@httpx.Method::Post, "/update_tray_menu", (_, w) => {
-    self.handle_update_tray_menu(w)
+    self.runtime.handle_update_tray_menu(w)
   })
   router.add_handler(@httpx.Method::Get, "/update_tray_menu", (_, w) => {
-    self.handle_update_tray_menu(w)
+    self.runtime.handle_update_tray_menu(w)
   })
   router.add_handler(@httpx.Method::Get, "/is_portable_mode", (_, w) => {
-    self.handle_is_portable_mode(w)
+    self.runtime.handle_is_portable_mode(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_init_error", (_, w) => {
-    self.handle_get_init_error(w)
+    self.runtime.handle_get_init_error(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_migration_result", (_, w) => {
-    self.handle_get_migration_result(w)
+    self.runtime.handle_get_migration_result(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_skills_migration_result", (_, w) => {
-    self.handle_get_skills_migration_result(w)
+    self.runtime.handle_get_skills_migration_result(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_tool_versions", (r, w) => {
-    self.handle_get_tool_versions(r, w)
+    self.runtime.handle_get_tool_versions(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_tool_versions", (r, w) => {
-    self.handle_get_tool_versions(r, w)
+    self.runtime.handle_get_tool_versions(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/run_tool_lifecycle_action", (r, w) => {
-    self.handle_run_tool_lifecycle_action(r, w)
+    self.runtime.handle_run_tool_lifecycle_action(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/probe_tool_installations", (r, w) => {
-    self.handle_probe_tool_installations(r, w)
+    self.runtime.handle_probe_tool_installations(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/probe_tool_installations", (r, w) => {
-    self.handle_probe_tool_installations(r, w)
+    self.runtime.handle_probe_tool_installations(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/set_window_theme", (r, w) => {
     self.handle_set_window_theme(r, w)

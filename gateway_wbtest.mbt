@@ -2136,6 +2136,28 @@ async test "workspace endpoints are owned by workspace service" {
 }
 
 ///|
+async test "runtime endpoints are owned by runtime service" {
+  let runtime_source = @fsx.read_file("gateway_misc.mbt")
+  let core_source = @fsx.read_file("gateway_core.mbt")
+  for
+    handler in [
+      "handle_update_tray_menu", "handle_is_portable_mode", "handle_get_init_error",
+      "handle_get_migration_result", "handle_get_skills_migration_result", "handle_get_tool_versions",
+      "handle_run_tool_lifecycle_action", "handle_probe_tool_installations",
+    ] {
+    assert_true(runtime_source.contains("async fn RuntimeService::\{handler}("))
+    assert_false(runtime_source.contains("async fn Gateway::\{handler}("))
+  }
+  assert_true(core_source.contains("self.runtime.handle_update_tray_menu(w)"))
+  assert_true(
+    core_source.contains("self.runtime.handle_get_tool_versions(r, w)"),
+  )
+  assert_true(
+    core_source.contains("self.runtime.handle_probe_tool_installations(r, w)"),
+  )
+}
+
+///|
 test "standalone tray update mirrors ccs no tray result" {
   assert_eq(moon_update_tray_menu_result(), Json::boolean(false))
 }

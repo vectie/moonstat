@@ -140,6 +140,15 @@ pub fn WorkspaceService::new() -> WorkspaceService {
 }
 
 ///|
+/// RuntimeService handles app runtime status and local tool lifecycle endpoints.
+pub struct RuntimeService {}
+
+///|
+pub fn RuntimeService::new() -> RuntimeService {
+  RuntimeService::{  }
+}
+
+///|
 /// OpenClawService handles OpenClaw and Hermes provider configuration.
 pub struct OpenClawService {
   mut openclaw_default_model : Json?

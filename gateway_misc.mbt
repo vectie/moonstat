@@ -18,6 +18,8 @@ pub struct Gateway {
   session : SessionService
   /// Local workspace and file dialog operations
   workspace : WorkspaceService
+  /// App runtime status and local tool lifecycle operations
+  runtime : RuntimeService
   /// OpenClaw and Hermes provider config
   openclaw : OpenClawService
 }
@@ -42,6 +44,7 @@ pub fn Gateway::new(
     config: ConfigService::new(),
     session: SessionService::new(),
     workspace: WorkspaceService::new(),
+    runtime: RuntimeService::new(),
     openclaw: OpenClawService::new(),
   }
 }
@@ -3013,8 +3016,8 @@ async fn Gateway::handle_check_for_updates(
 }
 
 ///|
-async fn Gateway::handle_update_tray_menu(
-  self : Gateway,
+async fn RuntimeService::handle_update_tray_menu(
+  self : RuntimeService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -3022,8 +3025,8 @@ async fn Gateway::handle_update_tray_menu(
 }
 
 ///|
-async fn Gateway::handle_is_portable_mode(
-  self : Gateway,
+async fn RuntimeService::handle_is_portable_mode(
+  self : RuntimeService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -3031,8 +3034,8 @@ async fn Gateway::handle_is_portable_mode(
 }
 
 ///|
-async fn Gateway::handle_get_init_error(
-  self : Gateway,
+async fn RuntimeService::handle_get_init_error(
+  self : RuntimeService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -3040,8 +3043,8 @@ async fn Gateway::handle_get_init_error(
 }
 
 ///|
-async fn Gateway::handle_get_migration_result(
-  self : Gateway,
+async fn RuntimeService::handle_get_migration_result(
+  self : RuntimeService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -3049,8 +3052,8 @@ async fn Gateway::handle_get_migration_result(
 }
 
 ///|
-async fn Gateway::handle_get_skills_migration_result(
-  self : Gateway,
+async fn RuntimeService::handle_get_skills_migration_result(
+  self : RuntimeService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -3058,8 +3061,8 @@ async fn Gateway::handle_get_skills_migration_result(
 }
 
 ///|
-async fn Gateway::handle_get_tool_versions(
-  self : Gateway,
+async fn RuntimeService::handle_get_tool_versions(
+  self : RuntimeService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -3070,8 +3073,8 @@ async fn Gateway::handle_get_tool_versions(
 }
 
 ///|
-async fn Gateway::handle_run_tool_lifecycle_action(
-  self : Gateway,
+async fn RuntimeService::handle_run_tool_lifecycle_action(
+  self : RuntimeService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -3093,8 +3096,8 @@ async fn Gateway::handle_run_tool_lifecycle_action(
 }
 
 ///|
-async fn Gateway::handle_probe_tool_installations(
-  self : Gateway,
+async fn RuntimeService::handle_probe_tool_installations(
+  self : RuntimeService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
