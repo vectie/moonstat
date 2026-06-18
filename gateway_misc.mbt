@@ -701,7 +701,7 @@ async fn Gateway::forward_non_streaming_codex_response(
       self.usage,
       providers,
     )
-    let outbound_request = self.codex_provider_outbound_request(
+    let outbound_request = self.session.codex_provider_outbound_request(
       active_provider, request,
     )
     let (response, response_body) = match active_provider {
@@ -885,7 +885,7 @@ async fn Gateway::forward_streaming_codex_response(
       self.usage,
       providers,
     )
-    let outbound_request = self.codex_provider_outbound_request(
+    let outbound_request = self.session.codex_provider_outbound_request(
       active_provider, request,
     )
     let (client, response, use_chat_bridge) = match active_provider {

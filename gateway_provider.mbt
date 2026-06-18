@@ -235,14 +235,14 @@ fn provider_selection_error_json(
 }
 
 ///|
-fn Gateway::codex_provider_outbound_request(
-  self : Gateway,
+fn SessionService::codex_provider_outbound_request(
+  self : SessionService,
   provider : ProviderRouteTarget?,
   request : Json,
 ) -> Json {
   match provider {
     Some(provider) if provider.can_use_codex_compatible_upstream() =>
-      self.session.codex_chat_history.enriched_request(request)
+      self.codex_chat_history.enriched_request(request)
     _ => request
   }
 }
