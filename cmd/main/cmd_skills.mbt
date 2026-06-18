@@ -1,0 +1,83 @@
+///|
+fn cli_skill_command_id(command_id : String) -> Bool {
+  match command_id {
+    "get_installed_skills"
+    | "get_skill_backups"
+    | "delete_skill_backup"
+    | "restore_skill_backup"
+    | "install_skill_unified"
+    | "uninstall_skill_unified"
+    | "toggle_skill_app"
+    | "scan_unmanaged_skills"
+    | "import_skills_from_apps"
+    | "discover_available_skills"
+    | "check_skill_updates"
+    | "update_skill"
+    | "migrate_skill_storage"
+    | "search_skills_sh"
+    | "get_skills"
+    | "get_skills_for_app"
+    | "get_skill_repos"
+    | "add_skill_repo"
+    | "remove_skill_repo"
+    | "install_skills_from_zip" => true
+    _ => false
+  }
+}
+
+///|
+async fn run_skill_cli_command(
+  command_id : String,
+  args : Array[String],
+) -> Unit {
+  match command_id {
+    "get_installed_skills" => check_usage_endpoint(args, "/skills/installed")
+    "get_skill_backups" => check_usage_endpoint(args, "/skills/backups")
+    "delete_skill_backup" =>
+      check_json_post_endpoint(
+        args,
+        skill_backup_id_path(args, "/skills/backups/delete"),
+        "Skills",
+      )
+    "restore_skill_backup" =>
+      check_json_post_endpoint(args, skill_restore_backup_path(args), "Skills")
+    "install_skill_unified" =>
+      check_json_post_endpoint(
+        args,
+        skill_install_path(args, "/skills/install-unified"),
+        "Skills",
+      )
+    "uninstall_skill_unified" =>
+      check_json_post_endpoint(
+        args,
+        skill_id_path(args, "/skills/uninstall-unified"),
+        "Skills",
+      )
+    "toggle_skill_app" =>
+      check_json_post_endpoint(args, skill_toggle_app_path(args), "Skills")
+    "scan_unmanaged_skills" => check_usage_endpoint(args, "/skills/unmanaged")
+    "import_skills_from_apps" => import_skills_from_apps(args)
+    "discover_available_skills" =>
+      check_usage_endpoint(args, "/skills/discover")
+    "check_skill_updates" => check_usage_endpoint(args, "/skills/updates")
+    "update_skill" =>
+      check_json_post_endpoint(
+        args,
+        skill_id_path(args, "/skills/update"),
+        "Skills",
+      )
+    "migrate_skill_storage" => migrate_skill_storage(args)
+    "search_skills_sh" => check_usage_endpoint(args, skill_search_path(args))
+    "get_skills" => check_usage_endpoint(args, "/skills")
+    "get_skills_for_app" =>
+      check_usage_endpoint(args, skill_app_path(args, "/skills/app"))
+    "get_skill_repos" => check_usage_endpoint(args, "/skills/repos")
+    "add_skill_repo" =>
+      check_json_post_endpoint(args, skill_repo_add_path(args), "Skills")
+    "remove_skill_repo" =>
+      check_json_post_endpoint(args, skill_repo_remove_path(args), "Skills")
+    "install_skills_from_zip" =>
+      check_json_post_endpoint(args, skill_zip_install_path(args), "Skills")
+    _ => ()
+  }
+}

@@ -500,6 +500,18 @@ test "copilot cli dispatcher owns Copilot auth commands" {
 }
 
 ///|
+test "skill cli dispatcher owns skills commands" {
+  assert_true(cli_skill_command_id("get_installed_skills"))
+  assert_true(cli_skill_command_id("restore_skill_backup"))
+  assert_true(cli_skill_command_id("import_skills_from_apps"))
+  assert_true(cli_skill_command_id("migrate_skill_storage"))
+  assert_true(cli_skill_command_id("install_skills_from_zip"))
+  assert_false(cli_skill_command_id("auth_get_status"))
+  assert_false(cli_skill_command_id("get_usage_summary"))
+  assert_false(cli_skill_command_id("get_providers"))
+}
+
+///|
 test "usage sync path accepts standalone projects dir override" {
   assert_eq(
     usage_sync_path(["moonstat", "usage", "sync"]),
