@@ -313,7 +313,7 @@ test "token plan quota usage conversion mirrors ccs rows" {
 }
 
 ///|
-test "usage query helpers parse ccs auto failover boolean parameters" {
+test "usage query helpers parse moonstat auto failover boolean parameters" {
   assert_eq(
     proxy_bool_request(
       "/proxy/auto-failover-enabled?appType=codex&enabled=true",
@@ -324,7 +324,7 @@ test "usage query helpers parse ccs auto failover boolean parameters" {
   )
   assert_eq(
     proxy_bool_request(
-      "/proxy/auto-failover-enabled?app_type=codex&enabled=0",
+      "/proxy/auto-failover-enabled?appType=codex&enabled=0",
       None,
       ["enabled"],
     ),
@@ -359,9 +359,9 @@ test "pick directory parser accepts defaultPath payload key" {
 }
 
 ///|
-test "ccs read command parsers accept json payload keys" {
+test "moonstat read command parsers accept canonical json payload keys" {
   let app_body = Some({ "app": Json::string("codex") }.to_json())
-  let app_type_body = Some({ "appType": Json::string("gemini") }.to_json())
+  let app_type_body = Some({ "app": Json::string("gemini") }.to_json())
   let provider_body = Some(
     { "app": Json::string("codex"), "providerId": Json::string("codex-oauth") }.to_json(),
   )
@@ -382,6 +382,20 @@ test "ccs read command parsers accept json payload keys" {
     Some("codex-oauth"),
   )
   assert_eq(
+    provider_app_from_request(
+      "/providers",
+      Some({ "appType": Json::string("codex") }.to_json()),
+    ),
+    None,
+  )
+  assert_eq(
+    provider_id_from_request(
+      "/providers/endpoints/list",
+      Some({ "provider_id": Json::string("codex-oauth") }.to_json()),
+    ),
+    None,
+  )
+  assert_eq(
     proxy_string_request(
       "/mcp/validate",
       Some({ "cmd": Json::string("node") }.to_json()),
@@ -399,7 +413,7 @@ test "ccs read command parsers accept json payload keys" {
 }
 
 ///|
-test "proxy failover command parsers accept ccs json payload keys" {
+test "proxy failover command parsers accept canonical json payload keys" {
   let body = Some(
     {
       "appType": Json::string(" codex "),
@@ -420,9 +434,28 @@ test "proxy failover command parsers accept ccs json payload keys" {
   assert_eq(
     proxy_app_type_from_request(
       "/proxy/failover-queue",
-      Some({ "app": Json::string(" gemini ") }.to_json()),
+      Some({ "appType": Json::string(" gemini ") }.to_json()),
     ),
     Some("gemini"),
+  )
+  assert_eq(
+    proxy_app_type_from_request(
+      "/proxy/failover-queue",
+      Some({ "app": Json::string("gemini") }.to_json()),
+    ),
+    None,
+  )
+  assert_true(
+    proxy_provider_query_from_request(
+      "/proxy/reset-circuit-breaker",
+      Some(
+        {
+          "app_type": Json::string("codex"),
+          "provider_id": Json::string("codex-oauth"),
+        }.to_json(),
+      ),
+    )
+    is None,
   )
   assert_eq(
     proxy_bool_request("/proxy/auto-failover-enabled", body, ["enabled"]),
@@ -604,7 +637,7 @@ test "provider command helpers parse ccs sort and endpoint test payloads" {
       {
         "updates": Json::array([
           { "id": Json::string("b"), "sortIndex": Json::number(0.0) }.to_json(),
-          { "id": Json::string("a"), "sort_index": Json::number(1.0) }.to_json(),
+          { "id": Json::string("a"), "sortIndex": Json::number(1.0) }.to_json(),
         ]),
       }.to_json(),
     ),
@@ -651,7 +684,7 @@ test "provider command helpers parse ccs sort and endpoint test payloads" {
 }
 
 ///|
-test "universal provider helper builds ccs provider shape from query args" {
+test "universal provider helper builds moonstat provider shape from query args" {
   guard universal_provider_from_request(
       "/providers/universal?id=u%201&name=Universal+One&providerType=openai-compatible&apps=claude,codex&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&codexModel=gpt-5&reasoningEffort=medium",
       None,
@@ -668,6 +701,17 @@ test "universal provider helper builds ccs provider shape from query args" {
     "baseUrl": "https://api.example.com/v1",
     "apiKey": "sk-test",
   })
+  assert_true(
+    universal_provider_from_request(
+      "/providers/universal?id=legacy&provider_type=openai-compatible&base_url=https%3A%2F%2Fapi.example.com&api_key=sk-test&codex_model=gpt-5",
+      None,
+    )
+    is Some(provider) &&
+    provider is Object(obj) &&
+    obj.get("baseUrl") is None &&
+    obj.get("apiKey") is None &&
+    obj["providerType"] == Json::string("custom"),
+  )
   guard universal_provider_from_request(
       "/providers/universal",
       Some(
@@ -2976,7 +3020,7 @@ test "stream check all provider ids follow ccs proxy target filter" {
 }
 
 ///|
-test "proxy config request parsers accept moonstat camelCase fields" {
+test "proxy config request parsers accept canonical moonstat fields" {
   let config = Some(
     {
       "proxyEnabled": Json::boolean(false),
@@ -3021,7 +3065,7 @@ test "proxy config request parsers accept moonstat camelCase fields" {
   )
   assert_eq(
     proxy_app_type_from_request(
-      "/set_default_cost_multiplier?app=codex&value=1.25",
+      "/set_default_cost_multiplier?appType=codex&value=1.25",
       None,
     ),
     Some("codex"),
@@ -3030,14 +3074,17 @@ test "proxy config request parsers accept moonstat camelCase fields" {
     proxy_app_type_from_request(
       "/set_pricing_model_source_test_hook",
       Some(
-        { "app": Json::string(" claude "), "value": Json::string("request") }.to_json(),
+        {
+          "appType": Json::string(" claude "),
+          "value": Json::string("request"),
+        }.to_json(),
       ),
     ),
     Some("claude"),
   )
   assert_eq(
     proxy_app_type_from_request(
-      "/proxy/app-config?app=codex&enabled=true",
+      "/proxy/app-config?appType=codex&enabled=true",
       None,
     ),
     Some("codex"),
@@ -3046,14 +3093,18 @@ test "proxy config request parsers accept moonstat camelCase fields" {
     proxy_app_type_from_request(
       "/proxy/takeover-status",
       Some(
-        { "app": Json::string(" gemini "), "enabled": Json::boolean(true) }.to_json(),
+        { "appType": Json::string(" gemini "), "enabled": Json::boolean(true) }.to_json(),
       ),
     ),
     Some("gemini"),
   )
   assert_eq(
     proxy_app_type_from_request("/providers/switch?app=codex&id=custom", None),
-    Some("codex"),
+    None,
+  )
+  assert_eq(
+    proxy_app_type_from_request("/proxy/app-config?app_type=codex", None),
+    None,
   )
 }
 

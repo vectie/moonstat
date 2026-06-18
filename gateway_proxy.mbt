@@ -1080,7 +1080,7 @@ async fn ProxyService::switch_provider_from_request(
   guard proxy_app_type_from_request(r.path, config) is Some(app_type) else {
     return Err("missing_app_type")
   }
-  guard proxy_string_request(r.path, config, ["provider_id", "providerId"])
+  guard proxy_string_request(r.path, config, ["providerId"])
     is Some(provider_id) else {
     return Err("missing_provider_id")
   }
@@ -1167,8 +1167,7 @@ fn proxy_provider_query_from_request(
   path : StringView,
   body : Json?,
 ) -> ProxyProviderQuery? {
-  guard proxy_string_request(path, body, ["provider_id", "providerId"])
-    is Some(provider_id) else {
+  guard proxy_string_request(path, body, ["providerId"]) is Some(provider_id) else {
     return None
   }
   guard proxy_app_type_from_request(path, body) is Some(app_type) else {
@@ -1179,7 +1178,7 @@ fn proxy_provider_query_from_request(
 
 ///|
 fn proxy_app_type_from_request(path : StringView, body : Json?) -> String? {
-  match proxy_string_request(path, body, ["app_type", "appType", "app"]) {
+  match proxy_string_request(path, body, ["appType"]) {
     Some(app_type) if !app_type.trim().is_empty() =>
       Some(app_type.trim().to_owned())
     _ => None

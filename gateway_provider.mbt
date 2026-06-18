@@ -1038,8 +1038,7 @@ async fn ProxyService::handle_open_provider_terminal(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  guard proxy_string_request(r.path, body, ["providerId", "provider_id"])
-    is Some(provider_id) else {
+  guard proxy_string_request(r.path, body, ["providerId"]) is Some(provider_id) else {
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
@@ -1542,23 +1541,14 @@ fn stream_check_provider_from_request(
   path : StringView,
   body : Json?,
 ) -> (String, String)? {
-  let app_type = match usage_query_value_any(path, "app_type", "appType") {
+  let app_type = match usage_query_value(path, "appType") {
     Some(value) => Some(value)
-    None => proxy_string_request(path, body, ["app_type", "appType"])
-  }
-  let app_type = match app_type {
-    Some(value) => Some(value)
-    None => proxy_string_request(path, body, ["app"])
+    None => proxy_string_request(path, body, ["appType"])
   }
   guard app_type is Some(app_type) else { return None }
-  let provider_id = match
-    usage_query_value_any(path, "provider_id", "providerId") {
+  let provider_id = match usage_query_value(path, "providerId") {
     Some(value) => Some(value)
-    None => proxy_string_request(path, body, ["provider_id", "providerId"])
-  }
-  let provider_id = match provider_id {
-    Some(value) => Some(value)
-    None => proxy_string_request(path, body, ["id"])
+    None => proxy_string_request(path, body, ["providerId"])
   }
   guard provider_id is Some(provider_id) else { return None }
   Some((app_type, provider_id))
@@ -1566,12 +1556,12 @@ fn stream_check_provider_from_request(
 
 ///|
 fn provider_app_from_request(path : StringView, body : Json?) -> String? {
-  provider_string_from_request(path, body, ["app", "app_type", "appType"])
+  provider_string_from_request(path, body, ["app"])
 }
 
 ///|
 fn provider_id_from_request(path : StringView, body : Json?) -> String? {
-  provider_string_from_request(path, body, ["id", "provider_id", "providerId"])
+  provider_string_from_request(path, body, ["id", "providerId"])
 }
 
 ///|
@@ -1751,10 +1741,7 @@ fn provider_explicit_type_from_request(
   body : Json?,
   settings : Json?,
 ) -> String? {
-  match
-    provider_string_from_request(path, body, [
-      "category", "provider_type", "providerType",
-    ]) {
+  match provider_string_from_request(path, body, ["category", "providerType"]) {
     Some(value) if !value.trim().is_empty() => return Some(value)
     _ => ()
   }
@@ -2037,18 +2024,18 @@ fn universal_provider_from_request(path : StringView, body : Json?) -> Json? {
       provider_string_from_request(path, body, ["name"]).unwrap_or(id),
     ),
     "providerType": Json::string(
-      provider_string_from_request(path, body, ["providerType", "provider_type"]).unwrap_or(
+      provider_string_from_request(path, body, ["providerType"]).unwrap_or(
         "custom",
       ),
     ),
     "apps": universal_provider_apps_from_request(path, body),
     "models": universal_provider_models_from_request(path, body),
   }
-  match provider_string_from_request(path, body, ["baseUrl", "base_url"]) {
+  match provider_string_from_request(path, body, ["baseUrl"]) {
     Some(value) => provider["baseUrl"] = Json::string(value)
     None => ()
   }
-  match provider_string_from_request(path, body, ["apiKey", "api_key"]) {
+  match provider_string_from_request(path, body, ["apiKey"]) {
     Some(value) => provider["apiKey"] = Json::string(value)
     None => ()
   }
@@ -2060,9 +2047,9 @@ fn universal_provider_apps_from_request(
   path : StringView,
   body : Json?,
 ) -> Json {
-  let apps_value = provider_string_from_request(path, body, [
-    "apps", "app", "appType", "app_type",
-  ]).unwrap_or("claude,codex,gemini")
+  let apps_value = provider_string_from_request(path, body, ["apps", "app"]).unwrap_or(
+    "claude,codex,gemini",
+  )
   let enabled = universal_provider_enabled_apps(apps_value)
   {
     "claude": Json::boolean(enabled.contains("claude")),
@@ -2093,29 +2080,23 @@ fn universal_provider_models_from_request(
   body : Json?,
 ) -> Json {
   let models : Map[String, Json] = {}
-  match
-    provider_string_from_request(path, body, ["claudeModel", "claude_model"]) {
+  match provider_string_from_request(path, body, ["claudeModel"]) {
     Some(model) => models["claude"] = { "model": Json::string(model) }.to_json()
     None => ()
   }
   let codex : Map[String, Json] = {}
-  match
-    provider_string_from_request(path, body, ["codexModel", "codex_model"]) {
+  match provider_string_from_request(path, body, ["codexModel"]) {
     Some(model) => codex["model"] = Json::string(model)
     None => ()
   }
-  match
-    provider_string_from_request(path, body, [
-      "reasoningEffort", "reasoning_effort",
-    ]) {
+  match provider_string_from_request(path, body, ["reasoningEffort"]) {
     Some(value) => codex["reasoningEffort"] = Json::string(value)
     None => ()
   }
   if !codex.is_empty() {
     models["codex"] = Json::object(codex)
   }
-  match
-    provider_string_from_request(path, body, ["geminiModel", "gemini_model"]) {
+  match provider_string_from_request(path, body, ["geminiModel"]) {
     Some(model) => models["gemini"] = { "model": Json::string(model) }.to_json()
     None => ()
   }
@@ -2132,7 +2113,7 @@ fn provider_target_from_request(
     return None
   }
   let provider_name = provider_string_from_request(path, body, [
-    "name", "provider_name", "providerName",
+    "name", "providerName",
   ]).unwrap_or(provider_id)
   let enabled = provider_bool_from_request(path, body, ["enabled"]).unwrap_or(
     true,
@@ -2142,17 +2123,15 @@ fn provider_target_from_request(
     path, body, settings_config,
   )
   let api_format = provider_prefer_non_empty(
-    provider_string_from_request(path, body, ["api_format", "apiFormat"]),
+    provider_string_from_request(path, body, ["apiFormat"]),
     provider_settings_api_format(settings_config),
   )
   let base_url = provider_prefer_non_empty(
-    provider_string_from_request(path, body, [
-      "base_url", "baseUrl", "websiteUrl",
-    ]),
+    provider_string_from_request(path, body, ["baseUrl", "websiteUrl"]),
     provider_settings_base_url(app_type, settings_config),
   )
   let api_key = provider_prefer_non_empty(
-    provider_string_from_request(path, body, ["api_key", "apiKey"]),
+    provider_string_from_request(path, body, ["apiKey"]),
     provider_settings_api_key(app_type, settings_config),
   )
   let provider_type = provider_resolved_provider_type(
@@ -2236,18 +2215,10 @@ fn provider_model_mapping_from_request(
     _ => ()
   }
   let mapping = ModelMapping::new(
-    haiku_model=provider_string_from_request(path, body, [
-      "haikuModel", "haiku_model",
-    ]),
-    sonnet_model=provider_string_from_request(path, body, [
-      "sonnetModel", "sonnet_model",
-    ]),
-    opus_model=provider_string_from_request(path, body, [
-      "opusModel", "opus_model",
-    ]),
-    default_model=provider_string_from_request(path, body, [
-      "defaultModel", "default_model",
-    ]),
+    haiku_model=provider_string_from_request(path, body, ["haikuModel"]),
+    sonnet_model=provider_string_from_request(path, body, ["sonnetModel"]),
+    opus_model=provider_string_from_request(path, body, ["opusModel"]),
+    default_model=provider_string_from_request(path, body, ["defaultModel"]),
   )
   if mapping.has_mapping() {
     Some(mapping)
@@ -2406,8 +2377,7 @@ fn provider_sort_updates_from_array(
   let updates : Array[ProviderSortUpdate] = []
   for item in items {
     guard item is Object(obj) else { continue }
-    guard json_string_from_map_any(obj, ["id", "providerId", "provider_id"])
-      is Some(id) else {
+    guard json_string_from_map_any(obj, ["id", "providerId"]) is Some(id) else {
       continue
     }
     let sort_index = match obj.get("sortIndex") {

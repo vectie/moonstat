@@ -876,7 +876,7 @@ test "proxy config setter paths encode moonstat command arguments" {
       "moonstat", "proxy", "takeover-status", "set", "--app", "codex", "--enabled",
       "true",
     ]),
-    Some("/proxy/takeover-status?app_type=codex&enabled=true"),
+    Some("/proxy/takeover-status?appType=codex&enabled=true"),
   )
   assert_eq(
     proxy_app_value_update_path(
@@ -886,7 +886,7 @@ test "proxy config setter paths encode moonstat command arguments" {
       ],
       "/proxy/default-cost-multiplier",
     ),
-    Some("/proxy/default-cost-multiplier?app_type=codex&value=1.25"),
+    Some("/proxy/default-cost-multiplier?appType=codex&value=1.25"),
   )
   assert_eq(
     proxy_provider_endpoint_path(
@@ -896,7 +896,7 @@ test "proxy config setter paths encode moonstat command arguments" {
       ],
       "/proxy/switch-provider",
     ),
-    Some("/proxy/switch-provider?provider_id=codex-oauth&app_type=codex"),
+    Some("/proxy/switch-provider?providerId=codex-oauth&appType=codex"),
   )
   assert_eq(
     provider_app_path(
@@ -1005,14 +1005,14 @@ test "proxy grouped commands build canonical paths" {
       ],
       "/proxy/switch-provider",
     ),
-    Some("/proxy/switch-provider?provider_id=codex%20oauth&app_type=codex"),
+    Some("/proxy/switch-provider?providerId=codex%20oauth&appType=codex"),
   )
   assert_eq(
     proxy_auto_failover_enabled_path([
       "moonstat", "proxy", "auto-failover-enabled", "set", "--app-type", "codex",
       "--enabled", "true",
     ]),
-    Some("/proxy/auto-failover-enabled?app_type=codex&enabled=true"),
+    Some("/proxy/auto-failover-enabled?appType=codex&enabled=true"),
   )
   assert_eq(
     global_proxy_url_path(
