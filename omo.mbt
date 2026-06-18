@@ -208,3 +208,16 @@ async fn moon_delete_omo_config_files(slim : Bool) -> String? {
   }
   None
 }
+
+///|
+async fn ProxyService::handle_disable_current_omo(
+  self : ProxyService,
+  w : @httpx.ResponseWriter,
+  slim~ : Bool,
+) -> Unit {
+  self.clear_current_omo_provider(slim)
+  match moon_delete_omo_config_files(slim) {
+    Some(error) => write_usage_bad_request(w, error)
+    None => write_usage_json(w, Json::null())
+  }
+}

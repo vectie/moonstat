@@ -2119,6 +2119,7 @@ async test "copilot optimizer config endpoints are owned by config service" {
 async test "settings mcp and prompt endpoints are owned by config service" {
   let misc_source = @fsx.read_file("gateway_misc.mbt")
   let config_source = @fsx.read_file("gateway_config.mbt")
+  let config_runtime_source = @fsx.read_file("gateway_config_runtime.mbt")
   let mcp_prompt_source = @fsx.read_file("gateway_config_mcp_prompt.mbt")
   let deeplink_source = @fsx.read_file("gateway_deeplink.mbt")
   let deeplink_helpers_source = @fsx.read_file("deeplink.mbt")
@@ -2127,6 +2128,7 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   let route_source = @fsx.read_file("gateway_config_routes.mbt")
   let config_sources = misc_source +
     config_source +
+    config_runtime_source +
     mcp_prompt_source +
     deeplink_source +
     deeplink_helpers_source +
@@ -2156,6 +2158,20 @@ async test "settings mcp and prompt endpoints are owned by config service" {
     ] {
     assert_true(config_sources.contains("async fn ConfigService::\{handler}("))
     assert_false(config_sources.contains("async fn Gateway::\{handler}("))
+  }
+  for
+    handler in [
+      "handle_set_window_theme", "handle_enter_lightweight_mode", "handle_exit_lightweight_mode",
+      "handle_is_lightweight_mode", "handle_set_auto_launch", "handle_get_auto_launch_status",
+      "handle_check_env_conflicts", "handle_delete_env_vars", "handle_get_claude_plugin_status",
+      "handle_is_claude_plugin_applied", "handle_apply_claude_onboarding_skip", "handle_clear_claude_onboarding_skip",
+      "handle_webdav_test_connection", "handle_webdav_sync_operation", "handle_webdav_sync_fetch_remote_info",
+      "handle_s3_test_connection", "handle_s3_sync_operation", "handle_s3_sync_fetch_remote_info",
+    ] {
+    assert_true(
+      config_runtime_source.contains("async fn ConfigService::\{handler}("),
+    )
+    assert_false(misc_source.contains("async fn ConfigService::\{handler}("))
   }
   for
     helper in [
@@ -2511,6 +2527,12 @@ async test "provider config endpoints are owned by proxy service" {
   assert_true(omo_source.contains("fn ProxyService::current_omo_provider_id("))
   assert_true(
     omo_source.contains("fn ProxyService::clear_current_omo_provider("),
+  )
+  assert_true(
+    omo_source.contains("async fn ProxyService::handle_disable_current_omo("),
+  )
+  assert_false(
+    misc_source.contains("async fn ProxyService::handle_disable_current_omo("),
   )
   assert_false(
     provider_source.contains("fn Gateway::current_claude_desktop_provider("),
