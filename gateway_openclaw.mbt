@@ -332,8 +332,7 @@ fn openclaw_tools_from_request(path : StringView, body : Json?) -> Json? {
 
 ///|
 fn hermes_memory_kind_from_request(path : StringView, body : Json?) -> String? {
-  match
-    proxy_string_request(path, body, ["kind", "memoryKind", "memory_kind"]) {
+  match proxy_string_request(path, body, ["kind", "memoryKind"]) {
     Some(raw) =>
       match raw.trim().to_lower() {
         "memory" => Some("memory")

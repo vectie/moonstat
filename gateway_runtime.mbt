@@ -21,7 +21,7 @@ async fn RuntimeService::handle_pick_directory(
   let body = proxy_json_body(r)
   write_usage_json(
     w,
-    match proxy_string_request(r.path, body, ["default_path", "defaultPath"]) {
+    match proxy_string_request(r.path, body, ["defaultPath"]) {
       Some(path) => Json::string(path)
       None => Json::null()
     },

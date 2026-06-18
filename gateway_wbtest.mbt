@@ -335,18 +335,26 @@ test "pick directory parser accepts defaultPath payload key" {
   assert_eq(
     proxy_string_request(
       "/files/directories/pick",
-      Some({ "defaultPath": Json::string("/tmp/ccs") }.to_json()),
-      ["default_path", "defaultPath"],
+      Some({ "defaultPath": Json::string("/tmp/moonstat") }.to_json()),
+      ["defaultPath"],
     ),
-    Some("/tmp/ccs"),
+    Some("/tmp/moonstat"),
   )
   assert_eq(
     proxy_string_request(
-      "/files/directories/pick?default_path=/tmp/moonstat",
+      "/files/directories/pick?defaultPath=/tmp/moonstat",
       None,
-      ["default_path", "defaultPath"],
+      ["defaultPath"],
     ),
     Some("/tmp/moonstat"),
+  )
+  assert_eq(
+    proxy_string_request(
+      "/files/directories/pick?default_path=/tmp/legacy",
+      None,
+      ["defaultPath"],
+    ),
+    None,
   )
 }
 
@@ -401,6 +409,13 @@ test "moonstat read command parsers accept canonical json payload keys" {
       Some({ "kind": Json::string("user") }.to_json()),
     ),
     Some("user"),
+  )
+  assert_eq(
+    hermes_memory_kind_from_request(
+      "/hermes/memory",
+      Some({ "memory_kind": Json::string("user") }.to_json()),
+    ),
+    None,
   )
 }
 
@@ -2881,7 +2896,7 @@ test "proxy app config circuit updates are app scoped" {
 }
 
 ///|
-test "stream check config accepts ccs camelCase body and query fields" {
+test "stream check config accepts moonstat canonical body and query fields" {
   let config = stream_check_config_from_request(
     "/proxy/stream-check/config?geminiModel=gemini-test&testPrompt=Ping",
     (
@@ -2904,6 +2919,19 @@ test "stream check config accepts ccs camelCase body and query fields" {
       StreamCheckConfig::default(),
     )
     is None,
+  )
+  assert_true(
+    stream_check_config_from_request(
+      "/proxy/stream-check/config?timeout_secs=30",
+      (
+        #|{"config":{"max_retries":1,"claude_model":"legacy"}}
+      ),
+      StreamCheckConfig::default(),
+    )
+    is Some(legacy_config) &&
+    legacy_config.timeout_secs == StreamCheckConfig::default().timeout_secs &&
+    legacy_config.max_retries == StreamCheckConfig::default().max_retries &&
+    legacy_config.claude_model == StreamCheckConfig::default().claude_model,
   )
 }
 
@@ -9294,7 +9322,7 @@ test "ccs mcp helpers preserve server apps and config shape" {
 }
 
 ///|
-test "ccs mcp request parser accepts encoded server JSON" {
+test "moonstat mcp request parser accepts canonical server JSON" {
   let body = {
     "server": {
       "id": Json::string("shell"),
@@ -9314,6 +9342,10 @@ test "ccs mcp request parser accepts encoded server JSON" {
   guard server is Object(obj) else { fail("expected normalized server") }
   assert_eq(obj["name"], Json::string("Shell"))
   assert_true(moon_mcp_app_enabled(server, "codex"))
+  assert_true(
+    moon_mcp_server_from_request("/mcp/servers?server_id=legacy", None, "codex")
+    is None,
+  )
 }
 
 ///|
@@ -9428,7 +9460,7 @@ test "ccs mcp import parses codex legacy toml servers" {
 }
 
 ///|
-test "ccs prompt helpers keep app-scoped prompt records" {
+test "moonstat prompt helpers keep app-scoped prompt records" {
   guard moon_prompt_from_request(
       "/prompts?app=codex&id=review&name=Review&content=Check%20this&description=Code%20review",
       None,
@@ -9442,6 +9474,13 @@ test "ccs prompt helpers keep app-scoped prompt records" {
   assert_eq(obj["name"], Json::string("Review"))
   assert_eq(obj["content"], Json::string("Check this"))
   assert_eq(obj["enabled"], Json::boolean(true))
+  assert_true(
+    moon_prompt_from_request(
+      "/prompts?app=codex&prompt_id=legacy&name=Legacy",
+      None,
+    )
+    is None,
+  )
   let prompts : Map[String, Json] = {}
   prompts[moon_prompt_store_key(app, id)] = prompt
   prompts[moon_prompt_store_key("claude", "review")] = moon_normalize_prompt(

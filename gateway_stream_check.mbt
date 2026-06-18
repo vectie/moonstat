@@ -39,7 +39,6 @@ fn StreamCheckConfig::to_json(self : StreamCheckConfig) -> Json {
 fn stream_check_int_request(
   path : StringView,
   obj : Map[String, Json]?,
-  _snake_key : String,
   camel_key : String,
 ) -> Int? {
   match obj {
@@ -65,7 +64,6 @@ fn stream_check_int_request(
 fn stream_check_string_request(
   path : StringView,
   obj : Map[String, Json]?,
-  _snake_key : String,
   camel_key : String,
 ) -> String? {
   match obj {

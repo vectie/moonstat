@@ -768,7 +768,7 @@ async fn ConfigService::handle_export_config_to_file(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, ["filePath", "file_path", "path"])
+  guard proxy_string_request(r.path, body, ["filePath", "path"])
     is Some(file_path) else {
     write_usage_bad_request(w, "missing_file_path")
     return
@@ -789,7 +789,7 @@ async fn ConfigService::handle_import_config_from_file(
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, ["filePath", "file_path", "path"])
+  guard proxy_string_request(r.path, body, ["filePath", "path"])
     is Some(file_path) else {
     write_usage_bad_request(w, "missing_file_path")
     return
@@ -854,7 +854,7 @@ async fn ConfigService::handle_rename_db_backup(
     write_usage_bad_request(w, "missing_old_filename")
     return
   }
-  guard proxy_string_request(r.path, body, ["newName", "new_name", "name"])
+  guard proxy_string_request(r.path, body, ["newName", "name"])
     is Some(new_name) else {
     write_usage_bad_request(w, "missing_new_name")
     return
@@ -977,7 +977,7 @@ async fn ConfigService::handle_delete_skill_backup(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, ["backupId", "backup_id", "id"])
+  guard proxy_string_request(r.path, body, ["backupId", "id"])
     is Some(backup_id) else {
     write_usage_bad_request(w, "missing_backup_id")
     return
@@ -993,7 +993,7 @@ async fn ConfigService::handle_restore_skill_backup(
 ) -> Unit {
   ignore(self)
   let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, ["backupId", "backup_id", "id"])
+  guard proxy_string_request(r.path, body, ["backupId", "id"])
     is Some(backup_id) else {
     write_usage_bad_request(w, "missing_backup_id")
     return
@@ -1195,8 +1195,7 @@ async fn ConfigService::handle_extract_common_config_snippet(
 ) -> Unit {
   let body = proxy_json_body(r)
   let app_type = moon_config_app_from_request(r.path, body).unwrap_or("claude")
-  match
-    proxy_string_request(r.path, body, ["settingsConfig", "settings_config"]) {
+  match proxy_string_request(r.path, body, ["settingsConfig"]) {
     Some(settings_config) =>
       match
         moon_extract_common_config_snippet_from_settings_config(
@@ -1382,44 +1381,41 @@ fn stream_check_config_from_request(
     Some(_) => return None
     None => None
   }
-  match stream_check_int_request(path, obj, "timeout_secs", "timeoutSecs") {
+  match stream_check_int_request(path, obj, "timeoutSecs") {
     Some(value) if value > 0 => config = { ..config, timeout_secs: value }
     Some(_) => return None
     None => ()
   }
-  match stream_check_int_request(path, obj, "max_retries", "maxRetries") {
+  match stream_check_int_request(path, obj, "maxRetries") {
     Some(value) if value >= 0 => config = { ..config, max_retries: value }
     Some(_) => return None
     None => ()
   }
-  match
-    stream_check_int_request(
-      path, obj, "degraded_threshold_ms", "degradedThresholdMs",
-    ) {
+  match stream_check_int_request(path, obj, "degradedThresholdMs") {
     Some(value) if value > 0 =>
       config = { ..config, degraded_threshold_ms: value }
     Some(_) => return None
     None => ()
   }
-  match stream_check_string_request(path, obj, "claude_model", "claudeModel") {
+  match stream_check_string_request(path, obj, "claudeModel") {
     Some(value) if !value.trim().is_empty() =>
       config = { ..config, claude_model: value.trim().to_owned() }
     Some(_) => return None
     None => ()
   }
-  match stream_check_string_request(path, obj, "codex_model", "codexModel") {
+  match stream_check_string_request(path, obj, "codexModel") {
     Some(value) if !value.trim().is_empty() =>
       config = { ..config, codex_model: value.trim().to_owned() }
     Some(_) => return None
     None => ()
   }
-  match stream_check_string_request(path, obj, "gemini_model", "geminiModel") {
+  match stream_check_string_request(path, obj, "geminiModel") {
     Some(value) if !value.trim().is_empty() =>
       config = { ..config, gemini_model: value.trim().to_owned() }
     Some(_) => return None
     None => ()
   }
-  match stream_check_string_request(path, obj, "test_prompt", "testPrompt") {
+  match stream_check_string_request(path, obj, "testPrompt") {
     Some(value) if !value.trim().is_empty() =>
       config = { ..config, test_prompt: value.trim().to_owned() }
     Some(_) => return None
