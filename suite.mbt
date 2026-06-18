@@ -121,12 +121,14 @@ pub fn moonstat_suite_status_json(
   host? : String = "127.0.0.1",
   port? : Int = 15721,
   model? : String = "gpt-5",
+  status? : String = "configured",
+  ready? : Bool = true,
 ) -> Json {
   {
     "contract": Json::string("moon.suite.status.v1"),
     "service": Json::string("moonstat"),
-    "status": Json::string("configured"),
-    "ready": Json::boolean(true),
+    "status": Json::string(status),
+    "ready": Json::boolean(ready),
     "manifest": moonstat_suite_manifest_json(host~, port~, model~),
     "status_path": Json::string(default_moonstat_suite_status_path()),
     "capabilities": Json::array(
@@ -215,10 +217,12 @@ pub async fn write_moonstat_suite_status(
   host? : String = "127.0.0.1",
   port? : Int = 15721,
   model? : String = "gpt-5",
+  status? : String = "configured",
+  ready? : Bool = true,
 ) -> String {
   let dir = @pathx.dirname(path)
   @fsx.make_directory(dir, recursive=true, exists_ok=true)
-  let json = moonstat_suite_status_json(host~, port~, model~).stringify(
+  let json = moonstat_suite_status_json(host~, port~, model~, status~, ready~).stringify(
     indent=2,
   )
   @fsx.write_to_file(path, json)

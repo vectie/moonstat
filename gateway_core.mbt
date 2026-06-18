@@ -8,6 +8,8 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       host=self.host,
       port=self.port,
       model=self.model,
+      status="running",
+      ready=true,
     )
     self.logger.info("Wrote Moon suite status to \{status_path}")
   } catch {

@@ -837,3 +837,32 @@ async test "suite status writes discovery file" {
     assert_eq(manifest["default_port"], Json::number(17000.0))
   })
 }
+
+///|
+async test "suite status can publish running startup state" {
+  @fsx.with_temporary_directory("moonstat-suite-status-running-XXXXXX", tmpdir => {
+    let path = @pathx.join(tmpdir, "suite-status.json")
+    let written = write_moonstat_suite_status(
+      path~,
+      host="0.0.0.0",
+      port=17001,
+      model="gpt-5",
+      status="running",
+      ready=true,
+    )
+    assert_eq(written, path)
+    guard @json.parse(@fsx.read_file(path)) is Object(obj) else {
+      fail("expected suite status json")
+    }
+    assert_eq(obj["status"], Json::string("running"))
+    assert_eq(obj["ready"], Json::boolean(true))
+    assert_eq(obj["health_url"], Json::string("http://127.0.0.1:17001/health"))
+  })
+}
+
+///|
+async test "gateway start writes running suite status" {
+  let source = @fsx.read_file("gateway_core.mbt")
+  assert_true(source.contains("write_moonstat_suite_status("))
+  assert_true(source.contains("status=\"running\""))
+}
