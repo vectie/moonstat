@@ -2,11 +2,6 @@
 using @xpath {type Path}
 
 ///|
-fn StringView::end_offset(self : StringView) -> Int {
-  self.start_offset() + self.length()
-}
-
-///|
 /// Path component separator
 pub let sep : Char = '/'
 
@@ -17,7 +12,7 @@ pub let sep : Char = '/'
 /// 
 /// edge cases: when path is relative path without directory component, return "."
 pub fn dirname(path : StringView) -> StringView {
-  let dir = @xpath.Path::dirname(path.to_string()).to_string()
+  let dir = @xpath.Path::dirname(path.to_owned()).to_string()
   if dir.is_empty() {
     "."
   } else {
@@ -34,14 +29,15 @@ pub fn dirname(path : StringView) -> StringView {
 /// This behavior is consistent with Posix convention basename command, but inconsistent with Python `os.path.basename`
 /// 
 pub fn basename(path : StringView) -> StringView {
-  let path = match path {
-    [.. path, '/'] => path
-    path => path
+  let mut path = path
+  while path is [.. rest, '/'] {
+    path = rest
   }
-  loop path.view() {
-    [] => path
-    [.., '/'] as view => path.view(start_offset=view.end_offset())
-    [.. view, _] => continue view
+  let parts = split(path).collect()
+  if parts.is_empty() {
+    path
+  } else {
+    parts[parts.length() - 1]
   }
 }
 
@@ -50,7 +46,7 @@ pub fn basename(path : StringView) -> StringView {
 /// 
 /// property: `stem(path) + ext(path) == basename(path)`
 pub fn ext(path : StringView) -> StringView {
-  Path::extname(path.to_string())
+  Path::extname(path.to_owned())
 }
 
 ///|
@@ -72,9 +68,9 @@ pub fn ext(path : StringView) -> StringView {
 pub fn replace_ext(path : StringView, ext : StringView) -> String {
   let basename = basename(path)
   match basename {
-    "" => return path.to_string()
-    "." => return path.to_string()
-    ".." => return path.to_string()
+    "" => return path.to_owned()
+    "." => return path.to_owned()
+    ".." => return path.to_owned()
     _ => {
       let old_ext_len = match basename.rev_find(".") {
         None => 0
@@ -107,93 +103,44 @@ pub fn stem(path : StringView) -> StringView {
 ///|
 /// Split each path component, handle redundant slashes but doesn't resolve `.` and `..`.
 pub fn split(view : StringView) -> Iter[StringView] {
-  enum State {
-    Root
-    Segment
-  }
-  let mut state : State = State::Root
-  let mut last = view
-  Iter::new(() => {
-    state~: loop state {
-      Root =>
-        match view {
-          // More than 3 slashes are treated as single slash.
-          [.. "///", .. rest] => {
-            // Skip all redundant slashes.
-            skip~: loop rest {
-              ['/', .. rest] => continue skip~ rest
-              rest => {
-                state = Segment
-                last = rest
-                break
-              }
-            }
-            Some("/")
-          }
-          [.. "//", .. rest] => {
-            state = Segment
-            last = rest
-            Some("//")
-          }
-          ['/', .. rest] => {
-            state = Segment
-            last = rest
-            Some("/")
-          }
-          rest => {
-            state = Segment
-            last = rest
-            continue state~ Segment
-          }
-        }
-      Segment =>
-        loop last.view() {
-          ['/', .. rest] as view => {
-            // Slice out the part before slash.
-            let part = last
-              .data()
-              .view(
-                start_offset=last.start_offset(),
-                end_offset=view.start_offset(),
-              )
-            // Skip redundant slashes.
-            let rest = skip~: loop rest {
-              ['/', .. rest] => continue skip~ rest
-              rest => rest
-            }
-            last = rest
-            Some(part)
-          }
-          [_, .. rest] => continue rest
-          [] as view =>
-            if last.is_empty() {
-              return None
-            } else {
-              let part = last
-              last = view
-              Some(part)
-            }
-        }
+  let parts : Array[StringView] = []
+  let mut rest = view
+  if rest.has_prefix("///") {
+    parts.push(view[0:1])
+    while rest.has_prefix("/") {
+      rest = rest[1:]
     }
-  })
+  } else if rest.has_prefix("//") {
+    parts.push(view[0:2])
+    rest = rest[2:]
+  } else if rest.has_prefix("/") {
+    parts.push(view[0:1])
+    rest = rest[1:]
+  }
+  for part in rest.split("/") {
+    if !part.is_empty() {
+      parts.push(part)
+    }
+  }
+  parts.iter()
 }
 
 ///|
 /// Normalize path by resolving `.` and `..` and eliminating redundant slashes.
 pub fn normalize(view : StringView) -> String {
-  Path::normalize(view.to_string()).0
+  Path::normalize(view.to_owned()).0
 }
 
 ///|
 /// 1. normalize path.
 /// 2. if rhs is absolute path, return rhs.
 pub fn join(p : StringView, q : StringView) -> String {
-  Path::join(p.to_string(), q.to_string()).normalize().0
+  Path::join(p.to_owned(), q.to_owned()).normalize().0
 }
 
 ///|
 pub fn is_absolute(path : StringView) -> Bool {
-  Path::is_absolute(path.to_string())
+  Path::is_absolute(path.to_owned())
 }
 
 ///|
@@ -210,7 +157,7 @@ pub fn is_relative(path : StringView) -> Bool {
 /// 
 /// edge cases: when from is equal to to, return "."
 pub fn relative(from : StringView, to : StringView) -> String raise {
-  let result = Path::relative(to.to_string(), base=from.to_string()).0
+  let result = Path::relative(to.to_owned(), base=from.to_owned()).0
   if result.is_empty() {
     "."
   } else {
@@ -224,5 +171,5 @@ pub fn relative(from : StringView, to : StringView) -> String raise {
 /// 1. if absolute path is given, normalize and return it.
 /// 2. if relative path is given, join it with current working directory,
 pub fn resolve(view : StringView) -> String raise {
-  Path::resolve(view.to_string()).0
+  Path::resolve(view.to_owned()).0
 }

@@ -1,6 +1,10 @@
 ///|
 fn parse_json_for_test(body : String) -> Json {
-  let parsed : Result[Json, Error] = try? @json.parse(body)
+  let parsed : Result[Json, Error] = try @json.parse(body) catch {
+    error => Err(error)
+  } noraise {
+    value => Ok(value)
+  }
   match parsed {
     Ok(json) => json
     Err(_) => Json::null()

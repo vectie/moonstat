@@ -213,7 +213,7 @@ pub async fn Directory::add_json_tree(
       }
       _ =>
         fail(
-          "Invalid JSON tree: expected String (file content) or Object (directory), got \{value}",
+          "Invalid JSON tree: expected String (file content) or Object (directory), got \{value.stringify()}",
         )
     }
   }
@@ -328,8 +328,13 @@ async fn eprintln(msg : String) -> Unit {
 
 ///|
 fn init {
-  if (try? @os.getenv("CI")) is Ok(Some("1" | "true")) {
-    @os.atexit(() => println("\{os_args} exited"))
+  let ci = try @os.getenv("CI") catch {
+    _ => None
+  } noraise {
+    value => value
+  }
+  if ci is Some("1" | "true") {
+    @os.atexit(() => println("\{os_args.join(" ")} exited"))
   }
 }
 

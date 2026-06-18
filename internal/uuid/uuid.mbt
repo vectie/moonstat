@@ -121,7 +121,17 @@ suberror ParseError {
   InvalidOctet(StringView)
   MissingDash(StringView)
   ExtraContent(StringView)
-} derive(Show, ToJson)
+} derive(Debug, ToJson)
+
+///|
+impl Show for ParseError with fn output(self : ParseError, logger : &Logger) -> Unit {
+  match self {
+    UnexpectedEnd => logger.write_string("UnexpectedEnd")
+    InvalidOctet(value) => logger.write_string("InvalidOctet(\{value})")
+    MissingDash(value) => logger.write_string("MissingDash(\{value})")
+    ExtraContent(value) => logger.write_string("ExtraContent(\{value})")
+  }
+}
 
 ///|
 pub fn parse(hex : StringView) -> Uuid raise ParseError {
@@ -223,7 +233,7 @@ pub enum Variant {
   RFC9562(Version)
   ReservedMicrosoft
   ReservedFuture
-} derive(Show, ToJson)
+} derive(Debug, ToJson)
 
 ///|
 pub(all) enum Version {
@@ -243,7 +253,7 @@ pub(all) enum Version {
   V13 = 13
   V14 = 14
   V15 = 15
-} derive(Show, ToJson)
+} derive(Debug, ToJson)
 
 ///|
 fn Version::from_uint64_unchecked(value : UInt64) -> Version = "%identity"

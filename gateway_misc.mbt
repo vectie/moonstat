@@ -136,7 +136,9 @@ async fn Gateway::handle_codex_responses(
   self.usage.record_inbound(body_str.length())
   let _ = self.proxy.activate_provider(self.usage, "codex")
   self.usage.record_request_context("codex", self.model)
-  let json_result : Result[Json, Error] = try? @json.parse(body_str)
+  let json_result : Result[Json, Error] = moon_result(() => {
+    @json.parse(body_str)
+  })
   match json_result {
     Err(_) => {
       self.usage.record_bad_request_with_provider(self.proxy)
@@ -196,7 +198,9 @@ async fn Gateway::handle_chat_completions(
   self.usage.record_inbound(body_str.length())
   let _ = self.proxy.activate_provider(self.usage, app_type)
   self.usage.record_request_context(app_type, self.model)
-  let json_result : Result[Json, Error] = try? @json.parse(body_str)
+  let json_result : Result[Json, Error] = moon_result(() => {
+    @json.parse(body_str)
+  })
   match json_result {
     Err(_) => {
       self.usage.record_bad_request_with_provider(self.proxy)
@@ -345,7 +349,9 @@ async fn Gateway::forward_non_streaming_chat_completion(
       }
     }
     if response.code == 200 {
-      let parsed : Result[Json, Error] = try? @json.parse(response_body)
+      let parsed : Result[Json, Error] = moon_result(() => {
+        @json.parse(response_body)
+      })
       match parsed {
         Ok(json) => {
           ignore(self.session.codex_chat_history.record_response(json))
@@ -801,7 +807,9 @@ async fn Gateway::forward_non_streaming_codex_response(
       }
     }
     if response.code == 200 {
-      let parsed : Result[Json, Error] = try? @json.parse(response_body)
+      let parsed : Result[Json, Error] = moon_result(() => {
+        @json.parse(response_body)
+      })
       let usage = match parsed {
         Ok(json) => {
           ignore(self.session.codex_chat_history.record_response(json))
@@ -1838,7 +1846,7 @@ fn moon_optional_path_from_request(path : StringView, body : Json?) -> String? {
 
 ///|
 fn moon_json_primary_api_key_any(content : String) -> Bool {
-  let parsed : Result[Json, Error] = try? @json.parse(content)
+  let parsed : Result[Json, Error] = moon_result(() => @json.parse(content))
   match parsed {
     Ok(Object(obj)) =>
       match json_string_from_map(obj, "primaryApiKey") {
@@ -5151,7 +5159,9 @@ async fn Gateway::handle_messages(
     )
     return
   }
-  let json_result : Result[Json, Error] = try? @json.parse(body_str)
+  let json_result : Result[Json, Error] = moon_result(() => {
+    @json.parse(body_str)
+  })
   match json_result {
     Err(_) => {
       self.usage.record_bad_request_with_provider(self.proxy)
@@ -5173,8 +5183,9 @@ async fn Gateway::handle_messages(
       )
       let upstream_session_id = session.upstream_session_id()
       let anthropic_beta = r.headers.get("anthropic-beta")
-      let anthropic_request_result : Result[AnthropicRequest, Error] = try? @json.from_json(
-        json,
+      let anthropic_request_result : Result[AnthropicRequest, Error] = moon_result(() => {
+          @json.from_json(json)
+        },
       )
       match anthropic_request_result {
         Err(_) => {
@@ -6550,7 +6561,10 @@ async fn Gateway::handle_non_streaming_request(
     self.logger.error("Codex API error: \{response.code} - \{error_body}")
     if response.code == 401 {
       self.logger.info("Attempting to refresh credentials")
-      let refresh_result : Result[@codex.Credentials, Error] = try? @codex.refresh_and_save_credentials()
+      let refresh_result : Result[@codex.Credentials, Error] = moon_async_result(() => {
+          @codex.refresh_and_save_credentials()
+        },
+      )
       match refresh_result {
         Ok(new_creds) => {
           self.auth.credentials = Some(new_creds)
@@ -6576,9 +6590,9 @@ async fn Gateway::handle_non_streaming_request(
     return
   }
   let response_body = client.read_all().text()
-  let response_json_result : Result[Json, Error] = try? @json.parse(
-    response_body,
-  )
+  let response_json_result : Result[Json, Error] = moon_result(() => {
+    @json.parse(response_body)
+  })
   match response_json_result {
     Ok(json) => {
       ignore(self.session.codex_chat_history.record_response(json))
@@ -7663,6 +7677,14 @@ async fn ProxyService::forward_openai_chat_sse_as_anthropic(
 }
 
 ///|
+fn openai_chat_stream_chunk_to_anthropic_events(
+  chunk : Json,
+) -> Array[StreamEvent] {
+  let state = OpenAIChatAnthropicStreamState::new()
+  state.push_chunk(chunk)
+}
+
+///|
 async fn ProxyService::forward_anthropic_sse_passthrough(
   _self : ProxyService,
   usage : UsageService,
@@ -7742,14 +7764,6 @@ fn gemini_native_stream_chunk_to_anthropic_events(
   chunk : Json,
 ) -> Array[StreamEvent] {
   let state = GeminiNativeAnthropicStreamState::new()
-  state.push_chunk(chunk)
-}
-
-///|
-fn openai_chat_stream_chunk_to_anthropic_events(
-  chunk : Json,
-) -> Array[StreamEvent] {
-  let state = OpenAIChatAnthropicStreamState::new()
   state.push_chunk(chunk)
 }
 
@@ -8663,7 +8677,10 @@ async fn Gateway::handle_streaming_request(
     self.logger.error("Codex API error: \{response.code} - \{error_body}")
     if response.code == 401 {
       self.logger.info("Attempting to refresh credentials")
-      let refresh_result : Result[@codex.Credentials, Error] = try? @codex.refresh_and_save_credentials()
+      let refresh_result : Result[@codex.Credentials, Error] = moon_async_result(() => {
+          @codex.refresh_and_save_credentials()
+        },
+      )
       match refresh_result {
         Ok(new_creds) => {
           self.auth.credentials = Some(new_creds)
@@ -8764,7 +8781,9 @@ fn convert_codex_to_anthropic(
           Some(String(id)) => id
           _ => generate_message_id()
         }
-        let args_json_result : Result[Json, Error] = try? @json.parse(args)
+        let args_json_result : Result[Json, Error] = moon_result(() => {
+          @json.parse(args)
+        })
         let args_json = match args_json_result {
           Ok(j) => j
           Err(_) => Json::object({})
@@ -8840,7 +8859,6 @@ priv struct StreamEvent {
 ///|
 priv struct CodexStreamReader {
   reader : &@io.Reader
-  model : String
   events : Array[Json]
   pending_events : Array[StreamEvent]
   responses_state : ResponsesStreamState
@@ -8854,7 +8872,6 @@ fn CodexStreamReader::new(
 ) -> CodexStreamReader {
   CodexStreamReader::{
     reader,
-    model,
     events: [],
     pending_events: [],
     responses_state: ResponsesStreamState::new(model),
@@ -8937,6 +8954,14 @@ fn codex_stream_event_from_sse_block(
 }
 
 ///|
+fn init {
+  ignore(prepare_upstream_request_body(Json::object({})))
+  ignore(openai_chat_stream_chunk_to_anthropic_events(Json::object({})))
+  ignore(gemini_native_stream_chunk_to_anthropic_events(Json::object({})))
+  ignore(codex_stream_event_from_sse_block("", "model"))
+}
+
+///|
 fn codex_stream_events_from_sse_block(
   block : String,
   state : ResponsesStreamState,
@@ -8976,7 +9001,7 @@ fn codex_stream_events_from_sse_block(
 
 ///|
 fn push_sse_json_event(events : Array[Json], data : String) -> Bool {
-  let json_result : Result[Json, Error] = try? @json.parse(data)
+  let json_result : Result[Json, Error] = moon_result(() => @json.parse(data))
   match json_result {
     Ok(json) => {
       events.push(json)
@@ -9630,7 +9655,9 @@ fn convert_stream_event(
             Some(String(id)) => id
             _ => generate_message_id()
           }
-          let args_json_result : Result[Json, Error] = try? @json.parse(args)
+          let args_json_result : Result[Json, Error] = moon_result(() => {
+            @json.parse(args)
+          })
           let args_json = match args_json_result {
             Ok(j) => j
             Err(_) => Json::object({})

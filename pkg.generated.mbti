@@ -2,6 +2,7 @@
 package "vectie/moonstat"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "vectie/moonstat/internal/pino",
   "vectie/moonstat/oauth/codex",
@@ -190,7 +191,7 @@ pub struct AnthropicDelta {
   type_ : String?
   text : String?
   stop_reason : String?
-} derive(Show, @json.FromJson)
+} derive(@debug.Debug, @json.FromJson)
 
 pub struct AnthropicMessage {
   role : String
@@ -219,7 +220,7 @@ pub struct AnthropicResponse {
   stop_reason : String?
   stop_sequence : String?
   usage : AnthropicUsage
-} derive(Show, ToJson, @json.FromJson)
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub struct AnthropicResponseBlock {
   type_ : String
@@ -227,7 +228,7 @@ pub struct AnthropicResponseBlock {
   name : String?
   input : Json?
   id : String?
-} derive(Show, ToJson, @json.FromJson)
+} derive(ToJson, @debug.Debug, @json.FromJson)
 
 pub struct AnthropicStreamEvent {
   type_ : String
@@ -235,7 +236,7 @@ pub struct AnthropicStreamEvent {
   delta : AnthropicDelta?
   content_block : AnthropicResponseBlock?
   message : AnthropicResponse?
-} derive(Show, @json.FromJson)
+} derive(@debug.Debug, @json.FromJson)
 
 pub struct AnthropicTool {
   name : String
@@ -250,7 +251,7 @@ pub struct AnthropicUsage {
   output_tokens : Int
   cache_read_input_tokens : Int?
   cache_creation_input_tokens : Int?
-} derive(Show, @json.FromJson)
+} derive(@debug.Debug, @json.FromJson)
 pub impl ToJson for AnthropicUsage
 
 pub struct AuthService {

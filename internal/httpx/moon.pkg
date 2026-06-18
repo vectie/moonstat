@@ -10,7 +10,3 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/test",
 }
-
-import {
-  "moonbitlang/async",
-} for "test"

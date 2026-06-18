@@ -12,7 +12,7 @@ pub impl ToJson for Header with fn to_json(self : Header) -> Json {
 
 ///|
 pub impl Show for Header with fn output(self : Header, logger : &Logger) -> Unit {
-  self.0.output(logger)
+  logger.write_string(self.to_json().stringify())
 }
 
 ///|

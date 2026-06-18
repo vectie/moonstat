@@ -1656,13 +1656,7 @@ fn has_flag(args : Array[String], name : String) -> Bool {
 ///|
 fn parse_int_arg(args : Array[String], name : String, default~ : Int) -> Int {
   match parse_string_arg(args, name) {
-    Some(s) => {
-      let result : Result[Int, Error] = try? @strconv.parse_int(s[:], base=10)
-      match result {
-        Ok(n) => n
-        Err(_) => default
-      }
-    }
+    Some(s) => @string.parse_int(s[:]) catch { _ => default }
     None => default
   }
 }

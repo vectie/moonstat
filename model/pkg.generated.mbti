@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "vectie/moonstat/model"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub fn open_router_model(api_key~ : String, name? : CommonModels) -> Model
 
@@ -9,7 +13,7 @@ pub fn open_router_model(api_key~ : String, name? : CommonModels) -> Model
 // Types and methods
 pub(all) enum CommonModels {
   Qwen3CoderPlus
-} derive(Show)
+} derive(@debug.Debug)
 
 pub struct Model {
   name : String
@@ -25,7 +29,7 @@ pub struct Model {
   account_id : String?
   refresh_token : String?
   id_token : String?
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) enum Provider {
   OpenAI
@@ -35,11 +39,11 @@ pub(all) enum Provider {
   Qwen
   Kimi
   KimiCoding
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum Type {
   SaaS(Provider)
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

@@ -233,7 +233,7 @@ pub struct AnthropicResponse {
   stop_reason : String?
   stop_sequence : String?
   usage : AnthropicUsage
-} derive(FromJson, Show, ToJson)
+} derive(FromJson, Debug, ToJson)
 
 ///|
 pub struct AnthropicResponseBlock {
@@ -242,7 +242,7 @@ pub struct AnthropicResponseBlock {
   name : String?
   input : Json?
   id : String?
-} derive(FromJson, Show, ToJson)
+} derive(FromJson, Debug, ToJson)
 
 ///|
 pub struct AnthropicUsage {
@@ -250,7 +250,7 @@ pub struct AnthropicUsage {
   output_tokens : Int
   cache_read_input_tokens : Int?
   cache_creation_input_tokens : Int?
-} derive(FromJson, Show)
+} derive(FromJson, Debug)
 
 ///|
 pub impl ToJson for AnthropicUsage with fn to_json(self : AnthropicUsage) -> Json {
@@ -274,11 +274,11 @@ pub struct AnthropicStreamEvent {
   delta : AnthropicDelta?
   content_block : AnthropicResponseBlock?
   message : AnthropicResponse?
-} derive(FromJson, Show)
+} derive(FromJson, Debug)
 
 ///|
 pub struct AnthropicDelta {
   type_ : String?
   text : String?
   stop_reason : String?
-} derive(FromJson, Show)
+} derive(FromJson, Debug)

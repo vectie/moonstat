@@ -782,6 +782,11 @@ fn openai_chat_completion_to_codex_response(
 }
 
 ///|
+fn init {
+  ignore(openai_chat_completion_to_codex_response(Json::object({}), "model"))
+}
+
+///|
 fn openai_chat_completion_to_codex_response_with_request(
   body : Json,
   fallback_model : String,

@@ -87,22 +87,29 @@ fn Layer::route(
   self : Layer,
   segments : ArrayView[StringView],
 ) -> (MethodMap[Route], Array[StringView])? {
-  let mut curr : Array[(Layer, Array[StringView])] = [(self, [])]
-  let mut next : Array[(Layer, Array[StringView])] = []
-  loop segments {
-    [] =>
+  route_layers([(self, [])], segments)
+}
+
+///|
+fn route_layers(
+  curr : Array[(Layer, Array[StringView])],
+  segments : ArrayView[StringView],
+) -> (MethodMap[Route], Array[StringView])? {
+  match segments {
+    [] => {
       for r in curr {
         if r.0.routes.keys().head() is Some(_) {
-          break Some((r.0.routes, r.1))
+          return Some((r.0.routes, r.1))
         } else if r.0.catch_all_routes.keys().head() is Some(_) {
-          break Some((r.0.catch_all_routes, r.1))
+          return Some((r.0.catch_all_routes, r.1))
         } else {
-          break Some((r.0.routes, r.1))
+          return Some((r.0.routes, r.1))
         }
-      } nobreak {
-        None
       }
-    [segment, .. segments] => {
+      None
+    }
+    [segment, .. rest] => {
+      let next : Array[(Layer, Array[StringView])] = []
       for r in curr {
         if r.0.matches.get(segment) is Some(child) {
           next.push((child, r.1))
@@ -115,18 +122,11 @@ fn Layer::route(
       if next.is_empty() {
         for r in curr {
           if r.0.catch_all_routes.keys().head() is Some(_) {
-            break Some((r.0.catch_all_routes, r.1))
+            return Some((r.0.catch_all_routes, r.1))
           }
-        } nobreak {
-          curr = next
-          next = []
-          continue segments
         }
-      } else {
-        curr = next
-        next = []
-        continue segments
       }
+      route_layers(next, rest)
     }
   }
 }

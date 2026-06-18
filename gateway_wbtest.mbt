@@ -190,8 +190,9 @@ test "github copilot usage conversion mirrors ccs premium row" {
 
 ///|
 test "github copilot usage conversion reports malformed response" {
+  let empty : Map[String, Json] = {}
   assert_eq(
-    moon_copilot_usage_result_from_json({}.to_json()).to_json(),
+    moon_copilot_usage_result_from_json(empty.to_json()).to_json(),
     UsageResult::new(
       false,
       error=Some("Failed to parse Copilot usage response"),
@@ -3329,7 +3330,7 @@ test "proxy takeover status alias is ccs-compatible standalone false state" {
   guard gateway.proxy.takeover_status_json() is Object(status) else {
     fail("expected takeover status object")
   }
-  assert_eq(status.size(), 5)
+  assert_eq(status.length(), 5)
   assert_eq(status["claude"], Json::boolean(false))
   assert_eq(status["codex"], Json::boolean(false))
   assert_eq(status["gemini"], Json::boolean(false))
@@ -9591,12 +9592,13 @@ test "ccs claude desktop direct compatibility filters unsafe providers" {
 ///|
 test "ccs import skips claude providers without direct or proxy compatibility" {
   let gateway = Gateway::new(port=17073)
+  let empty_env : Map[String, Json] = {}
   gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude",
       provider_id="incomplete",
       provider_name="Incomplete",
-      settings_config=Some({ "env": {}.to_json() }.to_json()),
+      settings_config=Some({ "env": empty_env.to_json() }.to_json()),
     ),
   )
   assert_eq(gateway.proxy.import_claude_desktop_providers_from_claude(), 0)
@@ -9641,9 +9643,10 @@ test "ccs import derives claude desktop routes from claude provider env" {
 
 ///|
 test "ccs skill repo request accepts query and json body shapes" {
+  let empty_body : Map[String, Json] = {}
   guard moon_skill_repo_request_json(
       "/add_skill_repo?owner=vectie&name=moonstat-skills&branch=main&enabled=true",
-      Some({}.to_json()),
+      Some(empty_body.to_json()),
     )
     is Some(Object(query_repo)) else {
     fail("expected query repo")

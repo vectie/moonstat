@@ -21,7 +21,9 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
       self.usage.pricing_override_rows(),
     ),
   )
-  let creds_result : Result[@codex.Credentials, Error] = try? @codex.load_credentials()
+  let creds_result : Result[@codex.Credentials, Error] = moon_async_result(() => {
+    @codex.load_credentials()
+  })
   if creds_result is Ok(creds) {
     self.auth.credentials = Some(creds)
     self.logger.info("Loaded credentials from file")

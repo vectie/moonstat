@@ -568,7 +568,9 @@ async fn WorkspaceService::write_static_file(
   content_type : String,
 ) -> Unit {
   ignore(self)
-  let result : Result[String, Error] = try? @fsx.read_file(path)
+  let result : Result[String, Error] = moon_async_result(() => {
+    @fsx.read_file(path)
+  })
   match result {
     Ok(content) => {
       w.header().set("Content-Type", content_type)

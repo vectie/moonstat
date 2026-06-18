@@ -190,7 +190,7 @@ fn extract_tool_calls(content : AnthropicContent) -> Array[ToolCall] {
 
 ///|
 fn parse_tool_result(content : String) -> ToolResult {
-  let json_result : Result[Json, Error] = try? @json.parse(content)
+  let json_result : Result[Json, Error] = moon_result(() => @json.parse(content))
   let tool_use_id = match json_result {
     Ok(Object(obj)) =>
       match obj.get("tool_use_id") {
@@ -242,7 +242,9 @@ pub fn build_anthropic_response(
     })
   }
   for tc in tool_calls {
-    let args_json_result : Result[Json, Error] = try? @json.parse(tc.arguments)
+    let args_json_result : Result[Json, Error] = moon_result(() => {
+      @json.parse(tc.arguments)
+    })
     let args_json = match args_json_result {
       Ok(j) => j
       Err(_) => Json::object({})
@@ -289,4 +291,9 @@ pub struct ToolCallInfo {
   id : String
   name : String
   arguments : String
+}
+
+fn init {
+  let tool_call : ToolCallInfo = { id: "id", name: "name", arguments: "{}" }
+  ignore(tool_call)
 }

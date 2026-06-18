@@ -370,7 +370,7 @@ async fn ProxyService::forward_gemini_get(
   url : String,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let result = try? @http.get(url)
+  let result = moon_async_result(() => @http.get(url))
   match result {
     Err(error) => {
       usage.record_upstream_error_status_with_provider(
@@ -415,8 +415,8 @@ async fn ProxyService::forward_gemini_post(
   request_json : Json,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  let result = try? @http.post(url, request_json, headers={
-    "Content-Type": "application/json",
+  let result = moon_async_result(() => {
+    @http.post(url, request_json, headers={ "Content-Type": "application/json" })
   })
   match result {
     Err(error) => {

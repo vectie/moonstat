@@ -57,7 +57,7 @@ pub async fn install_reroute(port : Int) -> Result[Unit, String] {
   let hosts_path = get_hosts_path()
 
   // 检查权限
-  if not(check_permission()) {
+  if !check_permission() {
     return Err("没有权限修改 hosts 文件，请使用 sudo 运行")
   }
 
@@ -83,12 +83,12 @@ pub async fn uninstall_reroute() -> Result[Unit, String] {
   let hosts_path = get_hosts_path()
 
   // 检查权限
-  if not(check_permission()) {
+  if !check_permission() {
     return Err("没有权限修改 hosts 文件，请使用 sudo 运行")
   }
 
   // 检查是否已安装
-  if not(is_reroute_installed()) {
+  if !is_reroute_installed() {
     return Err("hosts reroute is not installed")
   }
 
@@ -97,7 +97,7 @@ pub async fn uninstall_reroute() -> Result[Unit, String] {
     let lines = content.split("\n").to_array()
     let filtered_lines = lines
       .iter()
-      .filter(fn(line) { not(line.contains(REROUTE_COMMENT)) })
+      .filter(fn(line) { !line.contains(REROUTE_COMMENT) })
       .collect()
     let new_content = filtered_lines.join("\n")
     @fsx.write_to_file(hosts_path, new_content, create=0o644)

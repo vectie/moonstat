@@ -98,6 +98,29 @@ pub fn moon_proxy_error_message(error : MoonProxyError) -> String {
 }
 
 ///|
+fn moon_proxy_error_diagnostic_variants() -> Array[MoonProxyError] {
+  [
+    AlreadyRunning,
+    NotRunning,
+    UpstreamError(status=502, body=Some("upstream")),
+    Timeout("timeout"),
+    StreamIdleTimeout(30),
+    ForwardFailed("forward failed"),
+    NoAvailableProvider,
+    AllProvidersCircuitOpenError,
+    NoProvidersConfiguredError,
+    MaxRetriesExceeded,
+    ProviderUnhealthy("provider"),
+    ConfigError("config"),
+    InvalidRequest("request"),
+    AuthError("auth"),
+    DatabaseError("database"),
+    TransformError("transform"),
+    Unknown("unknown"),
+  ]
+}
+
+///|
 fn moon_build_retryable_failure_log(
   provider_name : String,
   attempted_providers : Int,
@@ -137,6 +160,20 @@ fn moon_build_terminal_failure_log(
       "已尝试 \{attempted_providers}/\{total_providers} 个 Provider，均失败。最后错误: \{error_summary}",
     ),
   )
+}
+
+///|
+fn init {
+  ignore(moon_proxy_error_diagnostic_variants())
+  ignore(
+    moon_build_retryable_failure_log(
+      "provider",
+      1,
+      2,
+      ForwardFailed("forward failed"),
+    ),
+  )
+  ignore(moon_build_terminal_failure_log(2, 2, Some(Timeout("timeout"))))
 }
 
 ///|

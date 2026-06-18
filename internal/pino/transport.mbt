@@ -10,7 +10,7 @@ enum Transport {
 ///|
 priv suberror InvalidTransport {
   InvalidTransport(StringView)
-} derive(Show)
+} derive(Debug)
 
 ///|
 /// Parses a transport string and creates the corresponding Transport instance.
@@ -36,12 +36,22 @@ priv suberror InvalidTransport {
 /// ```
 pub fn Transport::parse(transport : StringView) -> Transport raise {
   let schema = StringBuilder::new()
-  let path : StringView = loop transport {
-    [] as path => break path
-    [':', .. rest] => break rest
-    [c, .. rest] => {
-      schema.write_char(c)
-      continue rest
+  let mut path = transport
+  for view = transport {
+    match view {
+      [] => {
+        path = view
+        break
+      }
+      [':', .. rest] => {
+        path = rest
+        break
+      }
+      [c, .. rest] => {
+        path = rest
+        schema.write_char(c)
+        continue rest
+      }
     }
   }
   match schema.to_string() {
@@ -60,7 +70,7 @@ pub fn Transport::parse(transport : StringView) -> Transport raise {
 async fn mkdir(path : String) -> Unit {
   let dirs = []
   for dir = path.view() {
-    let dir = dir.to_string()
+    let dir = dir.to_owned()
     if dir == "." || dir == "" || @fs.exists(dir) {
       break
     }
@@ -98,9 +108,9 @@ async fn Transport::write(self : Transport, content : Json) -> Unit {
         }
       }
       let content = content.to_json().stringify()
-      let buffer = @buffer.new()
+      let buffer = Buffer()
       buffer.write_bytes(@encoding/utf8.encode(content))
-      buffer.write_byte('\n')
+      buffer.write_byte(b'\n')
       file.write(buffer.to_bytes())
     }
     Channel(channel) => channel.put(content)
@@ -147,7 +157,7 @@ pub fn Transport::console() -> Transport {
 /// # Returns
 /// A Transport configured for file output
 pub fn Transport::file(path : StringView) -> Transport {
-  Transport::File(path=path.to_string(), file=None)
+  Transport::File(path=path.to_owned(), file=None)
 }
 
 ///|

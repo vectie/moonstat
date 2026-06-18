@@ -10,12 +10,6 @@ import {
   "moonbitlang/core/test",
 }
 
-import {
-  "moonbitlang/async",
-  "vectie/moonlib/spawn",
-  "moonbitlang/async/process",
-} for "test"
-
 options(
   "native-stub": [ "stat.c", "mkdtemp.c", "readlink.c", "lock.c", "truncate.c" ],
 )

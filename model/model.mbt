@@ -13,7 +13,7 @@ pub struct Model {
   account_id : String?
   refresh_token : String?
   id_token : String?
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub(all) enum Provider {
@@ -24,12 +24,12 @@ pub(all) enum Provider {
   Qwen
   Kimi
   KimiCoding
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) enum Type {
   SaaS(Provider)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn open_router_model(
@@ -40,7 +40,7 @@ pub fn open_router_model(
     Qwen3CoderPlus => "qwen/qwen3-coder-plus"
   }
   {
-    name: name.to_string(),
+    name: name.common_model_name(),
     description: None,
     model_name,
     model_type: SaaS(Qwen),
@@ -59,4 +59,11 @@ pub fn open_router_model(
 ///|
 pub(all) enum CommonModels {
   Qwen3CoderPlus
-} derive(Show)
+} derive(Debug)
+
+///|
+fn CommonModels::common_model_name(self : CommonModels) -> String {
+  match self {
+    Qwen3CoderPlus => "Qwen3CoderPlus"
+  }
+}

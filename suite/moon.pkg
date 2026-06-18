@@ -1,7 +1,3 @@
 import {
   "moonbitlang/core/json",
-  "vectie/moonlib/fsx",
-  "vectie/moonlib/os",
-  "vectie/moonlib/pathx",
-  "vectie/moonstat",
 }

@@ -422,7 +422,7 @@ async fn hermes_web_ui_is_live(port : Int) -> Bool {
   if !@net.localhost_port_open(port, timeout_ms=1200) {
     return false
   }
-  let result = try? @http.get(hermes_web_ui_probe_url(port))
+  let result = moon_async_result(() => @http.get(hermes_web_ui_probe_url(port)))
   match result {
     Ok(_) => true
     Err(_) => false
