@@ -2169,13 +2169,15 @@ async test "runtime endpoints are owned by runtime service" {
   let core_source = @fsx.read_file("gateway_core.mbt")
   for
     handler in [
-      "handle_update_tray_menu", "handle_is_portable_mode", "handle_get_init_error",
-      "handle_get_migration_result", "handle_get_skills_migration_result", "handle_get_tool_versions",
-      "handle_run_tool_lifecycle_action", "handle_probe_tool_installations",
+      "handle_pick_directory", "handle_copy_text_to_clipboard", "handle_update_tray_menu",
+      "handle_is_portable_mode", "handle_get_init_error", "handle_get_migration_result",
+      "handle_get_skills_migration_result", "handle_get_tool_versions", "handle_run_tool_lifecycle_action",
+      "handle_probe_tool_installations", "handle_restart_app", "handle_install_update_and_restart",
     ] {
     assert_true(runtime_source.contains("async fn RuntimeService::\{handler}("))
     assert_false(runtime_source.contains("async fn Gateway::\{handler}("))
   }
+  assert_true(core_source.contains("self.runtime.handle_pick_directory(r, w)"))
   assert_true(core_source.contains("self.runtime.handle_update_tray_menu(w)"))
   assert_true(
     core_source.contains("self.runtime.handle_get_tool_versions(r, w)"),
@@ -2183,6 +2185,21 @@ async test "runtime endpoints are owned by runtime service" {
   assert_true(
     core_source.contains("self.runtime.handle_probe_tool_installations(r, w)"),
   )
+  assert_true(core_source.contains("self.runtime.handle_restart_app(w)"))
+}
+
+///|
+async test "external utility endpoints are owned by proxy service" {
+  let source = @fsx.read_file("gateway_misc.mbt")
+  let core_source = @fsx.read_file("gateway_core.mbt")
+  for handler in ["handle_open_external", "handle_check_for_updates"] {
+    assert_true(source.contains("async fn ProxyService::\{handler}("))
+    assert_false(source.contains("async fn Gateway::\{handler}("))
+  }
+  assert_true(source.contains("fn ProxyService::record_external_open("))
+  assert_false(source.contains("fn Gateway::record_external_open("))
+  assert_true(core_source.contains("self.proxy.handle_open_external(r, w)"))
+  assert_true(core_source.contains("self.proxy.handle_check_for_updates(w)"))
 }
 
 ///|
@@ -2218,31 +2235,28 @@ test "standalone tray update mirrors ccs no tray result" {
 
 ///|
 test "standalone external open records ccs normalized target" {
-  let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
-  assert_eq(gateway.proxy.last_external_url, None)
+  let proxy = ProxyService::new("127.0.0.9", 17008)
+  assert_eq(proxy.last_external_url, None)
   assert_eq(
-    gateway.record_external_open("github.com/vectie/moonstat"),
+    proxy.record_external_open("github.com/vectie/moonstat"),
     "https://github.com/vectie/moonstat",
   )
+  assert_eq(proxy.last_external_url, Some("https://github.com/vectie/moonstat"))
   assert_eq(
-    gateway.proxy.last_external_url,
-    Some("https://github.com/vectie/moonstat"),
-  )
-  assert_eq(
-    gateway.record_external_open("HTTP://github.com/vectie/moonstat"),
+    proxy.record_external_open("HTTP://github.com/vectie/moonstat"),
     "https://HTTP://github.com/vectie/moonstat",
   )
   assert_eq(
-    gateway.proxy.last_external_url,
+    proxy.last_external_url,
     Some("https://HTTP://github.com/vectie/moonstat"),
   )
 }
 
 ///|
 test "standalone update check records moonstat release target" {
-  let gateway = Gateway::new(port=17008, host="127.0.0.9", model="gpt-5")
-  assert_eq(gateway.record_external_open(moon_update_url()), moon_update_url())
-  assert_eq(gateway.proxy.last_external_url, Some(moon_update_url()))
+  let proxy = ProxyService::new("127.0.0.9", 17008)
+  assert_eq(proxy.record_external_open(moon_update_url()), moon_update_url())
+  assert_eq(proxy.last_external_url, Some(moon_update_url()))
 }
 
 ///|

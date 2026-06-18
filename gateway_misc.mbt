@@ -2960,8 +2960,8 @@ fn moon_streaming_request(
 }
 
 ///|
-async fn Gateway::handle_pick_directory(
-  self : Gateway,
+async fn RuntimeService::handle_pick_directory(
+  self : RuntimeService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -2977,8 +2977,8 @@ async fn Gateway::handle_pick_directory(
 }
 
 ///|
-async fn Gateway::handle_open_external(
-  self : Gateway,
+async fn ProxyService::handle_open_external(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -2991,15 +2991,18 @@ async fn Gateway::handle_open_external(
 }
 
 ///|
-fn Gateway::record_external_open(self : Gateway, raw_url : String) -> String {
+fn ProxyService::record_external_open(
+  self : ProxyService,
+  raw_url : String,
+) -> String {
   let normalized = moon_normalize_external_url(raw_url)
-  self.proxy.last_external_url = Some(normalized)
+  self.last_external_url = Some(normalized)
   normalized
 }
 
 ///|
-async fn Gateway::handle_copy_text_to_clipboard(
-  self : Gateway,
+async fn RuntimeService::handle_copy_text_to_clipboard(
+  self : RuntimeService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -3010,8 +3013,8 @@ async fn Gateway::handle_copy_text_to_clipboard(
 }
 
 ///|
-async fn Gateway::handle_check_for_updates(
-  self : Gateway,
+async fn ProxyService::handle_check_for_updates(
+  self : ProxyService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self.record_external_open(moon_update_url()))
@@ -3689,8 +3692,8 @@ async fn SkillService::handle_install_skills_from_zip(
 }
 
 ///|
-async fn Gateway::handle_restart_app(
-  self : Gateway,
+async fn RuntimeService::handle_restart_app(
+  self : RuntimeService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -3698,8 +3701,8 @@ async fn Gateway::handle_restart_app(
 }
 
 ///|
-async fn Gateway::handle_install_update_and_restart(
-  self : Gateway,
+async fn RuntimeService::handle_install_update_and_restart(
+  self : RuntimeService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)

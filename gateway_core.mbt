@@ -136,28 +136,28 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.config.handle_open_config_folder(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/pick_directory", (r, w) => {
-    self.handle_pick_directory(r, w)
+    self.runtime.handle_pick_directory(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/pick_directory", (r, w) => {
-    self.handle_pick_directory(r, w)
+    self.runtime.handle_pick_directory(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/open_external", (r, w) => {
-    self.handle_open_external(r, w)
+    self.proxy.handle_open_external(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/open_external", (r, w) => {
-    self.handle_open_external(r, w)
+    self.proxy.handle_open_external(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/copy_text_to_clipboard", (r, w) => {
-    self.handle_copy_text_to_clipboard(r, w)
+    self.runtime.handle_copy_text_to_clipboard(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copy_text_to_clipboard", (r, w) => {
-    self.handle_copy_text_to_clipboard(r, w)
+    self.runtime.handle_copy_text_to_clipboard(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/check_for_updates", (_, w) => {
-    self.handle_check_for_updates(w)
+    self.proxy.handle_check_for_updates(w)
   })
   router.add_handler(@httpx.Method::Get, "/check_for_updates", (_, w) => {
-    self.handle_check_for_updates(w)
+    self.proxy.handle_check_for_updates(w)
   })
   router.add_handler(@httpx.Method::Post, "/update_tray_menu", (_, w) => {
     self.runtime.handle_update_tray_menu(w)
@@ -612,10 +612,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.config.handle_save_settings(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/restart_app", (_, w) => {
-    self.handle_restart_app(w)
+    self.runtime.handle_restart_app(w)
   })
   router.add_handler(@httpx.Method::Post, "/install_update_and_restart", (_, w) => {
-    self.handle_install_update_and_restart(w)
+    self.runtime.handle_install_update_and_restart(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_app_config_dir_override", (_, w) => {
     self.config.handle_get_app_config_dir_override(w)
