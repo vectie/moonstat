@@ -1120,7 +1120,7 @@ async fn stream_check_all_providers(args : Array[String]) -> Unit {
 
 ///|
 async fn check_usage_provider_script(args : Array[String]) -> Unit {
-  guard usage_provider_script_path(args, "/queryProviderUsage", false)
+  guard usage_provider_script_path(args, "/usage/provider-usage", false)
     is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required usage script args: --provider-id --app")

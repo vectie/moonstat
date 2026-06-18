@@ -1264,10 +1264,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   router.add_handler(@httpx.Method::Post, "/get_usage_data_sources", (_, w) => {
     self.usage.handle_usage_data_sources(w)
   })
-  router.add_handler(@httpx.Method::Get, "/queryProviderUsage", (r, w) => {
+  router.add_handler(@httpx.Method::Get, "/usage/provider-usage", (r, w) => {
     self.usage.handle_query_provider_usage(r, w, self.proxy.provider_router)
   })
-  router.add_handler(@httpx.Method::Post, "/queryProviderUsage", (r, w) => {
+  router.add_handler(@httpx.Method::Post, "/usage/provider-usage", (r, w) => {
     self.usage.handle_query_provider_usage(r, w, self.proxy.provider_router)
   })
   router.add_handler(@httpx.Method::Get, "/get_balance", (r, w) => {

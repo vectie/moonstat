@@ -1577,7 +1577,7 @@ test "usage aggregate helpers prefer query params over ccs body args" {
 }
 
 ///|
-async test "queryProviderUsage returns cached ccs script result first" {
+async test "provider usage query returns cached script result first" {
   let usage = UsageService::new()
   let router = ProviderRouter::new()
   let cached = UsageResult::new(
@@ -1601,7 +1601,7 @@ async test "queryProviderUsage returns cached ccs script result first" {
 }
 
 ///|
-async test "queryProviderUsage falls back to ccs native balance credentials" {
+async test "provider usage query falls back to native balance credentials" {
   let usage = UsageService::new()
   let router = ProviderRouter::new()
   router.upsert_provider(

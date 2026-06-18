@@ -312,7 +312,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
 - `POST /usage/model-pricing`
 - `DELETE /usage/model-pricing`
 - `GET /usage/request-detail/{request_id}`
-- `GET|POST /queryProviderUsage?providerId=codex-oauth&app=codex`
+- `GET|POST /usage/provider-usage?providerId=codex-oauth&app=codex`
 - `GET|POST /get_balance?baseUrl=https://api.deepseek.com&apiKey=...`
 - `GET|POST /get_subscription_quota?tool=codex`
 - `GET|POST /get_codex_oauth_quota?accountId=...`
@@ -351,7 +351,7 @@ Moonstat currently exposes the ccs-compatible local routes below:
   `GET|POST /get_request_detail?requestId=...`, `GET /get_model_pricing`,
   `POST /update_model_pricing`, `DELETE|POST /delete_model_pricing`,
   `GET|POST /check_provider_limits`, `POST /sync_session_usage`,
-  `GET|POST /get_usage_data_sources`, `GET|POST /queryProviderUsage`,
+  `GET|POST /get_usage_data_sources`, `GET|POST /usage/provider-usage`,
   `GET|POST /get_balance`, `GET|POST /get_subscription_quota`,
   `GET|POST /get_codex_oauth_quota`, `GET|POST /get_codex_oauth_models`,
   `GET|POST /get_coding_plan_quota`,
@@ -500,7 +500,7 @@ fallback, defaulting to `~/.local/share/opencode/opencode.messages.jsonl`.
 `/get_balance` mirrors the CCS native balance command for DeepSeek, StepFun,
 SiliconFlow CN/EN, OpenRouter, and Novita AI by detecting provider from
 `baseUrl`, querying the vendor balance endpoint with `apiKey`, and returning the
-same `UsageResult` shape used by `queryProviderUsage`.
+same `UsageResult` shape used by `usage query-provider-usage`.
 
 `/get_subscription_quota` mirrors the CCS native subscription quota command for
 `claude`, `codex`, and `gemini`. It reads the same macOS keychain entries and

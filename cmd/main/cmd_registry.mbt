@@ -1438,8 +1438,7 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     {
       id: "query_provider_usage",
       patterns: [
-        "usage query-provider-usage", "queryProviderUsage", "query_provider_usage",
-        "query-provider-usage",
+        "usage query-provider-usage", "query_provider_usage", "query-provider-usage",
       ],
     },
     {

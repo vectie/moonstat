@@ -451,10 +451,6 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("query_provider_usage"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "queryProviderUsage"]) ==
-    Some("query_provider_usage"),
-  )
-  assert_true(
     registered_cli_command_id(["moonstat", "usage", "quota"]) ==
     Some("get_subscription_quota"),
   )
@@ -649,10 +645,10 @@ test "usage aliases build same paths as moonstat command names" {
         "moonstat", "usage", "query-provider-usage", "--provider-id", "p1", "--app",
         "codex",
       ],
-      "/queryProviderUsage",
+      "/usage/provider-usage",
       false,
     ),
-    Some("/queryProviderUsage?providerId=p1&app=codex"),
+    Some("/usage/provider-usage?providerId=p1&app=codex"),
   )
   assert_eq(
     usage_provider_script_path(
@@ -1047,16 +1043,6 @@ test "top level moonstat usage command names build command alias paths" {
       "moonstat", "check_provider_limits", "--providerId", "p1", "--appType", "codex",
     ]),
     "/usage/provider-limits?provider_id=p1&app_type=codex",
-  )
-  assert_eq(
-    usage_provider_script_path(
-      [
-        "moonstat", "queryProviderUsage", "--providerId", "p1", "--appType", "codex",
-      ],
-      "/queryProviderUsage",
-      false,
-    ),
-    Some("/queryProviderUsage?providerId=p1&app=codex"),
   )
   assert_eq(
     usage_pricing_update_path([

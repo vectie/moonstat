@@ -577,7 +577,7 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET|POST /get_usage_trends", "GET|POST /get_provider_stats", "GET|POST /get_model_stats",
     "GET|POST /get_request_logs", "GET|POST /get_request_detail", "GET /get_model_pricing",
     "POST /update_model_pricing", "DELETE|POST /delete_model_pricing", "GET|POST /check_provider_limits",
-    "POST /sync_session_usage", "GET|POST /get_usage_data_sources", "GET|POST /queryProviderUsage",
+    "POST /sync_session_usage", "GET|POST /get_usage_data_sources", "GET|POST /usage/provider-usage",
     "GET|POST /get_balance", "GET|POST /get_subscription_quota", "GET|POST /get_codex_oauth_quota",
     "GET|POST /get_codex_oauth_models", "GET|POST /get_coding_plan_quota", "POST /testUsageScript",
     "GET|POST /stream_check_provider", "GET|POST /stream_check_all_providers", "GET /get_stream_check_config",
