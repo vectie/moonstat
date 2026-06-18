@@ -129,8 +129,11 @@ async fn Gateway::handle_register_page(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  self.write_static_file(
-    w, "public/participant-register.html", "text/html; charset=utf-8",
+  self.workspace.write_static_file(
+    self.logger,
+    w,
+    "public/participant-register.html",
+    "text/html; charset=utf-8",
   )
 }
 

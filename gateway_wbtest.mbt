@@ -2283,6 +2283,8 @@ async test "workspace endpoints are owned by workspace service" {
       "handle_open_zip_file_dialog", "handle_list_daily_memory_files", "handle_read_daily_memory_file",
       "handle_write_daily_memory_file", "handle_search_daily_memory_files", "handle_delete_daily_memory_file",
       "handle_read_workspace_file", "handle_write_workspace_file", "handle_open_workspace_directory",
+      "handle_import_prompt_from_file", "handle_get_current_prompt_file_content",
+      "write_static_file",
     ] {
     assert_true(
       workspace_source.contains("async fn WorkspaceService::\{handler}("),
@@ -2299,6 +2301,16 @@ async test "workspace endpoints are owned by workspace service" {
   )
   assert_true(
     core_source.contains("self.workspace.handle_open_workspace_directory(r, w)"),
+  )
+  assert_true(
+    core_source.contains(
+      "self.workspace.handle_import_prompt_from_file(self.config, r, w)",
+    ),
+  )
+  assert_true(
+    core_source.contains(
+      "self.workspace.handle_get_current_prompt_file_content(r, w)",
+    ),
   )
 }
 

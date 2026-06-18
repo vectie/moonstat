@@ -344,17 +344,18 @@ async fn WorkspaceService::handle_open_zip_file_dialog(
 }
 
 ///|
-async fn Gateway::handle_import_prompt_from_file(
-  self : Gateway,
+async fn WorkspaceService::handle_import_prompt_from_file(
+  self : WorkspaceService,
+  config : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
+  ignore(self)
   let body = proxy_json_body(r)
   let app = moon_config_app_from_request(r.path, body).unwrap_or("claude")
   match moon_prompt_file_path_from_request(r.path, body, app) {
     Ok(file_path) =>
-      match
-        moon_import_prompt_from_file_json(self.config.prompts, app, file_path) {
+      match moon_import_prompt_from_file_json(config.prompts, app, file_path) {
         Ok(result) => write_usage_json(w, result)
         Err(error) => write_usage_bad_request(w, error)
       }
@@ -363,8 +364,8 @@ async fn Gateway::handle_import_prompt_from_file(
 }
 
 ///|
-async fn Gateway::handle_get_current_prompt_file_content(
-  self : Gateway,
+async fn WorkspaceService::handle_get_current_prompt_file_content(
+  self : WorkspaceService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -559,12 +560,14 @@ async fn WorkspaceService::handle_open_workspace_directory(
 }
 
 ///|
-async fn Gateway::write_static_file(
-  self : Gateway,
+async fn WorkspaceService::write_static_file(
+  self : WorkspaceService,
+  logger : @pino.Logger,
   w : @httpx.ResponseWriter,
   path : String,
   content_type : String,
 ) -> Unit {
+  ignore(self)
   let result : Result[String, Error] = try? @fsx.read_file(path)
   match result {
     Ok(content) => {
@@ -573,7 +576,7 @@ async fn Gateway::write_static_file(
       w.write(content)
     }
     Err(error) => {
-      self.logger.error("Failed to serve static file \{path}: \{error}")
+      logger.error("Failed to serve static file \{path}: \{error}")
       w.header().set("Content-Type", "text/plain; charset=utf-8")
       w.write_header(@status.NotFound)
       w.write("Not Found")

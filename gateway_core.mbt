@@ -591,16 +591,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.config.handle_enable_prompt(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/import_prompt_from_file", (r, w) => {
-    self.handle_import_prompt_from_file(r, w)
+    self.workspace.handle_import_prompt_from_file(self.config, r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_current_prompt_file_content", (
     r,
     w,
-  ) => self.handle_get_current_prompt_file_content(r, w))
+  ) => self.workspace.handle_get_current_prompt_file_content(r, w))
   router.add_handler(@httpx.Method::Post, "/get_current_prompt_file_content", (
     r,
     w,
-  ) => self.handle_get_current_prompt_file_content(r, w))
+  ) => self.workspace.handle_get_current_prompt_file_content(r, w))
   router.add_handler(@httpx.Method::Get, "/proxy/status", (_, w) => {
     self.proxy.handle_proxy_status(
       w,
