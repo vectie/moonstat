@@ -836,6 +836,32 @@ test "provider command helpers parse moonstat sort and endpoint test payloads" {
 }
 
 ///|
+test "provider mutation helpers reject retired snake case aliases" {
+  assert_eq(
+    provider_bool_from_request("/providers?addToLive=false", None, ["addToLive"]),
+    Some(false),
+  )
+  assert_eq(
+    provider_bool_from_request("/providers?add_to_live=false", None, [
+      "addToLive",
+    ]),
+    None,
+  )
+  assert_eq(
+    provider_string_from_request("/providers/update?originalId=old", None, [
+      "originalId",
+    ]),
+    Some("old"),
+  )
+  assert_eq(
+    provider_string_from_request("/providers/update?original_id=old", None, [
+      "originalId",
+    ]),
+    None,
+  )
+}
+
+///|
 test "universal provider helper builds moonstat provider shape from query args" {
   guard universal_provider_from_request(
       "/providers/universal?id=u%201&name=Universal+One&providerType=openai-compatible&apps=claude,codex&baseUrl=https%3A%2F%2Fapi.example.com%2Fv1&apiKey=sk-test&codexModel=gpt-5&reasoningEffort=medium",

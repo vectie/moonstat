@@ -837,9 +837,9 @@ async fn ProxyService::handle_add_provider(
     write_usage_bad_request(w, "invalid_provider")
     return
   }
-  let add_to_live = provider_bool_from_request(r.path, body, [
-    "addToLive", "add_to_live",
-  ]).unwrap_or(true)
+  let add_to_live = provider_bool_from_request(r.path, body, ["addToLive"]).unwrap_or(
+    true,
+  )
   self.add_provider_target(usage, app_type, target, add_to_live)
   write_usage_json(w, Json::boolean(true))
 }
@@ -879,9 +879,7 @@ async fn ProxyService::handle_update_provider(
     write_usage_bad_request(w, "invalid_provider")
     return
   }
-  let original_id = provider_string_from_request(r.path, body, [
-    "originalId", "original_id",
-  ])
+  let original_id = provider_string_from_request(r.path, body, ["originalId"])
   match self.update_provider_target(usage, app_type, target, original_id) {
     Ok(_) => write_usage_json(w, Json::boolean(true))
     Err(error) => write_usage_bad_request(w, error)
