@@ -612,72 +612,8 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
       run_workspace_cli_command(command_id, args)
       true
     }
-    Some("pick_directory") => {
-      check_usage_endpoint(args, pick_directory_path(args))
-      true
-    }
-    Some("open_external") => {
-      check_usage_endpoint(args, open_external_path(args))
-      true
-    }
-    Some("copy_text_to_clipboard") => {
-      check_usage_endpoint(args, copy_text_to_clipboard_path(args))
-      true
-    }
-    Some("check_for_updates") => {
-      check_json_post_endpoint(args, "/runtime/updates/check", "App shell")
-      true
-    }
-    Some("update_tray_menu") => {
-      check_json_post_endpoint(args, "/runtime/tray-menu/update", "App shell")
-      true
-    }
-    Some("is_portable_mode") => {
-      check_usage_endpoint(args, "/runtime/portable-mode")
-      true
-    }
-    Some("get_init_error") => {
-      check_usage_endpoint(args, "/runtime/init-error")
-      true
-    }
-    Some("get_migration_result") => {
-      check_usage_endpoint(args, "/runtime/migration-result")
-      true
-    }
-    Some("get_skills_migration_result") => {
-      check_usage_endpoint(args, "/runtime/skills-migration-result")
-      true
-    }
-    Some("get_tool_versions") => {
-      check_usage_endpoint(args, tool_versions_path(args))
-      true
-    }
-    Some("run_tool_lifecycle_action") => {
-      run_tool_lifecycle_action(args)
-      true
-    }
-    Some("probe_tool_installations") => {
-      check_usage_endpoint(args, tool_installations_path(args))
-      true
-    }
-    Some("set_window_theme") => {
-      check_usage_endpoint(args, window_theme_path(args))
-      true
-    }
-    Some("enter_lightweight_mode") => {
-      check_json_post_endpoint(
-        args, "/runtime/lightweight-mode/enter", "App shell",
-      )
-      true
-    }
-    Some("exit_lightweight_mode") => {
-      check_json_post_endpoint(
-        args, "/runtime/lightweight-mode/exit", "App shell",
-      )
-      true
-    }
-    Some("is_lightweight_mode") => {
-      check_usage_endpoint(args, "/runtime/lightweight-mode")
+    Some(command_id) if cli_runtime_command_id(command_id) => {
+      run_runtime_cli_command(command_id, args)
       true
     }
     Some("webdav_test_connection") => {
@@ -782,16 +718,6 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
     }
     Some("disable_current_omo_slim") => {
       check_json_post_endpoint(args, "/providers/omo-slim/disable", "OMO")
-      true
-    }
-    Some("restart_app") => {
-      check_json_post_endpoint(args, "/runtime/restart", "Settings")
-      true
-    }
-    Some("install_update_and_restart") => {
-      check_json_post_endpoint(
-        args, "/runtime/updates/install-restart", "Settings",
-      )
       true
     }
     Some(command_id) if cli_usage_command_id(command_id) => {

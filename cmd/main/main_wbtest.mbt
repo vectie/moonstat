@@ -562,6 +562,19 @@ test "provider cli dispatcher owns provider and model commands" {
 }
 
 ///|
+test "runtime cli dispatcher owns app shell commands" {
+  assert_true(cli_runtime_command_id("pick_directory"))
+  assert_true(cli_runtime_command_id("check_for_updates"))
+  assert_true(cli_runtime_command_id("get_tool_versions"))
+  assert_true(cli_runtime_command_id("enter_lightweight_mode"))
+  assert_true(cli_runtime_command_id("restart_app"))
+  assert_true(cli_runtime_command_id("install_update_and_restart"))
+  assert_false(cli_runtime_command_id("auth_get_status"))
+  assert_false(cli_runtime_command_id("get_usage_summary"))
+  assert_false(cli_runtime_command_id("read_workspace_file"))
+}
+
+///|
 test "usage sync path accepts standalone projects dir override" {
   assert_eq(
     usage_sync_path(["moonstat", "usage", "sync"]),

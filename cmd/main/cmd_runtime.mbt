@@ -1,0 +1,69 @@
+///|
+fn cli_runtime_command_id(command_id : String) -> Bool {
+  match command_id {
+    "pick_directory"
+    | "open_external"
+    | "copy_text_to_clipboard"
+    | "check_for_updates"
+    | "update_tray_menu"
+    | "is_portable_mode"
+    | "get_init_error"
+    | "get_migration_result"
+    | "get_skills_migration_result"
+    | "get_tool_versions"
+    | "run_tool_lifecycle_action"
+    | "probe_tool_installations"
+    | "set_window_theme"
+    | "enter_lightweight_mode"
+    | "exit_lightweight_mode"
+    | "is_lightweight_mode"
+    | "restart_app"
+    | "install_update_and_restart" => true
+    _ => false
+  }
+}
+
+///|
+async fn run_runtime_cli_command(
+  command_id : String,
+  args : Array[String],
+) -> Unit {
+  match command_id {
+    "pick_directory" => check_usage_endpoint(args, pick_directory_path(args))
+    "open_external" => check_usage_endpoint(args, open_external_path(args))
+    "copy_text_to_clipboard" =>
+      check_usage_endpoint(args, copy_text_to_clipboard_path(args))
+    "check_for_updates" =>
+      check_json_post_endpoint(args, "/runtime/updates/check", "App shell")
+    "update_tray_menu" =>
+      check_json_post_endpoint(args, "/runtime/tray-menu/update", "App shell")
+    "is_portable_mode" => check_usage_endpoint(args, "/runtime/portable-mode")
+    "get_init_error" => check_usage_endpoint(args, "/runtime/init-error")
+    "get_migration_result" =>
+      check_usage_endpoint(args, "/runtime/migration-result")
+    "get_skills_migration_result" =>
+      check_usage_endpoint(args, "/runtime/skills-migration-result")
+    "get_tool_versions" => check_usage_endpoint(args, tool_versions_path(args))
+    "run_tool_lifecycle_action" => run_tool_lifecycle_action(args)
+    "probe_tool_installations" =>
+      check_usage_endpoint(args, tool_installations_path(args))
+    "set_window_theme" => check_usage_endpoint(args, window_theme_path(args))
+    "enter_lightweight_mode" =>
+      check_json_post_endpoint(
+        args, "/runtime/lightweight-mode/enter", "App shell",
+      )
+    "exit_lightweight_mode" =>
+      check_json_post_endpoint(
+        args, "/runtime/lightweight-mode/exit", "App shell",
+      )
+    "is_lightweight_mode" =>
+      check_usage_endpoint(args, "/runtime/lightweight-mode")
+    "restart_app" =>
+      check_json_post_endpoint(args, "/runtime/restart", "Settings")
+    "install_update_and_restart" =>
+      check_json_post_endpoint(
+        args, "/runtime/updates/install-restart", "Settings",
+      )
+    _ => ()
+  }
+}
