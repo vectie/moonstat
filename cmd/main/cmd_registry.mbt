@@ -140,6 +140,183 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
       ],
     },
     {
+      id: "get_installed_skills",
+      patterns: [
+        "skills installed", "get_installed_skills", "get-installed-skills",
+      ],
+    },
+    {
+      id: "get_skill_backups",
+      patterns: ["skills backups", "get_skill_backups", "get-skill-backups"],
+    },
+    {
+      id: "delete_skill_backup",
+      patterns: [
+        "skills backup delete", "delete_skill_backup", "delete-skill-backup",
+      ],
+    },
+    {
+      id: "restore_skill_backup",
+      patterns: [
+        "skills backup restore", "restore_skill_backup", "restore-skill-backup",
+      ],
+    },
+    {
+      id: "install_skill_unified",
+      patterns: [
+        "skills install-unified", "install_skill_unified", "install-skill-unified",
+      ],
+    },
+    {
+      id: "uninstall_skill_unified",
+      patterns: [
+        "skills uninstall-unified", "uninstall_skill_unified", "uninstall-skill-unified",
+      ],
+    },
+    {
+      id: "toggle_skill_app",
+      patterns: ["skills toggle-app", "toggle_skill_app", "toggle-skill-app"],
+    },
+    {
+      id: "scan_unmanaged_skills",
+      patterns: [
+        "skills scan-unmanaged", "scan_unmanaged_skills", "scan-unmanaged-skills",
+      ],
+    },
+    {
+      id: "import_skills_from_apps",
+      patterns: [
+        "skills import-apps", "import_skills_from_apps", "import-skills-from-apps",
+      ],
+    },
+    {
+      id: "discover_available_skills",
+      patterns: [
+        "skills discover", "discover_available_skills", "discover-available-skills",
+      ],
+    },
+    {
+      id: "check_skill_updates",
+      patterns: [
+        "skills check-updates", "check_skill_updates", "check-skill-updates",
+      ],
+    },
+    {
+      id: "update_skill",
+      patterns: ["skills update", "update_skill", "update-skill"],
+    },
+    {
+      id: "migrate_skill_storage",
+      patterns: [
+        "skills migrate-storage", "migrate_skill_storage", "migrate-skill-storage",
+      ],
+    },
+    {
+      id: "search_skills_sh",
+      patterns: ["skills search", "search_skills_sh", "search-skills-sh"],
+    },
+    { id: "get_skills", patterns: ["skills list", "get_skills", "get-skills"] },
+    {
+      id: "get_skills_for_app",
+      patterns: ["skills app", "get_skills_for_app", "get-skills-for-app"],
+    },
+    {
+      id: "install_skill",
+      patterns: ["skills install", "install_skill", "install-skill"],
+    },
+    {
+      id: "install_skill_for_app",
+      patterns: [
+        "skills install-for-app", "install_skill_for_app", "install-skill-for-app",
+      ],
+    },
+    {
+      id: "uninstall_skill",
+      patterns: ["skills uninstall", "uninstall_skill", "uninstall-skill"],
+    },
+    {
+      id: "uninstall_skill_for_app",
+      patterns: [
+        "skills uninstall-for-app", "uninstall_skill_for_app", "uninstall-skill-for-app",
+      ],
+    },
+    {
+      id: "get_skill_repos",
+      patterns: ["skills repos", "get_skill_repos", "get-skill-repos"],
+    },
+    {
+      id: "add_skill_repo",
+      patterns: ["skills repo add", "add_skill_repo", "add-skill-repo"],
+    },
+    {
+      id: "remove_skill_repo",
+      patterns: ["skills repo remove", "remove_skill_repo", "remove-skill-repo"],
+    },
+    {
+      id: "install_skills_from_zip",
+      patterns: [
+        "skills install-zip", "install_skills_from_zip", "install-skills-from-zip",
+      ],
+    },
+    {
+      id: "get_app_config_path",
+      patterns: [
+        "config app-path", "get_app_config_path", "get-app-config-path",
+      ],
+    },
+    {
+      id: "open_app_config_folder",
+      patterns: [
+        "config open-app-folder", "open_app_config_folder", "open-app-config-folder",
+      ],
+    },
+    {
+      id: "set_claude_common_config_snippet",
+      patterns: [
+        "config claude-snippet set", "set_claude_common_config_snippet", "set-claude-common-config-snippet",
+      ],
+    },
+    {
+      id: "get_claude_common_config_snippet",
+      patterns: [
+        "config claude-snippet", "get_claude_common_config_snippet", "get-claude-common-config-snippet",
+      ],
+    },
+    {
+      id: "set_common_config_snippet",
+      patterns: [
+        "config snippet set", "set_common_config_snippet", "set-common-config-snippet",
+      ],
+    },
+    {
+      id: "get_common_config_snippet",
+      patterns: [
+        "config snippet", "get_common_config_snippet", "get-common-config-snippet",
+      ],
+    },
+    {
+      id: "extract_common_config_snippet",
+      patterns: [
+        "config snippet extract", "extract_common_config_snippet", "extract-common-config-snippet",
+      ],
+    },
+    {
+      id: "check_env_conflicts",
+      patterns: [
+        "config env-conflicts", "check_env_conflicts", "check-env-conflicts",
+      ],
+    },
+    {
+      id: "delete_env_vars",
+      patterns: ["config env-delete", "delete_env_vars", "delete-env-vars"],
+    },
+    {
+      id: "restore_env_backup",
+      patterns: [
+        "config env-restore", "restore_env_backup", "restore-env-backup",
+      ],
+    },
+    {
       id: "stream_check_provider",
       patterns: [
         "stream-check provider", "stream-check stream-check-provider", "stream_check_provider",
@@ -1508,6 +1685,181 @@ async fn run_registered_cli_command(args : Array[String]) -> Bool {
         args,
         copilot_account_optional_path(args, "/copilot_get_usage_for_account"),
       )
+      true
+    }
+    Some("get_installed_skills") => {
+      check_usage_endpoint(args, "/get_installed_skills")
+      true
+    }
+    Some("get_skill_backups") => {
+      check_usage_endpoint(args, "/get_skill_backups")
+      true
+    }
+    Some("delete_skill_backup") => {
+      check_json_post_endpoint(
+        args,
+        skill_backup_id_path(args, "/delete_skill_backup"),
+        "Skills",
+      )
+      true
+    }
+    Some("restore_skill_backup") => {
+      check_json_post_endpoint(args, skill_restore_backup_path(args), "Skills")
+      true
+    }
+    Some("install_skill_unified") => {
+      check_json_post_endpoint(
+        args,
+        skill_install_path(args, "/install_skill_unified"),
+        "Skills",
+      )
+      true
+    }
+    Some("uninstall_skill_unified") => {
+      check_json_post_endpoint(
+        args,
+        skill_id_path(args, "/uninstall_skill_unified"),
+        "Skills",
+      )
+      true
+    }
+    Some("toggle_skill_app") => {
+      check_json_post_endpoint(args, skill_toggle_app_path(args), "Skills")
+      true
+    }
+    Some("scan_unmanaged_skills") => {
+      check_usage_endpoint(args, "/scan_unmanaged_skills")
+      true
+    }
+    Some("import_skills_from_apps") => {
+      import_skills_from_apps(args)
+      true
+    }
+    Some("discover_available_skills") => {
+      check_usage_endpoint(args, "/discover_available_skills")
+      true
+    }
+    Some("check_skill_updates") => {
+      check_usage_endpoint(args, "/check_skill_updates")
+      true
+    }
+    Some("update_skill") => {
+      check_json_post_endpoint(
+        args,
+        skill_id_path(args, "/update_skill"),
+        "Skills",
+      )
+      true
+    }
+    Some("migrate_skill_storage") => {
+      migrate_skill_storage(args)
+      true
+    }
+    Some("search_skills_sh") => {
+      check_usage_endpoint(args, skill_search_path(args))
+      true
+    }
+    Some("get_skills") => {
+      check_usage_endpoint(args, "/get_skills")
+      true
+    }
+    Some("get_skills_for_app") => {
+      check_usage_endpoint(args, skill_app_path(args, "/get_skills_for_app"))
+      true
+    }
+    Some("install_skill") => {
+      check_json_post_endpoint(
+        args,
+        skill_install_path(args, "/install_skill"),
+        "Skills",
+      )
+      true
+    }
+    Some("install_skill_for_app") => {
+      check_json_post_endpoint(
+        args,
+        skill_install_path(args, "/install_skill_for_app"),
+        "Skills",
+      )
+      true
+    }
+    Some("uninstall_skill") => {
+      check_json_post_endpoint(
+        args,
+        skill_id_path(args, "/uninstall_skill"),
+        "Skills",
+      )
+      true
+    }
+    Some("uninstall_skill_for_app") => {
+      check_json_post_endpoint(
+        args,
+        skill_id_path(args, "/uninstall_skill_for_app"),
+        "Skills",
+      )
+      true
+    }
+    Some("get_skill_repos") => {
+      check_usage_endpoint(args, "/get_skill_repos")
+      true
+    }
+    Some("add_skill_repo") => {
+      check_json_post_endpoint(args, skill_repo_add_path(args), "Skills")
+      true
+    }
+    Some("remove_skill_repo") => {
+      check_json_post_endpoint(args, skill_repo_remove_path(args), "Skills")
+      true
+    }
+    Some("install_skills_from_zip") => {
+      check_json_post_endpoint(args, skill_zip_install_path(args), "Skills")
+      true
+    }
+    Some("get_app_config_path") => {
+      check_usage_endpoint(args, "/get_app_config_path")
+      true
+    }
+    Some("open_app_config_folder") => {
+      check_usage_endpoint(args, "/open_app_config_folder")
+      true
+    }
+    Some("get_claude_common_config_snippet") => {
+      check_usage_endpoint(args, "/get_claude_common_config_snippet")
+      true
+    }
+    Some("set_claude_common_config_snippet") => {
+      set_config_snippet(
+        args,
+        "/set_claude_common_config_snippet",
+        app_required=false,
+      )
+      true
+    }
+    Some("get_common_config_snippet") => {
+      check_usage_endpoint(
+        args,
+        config_app_path(args, "/get_common_config_snippet"),
+      )
+      true
+    }
+    Some("set_common_config_snippet") => {
+      set_config_snippet(args, "/set_common_config_snippet", app_required=true)
+      true
+    }
+    Some("extract_common_config_snippet") => {
+      check_usage_endpoint(args, extract_common_config_snippet_path(args))
+      true
+    }
+    Some("check_env_conflicts") => {
+      check_usage_endpoint(args, config_app_path(args, "/check_env_conflicts"))
+      true
+    }
+    Some("delete_env_vars") => {
+      delete_env_vars(args)
+      true
+    }
+    Some("restore_env_backup") => {
+      restore_env_backup(args)
       true
     }
     Some("stream_check_provider") => {

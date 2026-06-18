@@ -7,7 +7,7 @@ test "has flag matches exact CLI option" {
 
 ///|
 test "registered cli commands match suite command aliases and status commands" {
-  assert_true(registered_cli_commands().length() >= 215)
+  assert_true(registered_cli_commands().length() >= 250)
   assert_true(registered_cli_command_id(["moonstat", "start"]) == Some("start"))
   assert_true(
     registered_cli_command_id(["moonstat", "install", "--port", "15721"]) ==
@@ -48,6 +48,46 @@ test "registered cli commands match suite command aliases and status commands" {
   assert_true(
     registered_cli_command_id(["moonstat", "open-zip-file-dialog"]) ==
     Some("open_zip_file_dialog"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "skills", "installed"]) ==
+    Some("get_installed_skills"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "get-installed-skills"]) ==
+    Some("get_installed_skills"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "skills", "backup", "restore"]) ==
+    Some("restore_skill_backup"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "install-skill-unified"]) ==
+    Some("install_skill_unified"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "skills", "import-apps"]) ==
+    Some("import_skills_from_apps"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "skills", "search"]) ==
+    Some("search_skills_sh"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "skills", "repo", "add"]) ==
+    Some("add_skill_repo"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "config", "snippet", "set"]) ==
+    Some("set_common_config_snippet"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "check-env-conflicts"]) ==
+    Some("check_env_conflicts"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "config", "env-restore"]) ==
+    Some("restore_env_backup"),
   )
   assert_true(
     cli_args_match_pattern(
