@@ -1,5 +1,5 @@
 ///|
-pub fn transform_claude_request_for_api_format(
+fn transform_claude_request_for_api_format(
   body : Json,
   api_format : String,
   session_id? : String? = None,
@@ -26,21 +26,20 @@ pub fn transform_claude_request_for_api_format(
 }
 
 ///|
-pub struct GeminiToolCallMeta {
+priv struct GeminiToolCallMeta {
   id : String?
   name : String
-  args : Json
   thought_signature : String?
 }
 
 ///|
-pub struct GeminiAssistantTurn {
+priv struct GeminiAssistantTurn {
   assistant_content : Json
   tool_calls : Array[GeminiToolCallMeta]
 }
 
 ///|
-pub struct GeminiShadowStore {
+priv struct GeminiShadowStore {
   max_sessions : Int
   max_turns_per_session : Int
   sessions : Map[String, Array[GeminiAssistantTurn]]
@@ -765,7 +764,6 @@ fn extract_gemini_tool_call_meta(
     tool_calls.push({
       id: json_string_from_map(function_call, "id"),
       name: json_string_from_map(function_call, "name").unwrap_or(""),
-      args: function_call.get("args").unwrap_or(Json::object({})),
       thought_signature: json_string_from_map(part_obj, "thoughtSignature"),
     })
   }

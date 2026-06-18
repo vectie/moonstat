@@ -3053,7 +3053,6 @@ fn GeminiNativeAnthropicStreamState::shadow_turn(
     tool_calls.push({
       id: snapshot.id,
       name: snapshot.name,
-      args: snapshot.args,
       thought_signature: snapshot.thought_signature,
     })
   }

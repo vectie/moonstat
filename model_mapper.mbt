@@ -2,7 +2,7 @@
 const ONE_M_CONTEXT_MARKER = "[1M]"
 
 ///|
-pub struct ModelMapping {
+priv struct ModelMapping {
   haiku_model : String?
   sonnet_model : String?
   opus_model : String?
@@ -10,7 +10,7 @@ pub struct ModelMapping {
 }
 
 ///|
-pub fn ModelMapping::new(
+fn ModelMapping::new(
   haiku_model? : String? = None,
   sonnet_model? : String? = None,
   opus_model? : String? = None,
@@ -25,7 +25,7 @@ pub fn ModelMapping::new(
 }
 
 ///|
-pub fn ModelMapping::has_mapping(self : ModelMapping) -> Bool {
+fn ModelMapping::has_mapping(self : ModelMapping) -> Bool {
   self.haiku_model is Some(_) ||
   self.sonnet_model is Some(_) ||
   self.opus_model is Some(_) ||
@@ -33,7 +33,7 @@ pub fn ModelMapping::has_mapping(self : ModelMapping) -> Bool {
 }
 
 ///|
-pub fn ModelMapping::map_model(
+fn ModelMapping::map_model(
   self : ModelMapping,
   original_model : String,
 ) -> String {
@@ -60,7 +60,7 @@ pub fn ModelMapping::map_model(
 }
 
 ///|
-pub fn ModelMapping::to_json(self : ModelMapping) -> Json {
+fn ModelMapping::to_json(self : ModelMapping) -> Json {
   {
     "haikuModel": optional_model_mapping_string_json(self.haiku_model),
     "sonnetModel": optional_model_mapping_string_json(self.sonnet_model),
@@ -89,7 +89,7 @@ fn ProviderRouteTarget::map_model_for_upstream(
 }
 
 ///|
-pub fn strip_one_m_suffix_for_upstream(model : String) -> String {
+fn strip_one_m_suffix_for_upstream(model : String) -> String {
   let trimmed = model.trim_end().to_owned()
   if trimmed.length() < ONE_M_CONTEXT_MARKER.length() {
     return model

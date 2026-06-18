@@ -104,13 +104,7 @@ pub fn moonstat_suite_manifest_json(host? : String, port? : Int, model? : String
 
 pub fn moonstat_suite_status_json(host? : String, port? : Int, model? : String, status? : String, ready? : Bool) -> Json
 
-pub fn normalize_gemini_model_id(String) -> String
-
 pub fn static_model_pricing_json() -> Json
-
-pub fn strip_one_m_suffix_for_upstream(String) -> String
-
-pub fn transform_claude_request_for_api_format(Json, String, session_id? : String?, explicit_prompt_cache_key? : String?, is_codex_oauth? : Bool, codex_fast_mode? : Bool, gemini_shadow_turns? : Array[GeminiAssistantTurn]) -> Json
 
 pub async fn write_moonstat_moonclaw_providers_file(path? : String, host? : String, port? : Int, model? : String) -> String
 
@@ -140,36 +134,6 @@ pub fn Gateway::host(Self) -> String
 pub fn Gateway::new(port~ : Int, host? : String, model? : String) -> Self
 pub fn Gateway::port(Self) -> Int
 pub async fn Gateway::start(Self) -> Unit
-
-pub struct GeminiAssistantTurn {
-  assistant_content : Json
-  tool_calls : Array[GeminiToolCallMeta]
-}
-
-pub struct GeminiShadowStore {
-  max_sessions : Int
-  max_turns_per_session : Int
-  sessions : Map[String, Array[GeminiAssistantTurn]]
-  session_order : Array[String]
-}
-
-pub struct GeminiToolCallMeta {
-  id : String?
-  name : String
-  args : Json
-  thought_signature : String?
-}
-
-pub struct ModelMapping {
-  haiku_model : String?
-  sonnet_model : String?
-  opus_model : String?
-  default_model : String?
-}
-pub fn ModelMapping::has_mapping(Self) -> Bool
-pub fn ModelMapping::map_model(Self, String) -> String
-pub fn ModelMapping::new(haiku_model? : String?, sonnet_model? : String?, opus_model? : String?, default_model? : String?) -> Self
-pub fn ModelMapping::to_json(Self) -> Json
 
 pub struct ModelPricing {
   model_id : String

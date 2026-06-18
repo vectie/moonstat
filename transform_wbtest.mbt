@@ -614,7 +614,6 @@ test "moonstat gemini native shadow replay preserves thought signature by id" {
         {
           id: Some("call_1"),
           name: "Bash",
-          args: Json::object({ "command": Json::string("ls -R") }),
           thought_signature: Some("sig-tool-1"),
         },
       ],
@@ -700,7 +699,6 @@ test "moonstat gemini native shadow replay prefers exact id over name collision"
         {
           id: Some("call_a"),
           name: "server_a:search",
-          args: Json::object({ "q": Json::string("alpha") }),
           thought_signature: Some("sig-a"),
         },
       ],
@@ -722,7 +720,6 @@ test "moonstat gemini native shadow replay prefers exact id over name collision"
         {
           id: Some("call_b"),
           name: "server_b:search",
-          args: Json::object({ "q": Json::string("beta") }),
           thought_signature: Some("sig-b"),
         },
       ],
