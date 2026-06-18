@@ -27,7 +27,8 @@ async fn ProxyService::handle_get_custom_endpoints(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  guard provider_id_from_request(r.path, body) is Some(provider_id) else {
+  guard provider_route_provider_id_from_request(r.path, body)
+    is Some(provider_id) else {
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
@@ -48,7 +49,8 @@ async fn ProxyService::handle_add_custom_endpoint(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  guard provider_id_from_request(r.path, body) is Some(provider_id) else {
+  guard provider_route_provider_id_from_request(r.path, body)
+    is Some(provider_id) else {
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
@@ -74,7 +76,8 @@ async fn ProxyService::handle_remove_custom_endpoint(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  guard provider_id_from_request(r.path, body) is Some(provider_id) else {
+  guard provider_route_provider_id_from_request(r.path, body)
+    is Some(provider_id) else {
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
@@ -97,7 +100,8 @@ async fn ProxyService::handle_update_endpoint_last_used(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  guard provider_id_from_request(r.path, body) is Some(provider_id) else {
+  guard provider_route_provider_id_from_request(r.path, body)
+    is Some(provider_id) else {
     write_usage_bad_request(w, "missing_provider_id")
     return
   }

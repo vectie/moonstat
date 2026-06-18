@@ -1233,7 +1233,8 @@ async fn ProxyService::handle_get_live_provider(
   app_type : String,
 ) -> Unit {
   let body = proxy_json_body(r)
-  guard provider_id_from_request(r.path, body) is Some(provider_id) else {
+  guard provider_route_provider_id_from_request(r.path, body)
+    is Some(provider_id) else {
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
@@ -1522,7 +1523,15 @@ fn provider_app_from_request(path : StringView, body : Json?) -> String? {
 
 ///|
 fn provider_id_from_request(path : StringView, body : Json?) -> String? {
-  provider_string_from_request(path, body, ["id", "providerId"])
+  provider_string_from_request(path, body, ["id"])
+}
+
+///|
+fn provider_route_provider_id_from_request(
+  path : StringView,
+  body : Json?,
+) -> String? {
+  provider_string_from_request(path, body, ["providerId"])
 }
 
 ///|

@@ -418,8 +418,18 @@ test "moonstat read command parsers accept canonical json payload keys" {
     Some("codex"),
   )
   assert_eq(
-    provider_id_from_request("/providers/endpoints/list", provider_body),
+    provider_route_provider_id_from_request(
+      "/providers/endpoints/list", provider_body,
+    ),
     Some("codex-oauth"),
+  )
+  assert_eq(provider_id_from_request("/providers", provider_body), None)
+  assert_eq(
+    provider_route_provider_id_from_request(
+      "/providers/endpoints/list?id=codex-oauth",
+      None,
+    ),
+    None,
   )
   assert_eq(
     provider_app_from_request(
@@ -429,7 +439,7 @@ test "moonstat read command parsers accept canonical json payload keys" {
     None,
   )
   assert_eq(
-    provider_id_from_request(
+    provider_route_provider_id_from_request(
       "/providers/endpoints/list",
       Some({ "provider_id": Json::string("codex-oauth") }.to_json()),
     ),
