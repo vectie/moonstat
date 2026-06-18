@@ -234,27 +234,6 @@ fn provider_selection_error_json(
 }
 
 ///|
-async fn Gateway::write_provider_selection_error(
-  self : Gateway,
-  app_type : String,
-  error : ProviderSelectionError,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let status_code = provider_selection_error_status(error)
-  let body = provider_selection_error_json(error, app_type).stringify()
-  self.usage.record_upstream_error_status_with_provider(
-    self.proxy,
-    body.length(),
-    status_code,
-  )
-  self.usage.set_last_error(error.to_string())
-  w.header().set("Content-Type", "application/json")
-  w.write_header(status_code)
-  w.write(body)
-  w.flush()
-}
-
-///|
 fn Gateway::codex_provider_outbound_request(
   self : Gateway,
   provider : ProviderRouteTarget?,

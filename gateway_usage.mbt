@@ -483,6 +483,28 @@ async fn UsageService::record_upstream_error_status_with_provider(
 }
 
 ///|
+async fn UsageService::write_provider_selection_error(
+  self : UsageService,
+  proxy : ProxyService,
+  app_type : String,
+  error : ProviderSelectionError,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let status_code = provider_selection_error_status(error)
+  let body = provider_selection_error_json(error, app_type).stringify()
+  self.record_upstream_error_status_with_provider(
+    proxy,
+    body.length(),
+    status_code,
+  )
+  self.set_last_error(error.to_string())
+  w.header().set("Content-Type", "application/json")
+  w.write_header(status_code)
+  w.write(body)
+  w.flush()
+}
+
+///|
 async fn UsageService::record_internal_error(self : UsageService) -> Unit {
   self.stats.record_internal_error()
   self.stats.save_persistent_store()

@@ -430,7 +430,12 @@ async fn Gateway::forward_non_streaming_chat_completion(
 ) -> Unit {
   let selection = self.proxy.provider_router.select_providers(app_type)
   if provider_selection_is_all_circuits_open(selection) {
-    self.write_provider_selection_error(app_type, AllProvidersCircuitOpen, w)
+    self.usage.write_provider_selection_error(
+      self.proxy,
+      app_type,
+      AllProvidersCircuitOpen,
+      w,
+    )
     return
   }
   let providers = if selection.is_ok() { selection.providers } else { [] }
@@ -578,7 +583,12 @@ async fn Gateway::forward_streaming_chat_completion(
 ) -> Unit {
   let selection = self.proxy.provider_router.select_providers(app_type)
   if provider_selection_is_all_circuits_open(selection) {
-    self.write_provider_selection_error(app_type, AllProvidersCircuitOpen, w)
+    self.usage.write_provider_selection_error(
+      self.proxy,
+      app_type,
+      AllProvidersCircuitOpen,
+      w,
+    )
     return
   }
   let providers = if selection.is_ok() { selection.providers } else { [] }
@@ -833,7 +843,12 @@ async fn Gateway::forward_non_streaming_codex_response(
 ) -> Unit {
   let selection = self.proxy.provider_router.select_providers("codex")
   if provider_selection_is_all_circuits_open(selection) {
-    self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
+    self.usage.write_provider_selection_error(
+      self.proxy,
+      "codex",
+      AllProvidersCircuitOpen,
+      w,
+    )
     return
   }
   let providers = if selection.is_ok() { selection.providers } else { [] }
@@ -1007,7 +1022,12 @@ async fn Gateway::forward_streaming_codex_response(
 ) -> Unit {
   let selection = self.proxy.provider_router.select_providers("codex")
   if provider_selection_is_all_circuits_open(selection) {
-    self.write_provider_selection_error("codex", AllProvidersCircuitOpen, w)
+    self.usage.write_provider_selection_error(
+      self.proxy,
+      "codex",
+      AllProvidersCircuitOpen,
+      w,
+    )
     return
   }
   let providers = if selection.is_ok() { selection.providers } else { [] }
@@ -5301,7 +5321,12 @@ async fn Gateway::handle_messages(
   let active_provider = self.activate_provider(app_type)
   self.usage.record_request_context(app_type, self.model)
   if active_provider is None && self.all_provider_circuits_open(app_type) {
-    self.write_provider_selection_error(app_type, AllProvidersCircuitOpen, w)
+    self.usage.write_provider_selection_error(
+      self.proxy,
+      app_type,
+      AllProvidersCircuitOpen,
+      w,
+    )
     return
   }
   let json_result : Result[Json, Error] = try? @json.parse(body_str)

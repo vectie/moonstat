@@ -2347,6 +2347,7 @@ async test "provider config endpoints are owned by proxy service" {
   let config_source = @fsx.read_file("gateway_config.mbt")
   let misc_source = @fsx.read_file("gateway_misc.mbt")
   let omo_source = @fsx.read_file("omo.mbt")
+  let usage_source = @fsx.read_file("gateway_usage.mbt")
   let sources = provider_source + config_source + misc_source + omo_source
   let core_source = @fsx.read_file("gateway_core.mbt")
   for
@@ -2369,6 +2370,16 @@ async test "provider config endpoints are owned by proxy service" {
     assert_true(provider_source.contains("async fn ProxyService::\{helper}("))
     assert_false(provider_source.contains("async fn Gateway::\{helper}("))
   }
+  assert_true(
+    usage_source.contains(
+      "async fn UsageService::write_provider_selection_error(",
+    ),
+  )
+  assert_false(
+    provider_source.contains(
+      "async fn Gateway::write_provider_selection_error(",
+    ),
+  )
   assert_true(
     provider_source.contains(
       "fn ProxyService::stream_check_provider_result_json(",
