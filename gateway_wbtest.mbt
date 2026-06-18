@@ -1644,7 +1644,7 @@ async test "ccs open folder helper creates directory and returns boolean success
 }
 
 ///|
-test "provider selection errors use ccs proxy error codes" {
+test "provider selection errors use moonstat proxy error codes" {
   assert_eq(
     provider_selection_error_status(AllProvidersCircuitOpen),
     @status.ServiceUnavailable,
@@ -3338,7 +3338,7 @@ test "proxy takeover status alias is ccs-compatible standalone false state" {
 }
 
 ///|
-test "codex provider forward failures use ccs proxy error shape" {
+test "codex provider forward failures use moonstat proxy error shape" {
   let provider = ProviderRouteTarget::new(
     app_type="codex",
     provider_id="deepseek",
@@ -3353,7 +3353,7 @@ test "codex provider forward failures use ccs proxy error shape" {
   }
   guard body["error"] is Object(error) else { fail("expected error object") }
   assert_eq(error["type"], Json::string("proxy_error"))
-  assert_eq(error["code"], Json::string("cc_switch_forward_failed"))
+  assert_eq(error["code"], Json::string("moonstat_forward_failed"))
   assert_eq(error["param"], Json::null())
   assert_eq(error["provider"], Json::string("DeepSeek"))
   assert_eq(error["model"], Json::string("deepseek-chat"))
@@ -4210,7 +4210,7 @@ test "gateway records upstream failures into provider router before finish" {
 }
 
 ///|
-test "ccs upstream status retryability matches client error bucket" {
+test "moonstat upstream status retryability matches client error bucket" {
   assert_false(moon_upstream_status_retryable(400))
   assert_false(moon_upstream_status_retryable(405))
   assert_false(moon_upstream_status_retryable(406))
@@ -4225,7 +4225,7 @@ test "ccs upstream status retryability matches client error bucket" {
 }
 
 ///|
-test "proxy service uses ccs model mapping for upstream claude model" {
+test "proxy service uses moonstat model mapping for upstream claude model" {
   let gateway = Gateway::new(port=0, model="gpt-default")
   let provider = ProviderRouteTarget::new(
     app_type="claude",
@@ -4281,7 +4281,7 @@ test "proxy service uses ccs model mapping for upstream claude model" {
 }
 
 ///|
-test "proxy service uses ccs claude desktop route metadata for upstream model" {
+test "proxy service uses moonstat claude desktop route metadata for upstream model" {
   let gateway = Gateway::new(port=0, model="gpt-default")
   let routes : Map[String, ClaudeDesktopModelRoute] = {
     "claude-sonnet-4-6": ClaudeDesktopModelRoute::new(

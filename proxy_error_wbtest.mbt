@@ -1,5 +1,5 @@
 ///|
-test "ccs proxy error status mapping matches ccs" {
+test "moonstat proxy error status mapping is stable" {
   assert_eq(
     moon_map_proxy_error_to_status(
       MoonProxyError::UpstreamError(status=401, body=Some("Unauthorized")),
@@ -58,7 +58,7 @@ test "ccs proxy error status mapping matches ccs" {
 }
 
 ///|
-test "ccs proxy error message matches ccs friendly text" {
+test "moonstat proxy error message is user friendly" {
   let message = moon_proxy_error_message(
     MoonProxyError::UpstreamError(
       status=500,
@@ -75,7 +75,7 @@ test "ccs proxy error message matches ccs friendly text" {
 }
 
 ///|
-test "ccs single provider retryable log uses single provider code" {
+test "moonstat single provider retryable log uses single provider code" {
   let (code, message) = moon_build_retryable_failure_log(
     "PackyCode-response",
     1,
@@ -93,7 +93,7 @@ test "ccs single provider retryable log uses single provider code" {
 }
 
 ///|
-test "ccs multi provider retryable log keeps failover wording" {
+test "moonstat multi provider retryable log keeps failover wording" {
   let (code, message) = moon_build_retryable_failure_log(
     "primary",
     1,
@@ -106,12 +106,12 @@ test "ccs multi provider retryable log keeps failover wording" {
 }
 
 ///|
-test "ccs single provider has no terminal all failed log" {
+test "moonstat single provider has no terminal all failed log" {
   assert_true(moon_build_terminal_failure_log(1, 1, None) is None)
 }
 
 ///|
-test "ccs multi provider terminal log contains last error summary" {
+test "moonstat multi provider terminal log contains last error summary" {
   guard moon_build_terminal_failure_log(
       2,
       2,
@@ -126,7 +126,7 @@ test "ccs multi provider terminal log contains last error summary" {
 }
 
 ///|
-test "ccs summarize upstream body prefers json message" {
+test "moonstat summarize upstream body prefers json message" {
   let summary = moon_summarize_upstream_body(
     "{\"error\":{\"message\":\"invalid_request_error: unsupported field\"},\"request_id\":\"req_123\"}",
   )
@@ -134,7 +134,7 @@ test "ccs summarize upstream body prefers json message" {
 }
 
 ///|
-test "ccs summarize text for log collapses whitespace and truncates" {
+test "moonstat summarize text for log collapses whitespace and truncates" {
   assert_eq(
     moon_summarize_text_for_log("line1\n\n line2   line3", 12),
     "line1 line2...",

@@ -83,7 +83,7 @@ fn codex_forward_failed_error_json(
         ),
       ),
       "type": Json::string("proxy_error"),
-      "code": Json::string("cc_switch_forward_failed"),
+      "code": Json::string("moonstat_forward_failed"),
       "param": Json::null(),
       "provider": Json::string(provider.provider_name),
       "model": Json::string(request_model),
