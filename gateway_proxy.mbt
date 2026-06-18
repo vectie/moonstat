@@ -266,7 +266,7 @@ async fn Gateway::handle_proxy_status(
 
 ///|
 fn Gateway::proxy_status_json(self : Gateway) -> Json {
-  self.usage.stats.status_json(
+  self.usage.status_json(
     self.host,
     self.port,
     self.uptime_seconds(),
@@ -1249,7 +1249,7 @@ async fn Gateway::handle_proxy_switch_provider(
     return
   }
   self.proxy.provider_router.set_current_provider(app_type, provider_id)
-  self.usage.stats.set_active_target(
+  self.usage.set_active_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
@@ -1313,13 +1313,7 @@ async fn Gateway::handle_usage_model_pricing(
   self : Gateway,
   w : @httpx.ResponseWriter,
 ) -> Unit {
-  write_usage_json(
-    w,
-    model_pricing_json(
-      self.pricing_override_rows(),
-      self.usage.pricing_deleted_model_ids,
-    ),
-  )
+  write_usage_json(w, self.usage.model_pricing_json())
 }
 
 ///|
@@ -1340,15 +1334,8 @@ async fn Gateway::handle_usage_update_model_pricing(
     write_usage_bad_request(w, "invalid_model_pricing")
     return
   }
-  self.usage.pricing_overrides.set(pricing.model_id, pricing)
-  self.usage.pricing_deleted_model_ids.set(pricing.model_id, false)
-  let _backfilled = self.usage.stats.backfill_missing_usage_costs_for_model(
-    pricing.model_id,
-    self.pricing_override_rows(),
-    self.usage.pricing_deleted_model_ids,
-  )
+  let _backfilled = self.usage.upsert_model_pricing(pricing)
   self.save_model_pricing_store()
-  self.usage.stats.save_persistent_store()
   write_usage_json(w, Json::null())
 }
 
@@ -1369,7 +1356,7 @@ async fn Gateway::handle_usage_delete_model_pricing(
     write_usage_bad_request(w, "missing_model_id")
     return
   }
-  self.usage.pricing_deleted_model_ids.set(trimmed, true)
+  self.usage.delete_model_pricing(trimmed)
   self.save_model_pricing_store()
   write_usage_json(w, Json::null())
 }
@@ -1757,14 +1744,7 @@ fn usage_pricing_validation_error_from_request(
 
 ///|
 fn Gateway::pricing_override_rows(self : Gateway) -> Array[ModelPricing] {
-  let rows : Array[ModelPricing] = []
-  for model_id in self.usage.pricing_overrides.keys() {
-    guard self.usage.pricing_overrides.get(model_id) is Some(pricing) else {
-      continue
-    }
-    rows.push(pricing)
-  }
-  rows
+  self.usage.pricing_override_rows()
 }
 
 ///|

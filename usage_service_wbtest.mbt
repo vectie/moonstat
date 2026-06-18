@@ -35,6 +35,29 @@ test "usage service exposes stats and metrics without gateway" {
 }
 
 ///|
+async test "usage service owns proxy status target and pricing state" {
+  let usage = UsageService::new()
+  usage.set_active_target("codex", "codex-oauth", "Codex OAuth")
+  guard usage.status_json("127.0.0.1", 4199, 12) is Object(status) else {
+    fail("expected status object")
+  }
+  assert_true(status["running"] is true)
+  assert_true(status["address"] is String("127.0.0.1"))
+  assert_true(status["port"] is Number(4199.0, ..))
+  assert_true(status["uptime_seconds"] is Number(12.0, ..))
+  assert_true(status["current_provider_id"] is String("codex-oauth"))
+
+  usage.delete_model_pricing("moonstat-test-model")
+  assert_true(
+    !usage.model_pricing_json().stringify().contains("moonstat-test-model"),
+  )
+  let pricing = mp("moonstat-test-model", "Moonstat Test", "2", "4", "0", "0")
+  let _backfilled = usage.upsert_model_pricing(pricing)
+  assert_eq(usage.pricing_override_rows().length(), 1)
+  assert_true(usage.model_pricing_json().stringify().contains("Moonstat Test"))
+}
+
+///|
 async test "usage service owns usage report json without gateway" {
   let usage = UsageService::new()
   usage.record_inbound(64)
@@ -232,4 +255,36 @@ async test "usage service owns session sync persistence" {
   }
   assert_eq(state.last_modified, 7L)
   assert_eq(state.last_line_offset, 9)
+}
+
+///|
+async test "usage service owns model pricing backfill persistence" {
+  let dir = @pathx.join(
+    "/tmp",
+    "moonstat-usage-service-pricing-\{@async.now().to_int()}",
+  )
+  let usage = UsageService::new()
+  usage.stats.enable_persistent_store(storage_dir=dir)
+  usage.stats.record_request_log(
+    RequestLog::new(
+      request_id="req-service-pricing",
+      provider_id="codex-oauth",
+      app_type="codex",
+      model="moonstat-service-priced",
+      usage=TokenUsage::new(input_tokens=10, output_tokens=5),
+      total_cost_usd="0",
+      status_code=200,
+      created_at=1,
+    ),
+  )
+  let backfilled = usage.upsert_model_pricing(
+    mp("moonstat-service-priced", "Moonstat Service Priced", "2", "4", "0", "0"),
+  )
+  assert_eq(backfilled, 1)
+  assert_eq(usage.stats.request_logs[0].total_cost_usd, "0.00004")
+
+  let loaded = TrafficStats::new()
+  loaded.load_persistent_store(storage_dir=dir)
+  assert_eq(loaded.request_logs.length(), 1)
+  assert_eq(loaded.request_logs[0].total_cost_usd, "0.00004")
 }

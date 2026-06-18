@@ -44,6 +44,73 @@ fn UsageService::metrics_text(self : UsageService) -> String {
 }
 
 ///|
+fn UsageService::status_json(
+  self : UsageService,
+  address : String,
+  port : Int,
+  uptime_seconds : Int,
+  running? : Bool = true,
+) -> Json {
+  self.stats.status_json(address, port, uptime_seconds, running~)
+}
+
+///|
+fn UsageService::set_active_target(
+  self : UsageService,
+  app_type : String,
+  provider_id : String,
+  provider_name : String,
+) -> Unit {
+  self.stats.set_active_target(app_type, provider_id, provider_name)
+}
+
+///|
+fn UsageService::pricing_override_rows(
+  self : UsageService,
+) -> Array[ModelPricing] {
+  let rows : Array[ModelPricing] = []
+  for model_id in self.pricing_overrides.keys() {
+    guard self.pricing_overrides.get(model_id) is Some(pricing) else {
+      continue
+    }
+    rows.push(pricing)
+  }
+  rows
+}
+
+///|
+fn UsageService::model_pricing_json(self : UsageService) -> Json {
+  model_pricing_json(
+    self.pricing_override_rows(),
+    self.pricing_deleted_model_ids,
+  )
+}
+
+///|
+async fn UsageService::upsert_model_pricing(
+  self : UsageService,
+  pricing : ModelPricing,
+) -> Int {
+  self.pricing_overrides.set(pricing.model_id, pricing)
+  self.pricing_deleted_model_ids.set(pricing.model_id, false)
+  let backfilled = self.stats.backfill_missing_usage_costs_for_model(
+    pricing.model_id,
+    self.pricing_override_rows(),
+    self.pricing_deleted_model_ids,
+  )
+  self.stats.save_persistent_store()
+  backfilled
+}
+
+///|
+fn UsageService::delete_model_pricing(
+  self : UsageService,
+  model_id : String,
+) -> Unit {
+  self.pricing_deleted_model_ids.set(model_id, true)
+}
+
+///|
 fn UsageService::record_inbound(
   self : UsageService,
   request_bytes : Int,
