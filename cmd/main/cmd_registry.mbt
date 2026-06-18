@@ -82,73 +82,6 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "stream_check_all_providers", patterns: ["stream-check all"] },
     { id: "save_stream_check_config", patterns: ["stream-check config set"] },
     { id: "get_stream_check_config", patterns: ["stream-check config"] },
-    { id: "get_proxy_config", patterns: ["proxy config"] },
-    { id: "update_global_proxy_config", patterns: ["proxy global-config set"] },
-    { id: "get_global_proxy_config", patterns: ["proxy global-config"] },
-    { id: "set_global_proxy_url", patterns: ["proxy global-url set"] },
-    { id: "get_global_proxy_url", patterns: ["proxy global-url"] },
-    { id: "update_proxy_config_for_app", patterns: ["proxy app-config set"] },
-    { id: "get_proxy_config_for_app", patterns: ["proxy app-config"] },
-    {
-      id: "set_default_cost_multiplier",
-      patterns: ["proxy default-cost-multiplier set"],
-    },
-    {
-      id: "get_default_cost_multiplier",
-      patterns: ["proxy default-cost-multiplier"],
-    },
-    {
-      id: "set_pricing_model_source",
-      patterns: ["proxy pricing-model-source set"],
-    },
-    { id: "get_pricing_model_source", patterns: ["proxy pricing-model-source"] },
-    {
-      id: "update_circuit_breaker_config",
-      patterns: ["proxy circuit-breaker-config set"],
-    },
-    {
-      id: "get_circuit_breaker_config",
-      patterns: ["proxy circuit-breaker-config"],
-    },
-    { id: "add_to_failover_queue", patterns: ["proxy failover-queue add"] },
-    {
-      id: "remove_from_failover_queue",
-      patterns: ["proxy failover-queue remove"],
-    },
-    { id: "get_failover_queue", patterns: ["proxy failover-queue"] },
-    {
-      id: "set_auto_failover_enabled",
-      patterns: ["proxy auto-failover-enabled set"],
-    },
-    {
-      id: "get_auto_failover_enabled",
-      patterns: ["proxy auto-failover-enabled"],
-    },
-    {
-      id: "set_proxy_takeover_for_app",
-      patterns: ["proxy takeover-status set"],
-    },
-    { id: "get_proxy_takeover_status", patterns: ["proxy takeover-status"] },
-    { id: "get_proxy_status", patterns: ["proxy status"] },
-    { id: "start_proxy_server", patterns: ["proxy start"] },
-    { id: "stop_proxy_server", patterns: ["proxy stop"] },
-    { id: "stop_proxy_with_restore", patterns: ["proxy stop-with-restore"] },
-    { id: "test_proxy_url", patterns: ["proxy test-url"] },
-    { id: "get_upstream_proxy_status", patterns: ["proxy upstream-status"] },
-    { id: "scan_local_proxies", patterns: ["proxy scan-local"] },
-    { id: "get_provider_health", patterns: ["proxy provider-health"] },
-    {
-      id: "get_circuit_breaker_stats",
-      patterns: ["proxy circuit-breaker-stats"],
-    },
-    { id: "reset_circuit_breaker", patterns: ["proxy reset-circuit-breaker"] },
-    {
-      id: "get_available_providers_for_failover",
-      patterns: ["proxy available-failover-providers"],
-    },
-    { id: "is_live_takeover_active", patterns: ["proxy live-takeover-active"] },
-    { id: "switch_proxy_provider", patterns: ["proxy switch-provider"] },
-    { id: "is_proxy_running", patterns: ["proxy running"] },
     { id: "scan_openclaw_config_health", patterns: ["openclaw config-health"] },
     {
       id: "set_openclaw_default_model",
@@ -321,6 +254,9 @@ fn registered_cli_commands() -> Array[CliCommandSpec] {
     { id: "version", patterns: ["version", "--version", "-v"] },
   ]
   for command in provider_cli_commands() {
+    commands.push(command)
+  }
+  for command in proxy_cli_commands() {
     commands.push(command)
   }
   for command in usage_cli_commands() {
