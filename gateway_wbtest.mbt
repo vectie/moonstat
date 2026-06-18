@@ -2129,6 +2129,7 @@ async test "settings mcp and prompt endpoints are owned by config service" {
       "handle_s3_sync_save_settings", "handle_get_stream_check_config", "handle_save_stream_check_config",
       "handle_get_claude_plugin_status", "handle_read_claude_plugin_config", "handle_apply_claude_plugin_config",
       "handle_is_claude_plugin_applied", "handle_apply_claude_onboarding_skip", "handle_clear_claude_onboarding_skip",
+      "handle_fetch_models_for_config",
     ] {
     assert_true(config_sources.contains("async fn ConfigService::\{handler}("))
     assert_false(config_sources.contains("async fn Gateway::\{handler}("))
@@ -2171,6 +2172,9 @@ async test "settings mcp and prompt endpoints are owned by config service" {
   )
   assert_true(
     core_source.contains("self.config.handle_clear_claude_onboarding_skip(w)"),
+  )
+  assert_true(
+    core_source.contains("self.config.handle_fetch_models_for_config(r, w)"),
   )
   assert_true(
     core_source.contains("self.config.handle_get_auto_launch_status(w)"),

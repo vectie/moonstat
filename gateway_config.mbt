@@ -1496,8 +1496,8 @@ fn openclaw_config_health_from_json(config : Json) -> Json {
 }
 
 ///|
-async fn Gateway::handle_fetch_models_for_config(
-  self : Gateway,
+async fn ConfigService::handle_fetch_models_for_config(
+  self : ConfigService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {

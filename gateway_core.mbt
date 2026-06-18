@@ -1326,10 +1326,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.config.handle_save_stream_check_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/fetch_models_for_config", (r, w) => {
-    self.handle_fetch_models_for_config(r, w)
+    self.config.handle_fetch_models_for_config(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/fetch_models_for_config", (r, w) => {
-    self.handle_fetch_models_for_config(r, w)
+    self.config.handle_fetch_models_for_config(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/auth_start_login", (r, w) => {
     self.auth.handle_auth_start_login(r, w)
