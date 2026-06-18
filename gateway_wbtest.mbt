@@ -773,7 +773,7 @@ test "gateway syncs ccs provider limit metadata into usage limits" {
     ),
   )
   gateway.proxy.provider_router.upsert_provider(provider)
-  gateway.sync_provider_limits_from_target(provider)
+  gateway.usage.sync_provider_limits_from_target(provider)
   let now = TREND_DAY_SECONDS * 10
   gateway.usage.stats.record_request_log(
     RequestLog::new(
@@ -808,7 +808,8 @@ test "gateway syncs ccs provider limit metadata into usage limits" {
 ///|
 test "gateway add provider follows ccs current provider semantics" {
   let gateway = Gateway::new(port=0)
-  gateway.add_provider_target_ccs(
+  gateway.proxy.add_provider_target_ccs(
+    gateway.usage,
     "codex",
     ProviderRouteTarget::new(
       app_type="codex",
@@ -822,7 +823,8 @@ test "gateway add provider follows ccs current provider semantics" {
     Some("codex-oauth"),
   )
   gateway.proxy.provider_router.current_provider_ids.remove("gemini")
-  gateway.add_provider_target_ccs(
+  gateway.proxy.add_provider_target_ccs(
+    gateway.usage,
     "gemini",
     ProviderRouteTarget::new(
       app_type="gemini",
@@ -835,7 +837,8 @@ test "gateway add provider follows ccs current provider semantics" {
     gateway.proxy.provider_router.current_provider_id("gemini"),
     Some("gemini-alt"),
   )
-  gateway.add_provider_target_ccs(
+  gateway.proxy.add_provider_target_ccs(
+    gateway.usage,
     "opencode",
     ProviderRouteTarget::new(
       app_type="opencode",
@@ -854,7 +857,8 @@ test "gateway add provider follows ccs current provider semantics" {
 ///|
 test "gateway update provider follows ccs rename guards" {
   let gateway = Gateway::new(port=0)
-  let missing_result = gateway.update_provider_target_ccs(
+  let missing_result = gateway.proxy.update_provider_target_ccs(
+    gateway.usage,
     "opencode",
     ProviderRouteTarget::new(
       app_type="opencode",
@@ -885,7 +889,8 @@ test "gateway update provider follows ccs rename guards" {
       provider_name="OpenCode B",
     ),
   )
-  let duplicate_result = gateway.update_provider_target_ccs(
+  let duplicate_result = gateway.proxy.update_provider_target_ccs(
+    gateway.usage,
     "opencode",
     ProviderRouteTarget::new(
       app_type="opencode",
@@ -902,7 +907,8 @@ test "gateway update provider follows ccs rename guards" {
     gateway.proxy.provider_router.provider_by_id("opencode", "opencode-a")
     is Some(_),
   )
-  let non_additive_result = gateway.update_provider_target_ccs(
+  let non_additive_result = gateway.proxy.update_provider_target_ccs(
+    gateway.usage,
     "codex",
     ProviderRouteTarget::new(
       app_type="codex",
@@ -919,7 +925,8 @@ test "gateway update provider follows ccs rename guards" {
     gateway.proxy.provider_router.provider_by_id("codex", "codex-renamed")
     is None,
   )
-  let rename_result = gateway.update_provider_target_ccs(
+  let rename_result = gateway.proxy.update_provider_target_ccs(
+    gateway.usage,
     "opencode",
     ProviderRouteTarget::new(
       app_type="opencode",

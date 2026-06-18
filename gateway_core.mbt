@@ -831,28 +831,28 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     w,
   ) => self.handle_import_default_config(r, w))
   router.add_handler(@httpx.Method::Get, "/get_providers", (r, w) => {
-    self.handle_get_providers(r, w)
+    self.proxy.handle_get_providers(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_providers", (r, w) => {
-    self.handle_get_providers(r, w)
+    self.proxy.handle_get_providers(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/get_current_provider", (r, w) => {
-    self.handle_get_current_provider(r, w)
+    self.proxy.handle_get_current_provider(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/get_current_provider", (r, w) => {
-    self.handle_get_current_provider(r, w)
+    self.proxy.handle_get_current_provider(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/add_provider", (r, w) => {
-    self.handle_add_provider(r, w)
+    self.proxy.handle_add_provider(r, w, self.usage)
   })
   router.add_handler(@httpx.Method::Post, "/update_provider", (r, w) => {
-    self.handle_update_provider(r, w)
+    self.proxy.handle_update_provider(r, w, self.usage)
   })
   router.add_handler(@httpx.Method::Delete, "/delete_provider", (r, w) => {
-    self.handle_delete_provider(r, w)
+    self.proxy.handle_delete_provider(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/delete_provider", (r, w) => {
-    self.handle_delete_provider(r, w)
+    self.proxy.handle_delete_provider(r, w)
   })
   router.add_handler(
     @httpx.Method::Delete,
@@ -864,10 +864,10 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     w,
   ) => self.handle_remove_provider_from_live_config(r, w))
   router.add_handler(@httpx.Method::Post, "/switch_provider", (r, w) => {
-    self.handle_switch_provider(r, w)
+    self.proxy.handle_switch_provider(r, w, self.usage)
   })
   router.add_handler(@httpx.Method::Post, "/switch_provider_test_hook", (r, w) => {
-    self.handle_switch_provider(r, w)
+    self.proxy.handle_switch_provider(r, w, self.usage)
   })
   router.add_handler(@httpx.Method::Post, "/open_provider_terminal", (r, w) => {
     self.handle_open_provider_terminal(r, w)

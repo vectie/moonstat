@@ -661,8 +661,8 @@ async fn Gateway::handle_get_current_omo_provider_id(
 }
 
 ///|
-async fn Gateway::handle_get_providers(
-  self : Gateway,
+async fn ProxyService::handle_get_providers(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -671,12 +671,12 @@ async fn Gateway::handle_get_providers(
     write_usage_bad_request(w, "missing_app")
     return
   }
-  write_usage_json(w, self.proxy.provider_router.providers_moon_json(app_type))
+  write_usage_json(w, self.provider_router.providers_moon_json(app_type))
 }
 
 ///|
-async fn Gateway::handle_get_current_provider(
-  self : Gateway,
+async fn ProxyService::handle_get_current_provider(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -688,16 +688,17 @@ async fn Gateway::handle_get_current_provider(
   write_usage_json(
     w,
     Json::string(
-      self.proxy.provider_router.current_provider_for_moon_command(app_type),
+      self.provider_router.current_provider_for_moon_command(app_type),
     ),
   )
 }
 
 ///|
-async fn Gateway::handle_add_provider(
-  self : Gateway,
+async fn ProxyService::handle_add_provider(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
+  usage : UsageService,
 ) -> Unit {
   let body = proxy_json_body(r)
   guard provider_app_from_request(r.path, body) is Some(app_type) else {
@@ -711,33 +712,35 @@ async fn Gateway::handle_add_provider(
   let add_to_live = provider_bool_from_request(r.path, body, [
     "addToLive", "add_to_live",
   ]).unwrap_or(true)
-  self.add_provider_target_ccs(app_type, target, add_to_live)
+  self.add_provider_target_ccs(usage, app_type, target, add_to_live)
   write_usage_json(w, Json::boolean(true))
 }
 
 ///|
-fn Gateway::add_provider_target_ccs(
-  self : Gateway,
+fn ProxyService::add_provider_target_ccs(
+  self : ProxyService,
+  usage : UsageService,
   app_type : String,
   target : ProviderRouteTarget,
   add_to_live : Bool,
 ) -> Unit {
   ignore(add_to_live)
   let provider_id = target.provider_id
-  self.sync_provider_limits_from_target(target)
-  self.proxy.provider_router.upsert_provider(target)
+  usage.sync_provider_limits_from_target(target)
+  self.provider_router.upsert_provider(target)
   if !provider_app_is_additive(app_type) {
-    if self.proxy.provider_router.current_provider_id(app_type) is None {
-      self.proxy.provider_router.set_current_provider(app_type, provider_id)
+    if self.provider_router.current_provider_id(app_type) is None {
+      self.provider_router.set_current_provider(app_type, provider_id)
     }
   }
 }
 
 ///|
-async fn Gateway::handle_update_provider(
-  self : Gateway,
+async fn ProxyService::handle_update_provider(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
+  usage : UsageService,
 ) -> Unit {
   let body = proxy_json_body(r)
   guard provider_app_from_request(r.path, body) is Some(app_type) else {
@@ -751,54 +754,52 @@ async fn Gateway::handle_update_provider(
   let original_id = provider_string_from_request(r.path, body, [
     "originalId", "original_id",
   ])
-  match self.update_provider_target_ccs(app_type, target, original_id) {
+  match self.update_provider_target_ccs(usage, app_type, target, original_id) {
     Ok(_) => write_usage_json(w, Json::boolean(true))
     Err(error) => write_usage_bad_request(w, error)
   }
 }
 
 ///|
-fn Gateway::update_provider_target_ccs(
-  self : Gateway,
+fn ProxyService::update_provider_target_ccs(
+  self : ProxyService,
+  usage : UsageService,
   app_type : String,
   target : ProviderRouteTarget,
   original_id : String?,
 ) -> Result[Unit, String] {
   let provider_id = target.provider_id
   let original_provider_id = original_id.unwrap_or(provider_id)
-  let was_current = self.proxy.provider_router.current_provider_id(app_type) ==
+  let was_current = self.provider_router.current_provider_id(app_type) ==
     Some(original_provider_id)
   if original_provider_id != provider_id {
     if !provider_app_is_additive(app_type) {
       return Err("Only additive-mode providers support changing provider key")
     }
-    if self.proxy.provider_router.provider_by_id(app_type, original_provider_id)
+    if self.provider_router.provider_by_id(app_type, original_provider_id)
       is None {
       return Err(
         "Original provider '\{original_provider_id}' does not exist in app '\{app_type}'",
       )
     }
-    if self.proxy.provider_router.provider_by_id(app_type, provider_id)
-      is Some(_) {
+    if self.provider_router.provider_by_id(app_type, provider_id) is Some(_) {
       return Err(
         "Provider '\{provider_id}' already exists in app '\{app_type}'",
       )
     }
-    ignore(
-      self.proxy.provider_router.delete_provider(app_type, original_provider_id),
-    )
+    ignore(self.provider_router.delete_provider(app_type, original_provider_id))
   }
-  self.sync_provider_limits_from_target(target)
-  self.proxy.provider_router.upsert_provider(target)
+  usage.sync_provider_limits_from_target(target)
+  self.provider_router.upsert_provider(target)
   if was_current {
-    self.proxy.provider_router.set_current_provider(app_type, provider_id)
+    self.provider_router.set_current_provider(app_type, provider_id)
   }
   Ok(())
 }
 
 ///|
-async fn Gateway::handle_delete_provider(
-  self : Gateway,
+async fn ProxyService::handle_delete_provider(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -811,7 +812,7 @@ async fn Gateway::handle_delete_provider(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  if !self.proxy.provider_router.delete_provider(app_type, provider_id) {
+  if !self.provider_router.delete_provider(app_type, provider_id) {
     write_usage_bad_request(w, "provider_not_found")
     return
   }
@@ -843,10 +844,11 @@ async fn Gateway::handle_remove_provider_from_live_config(
 }
 
 ///|
-async fn Gateway::handle_switch_provider(
-  self : Gateway,
+async fn ProxyService::handle_switch_provider(
+  self : ProxyService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
+  usage : UsageService,
 ) -> Unit {
   let body = proxy_json_body(r)
   guard provider_app_from_request(r.path, body) is Some(app_type) else {
@@ -857,13 +859,13 @@ async fn Gateway::handle_switch_provider(
     write_usage_bad_request(w, "missing_provider_id")
     return
   }
-  guard self.proxy.provider_router.provider_by_id(app_type, provider_id)
+  guard self.provider_router.provider_by_id(app_type, provider_id)
     is Some(provider) else {
     write_usage_bad_request(w, "provider_not_found")
     return
   }
-  self.proxy.provider_router.set_current_provider(app_type, provider_id)
-  self.usage.set_active_target(
+  self.provider_router.set_current_provider(app_type, provider_id)
+  usage.set_active_target(
     app_type,
     provider.provider_id,
     provider.provider_name,
@@ -1761,15 +1763,15 @@ fn provider_settings_codex_fast_mode(settings : Json?) -> Bool? {
 }
 
 ///|
-fn Gateway::sync_provider_limits_from_target(
-  self : Gateway,
+fn UsageService::sync_provider_limits_from_target(
+  self : UsageService,
   target : ProviderRouteTarget,
 ) -> Unit {
   guard provider_limit_config_from_settings(target.settings_config)
     is Some(config) else {
     return
   }
-  self.usage.set_provider_limits(
+  self.set_provider_limits(
     target.provider_id,
     target.app_type,
     daily_limit_usd=config.daily_limit_usd,
