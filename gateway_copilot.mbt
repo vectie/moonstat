@@ -74,8 +74,8 @@ fn copilot_account_id_request(path : StringView, body : Json?) -> String? {
 }
 
 ///|
-async fn Gateway::handle_copilot_poll_for_account(
-  self : Gateway,
+async fn AuthService::handle_copilot_poll_for_account(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -98,8 +98,8 @@ async fn Gateway::handle_copilot_poll_for_account(
 }
 
 ///|
-async fn Gateway::handle_copilot_list_accounts(
-  self : Gateway,
+async fn AuthService::handle_copilot_list_accounts(
+  self : AuthService,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   ignore(self)
@@ -107,8 +107,8 @@ async fn Gateway::handle_copilot_list_accounts(
 }
 
 ///|
-async fn Gateway::handle_copilot_remove_account(
-  self : Gateway,
+async fn AuthService::handle_copilot_remove_account(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -125,8 +125,8 @@ async fn Gateway::handle_copilot_remove_account(
 }
 
 ///|
-async fn Gateway::handle_copilot_set_default_account(
-  self : Gateway,
+async fn AuthService::handle_copilot_set_default_account(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -143,8 +143,8 @@ async fn Gateway::handle_copilot_set_default_account(
 }
 
 ///|
-async fn Gateway::handle_copilot_get_models(
-  self : Gateway,
+async fn AuthService::handle_copilot_get_models(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -157,8 +157,8 @@ async fn Gateway::handle_copilot_get_models(
 }
 
 ///|
-async fn Gateway::handle_copilot_get_usage(
-  self : Gateway,
+async fn AuthService::handle_copilot_get_usage(
+  self : AuthService,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {

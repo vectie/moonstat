@@ -1386,13 +1386,13 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.auth.handle_copilot_poll_for_auth(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_poll_for_account", (r, w) => {
-    self.handle_copilot_poll_for_account(r, w)
+    self.auth.handle_copilot_poll_for_account(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/copilot_poll_for_account", (r, w) => {
-    self.handle_copilot_poll_for_account(r, w)
+    self.auth.handle_copilot_poll_for_account(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_list_accounts", (_, w) => {
-    self.handle_copilot_list_accounts(w)
+    self.auth.handle_copilot_list_accounts(w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_get_auth_status", (_, w) => {
     self.auth.handle_copilot_get_auth_status(w)
@@ -1407,16 +1407,16 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.auth.handle_copilot_logout(w)
   })
   router.add_handler(@httpx.Method::Delete, "/copilot_remove_account", (r, w) => {
-    self.handle_copilot_remove_account(r, w)
+    self.auth.handle_copilot_remove_account(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/copilot_remove_account", (r, w) => {
-    self.handle_copilot_remove_account(r, w)
+    self.auth.handle_copilot_remove_account(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_set_default_account", (r, w) => {
-    self.handle_copilot_set_default_account(r, w)
+    self.auth.handle_copilot_set_default_account(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/copilot_set_default_account", (r, w) => {
-    self.handle_copilot_set_default_account(r, w)
+    self.auth.handle_copilot_set_default_account(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_get_token", (r, w) => {
     self.auth.handle_copilot_get_token(r, w)
@@ -1426,19 +1426,19 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     w,
   ) => self.auth.handle_copilot_get_token(r, w))
   router.add_handler(@httpx.Method::Get, "/copilot_get_models", (r, w) => {
-    self.handle_copilot_get_models(r, w)
+    self.auth.handle_copilot_get_models(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_get_models_for_account", (
     r,
     w,
-  ) => self.handle_copilot_get_models(r, w))
+  ) => self.auth.handle_copilot_get_models(r, w))
   router.add_handler(@httpx.Method::Get, "/copilot_get_usage", (r, w) => {
-    self.handle_copilot_get_usage(r, w)
+    self.auth.handle_copilot_get_usage(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/copilot_get_usage_for_account", (
     r,
     w,
-  ) => self.handle_copilot_get_usage(r, w))
+  ) => self.auth.handle_copilot_get_usage(r, w))
   router.add_handler(@httpx.Method::Get, "/models", (_, w) => {
     self.handle_models(w)
   })
