@@ -2330,11 +2330,19 @@ async test "provider config endpoints are owned by proxy service" {
       "handle_test_api_endpoints", "handle_get_custom_endpoints", "handle_add_custom_endpoint",
       "handle_remove_custom_endpoint", "handle_update_endpoint_last_used", "handle_get_claude_desktop_status",
       "handle_get_claude_desktop_default_routes", "handle_get_current_omo_provider_id",
-      "handle_disable_current_omo",
+      "handle_disable_current_omo", "handle_stream_check_provider", "handle_stream_check_all_providers",
     ] {
     assert_true(sources.contains("async fn ProxyService::\{handler}("))
     assert_false(sources.contains("async fn Gateway::\{handler}("))
   }
+  assert_true(
+    provider_source.contains(
+      "fn ProxyService::stream_check_provider_result_json(",
+    ),
+  )
+  assert_false(
+    provider_source.contains("fn Gateway::stream_check_provider_result_json("),
+  )
   assert_true(
     provider_source.contains(
       "fn ProxyService::current_claude_desktop_provider(",
@@ -2351,6 +2359,10 @@ async test "provider config endpoints are owned by proxy service" {
   assert_false(omo_source.contains("fn Gateway::clear_current_omo_provider("))
   assert_true(
     core_source.contains("self.proxy.handle_import_default_config(r, w)"),
+  )
+  assert_true(core_source.contains("self.proxy.handle_stream_check_provider("))
+  assert_true(
+    core_source.contains("self.proxy.handle_stream_check_all_providers("),
   )
   assert_true(
     core_source.contains(
@@ -2578,7 +2590,11 @@ test "stream check result uses ccs camelCase shape" {
     ..gateway.config.stream_check_config,
     codex_model: "codex-check-model",
   }
-  guard gateway.stream_check_provider_result_json("codex", "codex-oauth")
+  guard gateway.proxy.stream_check_provider_result_json(
+      gateway.config.stream_check_config,
+      "codex",
+      "codex-oauth",
+    )
     is Some(Object(result)) else {
     fail("expected stream check result")
   }
@@ -2601,7 +2617,11 @@ test "stream check strips ccs codex effort suffix from result model" {
     codex_model: "gpt-5.5@low",
     claude_model: "claude-sonnet-4-5#high",
   }
-  guard gateway.stream_check_provider_result_json("codex", "codex-oauth")
+  guard gateway.proxy.stream_check_provider_result_json(
+      gateway.config.stream_check_config,
+      "codex",
+      "codex-oauth",
+    )
     is Some(Object(result)) else {
     fail("expected stream check result")
   }
@@ -2661,8 +2681,10 @@ test "stream check provider test config overrides global config like ccs" {
   assert_eq(config.max_retries, 5)
   assert_eq(config.degraded_threshold_ms, 1234)
   assert_eq(config.test_prompt, "provider prompt")
-  guard gateway.stream_check_provider_result_json(
-      "codex", "codex-provider-test",
+  guard gateway.proxy.stream_check_provider_result_json(
+      gateway.config.stream_check_config,
+      "codex",
+      "codex-provider-test",
     )
     is Some(Object(result)) else {
     fail("expected stream check result")

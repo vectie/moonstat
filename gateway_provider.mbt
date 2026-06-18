@@ -1234,8 +1234,9 @@ async fn ProxyService::handle_update_providers_sort_order(
 }
 
 ///|
-async fn Gateway::handle_stream_check_provider(
-  self : Gateway,
+async fn ProxyService::handle_stream_check_provider(
+  self : ProxyService,
+  stream_check_config : StreamCheckConfig,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1245,7 +1246,9 @@ async fn Gateway::handle_stream_check_provider(
     write_usage_bad_request(w, "missing_provider_id_or_app_type")
     return
   }
-  guard self.stream_check_provider_result_json(app_type, provider_id)
+  guard self.stream_check_provider_result_json(
+      stream_check_config, app_type, provider_id,
+    )
     is Some(result) else {
     write_usage_bad_request(w, "provider_not_found")
     return
@@ -1254,8 +1257,9 @@ async fn Gateway::handle_stream_check_provider(
 }
 
 ///|
-async fn Gateway::handle_stream_check_all_providers(
-  self : Gateway,
+async fn ProxyService::handle_stream_check_all_providers(
+  self : ProxyService,
+  stream_check_config : StreamCheckConfig,
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
 ) -> Unit {
@@ -1269,10 +1273,12 @@ async fn Gateway::handle_stream_check_all_providers(
   ]).unwrap_or(false)
   let rows : Array[Json] = []
   for
-    provider_id in self.proxy.provider_router.stream_check_provider_ids(
+    provider_id in self.provider_router.stream_check_provider_ids(
       app_type, proxy_targets_only,
     ) {
-    guard self.stream_check_provider_result_json(app_type, provider_id)
+    guard self.stream_check_provider_result_json(
+        stream_check_config, app_type, provider_id,
+      )
       is Some(result) else {
       continue
     }
@@ -1282,18 +1288,18 @@ async fn Gateway::handle_stream_check_all_providers(
 }
 
 ///|
-fn Gateway::stream_check_provider_result_json(
-  self : Gateway,
+fn ProxyService::stream_check_provider_result_json(
+  self : ProxyService,
+  stream_check_config : StreamCheckConfig,
   app_type : String,
   provider_id : String,
 ) -> Json? {
-  guard self.proxy.provider_router.provider_by_id(app_type, provider_id)
+  guard self.provider_router.provider_by_id(app_type, provider_id)
     is Some(provider) else {
     return None
   }
   let config = stream_check_effective_config_for_provider(
-    self.config.stream_check_config,
-    provider,
+    stream_check_config, provider,
   )
   let model = stream_check_reported_model_for_app(config, app_type)
   let configured = true

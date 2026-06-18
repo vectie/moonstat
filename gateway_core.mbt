@@ -1361,16 +1361,32 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.usage.handle_usage_request_detail(r, w, self.pricing_override_rows())
   })
   router.add_handler(@httpx.Method::Post, "/stream_check_provider", (r, w) => {
-    self.handle_stream_check_provider(r, w)
+    self.proxy.handle_stream_check_provider(
+      self.config.stream_check_config,
+      r,
+      w,
+    )
   })
   router.add_handler(@httpx.Method::Get, "/stream_check_provider", (r, w) => {
-    self.handle_stream_check_provider(r, w)
+    self.proxy.handle_stream_check_provider(
+      self.config.stream_check_config,
+      r,
+      w,
+    )
   })
   router.add_handler(@httpx.Method::Post, "/stream_check_all_providers", (r, w) => {
-    self.handle_stream_check_all_providers(r, w)
+    self.proxy.handle_stream_check_all_providers(
+      self.config.stream_check_config,
+      r,
+      w,
+    )
   })
   router.add_handler(@httpx.Method::Get, "/stream_check_all_providers", (r, w) => {
-    self.handle_stream_check_all_providers(r, w)
+    self.proxy.handle_stream_check_all_providers(
+      self.config.stream_check_config,
+      r,
+      w,
+    )
   })
   router.add_handler(@httpx.Method::Get, "/get_stream_check_config", (_, w) => {
     self.config.handle_get_stream_check_config(w)
