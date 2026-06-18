@@ -450,13 +450,17 @@ test "proxy failover command parsers accept ccs json payload keys" {
 }
 
 ///|
-test "ccs settings defaults mirror desktop command payloads" {
+test "moonstat settings defaults mirror desktop command payloads" {
   guard moon_default_app_settings_json() is Object(settings) else {
     fail("expected settings object")
   }
   assert_eq(proxy_json_bool(settings, "showInTray"), Some(true))
   assert_eq(proxy_json_bool(settings, "launchOnStartup"), Some(false))
   assert_eq(json_string_from_map(settings, "skillSyncMethod"), Some("auto"))
+  assert_eq(
+    json_string_from_map(settings, "skillStorageLocation"),
+    Some("unified"),
+  )
 
   guard moon_default_rectifier_config_json() is Object(rectifier) else {
     fail("expected rectifier object")

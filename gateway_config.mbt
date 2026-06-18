@@ -62,7 +62,7 @@ fn moon_default_app_settings_json() -> Json {
     "enableFailoverToggle": Json::boolean(false),
     "preserveCodexOfficialAuthOnSwitch": Json::boolean(false),
     "skillSyncMethod": Json::string("auto"),
-    "skillStorageLocation": Json::string("cc_switch"),
+    "skillStorageLocation": Json::string("unified"),
   }.to_json()
 }
 
