@@ -156,7 +156,7 @@ pub fn is_relative(path : StringView) -> Bool {
 /// join already normalizes the path, so no need to normalize here.
 /// 
 /// edge cases: when from is equal to to, return "."
-pub fn relative(from : StringView, to : StringView) -> String raise {
+pub fn relative(from : StringView, to : StringView) -> String {
   let result = Path::relative(to.to_owned(), base=from.to_owned()).0
   if result.is_empty() {
     "."
@@ -170,6 +170,6 @@ pub fn relative(from : StringView, to : StringView) -> String raise {
 /// 
 /// 1. if absolute path is given, normalize and return it.
 /// 2. if relative path is given, join it with current working directory,
-pub fn resolve(view : StringView) -> String raise {
+pub fn resolve(view : StringView) -> String {
   Path::resolve(view.to_owned()).0
 }

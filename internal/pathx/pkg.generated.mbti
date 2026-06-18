@@ -16,11 +16,11 @@ pub fn join(StringView, StringView) -> String
 
 pub fn normalize(StringView) -> String
 
-pub fn relative(StringView, StringView) -> String raise
+pub fn relative(StringView, StringView) -> String
 
 pub fn replace_ext(StringView, StringView) -> String
 
-pub fn resolve(StringView) -> String raise
+pub fn resolve(StringView) -> String
 
 pub let sep : Char
 
