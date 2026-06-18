@@ -194,6 +194,125 @@ fn UsageService::delete_model_pricing(
 }
 
 ///|
+async fn UsageService::load_model_pricing_store(self : UsageService) -> Unit {
+  let path = @pathx.join(
+    default_moonstat_stats_dir(),
+    MOONSTAT_MODEL_PRICING_FILE,
+  )
+  if !@fsx.exists_as_file(path) {
+    return
+  }
+  let content = @fsx.read_file(path) catch { _ => return }
+  for line_view in content.split("\n") {
+    let line = line_view.to_owned().trim()
+    if line.is_empty() {
+      continue
+    }
+    let parsed = @json.parse(line) catch { _ => continue }
+    guard parsed is Object(obj) else { continue }
+    guard store_json_string(obj, "modelId") is Some(model_id) else { continue }
+    if store_json_bool_or_false(obj, "deleted") {
+      self.pricing_deleted_model_ids.set(model_id, true)
+    } else {
+      match model_pricing_from_store_json(obj) {
+        Some(pricing) => {
+          self.pricing_overrides.set(pricing.model_id, pricing)
+          self.pricing_deleted_model_ids.set(model_id, false)
+        }
+        None => ()
+      }
+    }
+  }
+}
+
+///|
+async fn UsageService::save_model_pricing_store(self : UsageService) -> Unit {
+  let storage_dir = default_moonstat_stats_dir()
+  @fsx.make_directory(storage_dir, recursive=true, exists_ok=true) catch {
+    _ => return
+  }
+  let lines : Array[String] = []
+  for pricing in self.pricing_override_rows() {
+    if model_pricing_is_deleted(
+        pricing.model_id,
+        self.pricing_deleted_model_ids,
+      ) {
+      continue
+    }
+    lines.push(model_pricing_store_json(pricing, deleted=false).stringify())
+  }
+  for model_id in self.pricing_deleted_model_ids.keys() {
+    if !self.pricing_deleted_model_ids.get(model_id).unwrap_or(false) {
+      continue
+    }
+    lines.push(
+      { "modelId": Json::string(model_id), "deleted": Json::boolean(true) }
+      .to_json()
+      .stringify(),
+    )
+  }
+  @fsx.write_to_file(
+    @pathx.join(storage_dir, MOONSTAT_MODEL_PRICING_FILE),
+    lines.join("\n"),
+  ) catch {
+    _ => ()
+  }
+}
+
+///|
+async fn UsageService::handle_usage_model_pricing(
+  self : UsageService,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  write_usage_json(w, self.model_pricing_json())
+}
+
+///|
+async fn UsageService::handle_usage_update_model_pricing(
+  self : UsageService,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  match usage_pricing_validation_error_from_request(r.path, body) {
+    Some(error) => {
+      write_usage_bad_request(w, error)
+      return
+    }
+    None => ()
+  }
+  guard usage_pricing_from_request(r.path, body) is Some(pricing) else {
+    write_usage_bad_request(w, "invalid_model_pricing")
+    return
+  }
+  let _backfilled = self.upsert_model_pricing(pricing)
+  self.save_model_pricing_store()
+  write_usage_json(w, Json::null())
+}
+
+///|
+async fn UsageService::handle_usage_delete_model_pricing(
+  self : UsageService,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let body = proxy_json_body(r)
+  guard usage_string_from_request(r.path, body, ["model_id", "modelId"])
+    is Some(model_id) else {
+    write_usage_bad_request(w, "missing_model_id")
+    return
+  }
+  let trimmed = model_id.trim().to_owned()
+  if trimmed.is_empty() {
+    write_usage_bad_request(w, "missing_model_id")
+    return
+  }
+  self.delete_model_pricing(trimmed)
+  self.save_model_pricing_store()
+  write_usage_json(w, Json::null())
+}
+
+///|
 fn UsageService::record_inbound(
   self : UsageService,
   request_bytes : Int,

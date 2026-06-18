@@ -1463,59 +1463,6 @@ async fn Gateway::handle_proxy_running(
 }
 
 ///|
-async fn Gateway::handle_usage_model_pricing(
-  self : Gateway,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  write_usage_json(w, self.usage.model_pricing_json())
-}
-
-///|
-async fn Gateway::handle_usage_update_model_pricing(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  match usage_pricing_validation_error_from_request(r.path, body) {
-    Some(error) => {
-      write_usage_bad_request(w, error)
-      return
-    }
-    None => ()
-  }
-  guard usage_pricing_from_request(r.path, body) is Some(pricing) else {
-    write_usage_bad_request(w, "invalid_model_pricing")
-    return
-  }
-  let _backfilled = self.usage.upsert_model_pricing(pricing)
-  self.save_model_pricing_store()
-  write_usage_json(w, Json::null())
-}
-
-///|
-async fn Gateway::handle_usage_delete_model_pricing(
-  self : Gateway,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  let body = proxy_json_body(r)
-  guard usage_string_from_request(r.path, body, ["model_id", "modelId"])
-    is Some(model_id) else {
-    write_usage_bad_request(w, "missing_model_id")
-    return
-  }
-  let trimmed = model_id.trim().to_owned()
-  if trimmed.is_empty() {
-    write_usage_bad_request(w, "missing_model_id")
-    return
-  }
-  self.usage.delete_model_pricing(trimmed)
-  self.save_model_pricing_store()
-  write_usage_json(w, Json::null())
-}
-
-///|
 fn proxy_provider_query_from_request(
   path : StringView,
   body : Json?,
@@ -1899,72 +1846,6 @@ fn usage_pricing_validation_error_from_request(
 ///|
 fn Gateway::pricing_override_rows(self : Gateway) -> Array[ModelPricing] {
   self.usage.pricing_override_rows()
-}
-
-///|
-async fn Gateway::load_model_pricing_store(self : Gateway) -> Unit {
-  let path = @pathx.join(
-    default_moonstat_stats_dir(),
-    MOONSTAT_MODEL_PRICING_FILE,
-  )
-  if !@fsx.exists_as_file(path) {
-    return
-  }
-  let content = @fsx.read_file(path) catch { _ => return }
-  for line_view in content.split("\n") {
-    let line = line_view.to_owned().trim()
-    if line.is_empty() {
-      continue
-    }
-    let parsed = @json.parse(line) catch { _ => continue }
-    guard parsed is Object(obj) else { continue }
-    guard store_json_string(obj, "modelId") is Some(model_id) else { continue }
-    if store_json_bool_or_false(obj, "deleted") {
-      self.usage.pricing_deleted_model_ids.set(model_id, true)
-    } else {
-      match model_pricing_from_store_json(obj) {
-        Some(pricing) => {
-          self.usage.pricing_overrides.set(pricing.model_id, pricing)
-          self.usage.pricing_deleted_model_ids.set(model_id, false)
-        }
-        None => ()
-      }
-    }
-  }
-}
-
-///|
-async fn Gateway::save_model_pricing_store(self : Gateway) -> Unit {
-  let storage_dir = default_moonstat_stats_dir()
-  @fsx.make_directory(storage_dir, recursive=true, exists_ok=true) catch {
-    _ => return
-  }
-  let lines : Array[String] = []
-  for pricing in self.pricing_override_rows() {
-    if model_pricing_is_deleted(
-        pricing.model_id,
-        self.usage.pricing_deleted_model_ids,
-      ) {
-      continue
-    }
-    lines.push(model_pricing_store_json(pricing, deleted=false).stringify())
-  }
-  for model_id in self.usage.pricing_deleted_model_ids.keys() {
-    if !self.usage.pricing_deleted_model_ids.get(model_id).unwrap_or(false) {
-      continue
-    }
-    lines.push(
-      { "modelId": Json::string(model_id), "deleted": Json::boolean(true) }
-      .to_json()
-      .stringify(),
-    )
-  }
-  @fsx.write_to_file(
-    @pathx.join(storage_dir, MOONSTAT_MODEL_PRICING_FILE),
-    lines.join("\n"),
-  ) catch {
-    _ => ()
-  }
 }
 
 ///|

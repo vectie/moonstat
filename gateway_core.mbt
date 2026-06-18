@@ -15,7 +15,7 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
   } catch {
     err => self.logger.warn("Failed to write Moon suite status: \{err}")
   }
-  self.load_model_pricing_store()
+  self.usage.load_model_pricing_store()
   ignore(
     self.usage.load_and_reconcile_persistent_store(self.pricing_override_rows()),
   )
@@ -1268,25 +1268,25 @@ pub async fn Gateway::start(self : Gateway) -> Unit {
     self.session.handle_delete_sessions(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/model-pricing", (_, w) => {
-    self.handle_usage_model_pricing(w)
+    self.usage.handle_usage_model_pricing(w)
   })
   router.add_handler(@httpx.Method::Get, "/get_model_pricing", (_, w) => {
-    self.handle_usage_model_pricing(w)
+    self.usage.handle_usage_model_pricing(w)
   })
   router.add_handler(@httpx.Method::Post, "/usage/model-pricing", (r, w) => {
-    self.handle_usage_update_model_pricing(r, w)
+    self.usage.handle_usage_update_model_pricing(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/update_model_pricing", (r, w) => {
-    self.handle_usage_update_model_pricing(r, w)
+    self.usage.handle_usage_update_model_pricing(r, w)
   })
   router.add_handler(@httpx.Method::Delete, "/usage/model-pricing", (r, w) => {
-    self.handle_usage_delete_model_pricing(r, w)
+    self.usage.handle_usage_delete_model_pricing(r, w)
   })
   router.add_handler(@httpx.Method::Delete, "/delete_model_pricing", (r, w) => {
-    self.handle_usage_delete_model_pricing(r, w)
+    self.usage.handle_usage_delete_model_pricing(r, w)
   })
   router.add_handler(@httpx.Method::Post, "/delete_model_pricing", (r, w) => {
-    self.handle_usage_delete_model_pricing(r, w)
+    self.usage.handle_usage_delete_model_pricing(r, w)
   })
   router.add_handler(@httpx.Method::Get, "/usage/request-detail/*path", (r, w) => {
     self.usage.handle_usage_request_detail(r, w, self.pricing_override_rows())
