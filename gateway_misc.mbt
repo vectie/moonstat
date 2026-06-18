@@ -537,18 +537,10 @@ fn claude_base_is_full_url() -> Bool {
 ///|
 fn moon_model_mapping_from_env() -> ModelMapping? {
   let mapping = ModelMapping::new(
-    haiku_model=env_first_non_empty([
-      "MOONSTAT_ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL",
-    ]),
-    sonnet_model=env_first_non_empty([
-      "MOONSTAT_ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL",
-    ]),
-    opus_model=env_first_non_empty([
-      "MOONSTAT_ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL",
-    ]),
-    default_model=env_first_non_empty([
-      "MOONSTAT_ANTHROPIC_MODEL", "ANTHROPIC_MODEL",
-    ]),
+    haiku_model=env_first_non_empty(["ANTHROPIC_DEFAULT_HAIKU_MODEL"]),
+    sonnet_model=env_first_non_empty(["ANTHROPIC_DEFAULT_SONNET_MODEL"]),
+    opus_model=env_first_non_empty(["ANTHROPIC_DEFAULT_OPUS_MODEL"]),
+    default_model=env_first_non_empty(["ANTHROPIC_MODEL"]),
   )
   if mapping.has_mapping() {
     Some(mapping)

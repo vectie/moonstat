@@ -1,4 +1,12 @@
 ///|
+fn moon_wbtest_restore_env(key : String, value : String?) -> Unit {
+  match value {
+    Some(value) => @os.setenv(key, value, overwrite=true) catch { _ => () }
+    None => @os.unsetenv(key) catch { _ => () }
+  }
+}
+
+///|
 test "claude desktop model list matches moonstat response shape" {
   json_inspect(claude_desktop_model_list_json(), content={
     "data": [
@@ -9755,6 +9763,68 @@ test "moonstat claude desktop default routes match upstream command shape" {
   assert_eq(sonnet["routeId"], Json::string("claude-sonnet-4-6"))
   assert_eq(sonnet["envKey"], Json::string("ANTHROPIC_DEFAULT_SONNET_MODEL"))
   assert_eq(sonnet["supports1m"], Json::boolean(true))
+}
+
+///|
+test "moonstat model mapping env ignores moonstat prefixed aliases" {
+  let old_moon_default = @os.getenv("MOONSTAT_ANTHROPIC_MODEL") catch {
+    _ => None
+  }
+  let old_moon_haiku = @os.getenv("MOONSTAT_ANTHROPIC_DEFAULT_HAIKU_MODEL") catch {
+    _ => None
+  }
+  let old_moon_sonnet = @os.getenv("MOONSTAT_ANTHROPIC_DEFAULT_SONNET_MODEL") catch {
+    _ => None
+  }
+  let old_moon_opus = @os.getenv("MOONSTAT_ANTHROPIC_DEFAULT_OPUS_MODEL") catch {
+    _ => None
+  }
+  let old_default = @os.getenv("ANTHROPIC_MODEL") catch { _ => None }
+  let old_haiku = @os.getenv("ANTHROPIC_DEFAULT_HAIKU_MODEL") catch {
+    _ => None
+  }
+  let old_sonnet = @os.getenv("ANTHROPIC_DEFAULT_SONNET_MODEL") catch {
+    _ => None
+  }
+  let old_opus = @os.getenv("ANTHROPIC_DEFAULT_OPUS_MODEL") catch { _ => None }
+  @os.unsetenv("ANTHROPIC_MODEL") catch {
+    _ => ()
+  }
+  @os.unsetenv("ANTHROPIC_DEFAULT_HAIKU_MODEL") catch {
+    _ => ()
+  }
+  @os.unsetenv("ANTHROPIC_DEFAULT_SONNET_MODEL") catch {
+    _ => ()
+  }
+  @os.unsetenv("ANTHROPIC_DEFAULT_OPUS_MODEL") catch {
+    _ => ()
+  }
+  @os.setenv("MOONSTAT_ANTHROPIC_MODEL", "moon-default", overwrite=true)
+  @os.setenv(
+    "MOONSTAT_ANTHROPIC_DEFAULT_SONNET_MODEL",
+    "moon-sonnet",
+    overwrite=true,
+  )
+  assert_true(moon_model_mapping_from_env() is None)
+  @os.setenv("ANTHROPIC_MODEL", "anthropic-default", overwrite=true)
+  guard moon_model_mapping_from_env() is Some(mapping) else {
+    fail("expected standard anthropic model mapping")
+  }
+  assert_eq(mapping.default_model, Some("anthropic-default"))
+  moon_wbtest_restore_env("MOONSTAT_ANTHROPIC_MODEL", old_moon_default)
+  moon_wbtest_restore_env(
+    "MOONSTAT_ANTHROPIC_DEFAULT_HAIKU_MODEL", old_moon_haiku,
+  )
+  moon_wbtest_restore_env(
+    "MOONSTAT_ANTHROPIC_DEFAULT_SONNET_MODEL", old_moon_sonnet,
+  )
+  moon_wbtest_restore_env(
+    "MOONSTAT_ANTHROPIC_DEFAULT_OPUS_MODEL", old_moon_opus,
+  )
+  moon_wbtest_restore_env("ANTHROPIC_MODEL", old_default)
+  moon_wbtest_restore_env("ANTHROPIC_DEFAULT_HAIKU_MODEL", old_haiku)
+  moon_wbtest_restore_env("ANTHROPIC_DEFAULT_SONNET_MODEL", old_sonnet)
+  moon_wbtest_restore_env("ANTHROPIC_DEFAULT_OPUS_MODEL", old_opus)
 }
 
 ///|

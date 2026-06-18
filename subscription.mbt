@@ -730,13 +730,9 @@ async fn moon_refresh_gemini_token(refresh_token : String) -> String? {
 
 ///|
 fn moon_gemini_oauth_client() -> MoonGeminiOAuthClient? {
-  guard moon_env_first_non_empty([
-      "MOONSTAT_GEMINI_OAUTH_CLIENT_ID", "GEMINI_OAUTH_CLIENT_ID", "GEMINI_CLI_OAUTH_CLIENT_ID",
-    ])
+  guard moon_env_first_non_empty(["MOONSTAT_GEMINI_OAUTH_CLIENT_ID"])
     is Some(client_id) &&
-    moon_env_first_non_empty([
-      "MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET", "GEMINI_OAUTH_CLIENT_SECRET", "GEMINI_CLI_OAUTH_CLIENT_SECRET",
-    ])
+    moon_env_first_non_empty(["MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET"])
     is Some(client_secret) else {
     return None
   }

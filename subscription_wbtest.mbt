@@ -204,3 +204,62 @@ test "moonstat subscription gemini oauth client comes from env" {
       }
   }
 }
+
+///|
+test "moonstat subscription gemini oauth ignores non moonstat env aliases" {
+  let old_id = @os.getenv("MOONSTAT_GEMINI_OAUTH_CLIENT_ID") catch { _ => None }
+  let old_secret = @os.getenv("MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET") catch {
+    _ => None
+  }
+  let old_gemini_id = @os.getenv("GEMINI_OAUTH_CLIENT_ID") catch { _ => None }
+  let old_gemini_secret = @os.getenv("GEMINI_OAUTH_CLIENT_SECRET") catch {
+    _ => None
+  }
+  let old_cli_id = @os.getenv("GEMINI_CLI_OAUTH_CLIENT_ID") catch { _ => None }
+  let old_cli_secret = @os.getenv("GEMINI_CLI_OAUTH_CLIENT_SECRET") catch {
+    _ => None
+  }
+  @os.unsetenv("MOONSTAT_GEMINI_OAUTH_CLIENT_ID") catch {
+    _ => ()
+  }
+  @os.unsetenv("MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET") catch {
+    _ => ()
+  }
+  @os.setenv("GEMINI_OAUTH_CLIENT_ID", "gemini-id", overwrite=true)
+  @os.setenv("GEMINI_OAUTH_CLIENT_SECRET", "gemini-secret", overwrite=true)
+  @os.setenv("GEMINI_CLI_OAUTH_CLIENT_ID", "cli-id", overwrite=true)
+  @os.setenv("GEMINI_CLI_OAUTH_CLIENT_SECRET", "cli-secret", overwrite=true)
+  assert_true(moon_gemini_oauth_client() is None)
+  match old_id {
+    Some(value) =>
+      @os.setenv("MOONSTAT_GEMINI_OAUTH_CLIENT_ID", value, overwrite=true)
+    None => @os.unsetenv("MOONSTAT_GEMINI_OAUTH_CLIENT_ID") catch { _ => () }
+  }
+  match old_secret {
+    Some(value) =>
+      @os.setenv("MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET", value, overwrite=true)
+    None =>
+      @os.unsetenv("MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET") catch {
+        _ => ()
+      }
+  }
+  match old_gemini_id {
+    Some(value) => @os.setenv("GEMINI_OAUTH_CLIENT_ID", value, overwrite=true)
+    None => @os.unsetenv("GEMINI_OAUTH_CLIENT_ID") catch { _ => () }
+  }
+  match old_gemini_secret {
+    Some(value) =>
+      @os.setenv("GEMINI_OAUTH_CLIENT_SECRET", value, overwrite=true)
+    None => @os.unsetenv("GEMINI_OAUTH_CLIENT_SECRET") catch { _ => () }
+  }
+  match old_cli_id {
+    Some(value) =>
+      @os.setenv("GEMINI_CLI_OAUTH_CLIENT_ID", value, overwrite=true)
+    None => @os.unsetenv("GEMINI_CLI_OAUTH_CLIENT_ID") catch { _ => () }
+  }
+  match old_cli_secret {
+    Some(value) =>
+      @os.setenv("GEMINI_CLI_OAUTH_CLIENT_SECRET", value, overwrite=true)
+    None => @os.unsetenv("GEMINI_CLI_OAUTH_CLIENT_SECRET") catch { _ => () }
+  }
+}

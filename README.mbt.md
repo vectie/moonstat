@@ -431,7 +431,7 @@ same `UsageResult` shape used by `usage query-provider-usage`.
 fallback credential files, calls the official quota endpoints, and returns the
 Moonstat `SubscriptionQuota` JSON shape. Gemini expired-token refresh reads
 `MOONSTAT_GEMINI_OAUTH_CLIENT_ID` and `MOONSTAT_GEMINI_OAUTH_CLIENT_SECRET`
-(or the `GEMINI_OAUTH_*` / `GEMINI_CLI_OAUTH_*` aliases) at runtime.
+at runtime.
 `/usage/codex-oauth-quota` queries Codex OAuth quota over the
 same WHAM usage protocol. `/usage/codex-oauth-models` fetches Codex OAuth
 model-list command against `chatgpt.com/backend-api/codex/models`, returning the
@@ -463,9 +463,9 @@ profile mode.
 Claude model rerouting honors the standard Anthropic environment names:
 `ANTHROPIC_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`,
 `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_OPUS_MODEL`.
-`MOONSTAT_`-prefixed aliases are also accepted. When present, Moonstat maps the
-client's Haiku/Sonnet/Opus/default request model to that upstream model and
-strips the local `[1M]` context marker before forwarding.
+When present, Moonstat maps the client's Haiku/Sonnet/Opus/default request
+model to that upstream model and strips the local `[1M]` context marker before
+forwarding.
 
 For Codex standalone setup, run
 `moonstat codex install --port 15721 --model gpt-5`. Moonstat writes a managed
