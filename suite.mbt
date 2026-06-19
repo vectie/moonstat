@@ -294,42 +294,40 @@ fn moonstat_suite_integrations_json(
   Json::object({
     "moonclaw": Json::object({
       "role": Json::string("agent-provider-edge"),
-      "openai_base_url": Json::string(openai_base_url),
-      "anthropic_base_url": Json::string(anthropic_base_url),
-      "default_model": Json::string(model),
-      "moonclaw_model_config": moonclaw_model_config_json(
-        openai_base_url, model,
-      ),
-      "moonclaw_models_json": Json::array([
+      "openaiBaseUrl": Json::string(openai_base_url),
+      "anthropicBaseUrl": Json::string(anthropic_base_url),
+      "defaultModel": Json::string(model),
+      "moonclawModelConfig": moonclaw_model_config_json(openai_base_url, model),
+      "moonclawModelsJson": Json::array([
         moonclaw_model_config_json(openai_base_url, model),
       ]),
-      "moonclaw_models_path_candidates": Json::array([
+      "moonclawModelsPathCandidates": Json::array([
         Json::string(".moonclaw/models/models.json"),
         Json::string("~/.moonclaw/models/models.json"),
       ]),
-      "moonclaw_provider_name": Json::string("moonstat"),
-      "moonclaw_provider_model_id": Json::string(model),
-      "moonclaw_provider_config_paths": Json::array([
+      "moonclawProviderName": Json::string("moonstat"),
+      "moonclawProviderModelId": Json::string(model),
+      "moonclawProviderConfigPaths": Json::array([
         Json::string(".moonclaw/models/models.json"),
         Json::string("~/.moonclaw/models/models.json"),
         Json::string(".moonclaw/config.json"),
         Json::string("~/.moonclaw/config.json"),
       ]),
-      "moonclaw_providers_file_json": moonclaw_providers_file_json(
+      "moonclawProvidersFileJson": moonclaw_providers_file_json(
         openai_base_url, model,
       ),
-      "moonclaw_providers_file_command": Json::string(
+      "moonclawProvidersFileCommand": Json::string(
         "moonstat suite moonclaw-providers",
       ),
-      "moonclaw_providers_file_write_command": Json::string(
+      "moonclawProvidersFileWriteCommand": Json::string(
         "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
       ),
-      "health_url": Json::string("\{base_url}/health"),
-      "metrics_url": Json::string("\{base_url}/metrics"),
-      "usage_summary_url": Json::string("\{base_url}/usage/summary"),
-      "usage_logs_url": Json::string("\{base_url}/usage/logs"),
-      "provider_presets_url": Json::string("\{base_url}/providers/presets"),
-      "stream_check_all_providers_url": Json::string(
+      "healthUrl": Json::string("\{base_url}/health"),
+      "metricsUrl": Json::string("\{base_url}/metrics"),
+      "usageSummaryUrl": Json::string("\{base_url}/usage/summary"),
+      "usageLogsUrl": Json::string("\{base_url}/usage/logs"),
+      "providerPresetsUrl": Json::string("\{base_url}/providers/presets"),
+      "streamCheckAllProvidersUrl": Json::string(
         "\{base_url}/proxy/stream-check/all",
       ),
       "env": Json::object({
@@ -340,90 +338,86 @@ fn moonstat_suite_integrations_json(
     }),
     "moonbook": Json::object({
       "role": Json::string("durable-usage-output"),
-      "usage_summary_url": Json::string("\{base_url}/usage/summary"),
-      "usage_logs_url": Json::string("\{base_url}/usage/logs"),
-      "usage_trends_url": Json::string("\{base_url}/usage/trends"),
-      "usage_data_sources_url": Json::string("\{base_url}/usage/data-sources"),
-      "usage_request_logs_file": Json::string(
+      "usageSummaryUrl": Json::string("\{base_url}/usage/summary"),
+      "usageLogsUrl": Json::string("\{base_url}/usage/logs"),
+      "usageTrendsUrl": Json::string("\{base_url}/usage/trends"),
+      "usageDataSourcesUrl": Json::string("\{base_url}/usage/data-sources"),
+      "usageRequestLogsFile": Json::string(
         @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
       ),
-      "usage_model_pricing_file": Json::string(
+      "usageModelPricingFile": Json::string(
         @pathx.join(default_moonstat_stats_dir(), MOONSTAT_MODEL_PRICING_FILE),
       ),
       "cli": Json::string("moonstat"),
-      "moondesk_adapter_package": Json::string(
+      "moondeskAdapterPackage": Json::string(
         "vectie/moondesk/adapters/moonbook",
       ),
-      "moontown_adapter_package": Json::string(
+      "moontownAdapterPackage": Json::string(
         "vectie/moontown/adapters/moonbook",
       ),
     }),
     "moontown": Json::object({
       "role": Json::string("scheduler-network-watch"),
-      "health_url": Json::string("\{base_url}/health"),
-      "status_url": Json::string("\{base_url}/status"),
-      "stats_url": Json::string("\{base_url}/stats"),
-      "metrics_url": Json::string("\{base_url}/metrics"),
-      "stream_check_all_providers_url": Json::string(
+      "healthUrl": Json::string("\{base_url}/health"),
+      "statusUrl": Json::string("\{base_url}/status"),
+      "statsUrl": Json::string("\{base_url}/stats"),
+      "metricsUrl": Json::string("\{base_url}/metrics"),
+      "streamCheckAllProvidersUrl": Json::string(
         "\{base_url}/proxy/stream-check/all",
       ),
-      "usage_provider_limits_url": Json::string(
+      "usageProviderLimitsUrl": Json::string(
         "\{base_url}/usage/provider-limits",
       ),
-      "suite_status_file": Json::string(default_moonstat_suite_status_path()),
-      "moonclaw_provider_manifest_path": Json::string(
-        ".moonclaw/providers.json",
-      ),
-      "moonclaw_provider_manifest_command": Json::string("moonstat"),
-      "moonclaw_provider_manifest_args": Json::array([
+      "suiteStatusFile": Json::string(default_moonstat_suite_status_path()),
+      "moonclawProviderManifestPath": Json::string(".moonclaw/providers.json"),
+      "moonclawProviderManifestCommand": Json::string("moonstat"),
+      "moonclawProviderManifestArgs": Json::array([
         Json::string("suite"),
         Json::string("write-moonclaw-providers"),
         Json::string("--path"),
         Json::string(".moonclaw/providers.json"),
       ]),
-      "moonclaw_provider_manifest_full_command": Json::string(
+      "moonclawProviderManifestFullCommand": Json::string(
         "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
       ),
-      "moonclaw_provider_manifest_target": Json::string("moonbook"),
-      "moonbook_provider_manifest_path": Json::string(
-        ".moonclaw/providers.json",
-      ),
-      "moonbook_provider_manifest_command": Json::string("moonstat"),
-      "moonbook_provider_manifest_args": Json::array([
+      "moonclawProviderManifestTarget": Json::string("moonbook"),
+      "moonbookProviderManifestPath": Json::string(".moonclaw/providers.json"),
+      "moonbookProviderManifestCommand": Json::string("moonstat"),
+      "moonbookProviderManifestArgs": Json::array([
         Json::string("suite"),
         Json::string("write-moonclaw-providers"),
         Json::string("--path"),
         Json::string(".moonclaw/providers.json"),
       ]),
-      "moonbook_provider_manifest_full_command": Json::string(
+      "moonbookProviderManifestFullCommand": Json::string(
         "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
       ),
-      "adapter_packages": Json::array([
+      "adapterPackages": Json::array([
         Json::string("vectie/moontown/adapters/moonclaw"),
         Json::string("vectie/moontown/adapters/moonbook"),
       ]),
     }),
     "moondesk": Json::object({
       "role": Json::string("operator-dashboard"),
-      "suite_status_file": Json::string(default_moonstat_suite_status_path()),
-      "health_url": Json::string("\{base_url}/health"),
-      "status_url": Json::string("\{base_url}/status"),
-      "stats_url": Json::string("\{base_url}/stats"),
-      "metrics_url": Json::string("\{base_url}/metrics"),
-      "models_url": Json::string("\{openai_base_url}/models"),
-      "provider_presets_url": Json::string("\{base_url}/providers/presets"),
-      "claude_desktop_base_url": Json::string(claude_desktop_base_url),
-      "stream_check_provider_url": Json::string(
+      "suiteStatusFile": Json::string(default_moonstat_suite_status_path()),
+      "healthUrl": Json::string("\{base_url}/health"),
+      "statusUrl": Json::string("\{base_url}/status"),
+      "statsUrl": Json::string("\{base_url}/stats"),
+      "metricsUrl": Json::string("\{base_url}/metrics"),
+      "modelsUrl": Json::string("\{openai_base_url}/models"),
+      "providerPresetsUrl": Json::string("\{base_url}/providers/presets"),
+      "claudeDesktopBaseUrl": Json::string(claude_desktop_base_url),
+      "streamCheckProviderUrl": Json::string(
         "\{base_url}/proxy/stream-check/provider",
       ),
-      "stream_check_all_providers_url": Json::string(
+      "streamCheckAllProvidersUrl": Json::string(
         "\{base_url}/proxy/stream-check/all",
       ),
-      "stream_check_config_url": Json::string(
+      "streamCheckConfigUrl": Json::string(
         "\{base_url}/proxy/stream-check/config",
       ),
-      "config_status_url": Json::string("\{base_url}/config/status"),
-      "adapter_packages": Json::array([
+      "configStatusUrl": Json::string("\{base_url}/config/status"),
+      "adapterPackages": Json::array([
         Json::string("vectie/moondesk/adapters/moonclaw"),
         Json::string("vectie/moondesk/adapters/moonbook"),
         Json::string("vectie/moondesk/adapters/moontown"),
@@ -518,54 +512,54 @@ fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
     "health": Json::string("moonstat health"),
     "status": Json::string("moonstat status"),
     "stats": Json::string("moonstat stats"),
-    "usage_logs": Json::string("moonstat usage logs"),
-    "usage_summary": Json::string("moonstat usage summary"),
-    "usage_apps": Json::string("moonstat usage apps"),
-    "usage_trends": Json::string("moonstat usage trends"),
-    "usage_limits": Json::string(
+    "usageLogs": Json::string("moonstat usage logs"),
+    "usageSummary": Json::string("moonstat usage summary"),
+    "usageApps": Json::string("moonstat usage apps"),
+    "usageTrends": Json::string("moonstat usage trends"),
+    "usageLimits": Json::string(
       "moonstat usage limits --provider-id <provider_id> --app-type <app_type>",
     ),
-    "usage_providers": Json::string("moonstat usage providers"),
-    "usage_models": Json::string("moonstat usage models"),
-    "usage_sources": Json::string("moonstat usage sources"),
-    "usage_sync": Json::string("moonstat usage sync"),
-    "usage_pricing": Json::string("moonstat usage pricing"),
-    "usage_detail": Json::string(
+    "usageProviders": Json::string("moonstat usage providers"),
+    "usageModels": Json::string("moonstat usage models"),
+    "usageSources": Json::string("moonstat usage sources"),
+    "usageSync": Json::string("moonstat usage sync"),
+    "usagePricing": Json::string("moonstat usage pricing"),
+    "usageDetail": Json::string(
       "moonstat usage detail --request-id <request_id>",
     ),
-    "provider_presets": Json::string(
+    "providerPresets": Json::string(
       "moonstat provider presets list --app-type <app_type>",
     ),
-    "stream_check_provider": Json::string(
+    "streamCheckProvider": Json::string(
       "moonstat stream-check provider --app-type <app_type> --provider-id <provider_id>",
     ),
-    "stream_check_all": Json::string(
+    "streamCheckAll": Json::string(
       "moonstat stream-check all --app-type <app_type>",
     ),
-    "stream_check_config": Json::string("moonstat stream-check config"),
-    "stream_check_config_set": Json::string(
+    "streamCheckConfig": Json::string("moonstat stream-check config"),
+    "streamCheckConfigSet": Json::string(
       "moonstat stream-check config set --timeout-secs <seconds>",
     ),
-    "codex_install": Json::string(
+    "codexInstall": Json::string(
       "moonstat codex install --port \{port} --model \{model}",
     ),
-    "copilot_auth_status": Json::string("moonstat copilot status"),
-    "copilot_login": Json::string("moonstat copilot login"),
-    "claude_desktop_install": Json::string(
+    "copilotAuthStatus": Json::string("moonstat copilot status"),
+    "copilotLogin": Json::string("moonstat copilot login"),
+    "claudeDesktopInstall": Json::string(
       "moonstat claude-desktop install --port \{port}",
     ),
-    "skills_list": Json::string("moonstat skills installed"),
-    "skills_search": Json::string("moonstat skills search --query <query>"),
-    "skills_install": Json::string(
+    "skillsList": Json::string("moonstat skills installed"),
+    "skillsSearch": Json::string("moonstat skills search --query <query>"),
+    "skillsInstall": Json::string(
       "moonstat skills install-unified --directory <directory> --app-type <app_type>",
     ),
-    "skills_repos": Json::string("moonstat skills repos"),
-    "update_tray_menu": Json::string("moonstat runtime tray-menu update"),
-    "suite_manifest": Json::string("moonstat suite manifest"),
-    "suite_status": Json::string("moonstat suite status"),
-    "suite_write_status": Json::string("moonstat suite write-status"),
-    "moonclaw_providers": Json::string("moonstat suite moonclaw-providers"),
-    "moonclaw_providers_write": Json::string(
+    "skillsRepos": Json::string("moonstat skills repos"),
+    "updateTrayMenu": Json::string("moonstat runtime tray-menu update"),
+    "suiteManifest": Json::string("moonstat suite manifest"),
+    "suiteStatus": Json::string("moonstat suite status"),
+    "suiteWriteStatus": Json::string("moonstat suite write-status"),
+    "moonclawProviders": Json::string("moonstat suite moonclaw-providers"),
+    "moonclawProvidersWrite": Json::string(
       "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
     ),
   })

@@ -289,11 +289,11 @@ test "suite manifest publishes moonstat service contract" {
     fail("expected moonclaw integration")
   }
   assert_eq(
-    moonclaw["openai_base_url"],
+    moonclaw["openaiBaseUrl"],
     Json::string("http://127.0.0.1:15721/v1"),
   )
   assert_eq(
-    moonclaw["anthropic_base_url"],
+    moonclaw["anthropicBaseUrl"],
     Json::string("http://127.0.0.1:15721"),
   )
   guard moonclaw["env"] is Object(moonclaw_env) else {
@@ -304,7 +304,7 @@ test "suite manifest publishes moonstat service contract" {
     Json::string("http://127.0.0.1:15721/v1"),
   )
   assert_eq(moonclaw_env["OPENAI_API_KEY"], Json::string("moonstat-local"))
-  guard moonclaw["moonclaw_model_config"] is Object(model_config) else {
+  guard moonclaw["moonclawModelConfig"] is Object(model_config) else {
     fail("expected moonclaw model config")
   }
   assert_eq(model_config["name"], Json::string("moonstat/gpt-5"))
@@ -313,24 +313,24 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(model_config["api_key"], Json::string("moonstat-local"))
   assert_eq(model_config["base_url"], Json::string("http://127.0.0.1:15721/v1"))
   assert_eq(model_config["safe_zone_tokens"], Json::number(200000.0))
-  guard moonclaw["moonclaw_models_json"] is Array(models_json) else {
+  guard moonclaw["moonclawModelsJson"] is Array(models_json) else {
     fail("expected moonclaw models json")
   }
   assert_eq(models_json.length(), 1)
-  assert_eq(models_json[0], moonclaw["moonclaw_model_config"])
-  guard moonclaw["moonclaw_models_path_candidates"] is Array(paths) else {
+  assert_eq(models_json[0], moonclaw["moonclawModelConfig"])
+  guard moonclaw["moonclawModelsPathCandidates"] is Array(paths) else {
     fail("expected moonclaw models path candidates")
   }
   assert_true(paths.contains(Json::string(".moonclaw/models/models.json")))
   assert_true(paths.contains(Json::string("~/.moonclaw/models/models.json")))
-  assert_eq(moonclaw["moonclaw_provider_name"], Json::string("moonstat"))
-  assert_eq(moonclaw["moonclaw_provider_model_id"], Json::string("gpt-5"))
-  guard moonclaw["moonclaw_provider_config_paths"] is Array(config_paths) else {
+  assert_eq(moonclaw["moonclawProviderName"], Json::string("moonstat"))
+  assert_eq(moonclaw["moonclawProviderModelId"], Json::string("gpt-5"))
+  guard moonclaw["moonclawProviderConfigPaths"] is Array(config_paths) else {
     fail("expected moonclaw provider config paths")
   }
   assert_true(config_paths.contains(Json::string(".moonclaw/config.json")))
   assert_true(config_paths.contains(Json::string("~/.moonclaw/config.json")))
-  guard moonclaw["moonclaw_providers_file_json"] is Object(providers_file) else {
+  guard moonclaw["moonclawProvidersFileJson"] is Object(providers_file) else {
     fail("expected moonclaw providers file json")
   }
   guard providers_file["providers"] is Object(moonclaw_providers) else {
@@ -354,63 +354,63 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(provider_model["id"], Json::string("gpt-5"))
   assert_eq(provider_model["name"], Json::string("moonstat/gpt-5"))
   assert_eq(
-    moonclaw["moonclaw_providers_file_command"],
+    moonclaw["moonclawProvidersFileCommand"],
     Json::string("moonstat suite moonclaw-providers"),
   )
   assert_eq(
-    moonclaw["moonclaw_providers_file_write_command"],
+    moonclaw["moonclawProvidersFileWriteCommand"],
     Json::string(
       "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
     ),
   )
   assert_eq(
-    moonclaw["provider_presets_url"],
+    moonclaw["providerPresetsUrl"],
     Json::string("http://127.0.0.1:15721/providers/presets"),
   )
   guard integrations["moonbook"] is Object(moonbook) else {
     fail("expected moonbook integration")
   }
   assert_eq(
-    moonbook["usage_request_logs_file"],
+    moonbook["usageRequestLogsFile"],
     Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
     ),
   )
   assert_eq(moonbook["cli"], Json::string("moonstat"))
   assert_eq(
-    moonbook["moondesk_adapter_package"],
+    moonbook["moondeskAdapterPackage"],
     Json::string("vectie/moondesk/adapters/moonbook"),
   )
   assert_eq(
-    moonbook["moontown_adapter_package"],
+    moonbook["moontownAdapterPackage"],
     Json::string("vectie/moontown/adapters/moonbook"),
   )
   guard integrations["moontown"] is Object(moontown) else {
     fail("expected moontown integration")
   }
   assert_eq(
-    moontown["stream_check_all_providers_url"],
+    moontown["streamCheckAllProvidersUrl"],
     Json::string("http://127.0.0.1:15721/proxy/stream-check/all"),
   )
   assert_eq(
-    moontown["usage_provider_limits_url"],
+    moontown["usageProviderLimitsUrl"],
     Json::string("http://127.0.0.1:15721/usage/provider-limits"),
   )
   assert_eq(
-    moontown["moonclaw_provider_manifest_path"],
+    moontown["moonclawProviderManifestPath"],
     Json::string(".moonclaw/providers.json"),
   )
   assert_eq(
-    moontown["moonclaw_provider_manifest_command"],
+    moontown["moonclawProviderManifestCommand"],
     Json::string("moonstat"),
   )
   assert_eq(
-    moontown["moonclaw_provider_manifest_full_command"],
+    moontown["moonclawProviderManifestFullCommand"],
     Json::string(
       "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
     ),
   )
-  guard moontown["moonclaw_provider_manifest_args"] is Array(moonclaw_args) else {
+  guard moontown["moonclawProviderManifestArgs"] is Array(moonclaw_args) else {
     fail("expected moonclaw provider manifest args")
   }
   assert_true(
@@ -423,24 +423,24 @@ test "suite manifest publishes moonstat service contract" {
     ],
   )
   assert_eq(
-    moontown["moonclaw_provider_manifest_target"],
+    moontown["moonclawProviderManifestTarget"],
     Json::string("moonbook"),
   )
   assert_eq(
-    moontown["moonbook_provider_manifest_path"],
+    moontown["moonbookProviderManifestPath"],
     Json::string(".moonclaw/providers.json"),
   )
   assert_eq(
-    moontown["moonbook_provider_manifest_command"],
+    moontown["moonbookProviderManifestCommand"],
     Json::string("moonstat"),
   )
   assert_eq(
-    moontown["moonbook_provider_manifest_full_command"],
+    moontown["moonbookProviderManifestFullCommand"],
     Json::string(
       "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
     ),
   )
-  guard moontown["moonbook_provider_manifest_args"] is Array(moonbook_args) else {
+  guard moontown["moonbookProviderManifestArgs"] is Array(moonbook_args) else {
     fail("expected moonbook provider manifest args")
   }
   assert_true(
@@ -452,7 +452,7 @@ test "suite manifest publishes moonstat service contract" {
       Json::string(".moonclaw/providers.json"),
     ],
   )
-  guard moontown["adapter_packages"] is Array(moontown_adapters) else {
+  guard moontown["adapterPackages"] is Array(moontown_adapters) else {
     fail("expected moontown adapters")
   }
   assert_true(
@@ -469,22 +469,22 @@ test "suite manifest publishes moonstat service contract" {
     fail("expected moondesk integration")
   }
   assert_eq(
-    moondesk["claude_desktop_base_url"],
+    moondesk["claudeDesktopBaseUrl"],
     Json::string("http://127.0.0.1:15721/claude-desktop/v1"),
   )
   assert_eq(
-    moondesk["provider_presets_url"],
+    moondesk["providerPresetsUrl"],
     Json::string("http://127.0.0.1:15721/providers/presets"),
   )
   assert_eq(
-    moondesk["stream_check_config_url"],
+    moondesk["streamCheckConfigUrl"],
     Json::string("http://127.0.0.1:15721/proxy/stream-check/config"),
   )
   assert_eq(
-    moondesk["config_status_url"],
+    moondesk["configStatusUrl"],
     Json::string("http://127.0.0.1:15721/config/status"),
   )
-  guard moondesk["adapter_packages"] is Array(moondesk_adapters) else {
+  guard moondesk["adapterPackages"] is Array(moondesk_adapters) else {
     fail("expected moondesk adapters")
   }
   assert_true(
@@ -504,32 +504,32 @@ test "suite manifest publishes moonstat service contract" {
   )
   guard obj["commands"] is Object(commands) else { fail("expected commands") }
   assert_eq(commands["start"], Json::string("moonstat start --port 15721"))
-  assert_eq(commands["skills_list"], Json::string("moonstat skills installed"))
-  assert_eq(commands["skills_repos"], Json::string("moonstat skills repos"))
+  assert_eq(commands["skillsList"], Json::string("moonstat skills installed"))
+  assert_eq(commands["skillsRepos"], Json::string("moonstat skills repos"))
   assert_eq(
-    commands["update_tray_menu"],
+    commands["updateTrayMenu"],
     Json::string("moonstat runtime tray-menu update"),
   )
   assert_eq(
-    commands["suite_write_status"],
+    commands["suiteWriteStatus"],
     Json::string("moonstat suite write-status"),
   )
   assert_eq(
-    commands["moonclaw_providers"],
+    commands["moonclawProviders"],
     Json::string("moonstat suite moonclaw-providers"),
   )
   assert_eq(
-    commands["moonclaw_providers_write"],
+    commands["moonclawProvidersWrite"],
     Json::string(
       "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
     ),
   )
   assert_eq(
-    commands["stream_check_all"],
+    commands["streamCheckAll"],
     Json::string("moonstat stream-check all --app-type <app_type>"),
   )
   assert_eq(
-    commands["provider_presets"],
+    commands["providerPresets"],
     Json::string("moonstat provider presets list --app-type <app_type>"),
   )
   assert_eq(obj["cli"], obj["commands"])
@@ -834,15 +834,15 @@ async test "suite status writes discovery file" {
       fail("expected moondesk integration")
     }
     assert_eq(
-      moondesk["models_url"],
+      moondesk["modelsUrl"],
       Json::string("http://127.0.0.1:17000/v1/models"),
     )
     assert_eq(
-      moondesk["provider_presets_url"],
+      moondesk["providerPresetsUrl"],
       Json::string("http://127.0.0.1:17000/providers/presets"),
     )
     assert_eq(
-      moondesk["stream_check_provider_url"],
+      moondesk["streamCheckProviderUrl"],
       Json::string("http://127.0.0.1:17000/proxy/stream-check/provider"),
     )
     guard manifest["commands"] is Object(commands) else {
@@ -850,15 +850,15 @@ async test "suite status writes discovery file" {
     }
     assert_eq(commands["start"], Json::string("moonstat start --port 17000"))
     assert_eq(
-      commands["codex_install"],
+      commands["codexInstall"],
       Json::string("moonstat codex install --port 17000 --model gpt-5"),
     )
     assert_eq(
-      commands["copilot_auth_status"],
+      commands["copilotAuthStatus"],
       Json::string("moonstat copilot status"),
     )
     assert_eq(
-      commands["provider_presets"],
+      commands["providerPresets"],
       Json::string("moonstat provider presets list --app-type <app_type>"),
     )
     assert_eq(manifest["defaultPort"], Json::number(17000.0))

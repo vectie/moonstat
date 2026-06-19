@@ -67,7 +67,7 @@ when the gateway boots. The contract also includes a machine-readable
 `suiteIntegrations` object:
 
 - MoonClaw gets local OpenAI/Anthropic base URLs, env names, a
-  `moonclaw_providers_file_json` provider entry, and the project/home config
+  `moonclawProvidersFileJson` provider entry, and the project/home config
   paths where MoonClaw can load that entry.
 - MoonBook gets usage summary/log/trend/data-source URLs, the durable usage log
   and pricing files, and the MoonBook adapter package names used by Moondesk and
