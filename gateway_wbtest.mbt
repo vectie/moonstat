@@ -2569,6 +2569,17 @@ async test "external utility endpoints are owned by runtime service" {
 async test "provider config endpoints are owned by proxy service" {
   let codex_openai_source = @fsx.read_file("gateway_codex_openai.mbt")
   let claude_anthropic_source = @fsx.read_file("gateway_claude_anthropic.mbt")
+  let claude_media_source = @fsx.read_file("gateway_claude_anthropic_media.mbt")
+  let claude_stream_bridge_source = @fsx.read_file(
+    "gateway_claude_anthropic_stream_bridge.mbt",
+  )
+  let claude_codex_stream_source = @fsx.read_file(
+    "gateway_claude_anthropic_codex_stream.mbt",
+  )
+  let claude_protocol_source = claude_anthropic_source +
+    claude_media_source +
+    claude_stream_bridge_source +
+    claude_codex_stream_source
   let provider_source = @fsx.read_file("gateway_provider.mbt")
   let auth_source = @fsx.read_file("gateway_auth.mbt")
   let claude_desktop_source = @fsx.read_file("gateway_claude_desktop.mbt")
@@ -2582,7 +2593,7 @@ async test "provider config endpoints are owned by proxy service" {
   let omo_source = @fsx.read_file("omo.mbt")
   let usage_source = @fsx.read_file("gateway_usage.mbt")
   let sources = codex_openai_source +
-    claude_anthropic_source +
+    claude_protocol_source +
     provider_source +
     auth_source +
     claude_desktop_source +
@@ -2649,9 +2660,21 @@ async test "provider config endpoints are owned by proxy service" {
       "forward_gemini_native_sse_as_anthropic",
     ] {
     assert_true(
-      claude_anthropic_source.contains("async fn ProxyService::\{handler}("),
+      claude_protocol_source.contains("async fn ProxyService::\{handler}("),
     )
     assert_false(misc_source.contains("async fn ProxyService::\{handler}("))
+  }
+  for
+    handler in [
+      "forward_openai_chat_sse_as_anthropic", "forward_anthropic_sse_passthrough",
+      "forward_gemini_native_sse_as_anthropic",
+    ] {
+    assert_true(
+      claude_stream_bridge_source.contains("async fn ProxyService::\{handler}("),
+    )
+    assert_false(
+      claude_anthropic_source.contains("async fn ProxyService::\{handler}("),
+    )
   }
   for
     helper in [
@@ -2659,9 +2682,16 @@ async test "provider config endpoints are owned by proxy service" {
       "fn claude_compatible_response_to_anthropic(", "priv struct ResponsesStreamState",
       "fn ResponsesStreamState::new(",
     ] {
-    assert_true(claude_anthropic_source.contains(helper))
+    assert_true(claude_protocol_source.contains(helper))
     assert_false(misc_source.contains(helper))
   }
+  assert_true(claude_media_source.contains("fn prepare_upstream_request_body("))
+  assert_true(
+    claude_media_source.contains("fn replace_images_for_text_only_model("),
+  )
+  assert_true(
+    claude_codex_stream_source.contains("priv struct ResponsesStreamState"),
+  )
   for
     helper in [
       "struct StreamCheckConfig", "fn StreamCheckConfig::default(", "fn StreamCheckConfig::to_json(",
