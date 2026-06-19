@@ -13,18 +13,18 @@ pub fn moonstat_suite_manifest_json(
     "project": Json::string(@suite.project_name()),
     "version": Json::string(@suite.version()),
     "role": Json::string("network-edge"),
-    "default_host": Json::string(@suite.normalize_host(host)),
-    "default_port": Json::number(port.to_double()),
-    "base_url": Json::string(moonstat_base_url(host, port)),
-    "openai_base_url": Json::string(moonstat_openai_base_url(host, port)),
-    "anthropic_base_url": Json::string(moonstat_base_url(host, port)),
-    "claude_desktop_base_url": Json::string(
+    "defaultHost": Json::string(@suite.normalize_host(host)),
+    "defaultPort": Json::number(port.to_double()),
+    "baseUrl": Json::string(moonstat_base_url(host, port)),
+    "openaiBaseUrl": Json::string(moonstat_openai_base_url(host, port)),
+    "anthropicBaseUrl": Json::string(moonstat_base_url(host, port)),
+    "claudeDesktopBaseUrl": Json::string(
       moonstat_claude_desktop_base_url(host, port),
     ),
-    "default_model": Json::string(model),
-    "status_file": Json::string(default_moonstat_suite_status_path()),
+    "defaultModel": Json::string(model),
+    "statusFile": Json::string(default_moonstat_suite_status_path()),
     "capabilities": moonstat_suite_capabilities_json(),
-    "models_url": Json::string("\{moonstat_openai_base_url(host, port)}/models"),
+    "modelsUrl": Json::string("\{moonstat_openai_base_url(host, port)}/models"),
     "routes": Json::array(
       moonstat_suite_routes().map(fn(route) { Json::string(route) }),
     ),
@@ -42,8 +42,8 @@ pub fn moonstat_suite_manifest_json(
         "moondesk", "operator-shell", "Read the suite status file and display gateway health, model catalog, and traffic counters.",
       ),
     ]),
-    "agent_clients": moonstat_suite_agent_clients_json(host, port, model),
-    "suite_integrations": moonstat_suite_integrations_json(host, port, model),
+    "agentClients": moonstat_suite_agent_clients_json(host, port, model),
+    "suiteIntegrations": moonstat_suite_integrations_json(host, port, model),
     "commands": moonstat_suite_commands_json(port, model),
     "cli": moonstat_suite_commands_json(port, model),
   }
@@ -68,7 +68,7 @@ pub fn moonstat_suite_status_json(
     "status": Json::string(status),
     "ready": Json::boolean(ready),
     "manifest": moonstat_suite_manifest_json(host~, port~, model~),
-    "status_path": Json::string(default_moonstat_suite_status_path()),
+    "statusPath": Json::string(default_moonstat_suite_status_path()),
   }
   Json::object(status_json)
 }
@@ -115,48 +115,46 @@ fn moonstat_suite_capabilities_json() -> Json {
 fn moonstat_suite_shared_fields(host : String, port : Int) -> Map[String, Json] {
   let base_url = moonstat_base_url(host, port)
   {
-    "health_url": Json::string("\{base_url}/health"),
-    "status_url": Json::string("\{base_url}/status"),
-    "stats_url": Json::string("\{base_url}/stats"),
-    "metrics_url": Json::string("\{base_url}/metrics"),
-    "usage_logs_url": Json::string("\{base_url}/usage/logs"),
-    "usage_summary_url": Json::string("\{base_url}/usage/summary"),
-    "usage_summary_by_app_url": Json::string("\{base_url}/usage/summary/by-app"),
-    "usage_trends_url": Json::string("\{base_url}/usage/trends"),
-    "usage_provider_limits_url": Json::string(
-      "\{base_url}/usage/provider-limits",
-    ),
-    "usage_provider_stats_url": Json::string("\{base_url}/usage/provider-stats"),
-    "usage_model_stats_url": Json::string("\{base_url}/usage/model-stats"),
-    "usage_data_sources_url": Json::string("\{base_url}/usage/data-sources"),
-    "usage_sync_session_url": Json::string("\{base_url}/usage/sync-session"),
-    "usage_model_pricing_url": Json::string("\{base_url}/usage/model-pricing"),
-    "provider_presets_url": Json::string("\{base_url}/providers/presets"),
-    "usage_request_detail_url": Json::string(
+    "healthUrl": Json::string("\{base_url}/health"),
+    "statusUrl": Json::string("\{base_url}/status"),
+    "statsUrl": Json::string("\{base_url}/stats"),
+    "metricsUrl": Json::string("\{base_url}/metrics"),
+    "usageLogsUrl": Json::string("\{base_url}/usage/logs"),
+    "usageSummaryUrl": Json::string("\{base_url}/usage/summary"),
+    "usageSummaryByAppUrl": Json::string("\{base_url}/usage/summary/by-app"),
+    "usageTrendsUrl": Json::string("\{base_url}/usage/trends"),
+    "usageProviderLimitsUrl": Json::string("\{base_url}/usage/provider-limits"),
+    "usageProviderStatsUrl": Json::string("\{base_url}/usage/provider-stats"),
+    "usageModelStatsUrl": Json::string("\{base_url}/usage/model-stats"),
+    "usageDataSourcesUrl": Json::string("\{base_url}/usage/data-sources"),
+    "usageSyncSessionUrl": Json::string("\{base_url}/usage/sync-session"),
+    "usageModelPricingUrl": Json::string("\{base_url}/usage/model-pricing"),
+    "providerPresetsUrl": Json::string("\{base_url}/providers/presets"),
+    "usageRequestDetailUrl": Json::string(
       "\{base_url}/usage/request-detail/{request_id}",
     ),
-    "stream_check_provider_url": Json::string(
+    "streamCheckProviderUrl": Json::string(
       "\{base_url}/proxy/stream-check/provider",
     ),
-    "stream_check_all_providers_url": Json::string(
+    "streamCheckAllProvidersUrl": Json::string(
       "\{base_url}/proxy/stream-check/all",
     ),
-    "stream_check_config_url": Json::string(
+    "streamCheckConfigUrl": Json::string(
       "\{base_url}/proxy/stream-check/config",
     ),
-    "config_status_url": Json::string("\{base_url}/config/status"),
-    "usage_store_dir": Json::string(default_moonstat_stats_dir()),
-    "usage_request_logs_file": Json::string(
+    "configStatusUrl": Json::string("\{base_url}/config/status"),
+    "usageStoreDir": Json::string(default_moonstat_stats_dir()),
+    "usageRequestLogsFile": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_REQUEST_LOGS_FILE),
     ),
-    "usage_session_sync_file": Json::string(
+    "usageSessionSyncFile": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_SESSION_SYNC_FILE),
     ),
-    "usage_model_pricing_file": Json::string(
+    "usageModelPricingFile": Json::string(
       @pathx.join(default_moonstat_stats_dir(), MOONSTAT_MODEL_PRICING_FILE),
     ),
-    "usage_opencode_db_file": Json::string(default_opencode_db_path()),
-    "usage_opencode_export_file": Json::string(default_opencode_export_path()),
+    "usageOpencodeDbFile": Json::string(default_opencode_db_path()),
+    "usageOpencodeExportFile": Json::string(default_opencode_export_path()),
   }
 }
 
@@ -274,11 +272,11 @@ fn suite_agent_client_json(
 ) -> Json {
   Json::object({
     "id": Json::string(id),
-    "app_type": Json::string(app_type),
+    "appType": Json::string(app_type),
     "protocol": Json::string(protocol),
-    "base_url": Json::string(base_url),
-    "primary_route": Json::string(primary_route),
-    "setup_command": Json::string(setup_command),
+    "baseUrl": Json::string(base_url),
+    "primaryRoute": Json::string(primary_route),
+    "setupCommand": Json::string(setup_command),
     "usage": Json::string(usage),
   })
 }

@@ -64,7 +64,7 @@ gateway URLs, status file, capabilities, and command map needed by suite
 launchers. `suite write-status` writes the same status contract to
 `~/.moonsuite/suite-status.json` by default, and `start` refreshes that file
 when the gateway boots. The contract also includes a machine-readable
-`suite_integrations` object:
+`suiteIntegrations` object:
 
 - MoonClaw gets local OpenAI/Anthropic base URLs, env names, a
   `moonclaw_providers_file_json` provider entry, and the project/home config
@@ -479,7 +479,7 @@ to the upstream `/v1beta/...` and `/v1/...` paths.
 Moonstat is the network edge for local Moon apps. Point Codex-style clients,
 MoonClaw provider checks, or Moondesk/Moontown integration probes at
 `http://127.0.0.1:15721` and use `/status` or `/stats` for health dashboards.
-The suite manifest also publishes an `agent_clients` array for Codex,
+The suite manifest also publishes an `agentClients` array for Codex,
 Claude Code, Claude Desktop, OpenClaw, OpenCode, Gemini, GitHub Copilot, and
 generic OpenAI-compatible clients, with each client's app type, protocol, base
 URL, primary route, and setup command when Moonstat owns one.

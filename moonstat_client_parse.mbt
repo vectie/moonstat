@@ -109,10 +109,10 @@ pub fn moonstat_agent_clients_from_manifest(
     Object(obj) if moonstat_suite_manifest_contract_valid(obj) => obj
     _ => return Err("moonstat suite manifest contract is invalid")
   }
-  let rows = match obj.get("agent_clients") {
+  let rows = match obj.get("agentClients") {
     Some(Array(rows)) => rows
-    Some(_) => return Err("moonstat agent_clients field is not an array")
-    None => return Err("moonstat suite manifest has no agent_clients")
+    Some(_) => return Err("moonstat agentClients field is not an array")
+    None => return Err("moonstat suite manifest has no agentClients")
   }
   let clients : Array[MoonstatAgentClient] = []
   for row in rows {
@@ -136,21 +136,21 @@ pub fn MoonstatAgentClient::from_json(
     Some(value) => value
     None => return Err("moonstat agent client entry has no id")
   }
-  let app_type = match moonstat_json_string_field(obj, "app_type") {
+  let app_type = match moonstat_json_string_field(obj, "appType") {
     Some(value) => value
-    None => return Err("moonstat agent client entry has no app_type")
+    None => return Err("moonstat agent client entry has no appType")
   }
   let protocol = match moonstat_json_string_field(obj, "protocol") {
     Some(value) => value
     None => return Err("moonstat agent client entry has no protocol")
   }
-  let base_url = match moonstat_json_string_field(obj, "base_url") {
+  let base_url = match moonstat_json_string_field(obj, "baseUrl") {
     Some(value) => moonstat_client_normalize_base_url(value)
-    None => return Err("moonstat agent client entry has no base_url")
+    None => return Err("moonstat agent client entry has no baseUrl")
   }
-  let primary_route = match moonstat_json_string_field(obj, "primary_route") {
+  let primary_route = match moonstat_json_string_field(obj, "primaryRoute") {
     Some(value) => value
-    None => return Err("moonstat agent client entry has no primary_route")
+    None => return Err("moonstat agent client entry has no primaryRoute")
   }
   Ok({
     id,
@@ -158,7 +158,7 @@ pub fn MoonstatAgentClient::from_json(
     protocol,
     base_url,
     primary_route,
-    setup_command: moonstat_json_string_field(obj, "setup_command"),
+    setup_command: moonstat_json_string_field(obj, "setupCommand"),
     usage: moonstat_json_string_field(obj, "usage"),
   })
 }
@@ -230,7 +230,7 @@ fn moonstat_suite_manifest_contract_valid(obj : Map[String, Json]) -> Bool {
 
 ///|
 fn moonstat_base_url_from_json_object(obj : Map[String, Json]) -> String? {
-  match obj.get("base_url") {
+  match obj.get("baseUrl") {
     Some(String(url)) if !url.trim().is_empty() =>
       Some(moonstat_client_normalize_base_url(url))
     _ => None

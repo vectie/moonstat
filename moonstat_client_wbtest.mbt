@@ -282,6 +282,16 @@ test "moonstat client requires suite status and manifest contracts" {
     "manifest": { "base_url": Json::string("http://127.0.0.1:4199") }.to_json(),
   }.to_json()
   assert_true(MoonstatClient::from_suite_status(manifest_only) is None)
+  let snake_case_manifest = {
+    "contract": Json::string(@suite.status_contract()),
+    "service": Json::string("moonstat"),
+    "manifest": {
+      "contract": Json::string(@suite.manifest_contract()),
+      "service": Json::string("moonstat"),
+      "base_url": Json::string("http://127.0.0.1:4199"),
+    }.to_json(),
+  }.to_json()
+  assert_true(MoonstatClient::from_suite_status(snake_case_manifest) is None)
   let wrong_status_contract = {
     "contract": Json::string("moon.suite.status.v1"),
     "service": Json::string("moonstat"),
@@ -294,7 +304,7 @@ test "moonstat client requires suite status and manifest contracts" {
     "manifest": {
       "contract": Json::string("moon.suite.service.v0"),
       "service": Json::string("moonstat"),
-      "base_url": Json::string("http://127.0.0.1:4199"),
+      "baseUrl": Json::string("http://127.0.0.1:4199"),
     }.to_json(),
   }.to_json()
   assert_true(
@@ -342,7 +352,7 @@ test "moonstat client parses typed agent clients from suite status" {
 test "moonstat client rejects malformed agent client contracts" {
   assert_true(
     moonstat_agent_clients_from_manifest(
-      { "agent_clients": Json::array([]) }.to_json(),
+      { "agentClients": Json::array([]) }.to_json(),
     )
     is Err(_),
   )
@@ -358,12 +368,12 @@ test "moonstat client rejects malformed agent client contracts" {
   guard missing_id_manifest is Object(manifest_obj) else {
     fail("expected manifest object")
   }
-  manifest_obj["agent_clients"] = Json::array([
+  manifest_obj["agentClients"] = Json::array([
     {
-      "app_type": Json::string("codex"),
+      "appType": Json::string("codex"),
       "protocol": Json::string("openai-compatible"),
-      "base_url": Json::string("http://127.0.0.1:18081/v1"),
-      "primary_route": Json::string("POST /v1/chat/completions"),
+      "baseUrl": Json::string("http://127.0.0.1:18081/v1"),
+      "primaryRoute": Json::string("POST /v1/chat/completions"),
     }.to_json(),
   ])
   assert_true(
