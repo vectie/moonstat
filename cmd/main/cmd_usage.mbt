@@ -24,6 +24,7 @@ fn usage_cli_commands() -> Array[CliCommandSpec] {
     { id: "status", patterns: ["status"] },
     { id: "health", patterns: ["health"] },
     { id: "stats", patterns: ["stats"] },
+    { id: "metrics", patterns: ["metrics"] },
   ]
 }
 
@@ -48,20 +49,34 @@ async fn check_health(args : Array[String]) -> Unit {
 
 ///|
 async fn check_stats(args : Array[String]) -> Unit {
+  check_text_endpoint(args, "/stats", "Stats")
+}
+
+///|
+async fn check_metrics(args : Array[String]) -> Unit {
+  check_text_endpoint(args, "/metrics", "Metrics")
+}
+
+///|
+async fn check_text_endpoint(
+  args : Array[String],
+  path : String,
+  label : String,
+) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
     let client = @http.Client::new(url, headers={})
     defer client.close()
-    let response = client.get("/stats")
+    let response = client.get(path)
     if response.code == 200 {
       let body = client.read_all().text()
       println(body)
     } else {
-      logger.error("Stats check failed: \{response.code}")
+      logger.error("\{label} check failed: \{response.code}")
     }
   } catch {
-    err => logger.error("Stats check failed: \{err}")
+    err => logger.error("\{label} check failed: \{err}")
   }
 }
 
@@ -95,6 +110,7 @@ async fn run_usage_cli_command(
     "status" => check_status(args)
     "health" => check_health(args)
     "stats" => check_stats(args)
+    "metrics" => check_metrics(args)
     _ => ()
   }
 }

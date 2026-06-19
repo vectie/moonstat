@@ -463,6 +463,9 @@ test "registered cli commands match suite command aliases and status commands" {
     registered_cli_command_id(["moonstat", "health"]) == Some("health"),
   )
   assert_true(registered_cli_command_id(["moonstat", "stats"]) == Some("stats"))
+  assert_true(
+    registered_cli_command_id(["moonstat", "metrics"]) == Some("metrics"),
+  )
 }
 
 ///|
