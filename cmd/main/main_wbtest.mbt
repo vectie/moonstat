@@ -50,8 +50,12 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("launch_session_terminal"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "providers", "omo-slim", "file"]) ==
+    registered_cli_command_id(["moonstat", "provider", "omo-slim", "file"]) ==
     Some("read_omo_slim_local_file"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "providers", "omo-slim", "file"])
+    is None,
   )
   assert_true(
     registered_cli_command_id(["moonstat", "files", "open-zip-dialog"]) ==
@@ -207,9 +211,15 @@ test "registered cli commands match suite command aliases and status commands" {
   )
   assert_true(
     registered_cli_command_id([
-      "moonstat", "providers", "claude-desktop", "official",
+      "moonstat", "provider", "claude-desktop", "official",
     ]) ==
     Some("ensure_claude_desktop_official_provider"),
+  )
+  assert_true(
+    registered_cli_command_id([
+      "moonstat", "providers", "claude-desktop", "official",
+    ])
+    is None,
   )
   assert_true(
     registered_cli_command_id(["moonstat", "models", "fetch"]) ==

@@ -6,15 +6,15 @@ fn session_cli_commands() -> Array[CliCommandSpec] {
     { id: "launch_session_terminal", patterns: ["sessions terminal"] },
     { id: "delete_session", patterns: ["sessions delete"] },
     { id: "delete_sessions", patterns: ["sessions delete-many"] },
-    { id: "read_omo_local_file", patterns: ["providers omo file"] },
-    { id: "get_current_omo_provider_id", patterns: ["providers omo current"] },
-    { id: "disable_current_omo", patterns: ["providers omo disable"] },
-    { id: "read_omo_slim_local_file", patterns: ["providers omo-slim file"] },
+    { id: "read_omo_local_file", patterns: ["provider omo file"] },
+    { id: "get_current_omo_provider_id", patterns: ["provider omo current"] },
+    { id: "disable_current_omo", patterns: ["provider omo disable"] },
+    { id: "read_omo_slim_local_file", patterns: ["provider omo-slim file"] },
     {
       id: "get_current_omo_slim_provider_id",
-      patterns: ["providers omo-slim current"],
+      patterns: ["provider omo-slim current"],
     },
-    { id: "disable_current_omo_slim", patterns: ["providers omo-slim disable"] },
+    { id: "disable_current_omo_slim", patterns: ["provider omo-slim disable"] },
   ]
 }
 

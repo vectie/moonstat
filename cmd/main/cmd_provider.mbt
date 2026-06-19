@@ -17,19 +17,19 @@ fn provider_cli_commands() -> Array[CliCommandSpec] {
     { id: "import_default_config", patterns: ["proxy import-default-config"] },
     {
       id: "get_claude_desktop_status",
-      patterns: ["providers claude-desktop status"],
+      patterns: ["provider claude-desktop status"],
     },
     {
       id: "get_claude_desktop_default_routes",
-      patterns: ["providers claude-desktop default-routes"],
+      patterns: ["provider claude-desktop default-routes"],
     },
     {
       id: "import_claude_desktop_providers_from_claude",
-      patterns: ["providers claude-desktop import"],
+      patterns: ["provider claude-desktop import"],
     },
     {
       id: "ensure_claude_desktop_official_provider",
-      patterns: ["providers claude-desktop official"],
+      patterns: ["provider claude-desktop official"],
     },
     { id: "provider_live_ids", patterns: ["provider live-ids"] },
     { id: "provider_live_get", patterns: ["provider live-get"] },
