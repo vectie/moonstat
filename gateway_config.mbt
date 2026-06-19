@@ -931,48 +931,6 @@ async fn ConfigService::handle_s3_sync_save_settings(
 }
 
 ///|
-async fn ConfigService::handle_get_skill_backups(
-  self : ConfigService,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  write_usage_json(w, moon_get_skill_backups_json())
-}
-
-///|
-async fn ConfigService::handle_delete_skill_backup(
-  self : ConfigService,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, "backupId") is Some(backup_id) else {
-    write_usage_bad_request(w, "missing_backup_id")
-    return
-  }
-  write_usage_json(w, moon_delete_skill_backup_json(backup_id))
-}
-
-///|
-async fn ConfigService::handle_restore_skill_backup(
-  self : ConfigService,
-  r : @httpx.RequestReader,
-  w : @httpx.ResponseWriter,
-) -> Unit {
-  ignore(self)
-  let body = proxy_json_body(r)
-  guard proxy_string_request(r.path, body, "backupId") is Some(backup_id) else {
-    write_usage_bad_request(w, "missing_backup_id")
-    return
-  }
-  let current_app = proxy_string_request(r.path, body, "currentApp").unwrap_or(
-    "claude",
-  )
-  write_usage_json(w, moon_restore_skill_backup_json(backup_id, current_app))
-}
-
-///|
 async fn ConfigService::handle_get_app_config_path(
   self : ConfigService,
   w : @httpx.ResponseWriter,

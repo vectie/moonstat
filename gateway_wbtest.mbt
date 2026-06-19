@@ -2830,18 +2830,18 @@ async test "skill endpoints are owned by skill service" {
       "handle_discover_available_skills", "handle_check_skill_updates", "handle_update_skill",
       "handle_migrate_skill_storage", "handle_search_skills_sh", "handle_get_skills",
       "handle_get_skill_repos", "handle_add_skill_repo", "handle_remove_skill_repo",
-      "handle_install_skills_from_zip",
+      "handle_install_skills_from_zip", "handle_get_skill_backups", "handle_delete_skill_backup",
+      "handle_restore_skill_backup",
     ] {
     assert_true(skill_source.contains("async fn SkillService::\{handler}("))
     assert_false(skill_source.contains("async fn Gateway::\{handler}("))
     assert_false(misc_source.contains("async fn SkillService::\{handler}("))
   }
-  assert_true(
-    core_source.contains("self.skills.register_routes(router, self.config)"),
-  )
+  assert_true(core_source.contains("self.skills.register_routes(router)"))
   for
     handler in [
       "handle_get_installed_skills", "handle_install_skill_unified", "handle_add_skill_repo",
+      "handle_get_skill_backups", "handle_delete_skill_backup", "handle_restore_skill_backup",
     ] {
     assert_true(route_source.contains("self.\{handler}("))
   }

@@ -2,19 +2,18 @@
 fn SkillService::register_routes(
   self : SkillService,
   router : @httpx.Router,
-  config : ConfigService,
 ) -> Unit {
   router.add_handler(Get, "/skills/installed", (_, w) => {
     self.handle_get_installed_skills(w)
   })
   router.add_handler(Get, "/skills/backups", (_, w) => {
-    config.handle_get_skill_backups(w)
+    self.handle_get_skill_backups(w)
   })
   router.add_handler(Post, "/skills/backups/delete", (r, w) => {
-    config.handle_delete_skill_backup(r, w)
+    self.handle_delete_skill_backup(r, w)
   })
   router.add_handler(Post, "/skills/backups/restore", (r, w) => {
-    config.handle_restore_skill_backup(r, w)
+    self.handle_restore_skill_backup(r, w)
   })
   router.add_handler(Post, "/skills/install-unified", (r, w) => {
     self.handle_install_skill_unified(r, w)
