@@ -753,54 +753,6 @@ test "usage kebab-case flags build canonical paths" {
 ///|
 test "proxy config setter paths encode moonstat command arguments" {
   assert_eq(
-    proxy_global_config_update_path(
-      [
-        "moonstat", "proxy", "global-config", "set", "--proxy-enabled", "false",
-        "--listen-address", "127.0.0.2", "--listen-port", "17002", "--enable-logging",
-        "off",
-      ],
-      "/proxy/global-config",
-    ),
-    "/proxy/global-config?proxyEnabled=false&listenAddress=127.0.0.2&listenPort=17002&enableLogging=off",
-  )
-  assert_eq(
-    proxy_app_config_update_path([
-      "moonstat", "proxy", "app-config", "set", "--app-type", "codex", "--enabled",
-      "true", "--auto-failover-enabled", "false", "--max-retries", "5", "--streaming-first-byte-timeout",
-      "11", "--streaming-idle-timeout", "22", "--non-streaming-timeout", "33", "--failure-threshold",
-      "7", "--success-threshold", "3", "--timeout-seconds", "44", "--error-rate-threshold",
-      "0.4", "--min-requests", "12",
-    ]),
-    "/proxy/app-config?appType=codex&enabled=true&autoFailoverEnabled=false&maxRetries=5&streamingFirstByteTimeout=11&streamingIdleTimeout=22&nonStreamingTimeout=33&failureThreshold=7&successThreshold=3&timeoutSeconds=44&errorRateThreshold=0.4&minRequests=12",
-  )
-  assert_eq(
-    proxy_takeover_update_path([
-      "moonstat", "proxy", "takeover-status", "set", "--app-type", "codex", "--enabled",
-      "true",
-    ]),
-    Some("/proxy/takeover-status?appType=codex&enabled=true"),
-  )
-  assert_eq(
-    proxy_app_value_update_path(
-      [
-        "moonstat", "proxy", "default-cost-multiplier", "set", "--app-type", "codex",
-        "--value", "1.25",
-      ],
-      "/proxy/default-cost-multiplier",
-    ),
-    Some("/proxy/default-cost-multiplier?appType=codex&value=1.25"),
-  )
-  assert_eq(
-    proxy_provider_endpoint_path(
-      [
-        "moonstat", "proxy", "switch-provider", "--app-type", "codex", "--provider-id",
-        "codex-oauth",
-      ],
-      "/proxy/switch-provider",
-    ),
-    Some("/proxy/switch-provider?providerId=codex-oauth&appType=codex"),
-  )
-  assert_eq(
     provider_app_path(
       ["moonstat", "provider", "list", "--app-type", "codex"],
       "/providers",
@@ -909,56 +861,6 @@ test "proxy config setter paths encode moonstat command arguments" {
 
 ///|
 test "proxy grouped commands build canonical paths" {
-  assert_eq(
-    proxy_global_config_update_path(
-      [
-        "moonstat", "proxy", "global-config", "set", "--proxy-enabled", "true", "--listen-address",
-        "127.0.0.1", "--listen-port", "15721",
-      ],
-      "/proxy/global-config",
-    ),
-    "/proxy/global-config?proxyEnabled=true&listenAddress=127.0.0.1&listenPort=15721",
-  )
-  assert_eq(
-    proxy_app_config_update_path([
-      "moonstat", "proxy", "app-config", "set", "--app-type", "codex", "--enabled",
-      "true", "--auto-failover-enabled", "true",
-    ]),
-    "/proxy/app-config?appType=codex&enabled=true&autoFailoverEnabled=true",
-  )
-  assert_eq(
-    proxy_provider_endpoint_path(
-      [
-        "moonstat", "proxy", "switch-provider", "--app-type", "codex", "--provider-id",
-        "codex oauth",
-      ],
-      "/proxy/switch-provider",
-    ),
-    Some("/proxy/switch-provider?providerId=codex%20oauth&appType=codex"),
-  )
-  assert_eq(
-    proxy_auto_failover_enabled_path([
-      "moonstat", "proxy", "auto-failover-enabled", "set", "--app-type", "codex",
-      "--enabled", "true",
-    ]),
-    Some("/proxy/auto-failover-enabled?appType=codex&enabled=true"),
-  )
-  assert_eq(
-    global_proxy_url_path(
-      [
-        "moonstat", "proxy", "global-url", "set", "--url", "http://127.0.0.1:7890",
-      ],
-      "/proxy/global-url",
-    ),
-    Some("/proxy/global-url?url=http%3A%2F%2F127.0.0.1%3A7890"),
-  )
-  assert_eq(
-    global_proxy_url_path(
-      ["moonstat", "proxy", "test-url", "--url", "socks5://127.0.0.1:1080"],
-      "/proxy/test-url",
-    ),
-    Some("/proxy/test-url?url=socks5%3A%2F%2F127.0.0.1%3A1080"),
-  )
   assert_eq(
     provider_app_path(
       ["moonstat", "proxy", "import-default-config", "--app-type", "codex"],

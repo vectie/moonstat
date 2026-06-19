@@ -131,6 +131,90 @@ test "moonstat client builds required endpoint parameters" {
 }
 
 ///|
+test "moonstat client builds proxy mutation URLs" {
+  let client = MoonstatClient::new(base_url="http://127.0.0.1:4199")
+  assert_eq(client.proxy_start_url(), "http://127.0.0.1:4199/proxy/start")
+  assert_eq(
+    client.proxy_stop_with_restore_url(),
+    "http://127.0.0.1:4199/proxy/stop-with-restore",
+  )
+  assert_eq(
+    client.proxy_update_global_config_url(
+      proxy_enabled=Some("false"),
+      listen_address=Some("127.0.0.2"),
+      listen_port=Some("17002"),
+      enable_logging=Some("off"),
+    ),
+    "http://127.0.0.1:4199/proxy/global-config?proxyEnabled=false&listenAddress=127.0.0.2&listenPort=17002&enableLogging=off",
+  )
+  assert_eq(
+    client.proxy_update_global_config_url(),
+    "http://127.0.0.1:4199/proxy/global-config",
+  )
+  assert_eq(
+    client.proxy_set_global_url_url("http://127.0.0.1:7890"),
+    "http://127.0.0.1:4199/proxy/global-url?url=http%3A%2F%2F127.0.0.1%3A7890",
+  )
+  assert_eq(
+    client.proxy_test_url_url("socks5://127.0.0.1:1080"),
+    "http://127.0.0.1:4199/proxy/test-url?url=socks5%3A%2F%2F127.0.0.1%3A1080",
+  )
+  assert_eq(
+    client.proxy_update_app_config_url(
+      "codex",
+      enabled=Some("true"),
+      auto_failover_enabled=Some("false"),
+      max_retries=Some("5"),
+      streaming_first_byte_timeout=Some("11"),
+      streaming_idle_timeout=Some("22"),
+      non_streaming_timeout=Some("33"),
+      failure_threshold=Some("7"),
+      success_threshold=Some("3"),
+      timeout_seconds=Some("44"),
+      error_rate_threshold=Some("0.4"),
+      min_requests=Some("12"),
+    ),
+    "http://127.0.0.1:4199/proxy/app-config?appType=codex&enabled=true&autoFailoverEnabled=false&maxRetries=5&streamingFirstByteTimeout=11&streamingIdleTimeout=22&nonStreamingTimeout=33&failureThreshold=7&successThreshold=3&timeoutSeconds=44&errorRateThreshold=0.4&minRequests=12",
+  )
+  assert_eq(
+    client.proxy_set_default_cost_multiplier_url("codex", "1.25"),
+    "http://127.0.0.1:4199/proxy/default-cost-multiplier?appType=codex&value=1.25",
+  )
+  assert_eq(
+    client.proxy_set_pricing_model_source_url("codex", "request"),
+    "http://127.0.0.1:4199/proxy/pricing-model-source?appType=codex&value=request",
+  )
+  assert_eq(
+    client.proxy_update_circuit_breaker_config_url("7", "3", "44", "0.4", "12"),
+    "http://127.0.0.1:4199/proxy/circuit-breaker-config?failureThreshold=7&successThreshold=3&timeoutSeconds=44&errorRateThreshold=0.4&minRequests=12",
+  )
+  assert_eq(
+    client.proxy_reset_circuit_breaker_url("codex", "provider/a b"),
+    "http://127.0.0.1:4199/proxy/reset-circuit-breaker?providerId=provider%2Fa%20b&appType=codex",
+  )
+  assert_eq(
+    client.proxy_add_failover_queue_url("codex", "provider/a b"),
+    "http://127.0.0.1:4199/proxy/failover-queue?providerId=provider%2Fa%20b&appType=codex",
+  )
+  assert_eq(
+    client.proxy_remove_failover_queue_url("codex", "provider/a b"),
+    "http://127.0.0.1:4199/proxy/failover-queue?providerId=provider%2Fa%20b&appType=codex",
+  )
+  assert_eq(
+    client.proxy_set_auto_failover_enabled_url("codex", "true"),
+    "http://127.0.0.1:4199/proxy/auto-failover-enabled?appType=codex&enabled=true",
+  )
+  assert_eq(
+    client.proxy_set_takeover_status_url("codex", "true"),
+    "http://127.0.0.1:4199/proxy/takeover-status?appType=codex&enabled=true",
+  )
+  assert_eq(
+    client.proxy_switch_provider_url("codex", "codex oauth"),
+    "http://127.0.0.1:4199/proxy/switch-provider?providerId=codex%20oauth&appType=codex",
+  )
+}
+
+///|
 test "moonstat client omits empty usage query values" {
   let client = MoonstatClient::new(base_url="   ")
   assert_eq(client.base_url, "http://127.0.0.1:15721")

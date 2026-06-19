@@ -8,17 +8,20 @@ async fn check_proxy_status(args : Array[String]) -> Unit {
 
 ///|
 async fn start_proxy_server(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, "/proxy/start", "Proxy")
+  print_cli_json_result("Proxy start", cli_moonstat_client(args).proxy_start())
 }
 
 ///|
 async fn stop_proxy_server(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, "/proxy/stop", "Proxy")
+  print_cli_json_result("Proxy stop", cli_moonstat_client(args).proxy_stop())
 }
 
 ///|
 async fn stop_proxy_with_restore(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, "/proxy/stop-with-restore", "Proxy")
+  print_cli_json_result(
+    "Proxy stop with restore",
+    cli_moonstat_client(args).proxy_stop_with_restore(),
+  )
 }
 
 ///|
@@ -31,31 +34,41 @@ async fn check_proxy_global_config(args : Array[String]) -> Unit {
 
 ///|
 async fn update_proxy_global_config(args : Array[String]) -> Unit {
-  check_json_post_endpoint(
-    args,
-    proxy_global_config_update_path(args, "/proxy/global-config"),
-    "Proxy",
+  print_cli_json_result(
+    "Proxy global config update",
+    cli_moonstat_client(args).proxy_update_global_config(
+      proxy_enabled=parse_string_arg(args, "--proxy-enabled"),
+      listen_address=parse_string_arg(args, "--listen-address"),
+      listen_port=parse_string_arg(args, "--listen-port"),
+      enable_logging=parse_string_arg(args, "--enable-logging"),
+    ),
   )
 }
 
 ///|
 async fn set_global_proxy_url(args : Array[String]) -> Unit {
-  guard global_proxy_url_path(args, "/proxy/global-url") is Some(path) else {
+  guard parse_string_arg(args, "--url") is Some(url) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --url")
     return
   }
-  check_json_post_endpoint(args, path, "Proxy")
+  print_cli_json_result(
+    "Proxy global URL update",
+    cli_moonstat_client(args).proxy_set_global_url(url),
+  )
 }
 
 ///|
 async fn test_global_proxy_url(args : Array[String]) -> Unit {
-  guard global_proxy_url_path(args, "/proxy/test-url") is Some(path) else {
+  guard parse_string_arg(args, "--url") is Some(url) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --url")
     return
   }
-  check_json_post_endpoint(args, path, "Proxy")
+  print_cli_json_result(
+    "Proxy URL test",
+    cli_moonstat_client(args).proxy_test_url(url),
+  )
 }
 
 ///|
@@ -68,7 +81,25 @@ async fn check_proxy_app_config(args : Array[String]) -> Unit {
 
 ///|
 async fn update_proxy_app_config(args : Array[String]) -> Unit {
-  check_json_post_endpoint(args, proxy_app_config_update_path(args), "Proxy")
+  print_cli_json_result(
+    "Proxy app config update",
+    cli_moonstat_client(args).proxy_update_app_config(
+      proxy_app_arg(args),
+      enabled=parse_string_arg(args, "--enabled"),
+      auto_failover_enabled=parse_string_arg(args, "--auto-failover-enabled"),
+      max_retries=parse_string_arg(args, "--max-retries"),
+      streaming_first_byte_timeout=parse_string_arg(
+        args, "--streaming-first-byte-timeout",
+      ),
+      streaming_idle_timeout=parse_string_arg(args, "--streaming-idle-timeout"),
+      non_streaming_timeout=parse_string_arg(args, "--non-streaming-timeout"),
+      failure_threshold=parse_string_arg(args, "--failure-threshold"),
+      success_threshold=parse_string_arg(args, "--success-threshold"),
+      timeout_seconds=parse_string_arg(args, "--timeout-seconds"),
+      error_rate_threshold=parse_string_arg(args, "--error-rate-threshold"),
+      min_requests=parse_string_arg(args, "--min-requests"),
+    ),
+  )
 }
 
 ///|
@@ -81,13 +112,18 @@ async fn check_proxy_default_cost_multiplier(args : Array[String]) -> Unit {
 
 ///|
 async fn set_proxy_default_cost_multiplier(args : Array[String]) -> Unit {
-  guard proxy_app_value_update_path(args, "/proxy/default-cost-multiplier")
-    is Some(path) else {
+  guard parse_string_arg(args, "--value") is Some(value) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --value")
     return
   }
-  check_json_post_endpoint(args, path, "Proxy")
+  print_cli_json_result(
+    "Proxy default cost multiplier update",
+    cli_moonstat_client(args).proxy_set_default_cost_multiplier(
+      proxy_app_arg(args),
+      value,
+    ),
+  )
 }
 
 ///|
@@ -100,13 +136,18 @@ async fn check_proxy_pricing_model_source(args : Array[String]) -> Unit {
 
 ///|
 async fn set_proxy_pricing_model_source(args : Array[String]) -> Unit {
-  guard proxy_app_value_update_path(args, "/proxy/pricing-model-source")
-    is Some(path) else {
+  guard parse_string_arg(args, "--value") is Some(value) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --value")
     return
   }
-  check_json_post_endpoint(args, path, "Proxy")
+  print_cli_json_result(
+    "Proxy pricing model source update",
+    cli_moonstat_client(args).proxy_set_pricing_model_source(
+      proxy_app_arg(args),
+      value,
+    ),
+  )
 }
 
 ///|
@@ -131,14 +172,49 @@ async fn check_proxy_circuit_breaker_config(args : Array[String]) -> Unit {
 
 ///|
 async fn update_proxy_circuit_breaker_config(args : Array[String]) -> Unit {
-  guard proxy_circuit_config_update_path(args) is Some(path) else {
+  guard parse_string_arg(args, "--failure-threshold") is Some(failure_threshold) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error(
       "Missing required circuit config args: --failure-threshold --success-threshold --timeout-seconds --error-rate-threshold --min-requests",
     )
     return
   }
-  check_json_post_endpoint(args, path, "Proxy")
+  guard parse_string_arg(args, "--success-threshold") is Some(success_threshold) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error(
+      "Missing required circuit config args: --failure-threshold --success-threshold --timeout-seconds --error-rate-threshold --min-requests",
+    )
+    return
+  }
+  guard parse_string_arg(args, "--timeout-seconds") is Some(timeout_seconds) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error(
+      "Missing required circuit config args: --failure-threshold --success-threshold --timeout-seconds --error-rate-threshold --min-requests",
+    )
+    return
+  }
+  guard parse_string_arg(args, "--error-rate-threshold")
+    is Some(error_rate_threshold) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error(
+      "Missing required circuit config args: --failure-threshold --success-threshold --timeout-seconds --error-rate-threshold --min-requests",
+    )
+    return
+  }
+  guard parse_string_arg(args, "--min-requests") is Some(min_requests) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error(
+      "Missing required circuit config args: --failure-threshold --success-threshold --timeout-seconds --error-rate-threshold --min-requests",
+    )
+    return
+  }
+  print_cli_json_result(
+    "Proxy circuit breaker config update",
+    cli_moonstat_client(args).proxy_update_circuit_breaker_config(
+      failure_threshold, success_threshold, timeout_seconds, error_rate_threshold,
+      min_requests,
+    ),
+  )
 }
 
 ///|
@@ -157,13 +233,16 @@ async fn check_proxy_circuit_breaker_stats(args : Array[String]) -> Unit {
 
 ///|
 async fn reset_proxy_circuit_breaker(args : Array[String]) -> Unit {
-  guard proxy_provider_endpoint_path(args, "/proxy/reset-circuit-breaker")
-    is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --provider-id")
-    return
+  match proxy_provider_args(args) {
+    Some((app_type, provider_id)) =>
+      print_cli_json_result(
+        "Proxy circuit breaker reset",
+        cli_moonstat_client(args).proxy_reset_circuit_breaker(
+          app_type, provider_id,
+        ),
+      )
+    None => proxy_missing_provider_id()
   }
-  check_json_post_endpoint(args, path, "Proxy")
 }
 
 ///|
@@ -186,24 +265,30 @@ async fn check_proxy_available_failover_providers(args : Array[String]) -> Unit 
 
 ///|
 async fn add_proxy_failover_queue(args : Array[String]) -> Unit {
-  guard proxy_provider_endpoint_path(args, "/proxy/failover-queue")
-    is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --provider-id")
-    return
+  match proxy_provider_args(args) {
+    Some((app_type, provider_id)) =>
+      print_cli_json_result(
+        "Proxy failover queue add",
+        cli_moonstat_client(args).proxy_add_failover_queue(
+          app_type, provider_id,
+        ),
+      )
+    None => proxy_missing_provider_id()
   }
-  check_json_post_endpoint(args, path, "Proxy")
 }
 
 ///|
 async fn remove_proxy_failover_queue(args : Array[String]) -> Unit {
-  guard proxy_provider_endpoint_path(args, "/proxy/failover-queue")
-    is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --provider-id")
-    return
+  match proxy_provider_args(args) {
+    Some((app_type, provider_id)) =>
+      print_cli_json_result(
+        "Proxy failover queue remove",
+        cli_moonstat_client(args).proxy_remove_failover_queue(
+          app_type, provider_id,
+        ),
+      )
+    None => proxy_missing_provider_id()
   }
-  check_json_delete_endpoint(args, path, "Proxy")
 }
 
 ///|
@@ -216,12 +301,18 @@ async fn check_proxy_auto_failover_enabled(args : Array[String]) -> Unit {
 
 ///|
 async fn set_proxy_auto_failover_enabled(args : Array[String]) -> Unit {
-  guard proxy_auto_failover_enabled_path(args) is Some(path) else {
+  guard parse_string_arg(args, "--enabled") is Some(enabled) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --enabled")
     return
   }
-  check_json_post_endpoint(args, path, "Proxy")
+  print_cli_json_result(
+    "Proxy auto failover update",
+    cli_moonstat_client(args).proxy_set_auto_failover_enabled(
+      proxy_app_arg(args),
+      enabled,
+    ),
+  )
 }
 
 ///|
@@ -234,23 +325,30 @@ async fn check_proxy_takeover_status(args : Array[String]) -> Unit {
 
 ///|
 async fn set_proxy_takeover_status(args : Array[String]) -> Unit {
-  guard proxy_takeover_update_path(args) is Some(path) else {
+  guard parse_string_arg(args, "--enabled") is Some(enabled) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --enabled")
     return
   }
-  check_json_post_endpoint(args, path, "Proxy")
+  print_cli_json_result(
+    "Proxy takeover update",
+    cli_moonstat_client(args).proxy_set_takeover_status(
+      proxy_app_arg(args),
+      enabled,
+    ),
+  )
 }
 
 ///|
 async fn switch_proxy_provider(args : Array[String]) -> Unit {
-  guard proxy_provider_endpoint_path(args, "/proxy/switch-provider")
-    is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --provider-id")
-    return
+  match proxy_provider_args(args) {
+    Some((app_type, provider_id)) =>
+      print_cli_json_result(
+        "Proxy provider switch",
+        cli_moonstat_client(args).proxy_switch_provider(app_type, provider_id),
+      )
+    None => proxy_missing_provider_id()
   }
-  check_json_post_endpoint(args, path, "Proxy")
 }
 
 ///|
@@ -658,17 +756,6 @@ async fn update_provider_endpoint_last_used(args : Array[String]) -> Unit {
 }
 
 ///|
-fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
-    return None
-  }
-  let app_type = proxy_app_arg(args)
-  Some(
-    "\{path}?providerId=\{cli_url_encode(provider_id)}&appType=\{cli_url_encode(app_type)}",
-  )
-}
-
-///|
 fn proxy_provider_args(args : Array[String]) -> (String, String)? {
   guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
     return None
@@ -897,152 +984,6 @@ fn provider_upsert_path(
     None => ()
   }
   Some("\{path}?\{query.join("&")}")
-}
-
-///|
-fn proxy_app_value_update_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg(args, "--value") is Some(value) else { return None }
-  let app_type = proxy_app_arg(args)
-  Some(
-    "\{path}?appType=\{cli_url_encode(app_type)}&value=\{cli_url_encode(value)}",
-  )
-}
-
-///|
-fn proxy_circuit_config_update_path(args : Array[String]) -> String? {
-  guard parse_string_arg(args, "--failure-threshold") is Some(failure_threshold) else {
-    return None
-  }
-  guard parse_string_arg(args, "--success-threshold") is Some(success_threshold) else {
-    return None
-  }
-  guard parse_string_arg(args, "--timeout-seconds") is Some(timeout_seconds) else {
-    return None
-  }
-  guard parse_string_arg(args, "--error-rate-threshold")
-    is Some(error_rate_threshold) else {
-    return None
-  }
-  guard parse_string_arg(args, "--min-requests") is Some(min_requests) else {
-    return None
-  }
-  let query = [
-    cli_query_pair("failureThreshold", failure_threshold),
-    cli_query_pair("successThreshold", success_threshold),
-    cli_query_pair("timeoutSeconds", timeout_seconds),
-    cli_query_pair("errorRateThreshold", error_rate_threshold),
-    cli_query_pair("minRequests", min_requests),
-  ].join("&")
-  Some("/proxy/circuit-breaker-config?\{query}")
-}
-
-///|
-fn proxy_global_config_update_path(
-  args : Array[String],
-  path : String,
-) -> String {
-  let query : Array[String] = []
-  match parse_string_arg(args, "--proxy-enabled") {
-    Some(value) => query.push(cli_query_pair("proxyEnabled", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--listen-address") {
-    Some(value) => query.push(cli_query_pair("listenAddress", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--listen-port") {
-    Some(value) => query.push(cli_query_pair("listenPort", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--enable-logging") {
-    Some(value) => query.push(cli_query_pair("enableLogging", value))
-    None => ()
-  }
-  if query.is_empty() {
-    path
-  } else {
-    "\{path}?\{query.join("&")}"
-  }
-}
-
-///|
-fn global_proxy_url_path(args : Array[String], path : String) -> String? {
-  guard parse_string_arg(args, "--url") is Some(url) else { return None }
-  Some("\{path}?url=\{cli_url_encode(url)}")
-}
-
-///|
-fn proxy_app_config_update_path(args : Array[String]) -> String {
-  let app_type = proxy_app_arg(args)
-  let query : Array[String] = [cli_query_pair("appType", app_type)]
-  match parse_string_arg(args, "--enabled") {
-    Some(value) => query.push(cli_query_pair("enabled", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--auto-failover-enabled") {
-    Some(value) => query.push(cli_query_pair("autoFailoverEnabled", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--max-retries") {
-    Some(value) => query.push(cli_query_pair("maxRetries", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--streaming-first-byte-timeout") {
-    Some(value) =>
-      query.push(cli_query_pair("streamingFirstByteTimeout", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--streaming-idle-timeout") {
-    Some(value) => query.push(cli_query_pair("streamingIdleTimeout", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--non-streaming-timeout") {
-    Some(value) => query.push(cli_query_pair("nonStreamingTimeout", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--failure-threshold") {
-    Some(value) => query.push(cli_query_pair("failureThreshold", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--success-threshold") {
-    Some(value) => query.push(cli_query_pair("successThreshold", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--timeout-seconds") {
-    Some(value) => query.push(cli_query_pair("timeoutSeconds", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--error-rate-threshold") {
-    Some(value) => query.push(cli_query_pair("errorRateThreshold", value))
-    None => ()
-  }
-  match parse_string_arg(args, "--min-requests") {
-    Some(value) => query.push(cli_query_pair("minRequests", value))
-    None => ()
-  }
-  "/proxy/app-config?\{query.join("&")}"
-}
-
-///|
-fn proxy_takeover_update_path(args : Array[String]) -> String? {
-  guard parse_string_arg(args, "--enabled") is Some(enabled) else {
-    return None
-  }
-  let app_type = proxy_app_arg(args)
-  Some(
-    "/proxy/takeover-status?appType=\{cli_url_encode(app_type)}&enabled=\{cli_url_encode(enabled)}",
-  )
-}
-
-///|
-fn proxy_auto_failover_enabled_path(args : Array[String]) -> String? {
-  guard parse_string_arg(args, "--enabled") is Some(enabled) else {
-    return None
-  }
-  let app_type = proxy_app_arg(args)
-  Some(
-    "/proxy/auto-failover-enabled?appType=\{cli_url_encode(app_type)}&enabled=\{cli_url_encode(enabled)}",
-  )
 }
 
 ///|
