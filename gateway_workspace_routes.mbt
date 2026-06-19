@@ -3,7 +3,6 @@ fn WorkspaceService::register_routes(
   self : WorkspaceService,
   router : @httpx.Router,
   config : ConfigService,
-  proxy : ProxyService,
   logger : @pino.Logger,
 ) -> Unit {
   router.add_handler(Get, "/participant/register", (_, w) => {
@@ -15,20 +14,8 @@ fn WorkspaceService::register_routes(
   router.add_handler(Get, "/providers/omo/file", (_, w) => {
     self.handle_read_omo_local_file(w, slim=false)
   })
-  router.add_handler(Get, "/providers/omo/current", (_, w) => {
-    proxy.handle_get_current_omo_provider_id(w, slim=false)
-  })
-  router.add_handler(Post, "/providers/omo/disable", (_, w) => {
-    proxy.handle_disable_current_omo(w, slim=false)
-  })
   router.add_handler(Get, "/providers/omo-slim/file", (_, w) => {
     self.handle_read_omo_local_file(w, slim=true)
-  })
-  router.add_handler(Get, "/providers/omo-slim/current", (_, w) => {
-    proxy.handle_get_current_omo_provider_id(w, slim=true)
-  })
-  router.add_handler(Post, "/providers/omo-slim/disable", (_, w) => {
-    proxy.handle_disable_current_omo(w, slim=true)
   })
   router.add_handler(Post, "/files/dialogs/open", (_, w) => {
     self.handle_open_file_dialog(w)

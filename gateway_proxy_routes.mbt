@@ -169,6 +169,18 @@ fn ProxyService::register_management_routes(
   router.add_handler(Post, "/proxy/sync-current-providers-live", (_, w) => {
     self.handle_sync_current_providers_live(usage, w)
   })
+  router.add_handler(Get, "/providers/omo/current", (_, w) => {
+    self.handle_get_current_omo_provider_id(w, slim=false)
+  })
+  router.add_handler(Post, "/providers/omo/disable", (_, w) => {
+    self.handle_disable_current_omo(w, slim=false)
+  })
+  router.add_handler(Get, "/providers/omo-slim/current", (_, w) => {
+    self.handle_get_current_omo_provider_id(w, slim=true)
+  })
+  router.add_handler(Post, "/providers/omo-slim/disable", (_, w) => {
+    self.handle_disable_current_omo(w, slim=true)
+  })
   router.add_handler(Post, "/proxy/import-default-config", (r, w) => {
     self.handle_import_default_config(r, w)
   })

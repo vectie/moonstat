@@ -2495,13 +2495,17 @@ async test "workspace endpoints are owned by workspace service" {
   }
   assert_true(
     core_source.contains(
-      "self.workspace.register_routes(router, self.config, self.proxy, self.logger)",
+      "self.workspace.register_routes(router, self.config, self.logger)",
     ),
   )
   assert_true(route_source.contains("self.handle_save_file_dialog(r, w)"))
   assert_true(
     route_source.contains("self.handle_read_omo_local_file(w, slim=false)"),
   )
+  assert_false(
+    route_source.contains("proxy.handle_get_current_omo_provider_id"),
+  )
+  assert_false(route_source.contains("proxy.handle_disable_current_omo"))
   assert_true(
     route_source.contains("self.handle_open_workspace_directory(r, w)"),
   )
@@ -2753,6 +2757,22 @@ async test "provider config endpoints are owned by proxy service" {
   assert_false(omo_source.contains("fn Gateway::current_omo_provider_id("))
   assert_false(omo_source.contains("fn Gateway::clear_current_omo_provider("))
   assert_true(route_source.contains("self.handle_import_default_config(r, w)"))
+  assert_true(
+    route_source.contains(
+      "self.handle_get_current_omo_provider_id(w, slim=false)",
+    ),
+  )
+  assert_true(
+    route_source.contains("self.handle_disable_current_omo(w, slim=false)"),
+  )
+  assert_true(
+    route_source.contains(
+      "self.handle_get_current_omo_provider_id(w, slim=true)",
+    ),
+  )
+  assert_true(
+    route_source.contains("self.handle_disable_current_omo(w, slim=true)"),
+  )
   assert_true(route_source.contains("self.handle_stream_check_provider("))
   assert_true(route_source.contains("self.handle_stream_check_all_providers("))
   assert_true(
@@ -2795,25 +2815,11 @@ async test "provider config endpoints are owned by proxy service" {
     assert_true(claude_desktop_source.contains("fn ProxyService::\{helper}("))
     assert_false(misc_source.contains("fn ProxyService::\{helper}("))
   }
-  assert_true(
-    workspace_route_source.contains(
-      "proxy.handle_get_current_omo_provider_id(w, slim=false)",
-    ),
+  assert_false(
+    workspace_route_source.contains("proxy.handle_get_current_omo_provider_id"),
   )
-  assert_true(
-    workspace_route_source.contains(
-      "proxy.handle_get_current_omo_provider_id(w, slim=true)",
-    ),
-  )
-  assert_true(
-    workspace_route_source.contains(
-      "proxy.handle_disable_current_omo(w, slim=false)",
-    ),
-  )
-  assert_true(
-    workspace_route_source.contains(
-      "proxy.handle_disable_current_omo(w, slim=true)",
-    ),
+  assert_false(
+    workspace_route_source.contains("proxy.handle_disable_current_omo"),
   )
 }
 
