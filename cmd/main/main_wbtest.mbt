@@ -447,8 +447,12 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("get_model_pricing"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "usage", "query-provider-usage"]) ==
+    registered_cli_command_id(["moonstat", "usage", "provider-usage"]) ==
     Some("query_provider_usage"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "usage", "query-provider-usage"])
+    is None,
   )
   assert_true(
     registered_cli_command_id(["moonstat", "usage", "quota"]) ==
@@ -459,8 +463,12 @@ test "registered cli commands match suite command aliases and status commands" {
     Some("get_codex_oauth_models"),
   )
   assert_true(
-    registered_cli_command_id(["moonstat", "usage", "test-usage-script"]) ==
+    registered_cli_command_id(["moonstat", "usage", "test-script"]) ==
     Some("test_usage_script"),
+  )
+  assert_true(
+    registered_cli_command_id(["moonstat", "usage", "test-usage-script"])
+    is None,
   )
   assert_true(
     registered_cli_command_id(["moonstat", "usage", "detail"]) ==
@@ -737,7 +745,7 @@ test "usage kebab-case flags build canonical paths" {
   assert_eq(
     usage_provider_script_path(
       [
-        "moonstat", "usage", "query-provider-usage", "--provider-id", "p1", "--app-type",
+        "moonstat", "usage", "provider-usage", "--provider-id", "p1", "--app-type",
         "codex",
       ],
       "/usage/provider-usage",
@@ -748,7 +756,7 @@ test "usage kebab-case flags build canonical paths" {
   assert_eq(
     usage_provider_script_path(
       [
-        "moonstat", "usage", "test-usage-script", "--provider-id", "p1", "--app-type",
+        "moonstat", "usage", "test-script", "--provider-id", "p1", "--app-type",
         "codex", "--script-code", "{\"success\":true}",
       ],
       "/usage/test-script",

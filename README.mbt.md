@@ -27,7 +27,7 @@ Login uses Codex OAuth credentials:
 ```sh
 moon run cmd/main -- login
 moon run cmd/main -- auth status
-moon run cmd/main -- auth start-login
+moon run cmd/main -- auth login
 moon run cmd/main -- auth poll --device-code dev_... --user-code USER-CODE
 ```
 
@@ -416,7 +416,7 @@ fallback, defaulting to `~/.local/share/opencode/opencode.messages.jsonl`.
 `/usage/balance` queries provider balance for DeepSeek, StepFun,
 SiliconFlow CN/EN, OpenRouter, and Novita AI by detecting provider from
 `baseUrl`, querying the vendor balance endpoint with `apiKey`, and returning the
-same `UsageResult` shape used by `usage query-provider-usage`.
+same `UsageResult` shape used by `usage provider-usage`.
 
 `/usage/subscription-quota` queries native subscription quota for
 `claude`, `codex`, and `gemini`. It reads the same macOS keychain entries and
