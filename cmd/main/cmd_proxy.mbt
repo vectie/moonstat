@@ -1,6 +1,9 @@
 ///|
 async fn check_proxy_status(args : Array[String]) -> Unit {
-  check_proxy_endpoint(args, "/proxy/status")
+  print_cli_json_result(
+    "Proxy status",
+    cli_moonstat_client(args).proxy_status(),
+  )
 }
 
 ///|
@@ -20,7 +23,10 @@ async fn stop_proxy_with_restore(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_global_config(args : Array[String]) -> Unit {
-  check_proxy_endpoint(args, "/proxy/global-config")
+  print_cli_json_result(
+    "Proxy global config",
+    cli_moonstat_client(args).proxy_global_config(),
+  )
 }
 
 ///|
@@ -54,7 +60,10 @@ async fn test_global_proxy_url(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_app_config(args : Array[String]) -> Unit {
-  check_proxy_app_endpoint(args, "/proxy/app-config")
+  print_cli_json_result(
+    "Proxy app config",
+    cli_moonstat_client(args).proxy_app_config(proxy_app_arg(args)),
+  )
 }
 
 ///|
@@ -64,7 +73,10 @@ async fn update_proxy_app_config(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_default_cost_multiplier(args : Array[String]) -> Unit {
-  check_proxy_app_endpoint(args, "/proxy/default-cost-multiplier")
+  print_cli_json_result(
+    "Proxy default cost multiplier",
+    cli_moonstat_client(args).proxy_default_cost_multiplier(proxy_app_arg(args)),
+  )
 }
 
 ///|
@@ -80,7 +92,10 @@ async fn set_proxy_default_cost_multiplier(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_pricing_model_source(args : Array[String]) -> Unit {
-  check_proxy_app_endpoint(args, "/proxy/pricing-model-source")
+  print_cli_json_result(
+    "Proxy pricing model source",
+    cli_moonstat_client(args).proxy_pricing_model_source(proxy_app_arg(args)),
+  )
 }
 
 ///|
@@ -96,12 +111,22 @@ async fn set_proxy_pricing_model_source(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_provider_health(args : Array[String]) -> Unit {
-  check_proxy_provider_endpoint(args, "/proxy/provider-health")
+  match proxy_provider_args(args) {
+    Some((app_type, provider_id)) =>
+      print_cli_json_result(
+        "Proxy provider health",
+        cli_moonstat_client(args).proxy_provider_health(app_type, provider_id),
+      )
+    None => proxy_missing_provider_id()
+  }
 }
 
 ///|
 async fn check_proxy_circuit_breaker_config(args : Array[String]) -> Unit {
-  check_proxy_endpoint(args, "/proxy/circuit-breaker-config")
+  print_cli_json_result(
+    "Proxy circuit breaker config",
+    cli_moonstat_client(args).proxy_circuit_breaker_config(),
+  )
 }
 
 ///|
@@ -118,7 +143,16 @@ async fn update_proxy_circuit_breaker_config(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_circuit_breaker_stats(args : Array[String]) -> Unit {
-  check_proxy_provider_endpoint(args, "/proxy/circuit-breaker-stats")
+  match proxy_provider_args(args) {
+    Some((app_type, provider_id)) =>
+      print_cli_json_result(
+        "Proxy circuit breaker stats",
+        cli_moonstat_client(args).proxy_circuit_breaker_stats(
+          app_type, provider_id,
+        ),
+      )
+    None => proxy_missing_provider_id()
+  }
 }
 
 ///|
@@ -134,12 +168,20 @@ async fn reset_proxy_circuit_breaker(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_failover_queue(args : Array[String]) -> Unit {
-  check_proxy_app_endpoint(args, "/proxy/failover-queue")
+  print_cli_json_result(
+    "Proxy failover queue",
+    cli_moonstat_client(args).proxy_failover_queue(proxy_app_arg(args)),
+  )
 }
 
 ///|
 async fn check_proxy_available_failover_providers(args : Array[String]) -> Unit {
-  check_proxy_app_endpoint(args, "/proxy/available-failover-providers")
+  print_cli_json_result(
+    "Proxy available failover providers",
+    cli_moonstat_client(args).proxy_available_failover_providers(
+      proxy_app_arg(args),
+    ),
+  )
 }
 
 ///|
@@ -166,7 +208,10 @@ async fn remove_proxy_failover_queue(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_auto_failover_enabled(args : Array[String]) -> Unit {
-  check_proxy_app_endpoint(args, "/proxy/auto-failover-enabled")
+  print_cli_json_result(
+    "Proxy auto failover enabled",
+    cli_moonstat_client(args).proxy_auto_failover_enabled(proxy_app_arg(args)),
+  )
 }
 
 ///|
@@ -181,7 +226,10 @@ async fn set_proxy_auto_failover_enabled(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_takeover_status(args : Array[String]) -> Unit {
-  check_proxy_endpoint(args, "/proxy/takeover-status")
+  print_cli_json_result(
+    "Proxy takeover status",
+    cli_moonstat_client(args).proxy_takeover_status(),
+  )
 }
 
 ///|
@@ -207,7 +255,10 @@ async fn switch_proxy_provider(args : Array[String]) -> Unit {
 
 ///|
 async fn check_proxy_running(args : Array[String]) -> Unit {
-  check_proxy_endpoint(args, "/proxy/running")
+  print_cli_json_result(
+    "Proxy running",
+    cli_moonstat_client(args).proxy_running(),
+  )
 }
 
 ///|
@@ -291,7 +342,11 @@ async fn run_proxy_cli_command(
     "update_global_proxy_config" => update_proxy_global_config(args)
     "get_global_proxy_config" => check_proxy_global_config(args)
     "set_global_proxy_url" => set_global_proxy_url(args)
-    "get_global_proxy_url" => check_usage_endpoint(args, "/proxy/global-url")
+    "get_global_proxy_url" =>
+      print_cli_json_result(
+        "Proxy global URL",
+        cli_moonstat_client(args).proxy_global_url(),
+      )
     "update_proxy_config_for_app" => update_proxy_app_config(args)
     "get_proxy_config_for_app" => check_proxy_app_config(args)
     "set_default_cost_multiplier" => set_proxy_default_cost_multiplier(args)
@@ -313,15 +368,25 @@ async fn run_proxy_cli_command(
     "stop_proxy_with_restore" => stop_proxy_with_restore(args)
     "test_proxy_url" => test_global_proxy_url(args)
     "get_upstream_proxy_status" =>
-      check_usage_endpoint(args, "/proxy/upstream-status")
-    "scan_local_proxies" => check_usage_endpoint(args, "/proxy/local-proxies")
+      print_cli_json_result(
+        "Proxy upstream status",
+        cli_moonstat_client(args).proxy_upstream_status(),
+      )
+    "scan_local_proxies" =>
+      print_cli_json_result(
+        "Proxy local proxies",
+        cli_moonstat_client(args).proxy_local_proxies(),
+      )
     "get_provider_health" => check_proxy_provider_health(args)
     "get_circuit_breaker_stats" => check_proxy_circuit_breaker_stats(args)
     "reset_circuit_breaker" => reset_proxy_circuit_breaker(args)
     "get_available_providers_for_failover" =>
       check_proxy_available_failover_providers(args)
     "is_live_takeover_active" =>
-      check_proxy_endpoint(args, "/proxy/takeover-status")
+      print_cli_json_result(
+        "Proxy takeover status",
+        cli_moonstat_client(args).proxy_takeover_status(),
+      )
     "switch_proxy_provider" => switch_proxy_provider(args)
     "get_proxy_running" => check_proxy_running(args)
     _ => ()
@@ -593,30 +658,6 @@ async fn update_provider_endpoint_last_used(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn check_proxy_endpoint(args : Array[String], path : String) -> Unit {
-  check_json_endpoint(args, path, "Proxy")
-}
-
-///|
-async fn check_proxy_app_endpoint(args : Array[String], path : String) -> Unit {
-  let app_type = proxy_app_arg(args)
-  check_proxy_endpoint(args, "\{path}?appType=\{cli_url_encode(app_type)}")
-}
-
-///|
-async fn check_proxy_provider_endpoint(
-  args : Array[String],
-  path : String,
-) -> Unit {
-  guard proxy_provider_endpoint_path(args, path) is Some(path) else {
-    let logger = @pino.logger("moonstat", @pino.Transport::console())
-    logger.error("Missing required --provider-id")
-    return
-  }
-  check_proxy_endpoint(args, path)
-}
-
-///|
 fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? {
   guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
     return None
@@ -625,6 +666,20 @@ fn proxy_provider_endpoint_path(args : Array[String], path : String) -> String? 
   Some(
     "\{path}?providerId=\{cli_url_encode(provider_id)}&appType=\{cli_url_encode(app_type)}",
   )
+}
+
+///|
+fn proxy_provider_args(args : Array[String]) -> (String, String)? {
+  guard parse_string_arg(args, "--provider-id") is Some(provider_id) else {
+    return None
+  }
+  Some((proxy_app_arg(args), provider_id))
+}
+
+///|
+async fn proxy_missing_provider_id() -> Unit {
+  let logger = @pino.logger("moonstat", @pino.Transport::console())
+  logger.error("Missing required --provider-id")
 }
 
 ///|
@@ -1003,7 +1058,7 @@ fn stream_check_provider_path(args : Array[String]) -> String? {
 
 ///|
 async fn check_usage_providers(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage providers",
     cli_moonstat_client(args).usage_provider_stats(
       query=Some(usage_query(args, app_filter=true)),

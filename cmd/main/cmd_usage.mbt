@@ -97,7 +97,7 @@ async fn run_usage_cli_command(
 
 ///|
 async fn check_usage_logs(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage logs",
     cli_moonstat_client(args).usage_logs(query=Some(usage_logs_query(args))),
   )
@@ -105,7 +105,7 @@ async fn check_usage_logs(args : Array[String]) -> Unit {
 
 ///|
 async fn check_usage_summary(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage summary",
     cli_moonstat_client(args).usage_summary(
       query=Some(usage_query(args, app_filter=true)),
@@ -115,7 +115,7 @@ async fn check_usage_summary(args : Array[String]) -> Unit {
 
 ///|
 async fn check_usage_apps(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage apps",
     cli_moonstat_client(args).usage_summary_by_app(
       query=Some(usage_query(args, app_filter=false)),
@@ -125,7 +125,7 @@ async fn check_usage_apps(args : Array[String]) -> Unit {
 
 ///|
 async fn check_usage_trends(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage trends",
     cli_moonstat_client(args).usage_trends(
       query=Some(usage_query(args, app_filter=true)),
@@ -140,7 +140,7 @@ async fn check_usage_limits(args : Array[String]) -> Unit {
 
 ///|
 async fn check_usage_models(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage models",
     cli_moonstat_client(args).usage_model_stats(
       query=Some(usage_query(args, app_filter=true)),
@@ -175,7 +175,7 @@ async fn test_usage_script(args : Array[String]) -> Unit {
 
 ///|
 async fn sync_session_usage(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage sync",
     cli_moonstat_client(args).usage_sync_session(
       query=Some(usage_sync_query(args)),
@@ -272,7 +272,7 @@ async fn check_usage_endpoint(args : Array[String], path : String) -> Unit {
 
 ///|
 async fn check_usage_model_pricing(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage pricing",
     cli_moonstat_client(args).usage_model_pricing(),
   )
@@ -280,7 +280,7 @@ async fn check_usage_model_pricing(args : Array[String]) -> Unit {
 
 ///|
 async fn check_usage_data_sources(args : Array[String]) -> Unit {
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage data sources",
     cli_moonstat_client(args).usage_data_sources(),
   )
@@ -293,14 +293,14 @@ async fn check_usage_detail(args : Array[String]) -> Unit {
     logger.error("Missing required --request-id")
     return
   }
-  print_usage_json_result(
+  print_cli_json_result(
     "Usage detail",
     cli_moonstat_client(args).usage_request_detail(request_id),
   )
 }
 
 ///|
-async fn print_usage_json_result(
+async fn print_cli_json_result(
   label : String,
   result : Result[Json, String],
 ) -> Unit {

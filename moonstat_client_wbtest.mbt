@@ -96,6 +96,38 @@ test "moonstat client builds required endpoint parameters" {
     client.usage_delete_model_pricing_url("model/a b"),
     "http://127.0.0.1:4199/usage/model-pricing?modelId=model%2Fa%20b",
   )
+  assert_eq(
+    client.proxy_app_config_url("claude desktop"),
+    "http://127.0.0.1:4199/proxy/app-config?appType=claude%20desktop",
+  )
+  assert_eq(
+    client.proxy_default_cost_multiplier_url("codex"),
+    "http://127.0.0.1:4199/proxy/default-cost-multiplier?appType=codex",
+  )
+  assert_eq(
+    client.proxy_pricing_model_source_url("codex"),
+    "http://127.0.0.1:4199/proxy/pricing-model-source?appType=codex",
+  )
+  assert_eq(
+    client.proxy_provider_health_url("codex", "provider/a b"),
+    "http://127.0.0.1:4199/proxy/provider-health?providerId=provider%2Fa%20b&appType=codex",
+  )
+  assert_eq(
+    client.proxy_circuit_breaker_stats_url("codex", "provider/a b"),
+    "http://127.0.0.1:4199/proxy/circuit-breaker-stats?providerId=provider%2Fa%20b&appType=codex",
+  )
+  assert_eq(
+    client.proxy_failover_queue_url("openclaw"),
+    "http://127.0.0.1:4199/proxy/failover-queue?appType=openclaw",
+  )
+  assert_eq(
+    client.proxy_available_failover_providers_url("openclaw"),
+    "http://127.0.0.1:4199/proxy/available-failover-providers?appType=openclaw",
+  )
+  assert_eq(
+    client.proxy_auto_failover_enabled_url("openclaw"),
+    "http://127.0.0.1:4199/proxy/auto-failover-enabled?appType=openclaw",
+  )
 }
 
 ///|

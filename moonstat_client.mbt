@@ -369,6 +369,148 @@ pub fn MoonstatClient::usage_request_detail_url(
 }
 
 ///|
+pub fn MoonstatClient::proxy_status_url(self : MoonstatClient) -> String {
+  self.endpoint("/proxy/status")
+}
+
+///|
+pub fn MoonstatClient::proxy_running_url(self : MoonstatClient) -> String {
+  self.endpoint("/proxy/running")
+}
+
+///|
+pub fn MoonstatClient::proxy_global_config_url(self : MoonstatClient) -> String {
+  self.endpoint("/proxy/global-config")
+}
+
+///|
+pub fn MoonstatClient::proxy_global_url_url(self : MoonstatClient) -> String {
+  self.endpoint("/proxy/global-url")
+}
+
+///|
+pub fn MoonstatClient::proxy_upstream_status_url(
+  self : MoonstatClient,
+) -> String {
+  self.endpoint("/proxy/upstream-status")
+}
+
+///|
+pub fn MoonstatClient::proxy_local_proxies_url(self : MoonstatClient) -> String {
+  self.endpoint("/proxy/local-proxies")
+}
+
+///|
+pub fn MoonstatClient::proxy_app_config_url(
+  self : MoonstatClient,
+  app_type : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_path_with_pairs("/proxy/app-config", [("appType", app_type)]),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_default_cost_multiplier_url(
+  self : MoonstatClient,
+  app_type : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_path_with_pairs("/proxy/default-cost-multiplier", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_pricing_model_source_url(
+  self : MoonstatClient,
+  app_type : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_path_with_pairs("/proxy/pricing-model-source", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_circuit_breaker_config_url(
+  self : MoonstatClient,
+) -> String {
+  self.endpoint("/proxy/circuit-breaker-config")
+}
+
+///|
+pub fn MoonstatClient::proxy_provider_health_url(
+  self : MoonstatClient,
+  app_type : String,
+  provider_id : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_proxy_provider_path(
+      "/proxy/provider-health", app_type, provider_id,
+    ),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_circuit_breaker_stats_url(
+  self : MoonstatClient,
+  app_type : String,
+  provider_id : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_proxy_provider_path(
+      "/proxy/circuit-breaker-stats", app_type, provider_id,
+    ),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_failover_queue_url(
+  self : MoonstatClient,
+  app_type : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_path_with_pairs("/proxy/failover-queue", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_available_failover_providers_url(
+  self : MoonstatClient,
+  app_type : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_path_with_pairs("/proxy/available-failover-providers", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_auto_failover_enabled_url(
+  self : MoonstatClient,
+  app_type : String,
+) -> String {
+  self.endpoint(
+    moonstat_client_path_with_pairs("/proxy/auto-failover-enabled", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub fn MoonstatClient::proxy_takeover_status_url(
+  self : MoonstatClient,
+) -> String {
+  self.endpoint("/proxy/takeover-status")
+}
+
+///|
 pub async fn MoonstatClient::health(
   self : MoonstatClient,
 ) -> Result[Json, String] {
@@ -571,6 +713,158 @@ pub async fn MoonstatClient::usage_request_detail(
   request_id : String,
 ) -> Result[Json, String] {
   self.get_json_path("/usage/request-detail/\{copilot_url_encode(request_id)}")
+}
+
+///|
+pub async fn MoonstatClient::proxy_status(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/status")
+}
+
+///|
+pub async fn MoonstatClient::proxy_running(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/running")
+}
+
+///|
+pub async fn MoonstatClient::proxy_global_config(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/global-config")
+}
+
+///|
+pub async fn MoonstatClient::proxy_global_url(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/global-url")
+}
+
+///|
+pub async fn MoonstatClient::proxy_upstream_status(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/upstream-status")
+}
+
+///|
+pub async fn MoonstatClient::proxy_local_proxies(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/local-proxies")
+}
+
+///|
+pub async fn MoonstatClient::proxy_app_config(
+  self : MoonstatClient,
+  app_type : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_path_with_pairs("/proxy/app-config", [("appType", app_type)]),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_default_cost_multiplier(
+  self : MoonstatClient,
+  app_type : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_path_with_pairs("/proxy/default-cost-multiplier", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_pricing_model_source(
+  self : MoonstatClient,
+  app_type : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_path_with_pairs("/proxy/pricing-model-source", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_circuit_breaker_config(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/circuit-breaker-config")
+}
+
+///|
+pub async fn MoonstatClient::proxy_provider_health(
+  self : MoonstatClient,
+  app_type : String,
+  provider_id : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_proxy_provider_path(
+      "/proxy/provider-health", app_type, provider_id,
+    ),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_circuit_breaker_stats(
+  self : MoonstatClient,
+  app_type : String,
+  provider_id : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_proxy_provider_path(
+      "/proxy/circuit-breaker-stats", app_type, provider_id,
+    ),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_failover_queue(
+  self : MoonstatClient,
+  app_type : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_path_with_pairs("/proxy/failover-queue", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_available_failover_providers(
+  self : MoonstatClient,
+  app_type : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_path_with_pairs("/proxy/available-failover-providers", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_auto_failover_enabled(
+  self : MoonstatClient,
+  app_type : String,
+) -> Result[Json, String] {
+  self.get_json_path(
+    moonstat_client_path_with_pairs("/proxy/auto-failover-enabled", [
+      ("appType", app_type),
+    ]),
+  )
+}
+
+///|
+pub async fn MoonstatClient::proxy_takeover_status(
+  self : MoonstatClient,
+) -> Result[Json, String] {
+  self.get_json_path("/proxy/takeover-status")
 }
 
 ///|
@@ -783,6 +1077,37 @@ fn moonstat_client_session_sync_path_with_query(
   match moonstat_session_sync_query_string(query) {
     Some(query_string) => "\{path}?\{query_string}"
     None => path
+  }
+}
+
+///|
+fn moonstat_client_proxy_provider_path(
+  path : String,
+  app_type : String,
+  provider_id : String,
+) -> String {
+  moonstat_client_path_with_pairs(path, [
+    ("providerId", provider_id),
+    ("appType", app_type),
+  ])
+}
+
+///|
+fn moonstat_client_path_with_pairs(
+  path : String,
+  pairs : Array[(String, String)],
+) -> String {
+  let parts : Array[String] = []
+  for pair in pairs {
+    let (key, value) = pair
+    if !value.trim().is_empty() {
+      parts.push(moonstat_client_query_pair(key, value))
+    }
+  }
+  if parts.is_empty() {
+    path
+  } else {
+    "\{path}?\{parts.join("&")}"
   }
 }
 

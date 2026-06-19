@@ -182,6 +182,38 @@ pub async fn MoonstatClient::model_catalog(Self) -> Result[Array[MoonstatModel],
 pub async fn MoonstatClient::models(Self) -> Result[Json, String]
 pub fn MoonstatClient::models_url(Self) -> String
 pub fn MoonstatClient::new(base_url? : String, api_key? : String?, user_agent? : String?) -> Self
+pub async fn MoonstatClient::proxy_app_config(Self, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_app_config_url(Self, String) -> String
+pub async fn MoonstatClient::proxy_auto_failover_enabled(Self, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_auto_failover_enabled_url(Self, String) -> String
+pub async fn MoonstatClient::proxy_available_failover_providers(Self, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_available_failover_providers_url(Self, String) -> String
+pub async fn MoonstatClient::proxy_circuit_breaker_config(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_circuit_breaker_config_url(Self) -> String
+pub async fn MoonstatClient::proxy_circuit_breaker_stats(Self, String, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_circuit_breaker_stats_url(Self, String, String) -> String
+pub async fn MoonstatClient::proxy_default_cost_multiplier(Self, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_default_cost_multiplier_url(Self, String) -> String
+pub async fn MoonstatClient::proxy_failover_queue(Self, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_failover_queue_url(Self, String) -> String
+pub async fn MoonstatClient::proxy_global_config(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_global_config_url(Self) -> String
+pub async fn MoonstatClient::proxy_global_url(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_global_url_url(Self) -> String
+pub async fn MoonstatClient::proxy_local_proxies(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_local_proxies_url(Self) -> String
+pub async fn MoonstatClient::proxy_pricing_model_source(Self, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_pricing_model_source_url(Self, String) -> String
+pub async fn MoonstatClient::proxy_provider_health(Self, String, String) -> Result[Json, String]
+pub fn MoonstatClient::proxy_provider_health_url(Self, String, String) -> String
+pub async fn MoonstatClient::proxy_running(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_running_url(Self) -> String
+pub async fn MoonstatClient::proxy_status(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_status_url(Self) -> String
+pub async fn MoonstatClient::proxy_takeover_status(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_takeover_status_url(Self) -> String
+pub async fn MoonstatClient::proxy_upstream_status(Self) -> Result[Json, String]
+pub fn MoonstatClient::proxy_upstream_status_url(Self) -> String
 pub async fn MoonstatClient::route_chat(Self, Json) -> Result[Json, String]
 pub fn MoonstatClient::route_chat_url(Self) -> String
 pub async fn MoonstatClient::route_messages(Self, Json) -> Result[Json, String]
