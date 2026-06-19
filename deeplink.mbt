@@ -178,10 +178,6 @@ fn moon_deeplink_repo_parts(repo : String) -> Array[String] {
 
 ///|
 fn moon_deeplink_request_payload(path : StringView, body : Json?) -> Json? {
-  match moon_json_request(path, body, ["request"]) {
-    Some(Object(obj)) => return Some(Json::object(obj))
-    _ => ()
-  }
   match proxy_string_request(path, body, "url") {
     Some(url) => return moon_parse_deeplink_url_json(url)
     None => ()

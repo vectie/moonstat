@@ -33,23 +33,12 @@ async fn set_suite_json_config(
   base_path : String,
   flag : String,
 ) -> Unit {
-  guard suite_json_config_path(args, base_path, flag) is Some(path) else {
+  guard parse_string_arg(args, flag) is Some(raw) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required \{flag}")
     return
   }
-  check_json_post_endpoint(args, path, "Suite")
-}
-
-///|
-fn suite_json_config_path(
-  args : Array[String],
-  base_path : String,
-  flag : String,
-) -> String? {
-  guard parse_string_arg(args, flag) is Some(raw) else { return None }
-  let key = if flag.has_prefix("--") { flag[2:].to_owned() } else { flag }
-  Some("\{base_path}?\{cli_query_pair(key, raw)}")
+  post_json_body_endpoint(args, base_path, raw, "Suite")
 }
 
 ///|

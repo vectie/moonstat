@@ -9706,11 +9706,9 @@ test "moonstat mcp helpers preserve server apps and config shape" {
 ///|
 test "moonstat mcp request parser accepts canonical server JSON" {
   let body = {
-    "server": {
-      "id": Json::string("shell"),
-      "name": Json::string("Shell"),
-      "server": { "command": Json::string("sh") }.to_json(),
-    }.to_json(),
+    "id": Json::string("shell"),
+    "name": Json::string("Shell"),
+    "server": { "command": Json::string("sh") }.to_json(),
   }.to_json()
   guard moon_mcp_server_from_request(
       "/mcp/servers?appType=codex",
@@ -9724,23 +9722,35 @@ test "moonstat mcp request parser accepts canonical server JSON" {
   guard server is Object(obj) else { fail("expected normalized server") }
   assert_eq(obj["name"], Json::string("Shell"))
   assert_true(moon_mcp_app_enabled(server, "codex"))
-  let retired_spec = {
-    "id": Json::string("retired"),
-    "server": { "command": Json::string("sh") }.to_json(),
-  }.to_json()
+  assert_true(
+    moon_mcp_server_from_request(
+      "/mcp/servers?appType=codex",
+      Some(
+        {
+          "server": {
+            "id": Json::string("wrapped"),
+            "server": { "command": Json::string("sh") }.to_json(),
+          }.to_json(),
+        }.to_json(),
+      ),
+      "codex",
+    )
+    is None,
+  )
+  let id_only = { "id": Json::string("id-only") }.to_json()
   guard moon_mcp_server_from_request(
       "/mcp/servers?appType=codex",
-      Some(retired_spec),
+      Some(id_only),
       "codex",
     )
     is Some((retired_id, retired_server)) else {
     fail("expected parsed id-based server")
   }
-  assert_eq(retired_id, "retired")
+  assert_eq(retired_id, "id-only")
   guard retired_server is Object(retired_obj) else {
     fail("expected normalized retired server")
   }
-  assert_eq(retired_obj["name"], Json::string("retired"))
+  assert_eq(retired_obj["name"], Json::string("id-only"))
   assert_eq(retired_obj["server"], Json::object({}))
   assert_true(
     moon_mcp_server_from_request("/mcp/servers?server_id=legacy", None, "codex")
@@ -9862,8 +9872,15 @@ test "moonstat mcp import parses codex legacy toml servers" {
 ///|
 test "moonstat prompt helpers keep app-scoped prompt records" {
   guard moon_prompt_from_request(
-      "/prompts?appType=codex&id=review&name=Review&content=Check%20this&description=Code%20review",
-      None,
+      "/prompts?appType=codex",
+      Some(
+        {
+          "id": Json::string("review"),
+          "name": Json::string("Review"),
+          "content": Json::string("Check this"),
+          "description": Json::string("Code review"),
+        }.to_json(),
+      ),
     )
     is Some((app, id, prompt)) else {
     fail("expected prompt")
@@ -9874,6 +9891,20 @@ test "moonstat prompt helpers keep app-scoped prompt records" {
   assert_eq(obj["name"], Json::string("Review"))
   assert_eq(obj["content"], Json::string("Check this"))
   assert_eq(obj["enabled"], Json::boolean(true))
+  assert_true(
+    moon_prompt_from_request(
+      "/prompts?appType=codex",
+      Some(
+        {
+          "prompt": {
+            "id": Json::string("wrapped"),
+            "name": Json::string("Wrapped"),
+          }.to_json(),
+        }.to_json(),
+      ),
+    )
+    is None,
+  )
   assert_true(
     moon_prompt_from_request(
       "/prompts?appType=codex&prompt_id=legacy&name=Legacy",

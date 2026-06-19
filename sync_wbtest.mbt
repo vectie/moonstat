@@ -57,10 +57,8 @@ test "moonstat webdav sync settings ignore snake case compatibility keys" {
 }
 
 ///|
-test "moonstat sync settings request ignores config wrapper alias" {
-  let canonical = {
-    "settings": { "baseUrl": Json::string("https://dav.example.com") }.to_json(),
-  }.to_json()
+test "moonstat sync settings request uses direct body only" {
+  let canonical = { "baseUrl": Json::string("https://dav.example.com") }.to_json()
   guard moon_sync_settings_request("", Some(canonical)) is Some(Object(obj)) else {
     fail("expected settings object")
   }
@@ -68,14 +66,24 @@ test "moonstat sync settings request ignores config wrapper alias" {
     json_string_from_map(obj, "baseUrl"),
     Some("https://dav.example.com"),
   )
-  let retired = {
+  let config_wrapper = {
     "config": { "baseUrl": Json::string("https://legacy.example") }.to_json(),
   }.to_json()
-  guard moon_sync_settings_request("", Some(retired)) is Some(Object(obj)) else {
+  guard moon_sync_settings_request("", Some(config_wrapper))
+    is Some(Object(obj)) else {
     fail("expected direct body object")
   }
   assert_eq(json_string_from_map(obj, "baseUrl"), None)
   assert_true(obj.get("config") is Some(_))
+  let settings_wrapper = {
+    "settings": { "baseUrl": Json::string("https://wrapped.example") }.to_json(),
+  }.to_json()
+  guard moon_sync_settings_request("", Some(settings_wrapper))
+    is Some(Object(wrapped)) else {
+    fail("expected wrapper as direct object")
+  }
+  assert_eq(json_string_from_map(wrapped, "baseUrl"), None)
+  assert_true(wrapped.get("settings") is Some(_))
 }
 
 ///|

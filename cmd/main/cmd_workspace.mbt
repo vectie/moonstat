@@ -132,17 +132,9 @@ async fn run_workspace_cli_command(
     "parse_deeplink" =>
       check_usage_endpoint(args, deeplink_url_path(args, "/deeplinks/parse"))
     "merge_deeplink_config" =>
-      check_json_post_endpoint(
-        args,
-        deeplink_request_path(args, "/deeplinks/merge"),
-        "Deeplink",
-      )
+      post_deeplink_request_endpoint(args, "/deeplinks/merge", "Deeplink")
     "import_from_deeplink" =>
-      check_json_post_endpoint(
-        args,
-        deeplink_request_path(args, "/deeplinks/import"),
-        "Deeplink",
-      )
+      post_deeplink_request_endpoint(args, "/deeplinks/import", "Deeplink")
     "list_daily_memory_files" => check_usage_endpoint(args, "/workspace/memory")
     "read_daily_memory_file" =>
       check_usage_endpoint(
@@ -193,12 +185,18 @@ async fn set_openclaw_default_model(args : Array[String]) -> Unit {
 
 ///|
 async fn set_openclaw_agents_defaults(args : Array[String]) -> Unit {
-  let path = match
-    suite_json_config_path(args, "/openclaw/agents-defaults", "--defaults") {
-    Some(path) => Some(path)
-    None =>
-      openclaw_default_model_path_with_base(args, "/openclaw/agents-defaults")
+  match parse_string_arg(args, "--defaults") {
+    Some(defaults) => {
+      post_json_body_endpoint(
+        args, "/openclaw/agents-defaults", defaults, "OpenClaw",
+      )
+      return
+    }
+    None => ()
   }
+  let path = openclaw_default_model_path_with_base(
+    args, "/openclaw/agents-defaults",
+  )
   guard path is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --defaults or --primary")
@@ -209,10 +207,14 @@ async fn set_openclaw_agents_defaults(args : Array[String]) -> Unit {
 
 ///|
 async fn set_openclaw_env(args : Array[String]) -> Unit {
-  let path = match suite_json_config_path(args, "/openclaw/env", "--env") {
-    Some(path) => Some(path)
-    None => openclaw_key_value_path(args, "/openclaw/env")
+  match parse_string_arg(args, "--env") {
+    Some(env) => {
+      post_json_body_endpoint(args, "/openclaw/env", env, "OpenClaw")
+      return
+    }
+    None => ()
   }
+  let path = openclaw_key_value_path(args, "/openclaw/env")
   guard path is Some(path) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required --env or --key")
@@ -223,10 +225,12 @@ async fn set_openclaw_env(args : Array[String]) -> Unit {
 
 ///|
 async fn set_openclaw_tools(args : Array[String]) -> Unit {
-  let path = suite_json_config_path(args, "/openclaw/tools", "--tools").unwrap_or(
-    openclaw_tools_path(args),
-  )
-  check_json_post_endpoint(args, path, "OpenClaw")
+  match parse_string_arg(args, "--tools") {
+    Some(tools) =>
+      post_json_body_endpoint(args, "/openclaw/tools", tools, "OpenClaw")
+    None =>
+      check_json_post_endpoint(args, openclaw_tools_path(args), "OpenClaw")
+  }
 }
 
 ///|

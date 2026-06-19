@@ -945,18 +945,6 @@ test "proxy grouped commands build canonical paths" {
     Some("/openclaw/default-model?primary=gpt-5&fallbacks=sonnet%2Copus"),
   )
   assert_eq(
-    suite_json_config_path(
-      [
-        "moonstat", "openclaw", "model-catalog", "set", "--catalog", "{\"fast\":{\"alias\":\"f\"}}",
-      ],
-      "/openclaw/model-catalog",
-      "--catalog",
-    ),
-    Some(
-      "/openclaw/model-catalog?catalog=%7B%22fast%22%3A%7B%22alias%22%3A%22f%22%7D%7D",
-    ),
-  )
-  assert_eq(
     hermes_memory_path([
       "moonstat", "hermes", "memory", "set", "--kind", "memory", "--content", "hello world",
     ]),
@@ -1216,7 +1204,7 @@ test "top level moonstat config command names build config paths" {
       ],
       "/deeplinks/merge",
     ),
-    "/deeplinks/merge?request=%7B%22resource%22%3A%22provider%22%7D",
+    "/deeplinks/merge",
   )
   assert_eq(
     deeplink_request_path(
@@ -1225,7 +1213,7 @@ test "top level moonstat config command names build config paths" {
       ],
       "/deeplinks/import",
     ),
-    "/deeplinks/import?request=moonstat%3A%2F%2Fv1%2Fimport%3Fresource%3Dprompt%26appType%3Dcodex%26name%3DDaily%26content%3DSGVsbG8",
+    "/deeplinks/import?url=moonstat%3A%2F%2Fv1%2Fimport%3Fresource%3Dprompt%26appType%3Dcodex%26name%3DDaily%26content%3DSGVsbG8",
   )
   assert_eq(
     sync_settings_path(
@@ -1235,7 +1223,7 @@ test "top level moonstat config command names build config paths" {
       ],
       "/sync/webdav/settings",
     ),
-    "/sync/webdav/settings?settings=%7B%22baseUrl%22%3A%22https%3A%2F%2Fdav.example.com%22%7D&passwordTouched=false",
+    "/sync/webdav/settings?passwordTouched=false",
   )
   assert_eq(
     sync_settings_path(
@@ -1245,7 +1233,7 @@ test "top level moonstat config command names build config paths" {
       ],
       "/sync/s3/test",
     ),
-    "/sync/s3/test?settings=%7B%22bucket%22%3A%22moonstat%22%7D&preserveEmptyPassword=true",
+    "/sync/s3/test?preserveEmptyPassword=true",
   )
 }
 
@@ -1386,11 +1374,16 @@ test "top level moonstat mcp command names build mcp paths" {
     is Some(upsert_path) else {
     fail("expected upsert path")
   }
-  assert_true(upsert_path.has_prefix("/mcp/config/servers?server="))
-  assert_true(upsert_path.contains("&appType=codex"))
-  assert_true(upsert_path.contains("&syncOtherSide=true"))
-  assert_true(upsert_path.contains("Filesystem"))
-  assert_true(upsert_path.contains("npx"))
+  assert_eq(upsert_path, "/mcp/config/servers?appType=codex&syncOtherSide=true")
+  guard mcp_upsert_body([
+      "moonstat", "mcp", "upsert-config", "--app-type", "codex", "--id", "filesystem",
+      "--name", "Filesystem", "--command", "npx", "--sync-other-side", "true",
+    ])
+    is Some(upsert_body) else {
+    fail("expected upsert body")
+  }
+  assert_true(upsert_body.contains("Filesystem"))
+  assert_true(upsert_body.contains("npx"))
   assert_eq(
     mcp_enabled_path(
       [
@@ -1418,10 +1411,20 @@ test "top level moonstat prompt command names build prompt paths" {
       "Review", "--content", "Check this", "--description", "Code review", "--enabled",
       "true",
     ]),
-    Some(
-      "/prompts?appType=codex&id=review&name=Review&content=Check%20this&description=Code%20review&enabled=true",
-    ),
+    Some("/prompts?appType=codex"),
   )
+  guard prompt_upsert_body([
+      "moonstat", "prompt", "upsert", "--app-type", "codex", "--id", "review", "--name",
+      "Review", "--content", "Check this", "--description", "Code review", "--enabled",
+      "true",
+    ])
+    is Some(prompt_body) else {
+    fail("expected prompt body")
+  }
+  assert_true(prompt_body.contains("review"))
+  assert_true(prompt_body.contains("Check this"))
+  assert_true(prompt_body.contains("Code review"))
+  assert_true(prompt_body.contains("true"))
   assert_eq(
     prompt_id_path(
       ["moonstat", "prompt", "delete", "--app-type", "codex", "--id", "review"],

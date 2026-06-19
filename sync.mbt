@@ -341,10 +341,8 @@ fn moon_app_settings_with_sync(
 
 ///|
 fn moon_sync_settings_request(path : StringView, body : Json?) -> Json? {
-  match moon_json_request(path, body, ["settings"]) {
-    Some(value) => Some(value)
-    None => body
-  }
+  let _ = path
+  body
 }
 
 ///|

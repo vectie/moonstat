@@ -973,40 +973,6 @@ fn moon_trim_env_value_quotes(value : String) -> String {
 }
 
 ///|
-fn moon_json_request(
-  path : StringView,
-  body : Json?,
-  keys : Array[String],
-) -> Json? {
-  for key in keys {
-    match usage_query_value(path, key) {
-      Some(value) => return Some(moon_json_value_from_string(value))
-      None => ()
-    }
-  }
-  match body {
-    Some(Object(obj)) =>
-      for key in keys {
-        match obj.get(key) {
-          Some(value) => return Some(value)
-          None => ()
-        }
-      }
-    _ => ()
-  }
-  None
-}
-
-///|
-fn moon_json_value_from_string(value : String) -> Json {
-  try @json.parse(value) catch {
-    _ => Json::string(value)
-  } noraise {
-    parsed => parsed
-  }
-}
-
-///|
 fn gemini_request_is_stream(endpoint : String, body : Json) -> Bool {
   moon_streaming_request(endpoint, body, {})
 }

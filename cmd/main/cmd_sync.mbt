@@ -24,39 +24,23 @@ async fn run_sync_cli_command(
 ) -> Unit {
   match command_id {
     "webdav_test_connection" =>
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/webdav/test"),
-        "Sync",
-      )
+      post_sync_settings_endpoint(args, "/sync/webdav/test", "Sync")
     "webdav_sync_upload" =>
       check_json_post_endpoint(args, "/sync/webdav/upload", "Sync")
     "webdav_sync_download" =>
       check_json_post_endpoint(args, "/sync/webdav/download", "Sync")
     "webdav_sync_save_settings" =>
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/webdav/settings"),
-        "Sync",
-      )
+      post_sync_settings_endpoint(args, "/sync/webdav/settings", "Sync")
     "webdav_sync_fetch_remote_info" =>
       check_usage_endpoint(args, "/sync/webdav/remote-info")
     "s3_test_connection" =>
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/s3/test"),
-        "Sync",
-      )
+      post_sync_settings_endpoint(args, "/sync/s3/test", "Sync")
     "s3_sync_upload" =>
       check_json_post_endpoint(args, "/sync/s3/upload", "Sync")
     "s3_sync_download" =>
       check_json_post_endpoint(args, "/sync/s3/download", "Sync")
     "s3_sync_save_settings" =>
-      check_json_post_endpoint(
-        args,
-        sync_settings_path(args, "/sync/s3/settings"),
-        "Sync",
-      )
+      post_sync_settings_endpoint(args, "/sync/s3/settings", "Sync")
     "s3_sync_fetch_remote_info" =>
       check_usage_endpoint(args, "/sync/s3/remote-info")
     _ => ()

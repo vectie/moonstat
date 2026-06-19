@@ -260,23 +260,17 @@ fn moon_mcp_server_from_request(
   body : Json?,
   default_app : String,
 ) -> (String, Json)? {
-  match moon_json_request(path, body, ["server"]) {
+  match body {
     Some(Object(server)) =>
-      match json_string_from_map(server, "id") {
-        Some(id) =>
-          return Some(
-            (
-              id,
-              moon_mcp_normalize_server(id, Json::object(server), default_app),
-            ),
-          )
-        None => ()
+      if json_string_from_map(server, "id") is Some(id) {
+        return Some(
+          (id, moon_mcp_normalize_server(id, Json::object(server), default_app)),
+        )
       }
     _ => ()
   }
   guard proxy_string_request(path, body, "id") is Some(id) else { return None }
-  let spec = moon_json_request(path, body, ["spec"]).unwrap_or(Json::object({}))
-  Some((id, moon_mcp_server_from_spec(id, spec, default_app)))
+  Some((id, moon_mcp_server_from_spec(id, Json::object({}), default_app)))
 }
 
 ///|
@@ -778,14 +772,10 @@ fn moon_prompt_from_request(
   body : Json?,
 ) -> (String, String, Json)? {
   let app = moon_config_app_from_request(path, body).unwrap_or("claude")
-  match moon_json_request(path, body, ["prompt"]) {
+  match body {
     Some(Object(prompt)) =>
-      match json_string_from_map(prompt, "id") {
-        Some(id) =>
-          return Some(
-            (app, id, moon_normalize_prompt(id, Json::object(prompt))),
-          )
-        None => ()
+      if json_string_from_map(prompt, "id") is Some(id) {
+        return Some((app, id, moon_normalize_prompt(id, Json::object(prompt))))
       }
     _ => ()
   }

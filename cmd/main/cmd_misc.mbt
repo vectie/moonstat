@@ -451,12 +451,13 @@ async fn restore_env_backup(args : Array[String]) -> Unit {
 
 ///|
 async fn upsert_mcp_server(args : Array[String], base_path : String) -> Unit {
-  guard mcp_upsert_path(args, base_path) is Some(path) else {
+  guard mcp_upsert_path(args, base_path) is Some(path) &&
+    mcp_upsert_body(args) is Some(body) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required MCP server args: --id or --server")
     return
   }
-  check_json_post_endpoint(args, path, "MCP")
+  post_json_body_endpoint(args, path, body, "MCP")
 }
 
 ///|
@@ -491,12 +492,13 @@ async fn toggle_mcp_app(args : Array[String]) -> Unit {
 
 ///|
 async fn upsert_prompt(args : Array[String]) -> Unit {
-  guard prompt_upsert_path(args) is Some(path) else {
+  guard prompt_upsert_path(args) is Some(path) &&
+    prompt_upsert_body(args) is Some(body) else {
     let logger = @pino.logger("moonstat", @pino.Transport::console())
     logger.error("Missing required prompt args: --id")
     return
   }
-  check_json_post_endpoint(args, path, "Prompt")
+  post_json_body_endpoint(args, path, body, "Prompt")
 }
 
 ///|
@@ -723,19 +725,35 @@ fn deeplink_url_path(args : Array[String], base_path : String) -> String {
 fn deeplink_request_path(args : Array[String], base_path : String) -> String {
   let query : Array[String] = []
   match parse_string_arg(args, "--request") {
-    Some(request) => query.push(cli_query_pair("request", request))
+    Some(request) if !request.trim().has_prefix("{") =>
+      query.push(cli_query_pair("url", request))
     None => ()
+    _ => ()
   }
   cli_path_with_query(base_path, query)
 }
 
 ///|
+async fn post_deeplink_request_endpoint(
+  args : Array[String],
+  base_path : String,
+  label : String,
+) -> Unit {
+  match parse_string_arg(args, "--request") {
+    Some(request) if request.trim().has_prefix("{") =>
+      post_json_body_endpoint(args, base_path, request, label)
+    _ =>
+      check_json_post_endpoint(
+        args,
+        deeplink_request_path(args, base_path),
+        label,
+      )
+  }
+}
+
+///|
 fn sync_settings_path(args : Array[String], base_path : String) -> String {
   let query : Array[String] = []
-  match parse_string_arg(args, "--settings") {
-    Some(settings) => query.push(cli_query_pair("settings", settings))
-    None => ()
-  }
   match parse_string_arg(args, "--preserve-empty-password") {
     Some(value) => query.push(cli_query_pair("preserveEmptyPassword", value))
     None => ()
@@ -745,6 +763,25 @@ fn sync_settings_path(args : Array[String], base_path : String) -> String {
     None => ()
   }
   cli_path_with_query(base_path, query)
+}
+
+///|
+async fn post_sync_settings_endpoint(
+  args : Array[String],
+  base_path : String,
+  label : String,
+) -> Unit {
+  guard parse_string_arg(args, "--settings") is Some(settings) else {
+    let logger = @pino.logger("moonstat", @pino.Transport::console())
+    logger.error("Missing required --settings JSON")
+    return
+  }
+  post_json_body_endpoint(
+    args,
+    sync_settings_path(args, base_path),
+    settings,
+    label,
+  )
 }
 
 ///|
@@ -1043,23 +1080,25 @@ fn mcp_server_json_from_args(args : Array[String], id : String) -> String {
 ///|
 fn mcp_upsert_path(args : Array[String], base_path : String) -> String? {
   let query : Array[String] = []
-  match parse_string_arg(args, "--server") {
-    Some(server) => query.push(cli_query_pair("server", server))
-    None =>
-      match mcp_server_id_arg(args) {
-        Some(id) =>
-          query.push(
-            cli_query_pair("server", mcp_server_json_from_args(args, id)),
-          )
-        None => return None
-      }
-  }
+  guard mcp_upsert_body(args) is Some(_) else { return None }
   query.push(cli_query_pair("appType", config_app_arg(args)))
   match parse_string_arg(args, "--sync-other-side") {
     Some(value) => query.push(cli_query_pair("syncOtherSide", value))
     None => ()
   }
   Some("\{base_path}?\{query.join("&")}")
+}
+
+///|
+fn mcp_upsert_body(args : Array[String]) -> String? {
+  match parse_string_arg(args, "--server") {
+    Some(server) => Some(server)
+    None =>
+      match mcp_server_id_arg(args) {
+        Some(id) => Some(mcp_server_json_from_args(args, id))
+        None => None
+      }
+  }
 }
 
 ///|
@@ -1088,32 +1127,37 @@ fn prompt_id_path(args : Array[String], base_path : String) -> String? {
 
 ///|
 fn prompt_upsert_path(args : Array[String]) -> String? {
-  let query : Array[String] = [cli_query_pair("appType", config_app_arg(args))]
+  guard prompt_upsert_body(args) is Some(_) else { return None }
+  Some("/prompts?\{cli_query_pair("appType", config_app_arg(args))}")
+}
+
+///|
+fn prompt_upsert_body(args : Array[String]) -> String? {
   match parse_string_arg(args, "--prompt") {
-    Some(prompt) => query.push(cli_query_pair("prompt", prompt))
+    Some(prompt) => Some(prompt)
     None => {
       guard parse_string_arg(args, "--id") is Some(id) else { return None }
-      query.push(cli_query_pair("id", id))
+      let prompt : Map[String, Json] = { "id": Json::string(id) }
       match parse_string_arg(args, "--name") {
-        Some(name) => query.push(cli_query_pair("name", name))
+        Some(name) => prompt["name"] = Json::string(name)
         None => ()
       }
       match parse_string_arg(args, "--content") {
-        Some(content) => query.push(cli_query_pair("content", content))
+        Some(content) => prompt["content"] = Json::string(content)
         None => ()
       }
       match parse_string_arg(args, "--description") {
-        Some(description) =>
-          query.push(cli_query_pair("description", description))
+        Some(description) => prompt["description"] = Json::string(description)
         None => ()
       }
       match parse_string_arg(args, "--enabled") {
-        Some(enabled) => query.push(cli_query_pair("enabled", enabled))
+        Some(enabled) =>
+          prompt["enabled"] = Json::boolean(enabled.trim().to_lower() == "true")
         None => ()
       }
+      Some(Json::object(prompt).stringify())
     }
   }
-  Some("/prompts?\{query.join("&")}")
 }
 
 ///|
