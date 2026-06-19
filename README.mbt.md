@@ -10,6 +10,26 @@ suite. It is a standalone app and also fits beside:
 
 The proxy listens on `127.0.0.1:15721` by default.
 
+## Current Phase
+
+Moonstat is currently in a feature-testing phase. The backend, suite discovery,
+typed client surface, metrics route, and framework integrations are in place, so
+new work should prioritize validating real workflows before more structural
+cleanup.
+
+Framework integrations are product features and should remain supported:
+Codex/OpenAI-compatible clients, Claude/Anthropic-compatible clients, Claude
+Desktop, OpenClaw, Hermes, Gemini, OpenCode-style logs, GitHub Copilot, and the
+MoonClaw/MoonBook/Moontown/Moondesk suite adapters. Cleanup should target stale
+old-version aliases, deprecated command shims, dead local probes, and
+unnecessary compatibility paths, not active framework support.
+
+The main known cleanup backlog is organizational: split remaining large files
+such as `cmd/main/cmd_misc.mbt`, `gateway_provider.mbt`,
+`gateway_claude_anthropic.mbt`, and `gateway_usage.mbt` when testing exposes
+friction or before a release-hardening pass. UI work is intentionally deferred
+until the Lepusa desktop framework settles.
+
 ## Run
 
 ```sh
@@ -38,6 +58,46 @@ moon run cmd/main -- status
 moon run cmd/main -- stats
 curl http://127.0.0.1:15721/metrics
 moon run cmd/main -- usage logs
+```
+
+## Feature Testing Focus
+
+Use the current codebase for end-to-end feature testing. The highest-value
+areas are:
+
+- Proxy routing: Codex/OpenAI-compatible, Claude/Anthropic-compatible, Gemini,
+  OpenCode, OpenClaw, and Claude Desktop gateway paths.
+- Streaming behavior: SSE conversion, first-byte and idle timeout handling,
+  stream-check provider/all/config commands, and fallback behavior.
+- Usage accounting: request logs, summaries, trends, model/provider stats,
+  request detail, pricing overrides, balance/quota queries, and session sync
+  from Claude, Codex, Gemini, and OpenCode sources.
+- Provider management: CRUD, live import, universal providers, endpoint
+  metadata, sort order, failover queues, auto-failover, and circuit breakers.
+- Suite discovery: `~/.moonsuite/suite-status.json` written by `start`, read by
+  MoonClaw, MoonBook, Moontown, and Moondesk adapters.
+- Install/config flows: hosts reroute, Codex config, Claude Desktop profile,
+  OpenClaw/Hermes state, MCP/prompt import, and skill storage operations.
+- Failure paths: missing credentials, bad provider auth, malformed request
+  bodies, unavailable upstreams, circuit-open routing, and interrupted streams.
+
+Baseline validation before and after feature-test changes:
+
+```sh
+moon info
+moon fmt
+moon check --target native --deny-warn
+moon test --target native --deny-warn
+```
+
+For suite-adapter changes, also run the moonstat plugin tests in sibling
+projects:
+
+```sh
+(cd ../moonclaw && moon test plugin/moonstat --target native --deny-warn)
+(cd ../moondesk && moon test plugin/moonstat --target native --deny-warn)
+(cd ../moontown && moon test src/plugin/moonstat --target native --deny-warn)
+(cd ../moonbook && moon test plugins/moonstat --target native --deny-warn)
 ```
 
 Provider model discovery probes `/v1/models`-style catalogs and returns the

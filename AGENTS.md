@@ -24,6 +24,29 @@ You can browse and install extra skills here:
 - Try to keep deprecated blocks in file called `deprecated.mbt` in each
   directory.
 
+## Current Product Direction
+
+- Moonstat is in a feature-testing phase. Prefer testing real proxy, usage,
+  suite discovery, install/config, and failure workflows before broad structural
+  cleanup.
+
+- Preserve active framework integrations. Codex/OpenAI-compatible clients,
+  Claude/Anthropic-compatible clients, Claude Desktop, OpenClaw, Hermes, Gemini,
+  OpenCode-style logs, GitHub Copilot, and MoonClaw/MoonBook/Moontown/Moondesk
+  adapters are supported features, not stale compatibility.
+
+- Cleanup should target stale old-version aliases, deprecated command shims,
+  dead local probes, and unnecessary compatibility paths. Do not remove active
+  framework support unless explicitly requested.
+
+- UI work should wait until the Lepusa desktop framework settles. Backend,
+  suite, proxy, usage, and test coverage work can continue now.
+
+- Known structural cleanup backlog: split remaining large files such as
+  `cmd/main/cmd_misc.mbt`, `gateway_provider.mbt`,
+  `gateway_claude_anthropic.mbt`, and `gateway_usage.mbt` when tests expose
+  friction or during release hardening.
+
 ## Tooling
 
 - `moon fmt` is used to format your code properly.
@@ -49,3 +72,19 @@ You can browse and install extra skills here:
   behavior. For solid, well-defined results (e.g. scientific computations),
   prefer assertion tests. You can use `moon coverage analyze > uncovered.log` to
   see which parts of your code are not covered by tests.
+
+## Feature Test Matrix
+
+- Core validation: `moon info`, `moon fmt`,
+  `moon check --target native --deny-warn`, and
+  `moon test --target native --deny-warn`.
+
+- Suite adapter validation when touching discovery/contracts:
+  `../moonclaw` `moon test plugin/moonstat --target native --deny-warn`,
+  `../moondesk` `moon test plugin/moonstat --target native --deny-warn`,
+  `../moontown` `moon test src/plugin/moonstat --target native --deny-warn`,
+  and `../moonbook` `moon test plugins/moonstat --target native --deny-warn`.
+
+- Feature areas to exercise: proxy routing, streaming, usage accounting,
+  provider management, suite status discovery, install/config flows, and
+  failure handling.
