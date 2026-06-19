@@ -80,7 +80,7 @@ fn print_help() -> Unit {
   println("  proxy takeover-status  Show app takeover status")
   println("  proxy takeover-status set  Set app takeover state")
   println("  proxy is-live-takeover-active  Show takeover active boolean")
-  println("  proxy switch-proxy-provider  Hot-switch current app provider")
+  println("  proxy switch-provider  Hot-switch current app provider")
   println("  proxy running          Show proxy running boolean")
   println("  provider list          List providers")
   println("  provider current       Show current provider")
@@ -209,7 +209,7 @@ fn print_help() -> Unit {
   println("  moonstat proxy status          # Show proxy status")
   println("  moonstat proxy start")
   println(
-    "  moonstat proxy switch-proxy-provider --app-type codex --provider-id codex-oauth",
+    "  moonstat proxy switch-provider --app-type codex --provider-id codex-oauth",
   )
   println("  moonstat provider list --app-type codex")
   println(
