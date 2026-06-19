@@ -149,12 +149,9 @@ test "moonstat client discovers from suite status manifest" {
 }
 
 ///|
-test "moonstat client discovers from root status base url only" {
+test "moonstat client requires suite status manifest base url" {
   let root_base = { "base_url": Json::string("http://127.0.0.1:4199/") }.to_json()
-  assert_eq(
-    MoonstatClient::from_suite_status(root_base).unwrap().base_url,
-    "http://127.0.0.1:4199",
-  )
+  assert_true(MoonstatClient::from_suite_status(root_base) is None)
   let health_only = {
     "health_url": Json::string("http://127.0.0.1:4299/health"),
   }.to_json()

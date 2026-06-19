@@ -932,20 +932,11 @@ fn moonstat_json_int64_field(obj : Map[String, Json], key : String) -> Int64? {
 ///|
 pub fn moonstat_base_url_from_suite_status(status : Json) -> String? {
   match status {
-    Object(obj) => {
+    Object(obj) =>
       match obj.get("manifest") {
-        Some(Object(manifest)) =>
-          match moonstat_base_url_from_json_object(manifest) {
-            Some(base_url) => return Some(base_url)
-            None => ()
-          }
-        _ => ()
+        Some(Object(manifest)) => moonstat_base_url_from_json_object(manifest)
+        _ => None
       }
-      match moonstat_base_url_from_json_object(obj) {
-        Some(base_url) => Some(base_url)
-        None => None
-      }
-    }
     _ => None
   }
 }
