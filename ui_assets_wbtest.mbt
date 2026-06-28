@@ -69,6 +69,9 @@ async test "moonstat ui fetches current backend route surface" {
   assert_true(js.contains("loadSetupStatus"))
   assert_true(js.contains("loadSuite"))
   assert_true(js.contains("loadResilience"))
+  assert_true(js.contains("safeGetJson(endpoints.health)"))
+  assert_true(js.contains("Promise.allSettled"))
+  assert_true(js.contains("panel warning"))
   assert_true(js.contains("renderSuiteApps"))
   assert_true(js.contains("renderSetupConfigRows"))
   assert_true(js.contains("renderStreamCheckResults"))
@@ -146,9 +149,28 @@ async test "moonstat ui endpoint literals are advertised by suite manifest" {
 
 ///|
 async test "moonstat lepusa manifest uses published package boundary shape" {
+  let moon_mod = @fsx.read_file("moon.mod")
   let manifest = @fsx.read_file("lepusa.json")
+  match @lepusa_project.ProjectConfig::load("lepusa.json") {
+    Ok(project) => {
+      let _ = project.manifest()
+      let _ = project.root()
+      let _ = project.registry()
+    }
+    Err(problems) =>
+      fail(
+        "published Lepusa ProjectConfig failed to load moonstat lepusa.json: \{problems.join("; ")}",
+      )
+  }
+  assert_true(moon_mod.contains("\"vectie/lepusa@0.1.0\""))
+  assert_true(moon_mod.contains("\"moonbit-community/rabbita@0.12.4\""))
   assert_true(manifest.contains("\"identifier\": \"dev.vectie.moonstat\""))
+  assert_true(manifest.contains("\"backend\": \"system-webview\""))
+  assert_true(manifest.contains("\"assetProtocol\": \"lepusa\""))
+  assert_true(manifest.contains("\"source\":"))
   assert_true(manifest.contains("\"localhost\""))
+  assert_true(manifest.contains("\"port\": 15721"))
+  assert_true(manifest.contains("\"path\": \"/\""))
   assert_true(
     manifest.contains(
       "\"command\": [\"moon\", \"run\", \"cmd/main\", \"--\", \"start\"]",
@@ -156,6 +178,7 @@ async test "moonstat lepusa manifest uses published package boundary shape" {
   )
   assert_true(manifest.contains("\"readinessPath\": \"/health\""))
   assert_true(manifest.contains("\"serviceDiscovery\""))
+  assert_true(manifest.contains("\"opener\""))
   assert_false(manifest.contains("../lepusa"))
   assert_false(manifest.contains("../rba"))
 }

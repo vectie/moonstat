@@ -399,6 +399,10 @@ function renderLogs(data) {
   }
 }
 
+function probeData(probe, fallback) {
+  return probe && probe.ok ? probe.data : fallback;
+}
+
 function firstValue(object, keys) {
   if (!object || typeof object !== "object") return null;
   for (const key of keys) {
@@ -824,13 +828,18 @@ function updateUsageMetrics(summary) {
 
 async function loadUsageExplorer() {
   const params = usageQueryParams();
-  const [summary, trends, providerStats, modelStats, logs] = await Promise.all([
-    getJson(endpoint(endpoints.usageSummary, params)),
-    getJson(endpoint(endpoints.usageTrends, params)),
-    getJson(endpoint(endpoints.providerStats, params)),
-    getJson(endpoint(endpoints.modelStats, params)),
-    getJson(endpoint("/usage/logs", { ...params, pageSize: 12 })),
+  const [summaryProbe, trendsProbe, providerStatsProbe, modelStatsProbe, logsProbe] = await Promise.all([
+    safeGetJson(endpoint(endpoints.usageSummary, params)),
+    safeGetJson(endpoint(endpoints.usageTrends, params)),
+    safeGetJson(endpoint(endpoints.providerStats, params)),
+    safeGetJson(endpoint(endpoints.modelStats, params)),
+    safeGetJson(endpoint(endpoints.usageLogs, { ...params, pageSize: 12 })),
   ]);
+  const summary = probeData(summaryProbe, {});
+  const trends = probeData(trendsProbe, {});
+  const providerStats = probeData(providerStatsProbe, {});
+  const modelStats = probeData(modelStatsProbe, {});
+  const logs = probeData(logsProbe, {});
   updateUsageMetrics(summary);
   renderTrends(arrayFrom(trends, ["data", "items", "trends"]));
   renderStack("provider-usage", arrayFrom(providerStats, ["providers", "items", "data"]), ["providerName", "providerId", "name"]);
@@ -842,7 +851,7 @@ async function loadFrameworkRow(app) {
   try {
     const [providersJson, currentJson] = await Promise.all([
       getJson(endpoint("/providers", { appType: app.id })),
-      getJson(endpoint("/providers/current", { appType: app.id })),
+      getJson(endpoint(endpoints.providerCurrent, { appType: app.id })),
     ]);
     return {
       ...app,
@@ -861,36 +870,47 @@ async function loadFrameworks() {
 
 async function refresh() {
   $("error-box").hidden = true;
-  const [health, status, proxy, summary, byApp, modelStats, logs] =
+  const [healthProbe, statusProbe, proxyProbe, summaryProbe, byAppProbe, modelStatsProbe, logsProbe] =
     await Promise.all([
-      getJson(endpoints.health),
-      getJson(endpoints.status),
-      getJson(endpoints.proxy),
-      getJson(endpoints.usageSummary),
-      getJson(endpoints.usageByApp),
-      getJson(endpoints.modelStats),
-      getJson(endpoints.logs),
+      safeGetJson(endpoints.health),
+      safeGetJson(endpoints.status),
+      safeGetJson(endpoints.proxy),
+      safeGetJson(endpoints.usageSummary),
+      safeGetJson(endpoints.usageByApp),
+      safeGetJson(endpoints.modelStats),
+      safeGetJson(endpoints.logs),
     ]);
+  const health = probeData(healthProbe, {});
+  const status = probeData(statusProbe, {});
+  const proxy = probeData(proxyProbe, {});
+  const summary = probeData(summaryProbe, {});
+  const byApp = probeData(byAppProbe, {});
+  const modelStats = probeData(modelStatsProbe, {});
+  const logs = probeData(logsProbe, {});
 
-  const gatewayState = firstString(health, ["status", "state", "ok"]);
+  const gatewayState = healthProbe.ok ? firstString(health, ["status", "state", "ok"]) : "Unavailable";
   text("gateway-state", gatewayState);
-  text("gateway-detail", firstString(status, ["address", "baseUrl", "url"], "Local API ready"));
+  text("gateway-detail", statusProbe.ok ? firstString(status, ["address", "baseUrl", "url"], "Local API ready") : statusProbe.error);
 
-  const proxyState = firstString(proxy, ["status", "state", "running", "enabled"]);
+  const proxyState = proxyProbe.ok ? firstString(proxy, ["status", "state", "running", "enabled"]) : "Unavailable";
   text("proxy-state", proxyState);
-  text("proxy-detail", firstString(proxy, ["model", "activeModel", "provider"], "Proxy route status"));
+  text("proxy-detail", proxyProbe.ok ? firstString(proxy, ["model", "activeModel", "provider"], "Proxy route status") : proxyProbe.error);
 
   updateTotals(summary, status);
   renderProviderRows(status.provider_routes || status.active_targets || []);
-  await loadFrameworks();
   renderStack("app-usage", arrayFrom(byApp, ["apps", "items", "data"]), ["appType", "app", "name"]);
   renderStack("model-usage", arrayFrom(modelStats, ["models", "items", "data"]), ["model", "modelId", "name"]);
   renderLogs(logs);
-  await loadUsageExplorer();
-  await loadSetupStatus();
-  await loadSuite();
-  await loadResilience();
-  text("ui-updated", `Updated ${new Date().toLocaleTimeString()}`);
+  const panelResults = await Promise.allSettled([
+    loadFrameworks(),
+    loadUsageExplorer(),
+    loadSetupStatus(),
+    loadSuite(),
+    loadResilience(),
+  ]);
+  const failedPanels = panelResults.filter((result) => result.status === "rejected").length;
+  const suffix = failedPanels > 0 ? ` with ${failedPanels} panel warning${failedPanels === 1 ? "" : "s"}` : "";
+  text("ui-updated", `Updated${suffix} ${new Date().toLocaleTimeString()}`);
 }
 
 function showError(error) {
@@ -1039,11 +1059,11 @@ $("framework-rows")?.addEventListener("click", (event) => {
   } else if (action === "switch-provider") {
     const select = Array.from(document.querySelectorAll("select[data-app]"))
       .find((node) => node.dataset.app === appType);
-    if (select) postJson("/providers/switch", { appType, id: select.value }).then(refresh).catch(showError);
+    if (select) postJson(endpoints.providerSwitch, { appType, id: select.value }).then(refresh).catch(showError);
   } else if (action === "import-live") {
-    postJson(endpoint("/providers/import-live", { appType })).then(refresh).catch(showError);
+    postJson(endpoint(endpoints.providerImportLive, { appType })).then(refresh).catch(showError);
   } else if (action === "claude-desktop-import") {
-    postJson("/providers/claude-desktop/import").then(refresh).catch(showError);
+    postJson(endpoints.claudeDesktopImport).then(refresh).catch(showError);
   }
 });
 

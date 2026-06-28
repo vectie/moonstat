@@ -39,12 +39,15 @@ You can browse and install extra skills here:
   dead local probes, and unnecessary compatibility paths. Do not remove active
   framework support unless explicitly requested.
 
-- UI work should wait until the Lepusa desktop framework settles. Backend,
-  suite, proxy, usage, and test coverage work can continue now.
+- Lepusa is the frontend/desktop framework for Moonstat. The checked-in
+  `lepusa.json` is the standalone app boundary and should wrap Moonstat's
+  localhost gateway until a deeper Lepusa/Rabbita UI rewrite is worth doing.
+  Backend, suite, proxy, usage, and test coverage work can continue without
+  replacing the current gateway-served dashboard payload.
 
-- When UI or desktop integration starts, use published Rabbita and Lepusa
-  packages in `moon.mod`. Do not wire Moonstat to local `../rba` or `../lepusa`
-  workspaces except for temporary inspection or upstream validation.
+- Use published Rabbita and Lepusa packages in `moon.mod`. Do not wire Moonstat
+  to local `../rba` or `../lepusa` workspaces except for temporary inspection
+  or upstream validation.
 
 - Known structural cleanup backlog: split remaining large files such as
   `cmd/main/cmd_misc.mbt`, `gateway_provider.mbt`,

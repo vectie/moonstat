@@ -27,12 +27,13 @@ unnecessary compatibility paths, not active framework support.
 The main known cleanup backlog is organizational: split remaining large files
 such as `cmd/main/cmd_misc.mbt`, `gateway_provider.mbt`,
 `gateway_claude_anthropic.mbt`, and `gateway_usage.mbt` when testing exposes
-friction or before a release-hardening pass. The current UI is a standalone
-operator console served by Moonstat itself; Lepusa-specific desktop UI work
-should wait until the Lepusa framework settles.
+friction or before a release-hardening pass. Lepusa is the frontend/desktop
+framework for Moonstat. The checked-in `lepusa.json` wraps Moonstat's own
+localhost gateway as the standalone app shell, while the dashboard payload is
+still served from `/` by Moonstat itself.
 
-When desktop or UI integration starts, depend on published packages rather than
-local sibling checkouts. Use published Rabbita (`moonbit-community/rabbita`) and
+Desktop/UI integration depends on published packages rather than local sibling
+checkouts. Moonstat imports published Rabbita (`moonbit-community/rabbita`) and
 published Lepusa (`vectie/lepusa`) releases in `moon.mod`; keep `../rba` and
 `../lepusa` only as reference/test worktrees for reading upstream behavior.
 
@@ -66,9 +67,14 @@ curl http://127.0.0.1:15721/metrics
 moon run cmd/main -- usage logs
 ```
 
-Open the standalone operator UI at `http://127.0.0.1:15721/`. It is served by
-Moonstat itself and reads the same `/status`, `/proxy/status`, `/usage/*`, and
-`/metrics` surfaces used by the CLI and suite integrations. The UI also
+Open the operator UI at `http://127.0.0.1:15721/`, or launch it through Lepusa
+with the checked-in `lepusa.json` manifest. Lepusa is the frontend framework and
+desktop shell; it owns the system WebView, localhost service lifecycle,
+readiness probe, service discovery, and opener capability. The Moonstat gateway
+still serves the dashboard payload from `/`, so the same view works in a browser
+and inside the Lepusa shell. The UI reads the same `/status`, `/proxy/status`,
+`/usage/*`, and `/metrics` surfaces used by the CLI and suite integrations. The
+UI also
 exposes proxy start/stop/sync controls and provider create/update/delete/test
 flows for Claude Code, Claude Desktop, Codex, Gemini, OpenCode, OpenClaw, and
 Hermes without removing additive-provider behavior. Its usage explorer filters
@@ -80,13 +86,14 @@ automation. The resilience panel manages failover queues, auto-failover,
 circuit-breaker config/stats, provider limits, and stream-check config/results
 through the same `/proxy/*` and `/usage/provider-limits` routes. The suite
 panel reads and writes the MoonClaw/MoonBook/Moontown/Moondesk discovery
-contracts through `/suite/*` routes. The frontend stays framework-free for now:
-`moonstat-core.js` owns shared route/helper code and `moonstat.js` owns
-dashboard behavior.
+contracts through `/suite/*` routes. `moonstat-core.js` owns shared
+route/helper code and `moonstat.js` owns dashboard behavior inside the Lepusa
+app payload.
 
-For a desktop shell, use published Lepusa against the checked-in
-`lepusa.json` manifest. The manifest wraps the existing Moonstat gateway as a
-localhost app and does not depend on local `../lepusa` or `../rba` workspaces.
+For a desktop shell, use published Lepusa against the checked-in `lepusa.json`
+manifest. The manifest follows Lepusa's gateway-source shape, wraps the
+existing Moonstat gateway as a localhost app, and does not depend on local
+`../lepusa` or `../rba` workspaces.
 
 ## Feature Testing Focus
 
