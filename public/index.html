@@ -20,6 +20,7 @@
           <a href="#overview">Overview</a>
           <a href="#providers">Providers</a>
           <a href="#frameworks">Frameworks</a>
+          <a href="#setup">Setup</a>
           <a href="#usage">Usage</a>
           <a href="#usage-explorer">Explorer</a>
           <a href="#requests">Requests</a>
@@ -166,6 +167,65 @@
                 <span id="provider-form-status"></span>
               </div>
             </form>
+          </article>
+
+          <article class="panel wide" id="setup">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Setup</p>
+                <h2>Integration Status</h2>
+              </div>
+              <div class="inline-actions">
+                <button id="setup-refresh" type="button" class="button-secondary">Refresh Setup</button>
+                <button id="setup-import-mcp" type="button" class="button-secondary">Import MCP Apps</button>
+              </div>
+            </div>
+            <div class="setup-grid">
+              <div class="setup-card">
+                <div class="setup-card-head">
+                  <strong>Auth</strong>
+                  <span id="setup-auth-state" class="state warn">Loading</span>
+                </div>
+                <div id="setup-auth-rows" class="setup-list"></div>
+              </div>
+              <div class="setup-card">
+                <div class="setup-card-head">
+                  <strong>Runtime</strong>
+                  <span id="setup-runtime-state" class="state warn">Loading</span>
+                </div>
+                <div id="setup-runtime-rows" class="setup-list"></div>
+              </div>
+              <div class="setup-card">
+                <div class="setup-card-head">
+                  <strong>Claude Desktop</strong>
+                  <span id="setup-desktop-state" class="state warn">Loading</span>
+                </div>
+                <div id="setup-desktop-rows" class="setup-list"></div>
+                <div class="inline-actions">
+                  <button id="setup-import-claude-desktop" type="button">Import Claude Desktop</button>
+                </div>
+              </div>
+              <div class="setup-card">
+                <div class="setup-card-head">
+                  <strong>MCP and Plugin</strong>
+                  <span id="setup-mcp-state" class="state warn">Loading</span>
+                </div>
+                <div id="setup-mcp-rows" class="setup-list"></div>
+              </div>
+            </div>
+            <div class="table-wrap setup-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Framework</th>
+                    <th>Config</th>
+                    <th>Proxy Takeover</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="setup-config-rows"></tbody>
+              </table>
+            </div>
           </article>
 
           <article class="panel wide" id="providers">

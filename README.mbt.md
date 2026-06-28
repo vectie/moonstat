@@ -27,8 +27,9 @@ unnecessary compatibility paths, not active framework support.
 The main known cleanup backlog is organizational: split remaining large files
 such as `cmd/main/cmd_misc.mbt`, `gateway_provider.mbt`,
 `gateway_claude_anthropic.mbt`, and `gateway_usage.mbt` when testing exposes
-friction or before a release-hardening pass. UI work is intentionally deferred
-until the Lepusa desktop framework settles.
+friction or before a release-hardening pass. The current UI is a standalone
+operator console served by Moonstat itself; Lepusa-specific desktop UI work
+should wait until the Lepusa framework settles.
 
 When desktop or UI integration starts, depend on published packages rather than
 local sibling checkouts. Use published Rabbita (`moonbit-community/rabbita`) and
@@ -72,9 +73,11 @@ exposes proxy start/stop/sync controls and provider create/update/delete/test
 flows for Claude Code, Claude Desktop, Codex, Gemini, OpenCode, OpenClaw, and
 Hermes without removing additive-provider behavior. Its usage explorer filters
 summary, trend, provider, model, request-log, and request-detail views through
-the same `/usage/*` endpoints used by automation. The frontend stays
-framework-free for now: `moonstat-core.js` owns shared route/helper code and
-`moonstat.js` owns dashboard behavior.
+the same `/usage/*` endpoints used by automation. The setup panel checks auth,
+config, runtime, tool, Claude Desktop, MCP, Claude plugin, proxy-running, and
+proxy-takeover state through the same standalone management routes used by CLI
+automation. The frontend stays framework-free for now: `moonstat-core.js` owns
+shared route/helper code and `moonstat.js` owns dashboard behavior.
 
 For a desktop shell, use published Lepusa against the checked-in
 `lepusa.json` manifest. The manifest wraps the existing Moonstat gateway as a

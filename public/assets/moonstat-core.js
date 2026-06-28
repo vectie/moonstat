@@ -16,6 +16,20 @@ const endpoints = {
   modelStats: "/usage/model-stats",
   logs: "/usage/logs?limit=8",
   requestDetail: "/usage/request-detail",
+  authStatus: "/auth/status",
+  configStatus: "/config/status",
+  configFolderOpen: "/config/folder/open",
+  claudeDesktopStatus: "/providers/claude-desktop/status",
+  claudeDesktopImport: "/providers/claude-desktop/import",
+  mcpServers: "/mcp/servers",
+  mcpImportApps: "/mcp/import-apps",
+  settings: "/settings",
+  portableMode: "/runtime/portable-mode",
+  toolsVersions: "/tools/versions",
+  proxyRunning: "/proxy/running",
+  takeoverStatus: "/proxy/takeover-status",
+  pluginClaudeStatus: "/plugin/claude/status",
+  pluginClaudeApplied: "/plugin/claude/applied",
 };
 
 const frameworkApps = [
@@ -61,6 +75,14 @@ async function deleteJson(path, body) {
   if (!response.ok) throw new Error(`${path} returned ${response.status}`);
   const textBody = await response.text();
   return textBody ? JSON.parse(textBody) : null;
+}
+
+async function safeGetJson(path) {
+  try {
+    return { ok: true, data: await getJson(path) };
+  } catch (error) {
+    return { ok: false, error: error && error.message ? error.message : String(error) };
+  }
 }
 
 function endpoint(path, params) {
@@ -112,6 +134,16 @@ function objectRows(value) {
   }));
 }
 
+function recordCount(value, keys) {
+  if (Array.isArray(value)) return value.length;
+  if (!value || typeof value !== "object") return 0;
+  for (const key of keys || []) {
+    if (Array.isArray(value[key])) return value[key].length;
+    if (value[key] && typeof value[key] === "object") return Object.keys(value[key]).length;
+  }
+  return Object.keys(value).length;
+}
+
 function firstString(object, keys, fallback = "-") {
   if (!object || typeof object !== "object") return fallback;
   for (const key of keys) {
@@ -131,6 +163,12 @@ function stateClass(value) {
     return "state bad";
   }
   return "state warn";
+}
+
+function stateText(value) {
+  if (value == null || value === "") return "Unknown";
+  if (typeof value === "boolean") return value ? "Enabled" : "Disabled";
+  return String(value);
 }
 
 function escapeHtml(value) {
