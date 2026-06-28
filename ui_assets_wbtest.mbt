@@ -6,6 +6,10 @@ async test "moonstat ui assets expose operator dashboard at public root" {
   assert_true(html.contains("/assets/moonstat.js"))
   assert_true(html.contains("Provider Health"))
   assert_true(html.contains("Provider Control"))
+  assert_true(html.contains("Provider Editor"))
+  assert_true(html.contains("Save Provider"))
+  assert_true(html.contains("Delete Provider"))
+  assert_true(html.contains("Test Provider"))
   assert_true(html.contains("Start Proxy"))
   assert_true(html.contains("Stop Proxy"))
   assert_true(html.contains("Sync Live"))
@@ -19,7 +23,7 @@ async test "moonstat ui fetches current backend route surface" {
     "/health", "/status", "/proxy/status", "/usage/summary", "/usage/summary/by-app",
     "/usage/model-stats", "/usage/logs?limit=8", "/proxy/start", "/proxy/stop", "/proxy/sync-current-providers-live",
     "/providers", "/providers/current", "/providers/switch", "/providers/import-live",
-    "/providers/claude-desktop/import",
+    "/providers/update", "/proxy/stream-check/provider", "/providers/claude-desktop/import",
   ]
   for route in required {
     assert_true(js.contains(route))
@@ -32,6 +36,9 @@ async test "moonstat ui fetches current backend route surface" {
   }
   assert_true(js.contains("fetch(path"))
   assert_true(js.contains("postJson"))
+  assert_true(js.contains("deleteJson"))
+  assert_true(js.contains("providerPayloadFromForm"))
+  assert_true(js.contains("defaultModel"))
   assert_true(js.contains("setInterval"))
 }
 

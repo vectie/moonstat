@@ -90,6 +90,83 @@
             </div>
           </article>
 
+          <article class="panel wide" id="provider-editor">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Providers</p>
+                <h2>Provider Editor</h2>
+              </div>
+              <button id="provider-clear" type="button" class="button-secondary">New Provider</button>
+            </div>
+            <form id="provider-form" class="form-grid">
+              <input id="provider-original-id" type="hidden" />
+              <label>
+                <span>Framework</span>
+                <select id="provider-app"></select>
+              </label>
+              <label>
+                <span>Provider ID</span>
+                <input id="provider-id" autocomplete="off" required />
+              </label>
+              <label>
+                <span>Name</span>
+                <input id="provider-name" autocomplete="off" required />
+              </label>
+              <label>
+                <span>Provider Type</span>
+                <input id="provider-type" autocomplete="off" placeholder="openrouter, codex_oauth, gemini" />
+              </label>
+              <label class="span-2">
+                <span>Base URL</span>
+                <input id="provider-base-url" autocomplete="off" placeholder="https://api.example.com" />
+              </label>
+              <label>
+                <span>API Format</span>
+                <select id="provider-api-format">
+                  <option value="">Default</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="gemini_native">Gemini Native</option>
+                </select>
+              </label>
+              <label>
+                <span>API Key</span>
+                <input id="provider-api-key" type="password" autocomplete="new-password" />
+              </label>
+              <label>
+                <span>Default Model</span>
+                <input id="provider-default-model" autocomplete="off" />
+              </label>
+              <label>
+                <span>Sonnet Model</span>
+                <input id="provider-sonnet-model" autocomplete="off" />
+              </label>
+              <label>
+                <span>Haiku Model</span>
+                <input id="provider-haiku-model" autocomplete="off" />
+              </label>
+              <label>
+                <span>Opus Model</span>
+                <input id="provider-opus-model" autocomplete="off" />
+              </label>
+              <label class="span-2">
+                <span>Notes</span>
+                <textarea id="provider-notes" rows="3"></textarea>
+              </label>
+              <div class="check-row span-2">
+                <label><input id="provider-enabled" type="checkbox" checked /> Enabled</label>
+                <label><input id="provider-full-url" type="checkbox" /> Full URL</label>
+                <label><input id="provider-fast-mode" type="checkbox" /> Codex Fast Mode</label>
+              </div>
+              <div class="form-actions span-2">
+                <button id="provider-save" type="submit">Save Provider</button>
+                <button id="provider-delete" type="button" class="danger">Delete Provider</button>
+                <button id="provider-test" type="button" class="button-secondary">Test Provider</button>
+                <span id="provider-form-status"></span>
+              </div>
+            </form>
+          </article>
+
           <article class="panel wide" id="providers">
             <div class="panel-head">
               <div>

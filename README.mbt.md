@@ -67,7 +67,10 @@ moon run cmd/main -- usage logs
 
 Open the standalone operator UI at `http://127.0.0.1:15721/`. It is served by
 Moonstat itself and reads the same `/status`, `/proxy/status`, `/usage/*`, and
-`/metrics` surfaces used by the CLI and suite integrations.
+`/metrics` surfaces used by the CLI and suite integrations. The UI also
+exposes proxy start/stop/sync controls and provider create/update/delete/test
+flows for Claude Code, Claude Desktop, Codex, Gemini, OpenCode, OpenClaw, and
+Hermes without removing additive-provider behavior.
 
 For a desktop shell, use published Lepusa against the checked-in
 `lepusa.json` manifest. The manifest wraps the existing Moonstat gateway as a

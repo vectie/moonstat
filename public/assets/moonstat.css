@@ -141,12 +141,19 @@ h2 {
 }
 
 button,
+.button-secondary,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
 .button-secondary {
   min-height: 38px;
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 0 14px;
-  font: inherit;
   font-weight: 700;
   cursor: pointer;
 }
@@ -296,15 +303,26 @@ td small {
   color: var(--muted);
 }
 
-select {
+select,
+input,
+textarea {
   width: min(260px, 100%);
-  min-height: 34px;
   border: 1px solid var(--panel-border);
   border-radius: 6px;
-  padding: 0 10px;
   background: white;
   color: var(--text);
-  font: inherit;
+}
+
+select,
+input {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+textarea {
+  min-height: 80px;
+  padding: 9px 10px;
+  resize: vertical;
 }
 
 .inline-actions {
@@ -317,6 +335,68 @@ select {
   min-height: 32px;
   padding: 0 10px;
   font-size: 13px;
+}
+
+.provider-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.provider-picker select {
+  width: min(320px, 100%);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.form-grid label input,
+.form-grid label select,
+.form-grid label textarea {
+  width: 100%;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.span-2 {
+  grid-column: 1 / -1;
+}
+
+.check-row,
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.check-row label {
+  display: inline-flex;
+  grid-auto-flow: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.check-row input {
+  width: auto;
+  min-height: auto;
+}
+
+#provider-form-status {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .stack,
@@ -407,6 +487,10 @@ select {
 
   .status-grid,
   .panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
     grid-template-columns: 1fr;
   }
 
