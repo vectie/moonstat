@@ -182,3 +182,39 @@ async test "moonstat lepusa manifest uses published package boundary shape" {
   assert_false(manifest.contains("../lepusa"))
   assert_false(manifest.contains("../rba"))
 }
+
+///|
+async test "moonstat rabbita shell renders lepusa preview structure" {
+  let html = moonstat_rabbita_shell_html()
+  assert_true(html.contains("data-moonstat-api-base"))
+  assert_true(html.contains("http://127.0.0.1:15721"))
+  assert_true(html.contains("Proxy, providers, and spend in one place."))
+  assert_true(html.contains("id=\"gateway-state\""))
+  assert_true(html.contains("id=\"proxy-state\""))
+  assert_true(html.contains("id=\"frameworks\""))
+  assert_true(html.contains("id=\"providers\""))
+  assert_true(html.contains("id=\"suite\""))
+  assert_true(html.contains("id=\"usage\""))
+  assert_true(html.contains("Moonstat will populate this panel"))
+}
+
+///|
+async test "moonstat rabbita lepusa preview manifest parses" {
+  let manifest = @fsx.read_file("lepusa.rabbita.json")
+  match @lepusa_project.ProjectConfig::load("lepusa.rabbita.json") {
+    Ok(project) => {
+      let _ = project.manifest()
+      let _ = project.root()
+    }
+    Err(problems) =>
+      fail(
+        "published Lepusa ProjectConfig failed to load moonstat rabbita preview manifest: \{problems.join("; ")}",
+      )
+  }
+  assert_true(manifest.contains("\"rootHtml\""))
+  assert_true(manifest.contains("Moonstat Rabbita Shell"))
+  assert_true(manifest.contains("\"assetProtocol\": \"lepusa\""))
+  assert_true(manifest.contains("\"localhost\""))
+  assert_false(manifest.contains("../lepusa"))
+  assert_false(manifest.contains("../rba"))
+}

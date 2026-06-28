@@ -1,0 +1,31 @@
+{
+  "identifier": "dev.vectie.moonstat.rabbita",
+  "productName": "Moonstat Rabbita Preview",
+  "version": "0.1.0",
+  "rootHtml": "<main class=\"shell\" data-moonstat-api-base=\"http://127.0.0.1:15721\"><section id=\"overview\"><h1>Moonstat Rabbita Shell</h1><p>Rabbita-authored preview shell for the Lepusa desktop migration.</p></section><section id=\"providers\"></section><section id=\"suite\"></section><section id=\"usage\"></section></main>",
+  "runtime": {
+    "backend": "system-webview",
+    "assetProtocol": "lepusa",
+    "devtools": false
+  },
+  "window": {
+    "label": "main",
+    "title": "Moonstat",
+    "width": 1180,
+    "height": 780,
+    "resizable": true
+  },
+  "plugins": [
+    { "name": "localhost" },
+    { "name": "serviceDiscovery" },
+    { "name": "opener" }
+  ],
+  "capabilities": [
+    {
+      "name": "main",
+      "windows": ["main"],
+      "permissions": ["localhost", "service-discovery", "opener"]
+    }
+  ],
+  "startup": { "effect": "connect-moonstat-rabbita-preview" }
+}

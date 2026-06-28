@@ -1,3 +1,5 @@
+supported_targets = "native"
+
 import {
   "vectie/moonstat/suite",
   "vectie/moonlib/fsx",
@@ -13,6 +15,8 @@ import {
   "moonbitlang/async/fs",
   "moonbitlang/async/http",
   "moonbitlang/async/io",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
   "vectie/moonstat/internal/httpx",
   "vectie/moonstat/internal/httpx/status",
   "vectie/moonstat/internal/net",

@@ -95,6 +95,12 @@ manifest. The manifest follows Lepusa's gateway-source shape, wraps the
 existing Moonstat gateway as a localhost app, and does not depend on local
 `../lepusa` or `../rba` workspaces.
 
+`lepusa.rabbita.json` is the migration preview for the Rabbita-first desktop
+UI path. It uses Lepusa `rootHtml` and is paired with
+`moonstat_rabbita_shell_html`, which renders the first Rabbita-authored shell
+from MoonBit for tests and future generation while the production app continues
+to use the localhost gateway manifest.
+
 ## Feature Testing Focus
 
 Use the current codebase for end-to-end feature testing. The highest-value
