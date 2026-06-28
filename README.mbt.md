@@ -72,7 +72,9 @@ exposes proxy start/stop/sync controls and provider create/update/delete/test
 flows for Claude Code, Claude Desktop, Codex, Gemini, OpenCode, OpenClaw, and
 Hermes without removing additive-provider behavior. Its usage explorer filters
 summary, trend, provider, model, request-log, and request-detail views through
-the same `/usage/*` endpoints used by automation.
+the same `/usage/*` endpoints used by automation. The frontend stays
+framework-free for now: `moonstat-core.js` owns shared route/helper code and
+`moonstat.js` owns dashboard behavior.
 
 For a desktop shell, use published Lepusa against the checked-in
 `lepusa.json` manifest. The manifest wraps the existing Moonstat gateway as a

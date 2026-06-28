@@ -3,6 +3,7 @@ async test "moonstat ui assets expose operator dashboard at public root" {
   let html = @fsx.read_file("public/index.html")
   assert_true(html.contains("<title>Moonstat</title>"))
   assert_true(html.contains("/assets/moonstat.css"))
+  assert_true(html.contains("/assets/moonstat-core.js"))
   assert_true(html.contains("/assets/moonstat.js"))
   assert_true(html.contains("Provider Health"))
   assert_true(html.contains("Provider Control"))
@@ -21,7 +22,9 @@ async test "moonstat ui assets expose operator dashboard at public root" {
 
 ///|
 async test "moonstat ui fetches current backend route surface" {
+  let core = @fsx.read_file("public/assets/moonstat-core.js")
   let js = @fsx.read_file("public/assets/moonstat.js")
+  let assets = core + "\n" + js
   let required = [
     "/health", "/status", "/proxy/status", "/usage/summary", "/usage/summary/by-app",
     "/usage/trends", "/usage/provider-stats", "/usage/model-stats", "/usage/logs?limit=8",
@@ -30,21 +33,21 @@ async test "moonstat ui fetches current backend route surface" {
     "/providers/update", "/proxy/stream-check/provider", "/providers/claude-desktop/import",
   ]
   for route in required {
-    assert_true(js.contains(route))
+    assert_true(assets.contains(route))
   }
   for
     app in [
       "claude", "claude-desktop", "codex", "gemini", "opencode", "openclaw", "hermes",
     ] {
-    assert_true(js.contains(app))
+    assert_true(assets.contains(app))
   }
-  assert_true(js.contains("fetch(path"))
-  assert_true(js.contains("postJson"))
-  assert_true(js.contains("deleteJson"))
+  assert_true(core.contains("fetch(path"))
+  assert_true(core.contains("postJson"))
+  assert_true(core.contains("deleteJson"))
   assert_true(js.contains("providerPayloadFromForm"))
   assert_true(js.contains("loadUsageExplorer"))
   assert_true(js.contains("renderRequestDetail"))
-  assert_true(js.contains("defaultModel"))
+  assert_true(assets.contains("defaultModel"))
   assert_true(js.contains("setInterval"))
 }
 
