@@ -21,6 +21,7 @@
           <a href="#providers">Providers</a>
           <a href="#frameworks">Frameworks</a>
           <a href="#setup">Setup</a>
+          <a href="#suite">Suite</a>
           <a href="#resilience">Resilience</a>
           <a href="#usage">Usage</a>
           <a href="#usage-explorer">Explorer</a>
@@ -227,6 +228,52 @@
                 <tbody id="setup-config-rows"></tbody>
               </table>
             </div>
+          </article>
+
+          <article class="panel wide" id="suite">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Suite</p>
+                <h2>Moon Suite Integration</h2>
+              </div>
+              <div class="inline-actions">
+                <button id="suite-refresh" type="button" class="button-secondary">Refresh Suite</button>
+                <button id="suite-write-status" type="button">Write Status</button>
+                <button id="suite-write-moonclaw" type="button" class="button-secondary">Write MoonClaw</button>
+              </div>
+            </div>
+            <div class="usage-metrics">
+              <div>
+                <span>Status</span>
+                <strong id="suite-status-state">-</strong>
+              </div>
+              <div>
+                <span>Apps</span>
+                <strong id="suite-app-count">-</strong>
+              </div>
+              <div>
+                <span>Capabilities</span>
+                <strong id="suite-capability-count">-</strong>
+              </div>
+              <div>
+                <span>Status File</span>
+                <strong id="suite-status-path">-</strong>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>App</th>
+                    <th>Role</th>
+                    <th>Usage</th>
+                    <th>Key Route</th>
+                  </tr>
+                </thead>
+                <tbody id="suite-app-rows"></tbody>
+              </table>
+            </div>
+            <div id="suite-integrations" class="stack"></div>
           </article>
 
           <article class="panel wide" id="resilience">

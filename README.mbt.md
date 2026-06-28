@@ -78,9 +78,11 @@ config, runtime, tool, Claude Desktop, MCP, Claude plugin, proxy-running, and
 proxy-takeover state through the same standalone management routes used by CLI
 automation. The resilience panel manages failover queues, auto-failover,
 circuit-breaker config/stats, provider limits, and stream-check config/results
-through the same `/proxy/*` and `/usage/provider-limits` routes. The frontend
-stays framework-free for now: `moonstat-core.js` owns shared route/helper code
-and `moonstat.js` owns dashboard behavior.
+through the same `/proxy/*` and `/usage/provider-limits` routes. The suite
+panel reads and writes the MoonClaw/MoonBook/Moontown/Moondesk discovery
+contracts through `/suite/*` routes. The frontend stays framework-free for now:
+`moonstat-core.js` owns shared route/helper code and `moonstat.js` owns
+dashboard behavior.
 
 For a desktop shell, use published Lepusa against the checked-in
 `lepusa.json` manifest. The manifest wraps the existing Moonstat gateway as a
@@ -143,12 +145,15 @@ moon run cmd/main -- suite status
 moon run cmd/main -- suite write-status
 ```
 
-`suite manifest` and `suite status` print JSON contracts for MoonClaw,
+`suite manifest`, `suite status`, `GET /suite/manifest`, and `GET /suite/status`
+print JSON contracts for MoonClaw,
 MoonBook, Moontown, Moondesk, or any other local probe. They expose the
 gateway URLs, status file, capabilities, and command map needed by suite
-launchers. `suite write-status` writes the same status contract to
-`~/.moonsuite/suite-status.json` by default, and `start` refreshes that file
-when the gateway boots. The contract also includes a machine-readable
+launchers. `suite write-status` and `POST /suite/status/write` write the same
+status contract to `~/.moonsuite/suite-status.json` by default, and `start`
+refreshes that file when the gateway boots. `GET /suite/moonclaw-providers`
+and `POST /suite/moonclaw-providers/write` expose the MoonClaw providers file
+contract over HTTP. The contract also includes a machine-readable
 `suiteIntegrations` object:
 
 - MoonClaw gets local OpenAI/Anthropic base URLs, env names, a
@@ -171,6 +176,11 @@ Moonstat currently exposes the standalone local routes below:
 - `GET /status`
 - `GET /stats`
 - `GET /metrics`
+- `GET /suite/manifest`
+- `GET /suite/status`
+- `POST /suite/status/write`
+- `GET /suite/moonclaw-providers`
+- `POST /suite/moonclaw-providers/write`
 - `GET /proxy/status`
 - `POST /proxy/start`
 - `POST /proxy/stop`

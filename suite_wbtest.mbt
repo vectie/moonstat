@@ -99,6 +99,13 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /assets/moonstat.css")))
   assert_true(routes.contains(Json::string("GET /assets/moonstat.js")))
   assert_true(routes.contains(Json::string("GET /participant/register")))
+  assert_true(routes.contains(Json::string("GET /suite/manifest")))
+  assert_true(routes.contains(Json::string("GET /suite/status")))
+  assert_true(routes.contains(Json::string("POST /suite/status/write")))
+  assert_true(routes.contains(Json::string("GET /suite/moonclaw-providers")))
+  assert_true(
+    routes.contains(Json::string("POST /suite/moonclaw-providers/write")),
+  )
   assert_true(routes.contains(Json::string("GET /stats")))
   assert_true(routes.contains(Json::string("GET /metrics")))
   assert_true(routes.contains(Json::string("GET /usage/logs")))

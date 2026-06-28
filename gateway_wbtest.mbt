@@ -178,6 +178,24 @@ async test "gateway startup publishes the bound port for suite discovery" {
 }
 
 ///|
+async test "suite http endpoints are registered by gateway suite routes" {
+  let core_source = @fsx.read_file("gateway_core.mbt")
+  let route_source = @fsx.read_file("gateway_suite_routes.mbt")
+  assert_true(core_source.contains("self.register_suite_routes(router)"))
+  for
+    route in [
+      "/suite/manifest", "/suite/status", "/suite/status/write", "/suite/moonclaw-providers",
+      "/suite/moonclaw-providers/write",
+    ] {
+    assert_true(route_source.contains(route))
+  }
+  assert_true(route_source.contains("moonstat_suite_manifest_json("))
+  assert_true(route_source.contains("write_moonstat_suite_status("))
+  assert_true(route_source.contains("moonstat_moonclaw_providers_file_json("))
+  assert_true(route_source.contains("write_moonstat_moonclaw_providers_file("))
+}
+
+///|
 async test "usage script github copilot template uses standalone native query" {
   let path = "/usage/test-script?providerId=p1&appType=claude&templateType=github_copilot&accountId=moonstat-missing-account"
   guard test_usage_script_template_result(path, None) is Some(result) else {

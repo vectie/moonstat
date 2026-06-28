@@ -39,6 +39,11 @@ const endpoints = {
   providerLimits: "/usage/provider-limits",
   streamCheckAll: "/proxy/stream-check/all",
   streamCheckConfig: "/proxy/stream-check/config",
+  suiteManifest: "/suite/manifest",
+  suiteStatus: "/suite/status",
+  suiteWriteStatus: "/suite/status/write",
+  suiteMoonclawProviders: "/suite/moonclaw-providers",
+  suiteWriteMoonclawProviders: "/suite/moonclaw-providers/write",
 };
 
 const frameworkApps = [
