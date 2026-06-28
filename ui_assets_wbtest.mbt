@@ -186,16 +186,22 @@ async test "moonstat lepusa manifest uses published package boundary shape" {
 ///|
 async test "moonstat rabbita shell renders lepusa preview structure" {
   let html = moonstat_rabbita_shell_html()
+  let document = moonstat_rabbita_document_html()
   assert_true(html.contains("data-moonstat-api-base"))
   assert_true(html.contains("http://127.0.0.1:15721"))
+  assert_true(html.contains("/assets/moonstat.css"))
+  assert_true(html.contains("/assets/moonstat-core.js"))
+  assert_true(html.contains("/assets/moonstat.js"))
   assert_true(html.contains("Proxy, providers, and spend in one place."))
-  assert_true(html.contains("id=\"gateway-state\""))
-  assert_true(html.contains("id=\"proxy-state\""))
-  assert_true(html.contains("id=\"frameworks\""))
-  assert_true(html.contains("id=\"providers\""))
-  assert_true(html.contains("id=\"suite\""))
-  assert_true(html.contains("id=\"usage\""))
-  assert_true(html.contains("Moonstat will populate this panel"))
+  assert_true(document.contains("<html"))
+  assert_true(document.contains("<head"))
+  assert_true(document.contains("<body"))
+  for id in moonstat_rabbita_shell_dom_ids() {
+    assert_true(
+      html.contains("id=\"\{id}\""),
+      msg="missing Rabbita shell id \{id}",
+    )
+  }
 }
 
 ///|

@@ -99,8 +99,10 @@ existing Moonstat gateway as a localhost app, and does not depend on local
 UI path. It uses Lepusa `rootHtml` and is paired with
 `moonstat_rabbita_shell_html`, which renders the first Rabbita-authored shell
 from MoonBit for tests and future generation while the production app continues
-to use the localhost gateway manifest. Regenerate the preview contract with
-`moon run cmd/main -- suite lepusa-rabbita`.
+to use the localhost gateway manifest. The preview shell now carries the full
+dashboard DOM contract, including the existing CSS and JavaScript assets, so it
+can be promoted behind Lepusa once runtime smoke tests are strong enough.
+Regenerate the preview contract with `moon run cmd/main -- suite lepusa-rabbita`.
 
 ## Feature Testing Focus
 
