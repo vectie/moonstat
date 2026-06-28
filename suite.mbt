@@ -30,6 +30,7 @@ pub fn moonstat_suite_manifest_json(
     ),
     "frameworkApps": moonstat_framework_apps_json(),
     "uiEndpoints": moonstat_ui_endpoints_json(),
+    "uiReadinessCards": moonstat_ui_readiness_cards_json(),
     "apps": Json::array([
       suite_app_json(
         "moonclaw", "agent-runtime", "Use moonstat as the OpenAI-compatible or Anthropic-compatible local edge for agent provider calls.",

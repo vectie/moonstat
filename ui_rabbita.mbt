@@ -15,11 +15,16 @@ fn moonstat_rabbita_shell_view(
         .data_set(
           "moonstat-endpoints",
           moonstat_ui_endpoints_json().stringify(),
+        )
+        .data_set(
+          "moonstat-readiness-cards",
+          moonstat_ui_readiness_cards_json().stringify(),
         ),
       [
         moonstat_rabbita_sidebar(),
         @html.main_(class="main", [
           moonstat_rabbita_topbar(),
+          moonstat_rabbita_readiness_strip(),
           @html.section(class="status-grid", [
             moonstat_rabbita_metric_card(
               "Gateway", "gateway-state", "gateway-detail", "Loading status",
@@ -131,6 +136,26 @@ fn moonstat_rabbita_topbar() -> @html.Html {
       ),
     ]),
   ])
+}
+
+///|
+fn moonstat_rabbita_readiness_strip() -> @html.Html {
+  @html.section(
+    id="readiness",
+    class="readiness-strip",
+    attrs=@html.Attrs::build().aria_label("Moonstat readiness"),
+    [
+      @html.div(class="readiness-head", [
+        @html.p(class="eyebrow", "Readiness"),
+        @html.strong("Standalone gateway checklist"),
+      ]),
+      @html.div(
+        id="readiness-cards",
+        class="readiness-cards",
+        moonstat_rabbita_empty(),
+      ),
+    ],
+  )
 }
 
 ///|
@@ -741,12 +766,12 @@ pub fn moonstat_rabbita_shell_dom_ids() -> Array[String] {
   [
     "ui-updated", "overview", "refresh", "proxy-start", "proxy-stop", "gateway-state",
     "gateway-detail", "proxy-state", "proxy-detail", "request-total", "request-total-detail",
-    "cost-total", "cost-detail", "frameworks", "framework-rows", "sync-live", "provider-editor",
-    "provider-form", "provider-original-id", "provider-app", "provider-id", "provider-name",
-    "provider-type", "provider-base-url", "provider-api-format", "provider-api-key",
-    "provider-default-model", "provider-sonnet-model", "provider-haiku-model", "provider-opus-model",
-    "provider-notes", "provider-enabled", "provider-full-url", "provider-fast-mode",
-    "provider-save", "provider-delete", "provider-test", "provider-form-status",
+    "cost-total", "cost-detail", "readiness", "readiness-cards", "frameworks", "framework-rows",
+    "sync-live", "provider-editor", "provider-form", "provider-original-id", "provider-app",
+    "provider-id", "provider-name", "provider-type", "provider-base-url", "provider-api-format",
+    "provider-api-key", "provider-default-model", "provider-sonnet-model", "provider-haiku-model",
+    "provider-opus-model", "provider-notes", "provider-enabled", "provider-full-url",
+    "provider-fast-mode", "provider-save", "provider-delete", "provider-test", "provider-form-status",
     "setup", "setup-refresh", "setup-import-mcp", "setup-auth-state", "setup-auth-rows",
     "setup-runtime-state", "setup-runtime-rows", "setup-desktop-state", "setup-desktop-rows",
     "setup-import-claude-desktop", "setup-mcp-state", "setup-mcp-rows", "setup-config-rows",

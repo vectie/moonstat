@@ -11,6 +11,20 @@ function readShellJson(name, fallback) {
 
 const endpoints = readShellJson("moonstat-endpoints", {});
 
+function readReadinessCards() {
+  const parsed = readShellJson("moonstat-readiness-cards", []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((card) => card && typeof card.id === "string" && typeof card.label === "string")
+    .map((card) => ({
+      id: card.id,
+      label: card.label,
+      ready: typeof card.ready === "string" ? card.ready : "Ready",
+      waiting: typeof card.waiting === "string" ? card.waiting : "Needs attention",
+      target: typeof card.target === "string" ? card.target : "#overview",
+    }));
+}
+
 function readFrameworkApps() {
   const parsed = readShellJson("moonstat-framework-apps", []);
   if (!Array.isArray(parsed)) return [];
@@ -24,6 +38,7 @@ function readFrameworkApps() {
     }));
 }
 
+const readinessCards = readReadinessCards();
 const frameworkApps = readFrameworkApps();
 
 const $ = (id) => document.getElementById(id);

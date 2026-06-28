@@ -90,3 +90,41 @@ pub fn moonstat_ui_endpoints_json() -> Json {
     ),
   })
 }
+
+///|
+pub fn moonstat_ui_readiness_cards_json() -> Json {
+  Json::array([
+    moonstat_readiness_card_json(
+      "gateway", "Gateway", "Ready", "Unavailable", "#overview",
+    ),
+    moonstat_readiness_card_json(
+      "proxy", "Proxy", "Running", "Needs start", "#overview",
+    ),
+    moonstat_readiness_card_json(
+      "providers", "Providers", "Configured", "Add provider", "#frameworks",
+    ),
+    moonstat_readiness_card_json(
+      "usage", "Usage", "Tracking", "No traffic yet", "#usage-explorer",
+    ),
+    moonstat_readiness_card_json(
+      "requests", "Requests", "Recent activity", "No requests yet", "#requests",
+    ),
+  ])
+}
+
+///|
+fn moonstat_readiness_card_json(
+  id : String,
+  label : String,
+  ready : String,
+  waiting : String,
+  target : String,
+) -> Json {
+  Json::object({
+    "id": Json::string(id),
+    "label": Json::string(label),
+    "ready": Json::string(ready),
+    "waiting": Json::string(waiting),
+    "target": Json::string(target),
+  })
+}

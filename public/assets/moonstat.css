@@ -108,6 +108,67 @@ a {
   margin-bottom: 22px;
 }
 
+.readiness-strip {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.readiness-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.readiness-head strong {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.readiness-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.readiness-card {
+  display: grid;
+  gap: 6px;
+  min-height: 104px;
+  border: 1px solid var(--panel-border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 13px;
+  background: white;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.readiness-card.good {
+  border-left-color: var(--good);
+}
+
+.readiness-card.warn {
+  border-left-color: var(--warn);
+}
+
+.readiness-card span,
+.readiness-card small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.readiness-card span {
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.readiness-card strong {
+  font-size: 18px;
+  line-height: 1.15;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--accent);
@@ -657,6 +718,7 @@ textarea {
   }
 
   .status-grid,
+  .readiness-cards,
   .panel-grid,
   .usage-metrics,
   .detail-grid,
@@ -671,7 +733,8 @@ textarea {
     padding: 18px;
   }
 
-  .topbar {
+  .topbar,
+  .readiness-head {
     display: grid;
   }
 
@@ -680,6 +743,7 @@ textarea {
   }
 
   .status-grid,
+  .readiness-cards,
   .panel-grid,
   .usage-metrics,
   .detail-grid,

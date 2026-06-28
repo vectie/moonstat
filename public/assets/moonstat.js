@@ -1,4 +1,71 @@
 let frameworkRows = [];
+let readinessState = {};
+
+function mergeReadinessState(next) {
+  readinessState = { ...readinessState, ...(next || {}) };
+  renderReadiness(readinessState);
+}
+
+function readinessCardState(card, state) {
+  if (card.id === "gateway") {
+    const ok = state.healthOk === true;
+    return {
+      ok,
+      value: ok ? card.ready : card.waiting,
+      detail: state.gatewayDetail || "Local API health",
+    };
+  }
+  if (card.id === "proxy") {
+    const ok = state.proxyRunning === true;
+    return {
+      ok,
+      value: ok ? card.ready : card.waiting,
+      detail: state.proxyDetail || "Proxy route status",
+    };
+  }
+  if (card.id === "providers") {
+    const count = number(state.providerCount);
+    return {
+      ok: count > 0,
+      value: count > 0 ? `${compact(count)} provider${count === 1 ? "" : "s"}` : card.waiting,
+      detail: state.frameworkErrorCount > 0 ? `${state.frameworkErrorCount} framework warnings` : "Provider routes",
+    };
+  }
+  if (card.id === "usage") {
+    const requests = number(state.totalRequests);
+    return {
+      ok: requests > 0,
+      value: requests > 0 ? `${compact(requests)} requests` : card.waiting,
+      detail: state.totalCost != null ? money(state.totalCost) : "Spend tracker",
+    };
+  }
+  if (card.id === "requests") {
+    const count = number(state.recentRequestCount);
+    return {
+      ok: count > 0,
+      value: count > 0 ? `${compact(count)} recent` : card.waiting,
+      detail: "Request log",
+    };
+  }
+  return { ok: false, value: card.waiting, detail: card.label };
+}
+
+function renderReadiness(state) {
+  const target = $("readiness-cards");
+  if (!target) return;
+  target.innerHTML = readinessCards
+    .map((card) => {
+      const item = readinessCardState(card, state);
+      return `
+        <a class="readiness-card ${item.ok ? "good" : "warn"}" href="${escapeHtml(card.target)}">
+          <span>${escapeHtml(card.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.detail)}</small>
+        </a>
+      `;
+    })
+    .join("");
+}
 
 function renderProviderRows(data) {
   const rows = arrayFrom(data, ["providers", "items", "data", "health"]);
@@ -866,6 +933,11 @@ async function loadFrameworkRow(app) {
 async function loadFrameworks() {
   const rows = await Promise.all(frameworkApps.map(loadFrameworkRow));
   renderFrameworkRows(rows);
+  mergeReadinessState({
+    providerCount: rows.reduce((total, row) => total + (row.providers || []).length, 0),
+    frameworkErrorCount: rows.filter((row) => row.error).length,
+  });
+  return rows;
 }
 
 async function refresh() {
@@ -897,10 +969,21 @@ async function refresh() {
   text("proxy-detail", proxyProbe.ok ? firstString(proxy, ["model", "activeModel", "provider"], "Proxy route status") : proxyProbe.error);
 
   updateTotals(summary, status);
-  renderProviderRows(status.provider_routes || status.active_targets || []);
+  const providerHealthRows = arrayFrom(status.provider_routes || status.active_targets || [], ["providers", "items", "data", "health"]);
+  renderProviderRows(providerHealthRows);
   renderStack("app-usage", arrayFrom(byApp, ["apps", "items", "data"]), ["appType", "app", "name"]);
   renderStack("model-usage", arrayFrom(modelStats, ["models", "items", "data"]), ["model", "modelId", "name"]);
   renderLogs(logs);
+  mergeReadinessState({
+    healthOk: healthProbe.ok && stateClass(gatewayState).includes("good"),
+    gatewayDetail: statusProbe.ok ? firstString(status, ["address", "baseUrl", "url"], "Local API ready") : statusProbe.error,
+    proxyRunning: proxyProbe.ok && stateClass(proxyState).includes("good"),
+    proxyDetail: proxyProbe.ok ? firstString(proxy, ["model", "activeModel", "provider"], "Proxy route status") : proxyProbe.error,
+    providerCount: readinessState.providerCount ?? providerHealthRows.length,
+    totalRequests: summary.totalRequests ?? summary.requests ?? summary.requestCount ?? status.total_requests ?? status.totalRequests ?? 0,
+    totalCost: summary.totalCostUsd ?? summary.costUsd ?? summary.totalCost ?? status.totalCostUsd ?? status.costUsd ?? 0,
+    recentRequestCount: arrayFrom(logs, ["logs", "items", "requests", "data"]).length,
+  });
   const panelResults = await Promise.allSettled([
     loadFrameworks(),
     loadUsageExplorer(),
@@ -1071,6 +1154,7 @@ initProviderAppSelect();
 initUsageAppSelect();
 initResilienceAppSelect();
 clearProviderForm("claude");
+renderReadiness({});
 renderRequestDetail(null);
 renderStreamCheckResults([]);
 

@@ -7,6 +7,7 @@ async test "moonstat generated dashboard exposes operator ui surface" {
   assert_true(html.contains("/assets/moonstat.js"))
   assert_true(html.contains("data-moonstat-framework-apps="))
   assert_true(html.contains("data-moonstat-endpoints="))
+  assert_true(html.contains("data-moonstat-readiness-cards="))
   assert_true(html.contains("/health"))
   assert_true(html.contains("/proxy/status"))
   for
@@ -16,6 +17,8 @@ async test "moonstat generated dashboard exposes operator ui surface" {
     assert_true(html.contains(app))
   }
   assert_true(html.contains("Provider Health"))
+  assert_true(html.contains("Readiness"))
+  assert_true(html.contains("Standalone gateway checklist"))
   assert_true(html.contains("Provider Control"))
   assert_true(html.contains("Provider Editor"))
   assert_true(html.contains("Integration Status"))
@@ -68,6 +71,8 @@ async test "moonstat ui fetches current backend route surface" {
   }
   assert_true(core.contains("readShellJson"))
   assert_true(core.contains("moonstat-endpoints"))
+  assert_true(core.contains("readReadinessCards"))
+  assert_true(core.contains("moonstat-readiness-cards"))
   assert_false(core.contains("const endpoints = {"))
   assert_true(core.contains("readFrameworkApps"))
   assert_false(core.contains("const frameworkApps = ["))
@@ -86,6 +91,8 @@ async test "moonstat ui fetches current backend route surface" {
   assert_true(js.contains("renderSetupConfigRows"))
   assert_true(js.contains("renderStreamCheckResults"))
   assert_true(js.contains("renderRequestDetail"))
+  assert_true(js.contains("renderReadiness"))
+  assert_true(js.contains("mergeReadinessState"))
   assert_true(core.contains("safeGetJson"))
   assert_true(core.contains("recordCount"))
   assert_true(assets.contains("defaultModel"))
@@ -153,6 +160,22 @@ test "moonstat ui endpoint metadata preserves dashboard route support" {
     Json::string("/proxy/stream-check/all"),
   )
   assert_eq(endpoints["requestDetail"], Json::string("/usage/request-detail"))
+}
+
+///|
+test "moonstat readiness metadata preserves first run operator checklist" {
+  guard moonstat_ui_readiness_cards_json() is Array(cards) else {
+    fail("expected readiness card array")
+  }
+  assert_eq(cards.length(), 5)
+  for id in ["gateway", "proxy", "providers", "usage", "requests"] {
+    assert_true(
+      cards.any(card => {
+        guard card is Object(obj) else { return false }
+        obj["id"] == Json::string(id) && obj["target"] is String(_)
+      }),
+    )
+  }
 }
 
 ///|
