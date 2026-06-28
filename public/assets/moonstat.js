@@ -11,8 +11,11 @@ const endpoints = {
   providerStreamCheck: "/proxy/stream-check/provider",
   usageSummary: "/usage/summary",
   usageByApp: "/usage/summary/by-app",
+  usageTrends: "/usage/trends",
+  providerStats: "/usage/provider-stats",
   modelStats: "/usage/model-stats",
   logs: "/usage/logs?limit=8",
+  requestDetail: "/usage/request-detail",
 };
 
 const frameworkApps = [
@@ -88,6 +91,10 @@ function money(value) {
 
 function compact(value) {
   return number(value).toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
+function percent(value) {
+  return `${(number(value) * 100).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
 }
 
 function arrayFrom(value, keys) {
@@ -233,6 +240,15 @@ function initProviderAppSelect() {
   select.innerHTML = frameworkApps
     .map((app) => `<option value="${escapeHtml(app.id)}">${escapeHtml(app.label)}</option>`)
     .join("");
+}
+
+function initUsageAppSelect() {
+  const select = $("usage-app");
+  if (!select) return;
+  select.innerHTML = [
+    `<option value="">All frameworks</option>`,
+    ...frameworkApps.map((app) => `<option value="${escapeHtml(app.id)}">${escapeHtml(app.label)}</option>`),
+  ].join("");
 }
 
 function providerRow(appType) {
@@ -414,6 +430,75 @@ function renderStack(id, rows, labelKeys) {
   }
 }
 
+function usageQueryParams(extra) {
+  const appType = $("usage-app")?.value || "";
+  const range = $("usage-range")?.value || "604800";
+  const params = { ...(extra || {}) };
+  if (appType) params.appType = appType;
+  if (range !== "all") {
+    const endDate = Math.floor(Date.now() / 1000);
+    params.endDate = endDate;
+    params.startDate = endDate - Number(range);
+  }
+  return params;
+}
+
+function trendLabel(value) {
+  if (!value) return "-";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function renderTrends(rows) {
+  const target = $("usage-trends");
+  if (!target) return;
+  target.innerHTML = "";
+  if (rows.length === 0) {
+    target.innerHTML = `<div class="trend-bar"><span style="height:10px"></span><small>No data</small></div>`;
+    return;
+  }
+  const maxTokens = Math.max(1, ...rows.map((row) => number(row.totalTokens ?? row.tokens ?? row.requestCount)));
+  for (const row of rows.slice(-36)) {
+    const tokens = number(row.totalTokens ?? row.tokens ?? row.requestCount);
+    const height = Math.max(10, Math.round((tokens / maxTokens) * 118));
+    const label = trendLabel(row.date ?? row.timestamp ?? row.bucket);
+    const bar = document.createElement("div");
+    bar.className = "trend-bar";
+    bar.title = `${label}: ${compact(tokens)} tokens`;
+    bar.innerHTML = `<span style="height:${height}px"></span><small>${escapeHtml(label)}</small>`;
+    target.appendChild(bar);
+  }
+}
+
+function renderRequestDetail(detail) {
+  const target = $("request-detail");
+  if (!target) return;
+  if (!detail || typeof detail !== "object") {
+    text("request-detail-id", "No selection");
+    target.innerHTML = `<div><span>Status</span><strong>No request selected</strong></div>`;
+    return;
+  }
+  text("request-detail-id", firstString(detail, ["requestId"], "Request"));
+  const fields = [
+    ["App", firstString(detail, ["appType"])],
+    ["Provider", firstString(detail, ["providerName", "providerId"])],
+    ["Model", firstString(detail, ["model", "requestModel"])],
+    ["Pricing", firstString(detail, ["pricingModel"], "")],
+    ["Status", firstString(detail, ["statusCode"])],
+    ["Cost", money(detail.totalCostUsd ?? detail.totalCost ?? 0)],
+    ["Input", compact(detail.inputTokens)],
+    ["Output", compact(detail.outputTokens)],
+    ["Cache Read", compact(detail.cacheReadTokens)],
+    ["Cache Write", compact(detail.cacheCreationTokens)],
+    ["Latency", `${compact(detail.latencyMs)} ms`],
+    ["Streaming", firstString(detail, ["isStreaming"])],
+  ];
+  target.innerHTML = fields
+    .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
+    .join("");
+}
+
 function renderLogs(data) {
   const rows = arrayFrom(data, ["logs", "items", "requests", "data"]);
   const target = $("request-log");
@@ -423,8 +508,9 @@ function renderLogs(data) {
     target.innerHTML = `<div class="log-item"><strong>No recent requests</strong><small>Requests will appear here after proxy traffic.</small></div>`;
     return;
   }
-  for (const row of rows.slice(0, 8)) {
+  for (const row of rows.slice(0, 12)) {
     const route = firstString(row, ["path", "route", "endpoint", "requestPath"]);
+    const requestId = firstString(row, ["requestId", "id"], "");
     const provider = firstString(row, ["providerName", "providerId", "provider"], "");
     const model = firstString(row, ["model", "modelId"], "");
     const status = firstString(row, ["statusCode", "status", "code"]);
@@ -433,6 +519,7 @@ function renderLogs(data) {
     div.innerHTML = `
       <strong>${escapeHtml(route)}</strong>
       <small>${escapeHtml([provider, model, status].filter(Boolean).join(" | "))}</small>
+      ${requestId ? `<button type="button" data-request-id="${escapeHtml(requestId)}">Details</button>` : ""}
     `;
     target.appendChild(div);
   }
@@ -454,6 +541,34 @@ function updateTotals(summary, stats) {
     summary.totalCostUsd ?? summary.costUsd ?? summary.totalCost ?? stats.totalCostUsd ?? stats.costUsd ?? 0;
   text("request-total", compact(totalRequests));
   text("cost-total", money(totalCost));
+}
+
+function updateUsageMetrics(summary) {
+  const totalTokens = number(
+    summary.realTotalTokens ??
+    summary.totalTokens ??
+    number(summary.totalInputTokens) + number(summary.totalOutputTokens),
+  );
+  text("usage-filter-requests", compact(summary.totalRequests ?? summary.requests ?? 0));
+  text("usage-filter-cost", money(summary.totalCostUsd ?? summary.totalCost ?? 0));
+  text("usage-filter-tokens", compact(totalTokens));
+  text("usage-filter-cache", percent(summary.cacheHitRate ?? 0));
+}
+
+async function loadUsageExplorer() {
+  const params = usageQueryParams();
+  const [summary, trends, providerStats, modelStats, logs] = await Promise.all([
+    getJson(endpoint(endpoints.usageSummary, params)),
+    getJson(endpoint(endpoints.usageTrends, params)),
+    getJson(endpoint(endpoints.providerStats, params)),
+    getJson(endpoint(endpoints.modelStats, params)),
+    getJson(endpoint("/usage/logs", { ...params, pageSize: 12 })),
+  ]);
+  updateUsageMetrics(summary);
+  renderTrends(arrayFrom(trends, ["data", "items", "trends"]));
+  renderStack("provider-usage", arrayFrom(providerStats, ["providers", "items", "data"]), ["providerName", "providerId", "name"]);
+  renderStack("filtered-model-usage", arrayFrom(modelStats, ["models", "items", "data"]), ["model", "modelId", "name"]);
+  renderLogs(logs);
 }
 
 async function loadFrameworkRow(app) {
@@ -504,6 +619,7 @@ async function refresh() {
   renderStack("app-usage", arrayFrom(byApp, ["apps", "items", "data"]), ["appType", "app", "name"]);
   renderStack("model-usage", arrayFrom(modelStats, ["models", "items", "data"]), ["model", "modelId", "name"]);
   renderLogs(logs);
+  await loadUsageExplorer();
   text("ui-updated", `Updated ${new Date().toLocaleTimeString()}`);
 }
 
@@ -529,6 +645,18 @@ $("proxy-stop")?.addEventListener("click", () => {
 
 $("sync-live")?.addEventListener("click", () => {
   postJson(endpoints.syncLive).then(refresh).catch(showError);
+});
+
+$("usage-apply")?.addEventListener("click", () => {
+  loadUsageExplorer().catch(showError);
+});
+
+$("request-log")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-request-id]");
+  if (!button) return;
+  getJson(`${endpoints.requestDetail}/${encodeURIComponent(button.dataset.requestId)}`)
+    .then(renderRequestDetail)
+    .catch(showError);
 });
 
 $("framework-rows")?.addEventListener("click", (event) => {
@@ -560,7 +688,9 @@ $("framework-rows")?.addEventListener("click", (event) => {
 });
 
 initProviderAppSelect();
+initUsageAppSelect();
 clearProviderForm("claude");
+renderRequestDetail(null);
 
 $("provider-clear")?.addEventListener("click", () => {
   clearProviderForm($("provider-app").value);

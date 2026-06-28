@@ -70,7 +70,9 @@ Moonstat itself and reads the same `/status`, `/proxy/status`, `/usage/*`, and
 `/metrics` surfaces used by the CLI and suite integrations. The UI also
 exposes proxy start/stop/sync controls and provider create/update/delete/test
 flows for Claude Code, Claude Desktop, Codex, Gemini, OpenCode, OpenClaw, and
-Hermes without removing additive-provider behavior.
+Hermes without removing additive-provider behavior. Its usage explorer filters
+summary, trend, provider, model, request-log, and request-detail views through
+the same `/usage/*` endpoints used by automation.
 
 For a desktop shell, use published Lepusa against the checked-in
 `lepusa.json` manifest. The manifest wraps the existing Moonstat gateway as a

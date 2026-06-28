@@ -21,6 +21,7 @@
           <a href="#providers">Providers</a>
           <a href="#frameworks">Frameworks</a>
           <a href="#usage">Usage</a>
+          <a href="#usage-explorer">Explorer</a>
           <a href="#requests">Requests</a>
         </nav>
         <div class="sidebar-footer">
@@ -56,7 +57,7 @@
           <article class="metric-card">
             <span>Requests</span>
             <strong id="request-total">-</strong>
-            <small id="request-detail">Across all apps</small>
+            <small id="request-total-detail">Across all apps</small>
           </article>
           <article class="metric-card">
             <span>Spend</span>
@@ -211,6 +212,64 @@
             <div id="model-usage" class="stack"></div>
           </article>
 
+          <article class="panel wide" id="usage-explorer">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Statistics</p>
+                <h2>Usage Explorer</h2>
+              </div>
+              <div class="filter-row">
+                <select id="usage-app" aria-label="Usage framework"></select>
+                <select id="usage-range" aria-label="Usage range">
+                  <option value="86400">24 hours</option>
+                  <option value="604800" selected>7 days</option>
+                  <option value="2592000">30 days</option>
+                  <option value="all">All time</option>
+                </select>
+                <button id="usage-apply" type="button" class="button-secondary">Apply</button>
+              </div>
+            </div>
+            <div class="usage-metrics">
+              <div>
+                <span>Requests</span>
+                <strong id="usage-filter-requests">-</strong>
+              </div>
+              <div>
+                <span>Cost</span>
+                <strong id="usage-filter-cost">-</strong>
+              </div>
+              <div>
+                <span>Tokens</span>
+                <strong id="usage-filter-tokens">-</strong>
+              </div>
+              <div>
+                <span>Cache Hit</span>
+                <strong id="usage-filter-cache">-</strong>
+              </div>
+            </div>
+            <div id="usage-trends" class="trend-bars"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Providers</p>
+                <h2>Provider Usage</h2>
+              </div>
+            </div>
+            <div id="provider-usage" class="stack"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Models</p>
+                <h2>Model Usage</h2>
+              </div>
+            </div>
+            <div id="filtered-model-usage" class="stack"></div>
+          </article>
+
           <article class="panel wide" id="requests">
             <div class="panel-head">
               <div>
@@ -220,6 +279,17 @@
               <a class="text-link" href="/usage/logs" target="_blank" rel="noreferrer">JSON</a>
             </div>
             <div id="request-log" class="log-list"></div>
+          </article>
+
+          <article class="panel wide" id="request-detail-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Request</p>
+                <h2>Request Detail</h2>
+              </div>
+              <span id="request-detail-id" class="pill">No selection</span>
+            </div>
+            <div id="request-detail" class="detail-grid"></div>
           </article>
         </section>
 

@@ -374,7 +374,8 @@ textarea {
 }
 
 .check-row,
-.form-actions {
+.form-actions,
+.filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -397,6 +398,77 @@ textarea {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+.filter-row {
+  justify-content: flex-end;
+}
+
+.filter-row select {
+  width: 170px;
+}
+
+.usage-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.usage-metrics div {
+  border: 1px solid #e5ecef;
+  border-radius: 6px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.usage-metrics span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.usage-metrics strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 20px;
+}
+
+.trend-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(26px, 1fr));
+  gap: 8px;
+  align-items: end;
+  min-height: 150px;
+  border: 1px solid #e5ecef;
+  border-radius: 6px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.trend-bar {
+  display: grid;
+  gap: 6px;
+  align-items: end;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.trend-bar span {
+  display: block;
+  min-height: 10px;
+  border-radius: 4px 4px 0 0;
+  background: #14847a;
+}
+
+.trend-bar small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stack,
@@ -428,6 +500,43 @@ textarea {
 .row-card small,
 .log-item small {
   color: var(--muted);
+}
+
+.log-item button {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-grid div {
+  min-width: 0;
+  border: 1px solid #e5ecef;
+  border-radius: 6px;
+  padding: 10px;
+  background: #fbfcfd;
+}
+
+.detail-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.detail-grid strong {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 
 .text-link {
@@ -467,7 +576,9 @@ textarea {
   }
 
   .status-grid,
-  .panel-grid {
+  .panel-grid,
+  .usage-metrics,
+  .detail-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -486,7 +597,9 @@ textarea {
   }
 
   .status-grid,
-  .panel-grid {
+  .panel-grid,
+  .usage-metrics,
+  .detail-grid {
     grid-template-columns: 1fr;
   }
 

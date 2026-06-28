@@ -10,6 +10,9 @@ async test "moonstat ui assets expose operator dashboard at public root" {
   assert_true(html.contains("Save Provider"))
   assert_true(html.contains("Delete Provider"))
   assert_true(html.contains("Test Provider"))
+  assert_true(html.contains("Usage Explorer"))
+  assert_true(html.contains("Provider Usage"))
+  assert_true(html.contains("Request Detail"))
   assert_true(html.contains("Start Proxy"))
   assert_true(html.contains("Stop Proxy"))
   assert_true(html.contains("Sync Live"))
@@ -21,7 +24,8 @@ async test "moonstat ui fetches current backend route surface" {
   let js = @fsx.read_file("public/assets/moonstat.js")
   let required = [
     "/health", "/status", "/proxy/status", "/usage/summary", "/usage/summary/by-app",
-    "/usage/model-stats", "/usage/logs?limit=8", "/proxy/start", "/proxy/stop", "/proxy/sync-current-providers-live",
+    "/usage/trends", "/usage/provider-stats", "/usage/model-stats", "/usage/logs?limit=8",
+    "/usage/request-detail", "/proxy/start", "/proxy/stop", "/proxy/sync-current-providers-live",
     "/providers", "/providers/current", "/providers/switch", "/providers/import-live",
     "/providers/update", "/proxy/stream-check/provider", "/providers/claude-desktop/import",
   ]
@@ -38,6 +42,8 @@ async test "moonstat ui fetches current backend route surface" {
   assert_true(js.contains("postJson"))
   assert_true(js.contains("deleteJson"))
   assert_true(js.contains("providerPayloadFromForm"))
+  assert_true(js.contains("loadUsageExplorer"))
+  assert_true(js.contains("renderRequestDetail"))
   assert_true(js.contains("defaultModel"))
   assert_true(js.contains("setInterval"))
 }
