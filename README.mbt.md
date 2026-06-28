@@ -95,7 +95,8 @@ app payload.
 For a desktop shell, use published Lepusa against the checked-in `lepusa.json`
 manifest. The manifest follows Lepusa's gateway-source shape, wraps the
 existing Moonstat gateway as a localhost app, opens `/ui/rabbita`, and does not
-depend on local `../lepusa` or `../rba` workspaces.
+depend on local `../lepusa` or `../rba` workspaces. Regenerate the primary
+desktop manifest with `moon run cmd/main -- suite lepusa`.
 
 `lepusa.rabbita.json` is the migration preview for the Rabbita-first desktop
 UI path. It uses Lepusa `rootHtml` and is paired with

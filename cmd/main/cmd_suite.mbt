@@ -2,6 +2,7 @@
 fn suite_cli_commands() -> Array[CliCommandSpec] {
   [
     { id: "suite_manifest", patterns: ["suite manifest"] },
+    { id: "suite_lepusa", patterns: ["suite lepusa"] },
     { id: "suite_lepusa_rabbita", patterns: ["suite lepusa-rabbita"] },
     { id: "suite_status", patterns: ["suite status"] },
     { id: "suite_write_status", patterns: ["suite write-status"] },
@@ -20,6 +21,7 @@ async fn run_suite_cli_command(
 ) -> Unit {
   match command_id {
     "suite_manifest" => print_suite_manifest(args)
+    "suite_lepusa" => print_lepusa_manifest(args)
     "suite_lepusa_rabbita" => print_lepusa_rabbita_manifest(args)
     "suite_status" => print_suite_status(args)
     "suite_write_status" => write_suite_status(args)
@@ -55,6 +57,12 @@ fn print_suite_manifest(args : Array[String]) -> Unit {
       indent=2,
     ),
   )
+}
+
+///|
+fn print_lepusa_manifest(args : Array[String]) -> Unit {
+  let port = parse_int_arg(args, "--port", default=@suite.default_port())
+  println(@moonstat.moonstat_lepusa_manifest(port~))
 }
 
 ///|

@@ -18,21 +18,41 @@
         "port": 15721,
         "path": "/ui/rabbita",
         "readinessPath": "/health",
-        "command": ["moon", "run", "cmd/main", "--", "start"]
+        "command": [
+          "moon",
+          "run",
+          "cmd/main",
+          "--",
+          "start"
+        ]
       }
     }
   },
   "plugins": [
-    { "name": "localhost" },
-    { "name": "serviceDiscovery" },
-    { "name": "opener" }
+    {
+      "name": "localhost"
+    },
+    {
+      "name": "serviceDiscovery"
+    },
+    {
+      "name": "opener"
+    }
   ],
   "capabilities": [
     {
       "name": "main",
-      "windows": ["main"],
-      "permissions": ["localhost", "service-discovery", "opener"]
+      "windows": [
+        "main"
+      ],
+      "permissions": [
+        "localhost",
+        "service-discovery",
+        "opener"
+      ]
     }
   ],
-  "startup": { "effect": "connect-moonstat" }
+  "startup": {
+    "effect": "connect-moonstat"
+  }
 }

@@ -164,6 +164,21 @@ async test "moonstat lepusa manifest uses published package boundary shape" {
   }
   assert_true(moon_mod.contains("\"vectie/lepusa@0.1.0\""))
   assert_true(moon_mod.contains("\"moonbit-community/rabbita@0.12.4\""))
+  let generated = moonstat_lepusa_manifest_json()
+  let parsed = @json.parse(manifest) catch {
+    _ => fail("expected lepusa.json to parse")
+  }
+  guard parsed is Object(parsed_obj) else { fail("expected lepusa object") }
+  guard generated is Object(generated_obj) else {
+    fail("expected generated lepusa object")
+  }
+  for
+    key in [
+      "identifier", "productName", "version", "runtime", "window", "plugins", "capabilities",
+      "startup",
+    ] {
+    assert_eq(parsed_obj[key], generated_obj[key])
+  }
   assert_true(manifest.contains("\"identifier\": \"dev.vectie.moonstat\""))
   assert_true(manifest.contains("\"backend\": \"system-webview\""))
   assert_true(manifest.contains("\"assetProtocol\": \"lepusa\""))
@@ -173,11 +188,6 @@ async test "moonstat lepusa manifest uses published package boundary shape" {
   assert_true(manifest.contains("\"path\": \"/ui/rabbita\""))
   assert_true(
     moonstat_suite_manifest_json().stringify().contains("GET /ui/rabbita"),
-  )
-  assert_true(
-    manifest.contains(
-      "\"command\": [\"moon\", \"run\", \"cmd/main\", \"--\", \"start\"]",
-    ),
   )
   assert_true(manifest.contains("\"readinessPath\": \"/health\""))
   assert_true(manifest.contains("\"serviceDiscovery\""))

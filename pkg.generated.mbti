@@ -100,6 +100,10 @@ pub fn moonstat_agent_clients_from_suite_status(Json) -> Result[Array[MoonstatAg
 
 pub fn moonstat_base_url_from_suite_status(Json) -> String?
 
+pub fn moonstat_lepusa_manifest(port? : Int) -> String
+
+pub fn moonstat_lepusa_manifest_json(port? : Int) -> Json
+
 pub fn moonstat_models_from_json(Json) -> Result[Array[MoonstatModel], String]
 
 pub fn moonstat_moonclaw_providers_file_json(host? : String, port? : Int, model? : String) -> Json
