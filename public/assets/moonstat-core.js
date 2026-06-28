@@ -1,73 +1,27 @@
-const endpoints = {
-  health: "/health",
-  status: "/status",
-  proxy: "/proxy/status",
-  proxyStart: "/proxy/start",
-  proxyStop: "/proxy/stop",
-  syncLive: "/proxy/sync-current-providers-live",
-  providerCreate: "/providers",
-  providerCurrent: "/providers/current",
-  providerUpdate: "/providers/update",
-  providerDelete: "/providers",
-  providerSwitch: "/providers/switch",
-  providerImportLive: "/providers/import-live",
-  providerStreamCheck: "/proxy/stream-check/provider",
-  usageSummary: "/usage/summary",
-  usageByApp: "/usage/summary/by-app",
-  usageTrends: "/usage/trends",
-  providerStats: "/usage/provider-stats",
-  modelStats: "/usage/model-stats",
-  usageLogs: "/usage/logs",
-  logs: "/usage/logs?limit=8",
-  requestDetail: "/usage/request-detail",
-  authStatus: "/auth/status",
-  configStatus: "/config/status",
-  configFolderOpen: "/config/folder/open",
-  claudeDesktopStatus: "/providers/claude-desktop/status",
-  claudeDesktopImport: "/providers/claude-desktop/import",
-  mcpServers: "/mcp/servers",
-  mcpImportApps: "/mcp/import-apps",
-  settings: "/settings",
-  portableMode: "/runtime/portable-mode",
-  toolsVersions: "/tools/versions",
-  proxyRunning: "/proxy/running",
-  takeoverStatus: "/proxy/takeover-status",
-  pluginClaudeStatus: "/plugin/claude/status",
-  pluginClaudeApplied: "/plugin/claude/applied",
-  circuitConfig: "/proxy/circuit-breaker-config",
-  circuitStats: "/proxy/circuit-breaker-stats",
-  resetCircuit: "/proxy/reset-circuit-breaker",
-  failoverQueue: "/proxy/failover-queue",
-  availableFailover: "/proxy/available-failover-providers",
-  autoFailover: "/proxy/auto-failover-enabled",
-  providerLimits: "/usage/provider-limits",
-  streamCheckAll: "/proxy/stream-check/all",
-  streamCheckConfig: "/proxy/stream-check/config",
-  suiteManifest: "/suite/manifest",
-  suiteStatus: "/suite/status",
-  suiteWriteStatus: "/suite/status/write",
-  suiteMoonclawProviders: "/suite/moonclaw-providers",
-  suiteWriteMoonclawProviders: "/suite/moonclaw-providers/write",
-};
+function readShellJson(name, fallback) {
+  const shell = document.querySelector(`[data-${name}]`);
+  const raw = shell ? shell.getAttribute(`data-${name}`) : "";
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch (_error) {
+    return fallback;
+  }
+}
+
+const endpoints = readShellJson("moonstat-endpoints", {});
 
 function readFrameworkApps() {
-  const shell = document.querySelector("[data-moonstat-framework-apps]");
-  const raw = shell ? shell.getAttribute("data-moonstat-framework-apps") : "";
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((app) => app && typeof app.id === "string" && typeof app.label === "string")
-      .map((app) => ({
-        id: app.id,
-        label: app.label,
-        mode: app.mode === "additive" ? "additive" : "single",
-        desktop: app.desktop === true,
-      }));
-  } catch (_error) {
-    return [];
-  }
+  const parsed = readShellJson("moonstat-framework-apps", []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((app) => app && typeof app.id === "string" && typeof app.label === "string")
+    .map((app) => ({
+      id: app.id,
+      label: app.label,
+      mode: app.mode === "additive" ? "additive" : "single",
+      desktop: app.desktop === true,
+    }));
 }
 
 const frameworkApps = readFrameworkApps();

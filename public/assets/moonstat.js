@@ -850,7 +850,7 @@ async function loadUsageExplorer() {
 async function loadFrameworkRow(app) {
   try {
     const [providersJson, currentJson] = await Promise.all([
-      getJson(endpoint("/providers", { appType: app.id })),
+      getJson(endpoint(endpoints.providerCreate, { appType: app.id })),
       getJson(endpoint(endpoints.providerCurrent, { appType: app.id })),
     ]);
     return {

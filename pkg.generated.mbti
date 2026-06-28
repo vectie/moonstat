@@ -124,6 +124,8 @@ pub fn moonstat_suite_manifest_json(host? : String, port? : Int, model? : String
 
 pub fn moonstat_suite_status_json(host? : String, port? : Int, model? : String, status? : String, ready? : Bool) -> Json
 
+pub fn moonstat_ui_endpoints_json() -> Json
+
 pub fn static_model_pricing_json() -> Json
 
 pub async fn write_moonstat_moonclaw_providers_file(path? : String, host? : String, port? : Int, model? : String) -> String

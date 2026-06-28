@@ -11,6 +11,10 @@ fn moonstat_rabbita_shell_view(
         .data_set(
           "moonstat-framework-apps",
           moonstat_framework_apps_json().stringify(),
+        )
+        .data_set(
+          "moonstat-endpoints",
+          moonstat_ui_endpoints_json().stringify(),
         ),
       [
         moonstat_rabbita_sidebar(),

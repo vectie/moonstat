@@ -6,6 +6,9 @@ async test "moonstat generated dashboard exposes operator ui surface" {
   assert_true(html.contains("/assets/moonstat-core.js"))
   assert_true(html.contains("/assets/moonstat.js"))
   assert_true(html.contains("data-moonstat-framework-apps="))
+  assert_true(html.contains("data-moonstat-endpoints="))
+  assert_true(html.contains("/health"))
+  assert_true(html.contains("/proxy/status"))
   for
     app in [
       "claude", "claude-desktop", "codex", "gemini", "opencode", "openclaw", "hermes",
@@ -44,6 +47,7 @@ async test "moonstat ui fetches current backend route surface" {
   let core = @fsx.read_file("public/assets/moonstat-core.js")
   let js = @fsx.read_file("public/assets/moonstat.js")
   let assets = core + "\n" + js
+  let endpoint_contract = moonstat_ui_endpoints_json().stringify()
   let required = [
     "/health", "/status", "/proxy/status", "/usage/summary", "/usage/summary/by-app",
     "/usage/trends", "/usage/provider-stats", "/usage/model-stats", "/usage/logs?limit=8",
@@ -60,10 +64,12 @@ async test "moonstat ui fetches current backend route surface" {
     "/suite/moonclaw-providers/write",
   ]
   for route in required {
-    assert_true(assets.contains(route))
+    assert_true(endpoint_contract.contains(route))
   }
+  assert_true(core.contains("readShellJson"))
+  assert_true(core.contains("moonstat-endpoints"))
+  assert_false(core.contains("const endpoints = {"))
   assert_true(core.contains("readFrameworkApps"))
-  assert_true(core.contains("data-moonstat-framework-apps"))
   assert_false(core.contains("const frameworkApps = ["))
   assert_true(core.contains("fetch(path"))
   assert_true(core.contains("postJson"))
@@ -127,6 +133,29 @@ test "moonstat framework app metadata preserves active framework support" {
 }
 
 ///|
+test "moonstat ui endpoint metadata preserves dashboard route support" {
+  guard moonstat_ui_endpoints_json() is Object(endpoints) else {
+    fail("expected endpoint object")
+  }
+  assert_eq(endpoints["health"], Json::string("/health"))
+  assert_eq(endpoints["providerCreate"], Json::string("/providers"))
+  assert_eq(
+    endpoints["claudeDesktopImport"],
+    Json::string("/providers/claude-desktop/import"),
+  )
+  assert_eq(endpoints["suiteManifest"], Json::string("/suite/manifest"))
+  assert_eq(
+    endpoints["suiteWriteMoonclawProviders"],
+    Json::string("/suite/moonclaw-providers/write"),
+  )
+  assert_eq(
+    endpoints["streamCheckAll"],
+    Json::string("/proxy/stream-check/all"),
+  )
+  assert_eq(endpoints["requestDetail"], Json::string("/usage/request-detail"))
+}
+
+///|
 fn ui_strip_query(path : String) -> String {
   match path.find("?") {
     Some(index) => path[:index].to_owned()
@@ -175,13 +204,25 @@ fn ui_manifest_advertises_route(routes : Array[Json], path : String) -> Bool {
 }
 
 ///|
+fn ui_route_literals_from_endpoint_contract() -> Array[String] {
+  let routes : Array[String] = []
+  guard moonstat_ui_endpoints_json() is Object(endpoints) else { return routes }
+  for key in endpoints.keys() {
+    guard endpoints[key] is String(route) else { continue }
+    routes.push(ui_strip_query(route))
+  }
+  routes
+}
+
+///|
 async test "moonstat ui endpoint literals are advertised by suite manifest" {
   let core = @fsx.read_file("public/assets/moonstat-core.js")
   let js = @fsx.read_file("public/assets/moonstat.js")
   let manifest = moonstat_suite_manifest_json(port=15721)
   guard manifest is Object(obj) else { fail("expected manifest object") }
   guard obj["routes"] is Array(routes) else { fail("expected routes") }
-  let endpoint_routes = ui_route_literals_from_asset(core) +
+  let endpoint_routes = ui_route_literals_from_endpoint_contract() +
+    ui_route_literals_from_asset(core) +
     ui_route_literals_from_asset(js)
   assert_true(endpoint_routes.length() > 45)
   for route in endpoint_routes {
