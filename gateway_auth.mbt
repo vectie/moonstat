@@ -50,7 +50,7 @@ async fn AuthService::codex_client(
   session_id? : String? = None,
 ) -> @http.Client {
   let _ = self
-  @http.Client::new(
+  Client(
     "https://chatgpt.com",
     headers=codex_oauth_headers(creds, accept, session_id),
   )

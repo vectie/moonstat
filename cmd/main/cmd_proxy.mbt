@@ -1108,7 +1108,7 @@ async fn update_usage_pricing(args : Array[String]) -> Unit {
   }
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
-    let client = @http.Client::new(url, headers={})
+    let client = @http.Client::Client(url, headers={})
     defer client.close()
     let response = client.post(path, "{}")
     let body = client.read_all().text()
@@ -1131,7 +1131,7 @@ async fn delete_usage_pricing(args : Array[String]) -> Unit {
   }
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
-    let client = @http.Client::new(url, headers={})
+    let client = @http.Client::Client(url, headers={})
     defer client.close()
     client.request(Delete, path)
     let response = client.end_request()

@@ -99,7 +99,13 @@ async fn Transport::write(self : Transport, content : Json) -> Unit {
             mkdir(dir)
           }
           let file = if @fs.exists(path) {
-            @fs.open(path, mode=WriteOnly, append=true, create=0o644)
+            @fs.open(
+              path,
+              mode=WriteOnly,
+              append=true,
+              create_mode=OpenExisting,
+              permission=0o644,
+            )
           } else {
             @fs.create(path, permission=0o644)
           }

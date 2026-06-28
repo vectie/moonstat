@@ -507,7 +507,7 @@ async fn ProxyService::post_codex_compatible_provider_stream(
     Err(message) => return Err(message)
     Ok(_) => ()
   }
-  let client = @http.Client::new(origin, headers~)
+  let client = @http.Client::Client(origin, headers~)
   let response = client.post(path, request) catch {
     error => {
       client.close()

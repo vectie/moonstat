@@ -75,7 +75,7 @@ async fn moon_balance_fetch_json(
     Ok(target) => target
     Err(err) => return Err(moon_balance_error(err))
   }
-  let client = @http.Client::new(target.origin, headers={
+  let client = @http.Client::Client(target.origin, headers={
     "Authorization": "Bearer \{api_key}",
     "Accept": "application/json",
   })

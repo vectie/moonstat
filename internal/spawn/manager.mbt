@@ -19,7 +19,7 @@ pub struct Manager {
 
 ///|
 pub fn Manager::new(cwd~ : String) -> Manager {
-  { id: 0, cwd, process: {}, spawn: @aqueue.Queue::new(kind=Unbounded) }
+  { id: 0, cwd, process: {}, spawn: Queue(kind=Unbounded) }
 }
 
 ///|
@@ -96,7 +96,7 @@ pub async fn Manager::spawn(
   cwd? : String,
   env? : Map[String, String],
 ) -> Process {
-  let process = @aqueue.Queue::new(kind=Unbounded)
+  let process : @aqueue.Queue[Result[Process, Error]] = Queue(kind=Unbounded)
   self.spawn.put({
     command,
     arguments,

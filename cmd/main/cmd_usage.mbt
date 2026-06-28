@@ -159,7 +159,7 @@ async fn test_usage_script(args : Array[String]) -> Unit {
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
-    let client = @http.Client::new(url, headers={})
+    let client = @http.Client::Client(url, headers={})
     defer client.close()
     let response = client.post(path, "{}")
     let body = client.read_all().text()

@@ -36,7 +36,7 @@ fn parse_jwt(token : String) -> Json raise Error {
   }
   let padded = add_base64_padding(parts[1].to_owned())
   let payload = @base64.decode(padded, url_safe=true) catch {
-    err => raise ParseError("Base64 decode failed: \{err}")
+    _ => raise ParseError("Base64 decode failed")
   }
   let payload_str = @encoding/utf8.decode(payload)
   @json.parse(payload_str) catch {

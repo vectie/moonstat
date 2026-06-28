@@ -1216,7 +1216,7 @@ async fn save_stream_check_config(args : Array[String]) -> Unit {
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   let path = stream_check_config_update_path(args)
   try {
-    let client = @http.Client::new(url, headers={})
+    let client = @http.Client::Client(url, headers={})
     defer client.close()
     let response = client.post(path, "{}")
     let body = client.read_all().text()
@@ -1315,7 +1315,7 @@ async fn check_json_endpoint(
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
-    let client = @http.Client::new(url, headers={})
+    let client = @http.Client::Client(url, headers={})
     defer client.close()
     let response = client.get(path)
     if response.code == 200 {
@@ -1338,7 +1338,7 @@ async fn check_json_post_endpoint(
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
-    let client = @http.Client::new(url, headers={})
+    let client = @http.Client::Client(url, headers={})
     defer client.close()
     let response = client.post(path, "{}")
     if response.code == 200 {
@@ -1362,7 +1362,7 @@ async fn post_json_body_endpoint(
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
-    let client = @http.Client::new(url, headers={
+    let client = @http.Client::Client(url, headers={
       "Content-Type": "application/json",
     })
     defer client.close()
@@ -1387,7 +1387,7 @@ async fn check_json_delete_endpoint(
   let logger = @pino.logger("moonstat", @pino.Transport::console())
   let url = parse_string_arg(args, "--url").unwrap_or("http://localhost:15721")
   try {
-    let client = @http.Client::new(url, headers={})
+    let client = @http.Client::Client(url, headers={})
     defer client.close()
     client.request(Delete, path)
     let response = client.end_request()

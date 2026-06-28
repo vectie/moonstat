@@ -109,8 +109,8 @@ async fn moon_skill_state_save(
   @fs.write_file(
     path,
     @encoding/utf8.encode(state.stringify(indent=2)),
-    create=0o644,
-    truncate=true,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   ) catch {
     _ => return false
   }
@@ -808,7 +808,12 @@ async fn moon_copy_skill_directory(
               }
             Regular | SymLink => {
               let bytes = @fs.read_file(child_source)
-              @fs.write_file(child_dest, bytes, create=0o644, truncate=true)
+              @fs.write_file(
+                child_dest,
+                bytes,
+                create_mode=CreateOrTruncate,
+                permission=0o644,
+              )
             }
             _ => ()
           }
@@ -817,7 +822,12 @@ async fn moon_copy_skill_directory(
       Regular | SymLink => {
         moon_skill_make_directory(@pathx.dirname(dest_path).to_owned())
         let bytes = @fs.read_file(source_path)
-        @fs.write_file(dest_path, bytes, create=0o644, truncate=true)
+        @fs.write_file(
+          dest_path,
+          bytes,
+          create_mode=CreateOrTruncate,
+          permission=0o644,
+        )
       }
       _ => return Err("unsupported skill entry kind: \{source_path}")
     }

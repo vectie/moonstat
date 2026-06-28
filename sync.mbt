@@ -869,7 +869,7 @@ async fn moon_webdav_get_text(
   password : String,
 ) -> Result[MoonWebDavTextResponse, String] {
   let (origin, path) = split_origin_and_path(url)
-  let client = @http.Client::new(origin, headers={
+  let client = @http.Client::Client(origin, headers={
     "Authorization": moon_webdav_basic_auth_header(username, password),
     "Accept": "application/json",
   })

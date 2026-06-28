@@ -1434,7 +1434,7 @@ async fn ProxyService::handle_non_streaming_request(
   let codex_input = convert_anthropic_to_codex(request, model)
   let codex_request = build_codex_request(codex_input, model, false)
   logger.debug("Sending request to Codex API")
-  let client = @http.Client::new(
+  let client = @http.Client::Client(
     "https://chatgpt.com",
     headers=codex_oauth_headers(creds, "application/json", session_id),
   )
@@ -1578,7 +1578,7 @@ async fn ProxyService::forward_streaming_claude_compatible_request(
   )
   let (origin, path) = split_origin_and_path(url)
   let custom_user_agent = provider_custom_user_agent(provider)
-  let client = @http.Client::new(
+  let client = @http.Client::Client(
     origin,
     headers=claude_compatible_provider_headers(
       api_key,
@@ -1604,7 +1604,7 @@ async fn ProxyService::forward_streaming_claude_compatible_request(
           api_format,
           session_id,
         )
-        let retry_client = @http.Client::new(
+        let retry_client = @http.Client::Client(
           origin,
           headers=claude_compatible_provider_headers(
             api_key,
@@ -1692,7 +1692,7 @@ async fn ProxyService::forward_streaming_claude_compatible_request(
           api_format,
           session_id,
         )
-        let retry_client = @http.Client::new(
+        let retry_client = @http.Client::Client(
           origin,
           headers=claude_compatible_provider_headers(
             api_key,
@@ -1956,7 +1956,7 @@ async fn ProxyService::handle_streaming_request(
   let codex_input = convert_anthropic_to_codex(request, model)
   let codex_request = build_codex_request(codex_input, model, true)
   logger.debug("Sending streaming request to Codex API")
-  let client = @http.Client::new(
+  let client = @http.Client::Client(
     "https://chatgpt.com",
     headers=codex_oauth_headers(creds, "text/event-stream", session_id),
   )

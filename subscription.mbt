@@ -774,7 +774,7 @@ async fn moon_fetch_json_get(
     Ok(target) => target
     Err(err) => return Err({ status: Valid, message: err })
   }
-  let client = @http.Client::new(target.origin, headers~)
+  let client = @http.Client::Client(target.origin, headers~)
   defer client.close()
   let response = client.get(target.path) catch {
     err => return Err({ status: Valid, message: "Network error: \{err}" })
@@ -794,7 +794,7 @@ async fn moon_fetch_json_post(
     Ok(target) => target
     Err(err) => return Err({ status: Valid, message: err })
   }
-  let client = @http.Client::new(target.origin, headers~)
+  let client = @http.Client::Client(target.origin, headers~)
   defer client.close()
   let response = client.post(target.path, body) catch {
     err => {

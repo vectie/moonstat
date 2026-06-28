@@ -62,7 +62,7 @@ async fn MoonstatClient::request_text_path(
     Err(err) => return Err(err)
   }
   let headers = self.headers(http_method)
-  let client = @http.Client::new(target.origin, headers~)
+  let client = @http.Client::Client(target.origin, headers~)
   defer client.close()
   let response = match http_method {
     "GET" =>

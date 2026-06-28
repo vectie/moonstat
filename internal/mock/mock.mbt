@@ -115,7 +115,7 @@ pub fn[T : Show] Context::show(self : Context, value : T) -> String {
 }
 
 ///|
-let home_lock : @semaphore.Semaphore = @semaphore.Semaphore::new(1)
+let home_lock : @semaphore.Semaphore = Semaphore(1)
 
 ///|
 /// Temporarily points `HOME` to the provided directory while running `f`.
@@ -146,7 +146,7 @@ pub async fn Directory::add_file(
   content? : String = "",
 ) -> File {
   let path = @pathx.join(self.0, name)
-  @fs.write_file(path, content, truncate=true, create=0o644)
+  @fs.write_file(path, content, create_mode=CreateOrTruncate, permission=0o644)
   File(path)
 }
 
@@ -318,7 +318,7 @@ pub fn Context::model(
 }
 
 ///|
-let semaphore : @semaphore.Semaphore = @semaphore.Semaphore::new(16)
+let semaphore : @semaphore.Semaphore = Semaphore(16)
 
 ///|
 async fn eprintln(msg : String) -> Unit {
