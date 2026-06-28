@@ -80,6 +80,71 @@ async test "moonstat ui fetches current backend route surface" {
 }
 
 ///|
+fn ui_strip_query(path : String) -> String {
+  match path.find("?") {
+    Some(index) => path[:index].to_owned()
+    None => path
+  }
+}
+
+///|
+fn ui_route_literals_from_asset(source : String) -> Array[String] {
+  let routes : Array[String] = []
+  let mut first_segment = true
+  for segment_view in source.split("\"/") {
+    if first_segment {
+      first_segment = false
+      continue
+    }
+    let segment = segment_view.to_owned()
+    guard segment.find("\"") is Some(end) else { continue }
+    let route = "/\{segment[:end].to_owned()}"
+    if route.has_prefix("//") {
+      continue
+    }
+    routes.push(ui_strip_query(route))
+  }
+  routes
+}
+
+///|
+fn ui_manifest_route_matches_path(route_value : String, path : String) -> Bool {
+  guard route_value.find(" ") is Some(separator) else { return false }
+  let route_path = route_value[separator + 1:].to_owned()
+  route_path == path ||
+  route_path == "\{path}/*path" ||
+  (
+    route_path.has_suffix("/*path") &&
+    path.has_prefix(route_path[:route_path.length() - 6])
+  )
+}
+
+///|
+fn ui_manifest_advertises_route(routes : Array[Json], path : String) -> Bool {
+  routes.any(route => {
+    guard route is String(value) else { return false }
+    ui_manifest_route_matches_path(value, path)
+  })
+}
+
+///|
+async test "moonstat ui endpoint literals are advertised by suite manifest" {
+  let core = @fsx.read_file("public/assets/moonstat-core.js")
+  let js = @fsx.read_file("public/assets/moonstat.js")
+  let manifest = moonstat_suite_manifest_json(port=15721)
+  guard manifest is Object(obj) else { fail("expected manifest object") }
+  guard obj["routes"] is Array(routes) else { fail("expected routes") }
+  let endpoint_routes = ui_route_literals_from_asset(core) +
+    ui_route_literals_from_asset(js)
+  assert_true(endpoint_routes.length() > 45)
+  for route in endpoint_routes {
+    if !ui_manifest_advertises_route(routes, route) {
+      fail("suite manifest does not advertise UI endpoint route: \{route}")
+    }
+  }
+}
+
+///|
 async test "moonstat lepusa manifest uses published package boundary shape" {
   let manifest = @fsx.read_file("lepusa.json")
   assert_true(manifest.contains("\"identifier\": \"dev.vectie.moonstat\""))
