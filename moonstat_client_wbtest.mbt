@@ -260,6 +260,106 @@ test "moonstat client builds session sync URLs" {
 }
 
 ///|
+fn moonstat_client_contract_path(url : String) -> String {
+  let without_origin = match url.find("://") {
+    Some(scheme_index) => {
+      let after_scheme = url[scheme_index + 3:]
+      match after_scheme.find("/") {
+        Some(path_index) => after_scheme[path_index:].to_owned()
+        None => "/"
+      }
+    }
+    None => url
+  }
+  match without_origin.find("?") {
+    Some(query_index) => without_origin[:query_index].to_owned()
+    None => without_origin
+  }
+}
+
+///|
+fn moonstat_manifest_advertises_client_path(
+  routes : Array[Json],
+  path : String,
+) -> Bool {
+  routes.any(route => {
+    guard route is String(value) else { return false }
+    value.contains(" \{path}") ||
+    (value.has_suffix("/*path") && path.has_prefix(value[4:value.length() - 5]))
+  })
+}
+
+///|
+test "moonstat client helper paths are advertised by suite manifest" {
+  let client = MoonstatClient::new(base_url="http://127.0.0.1:4199")
+  let manifest = moonstat_suite_manifest_json(port=4199)
+  guard manifest is Object(obj) else { fail("expected manifest object") }
+  guard obj["routes"] is Array(routes) else { fail("expected routes") }
+  let urls = [
+    client.health_url(),
+    client.status_url(),
+    client.stats_url(),
+    client.metrics_url(),
+    client.models_url(),
+    client.route_chat_url(),
+    client.route_openclaw_chat_url(),
+    client.route_response_url(),
+    client.route_response_compact_url(),
+    client.route_messages_url(),
+    client.usage_logs_url(),
+    client.usage_summary_url(),
+    client.usage_summary_by_app_url(),
+    client.usage_trends_url(),
+    client.usage_provider_limits_url("claude", "provider/a b"),
+    client.usage_provider_usage_url("claude", "provider/a b"),
+    client.usage_provider_stats_url(),
+    client.usage_model_stats_url(),
+    client.usage_data_sources_url(),
+    client.usage_model_pricing_url(),
+    client.usage_delete_model_pricing_url("model/a b"),
+    client.usage_sync_session_url(),
+    client.usage_request_detail_url("req/a b"),
+    client.proxy_status_url(),
+    client.proxy_running_url(),
+    client.proxy_global_config_url(),
+    client.proxy_global_url_url(),
+    client.proxy_upstream_status_url(),
+    client.proxy_local_proxies_url(),
+    client.proxy_app_config_url("codex"),
+    client.proxy_default_cost_multiplier_url("codex"),
+    client.proxy_pricing_model_source_url("codex"),
+    client.proxy_circuit_breaker_config_url(),
+    client.proxy_provider_health_url("codex", "provider/a b"),
+    client.proxy_circuit_breaker_stats_url("codex", "provider/a b"),
+    client.proxy_failover_queue_url("codex"),
+    client.proxy_available_failover_providers_url("codex"),
+    client.proxy_auto_failover_enabled_url("codex"),
+    client.proxy_takeover_status_url(),
+    client.proxy_start_url(),
+    client.proxy_stop_url(),
+    client.proxy_stop_with_restore_url(),
+    client.proxy_update_global_config_url(),
+    client.proxy_set_global_url_url("http://127.0.0.1:7890"),
+    client.proxy_test_url_url("socks5://127.0.0.1:1080"),
+    client.proxy_update_app_config_url("codex"),
+    client.proxy_set_default_cost_multiplier_url("codex", "1.25"),
+    client.proxy_set_pricing_model_source_url("codex", "request"),
+    client.proxy_update_circuit_breaker_config_url("7", "3", "44", "0.4", "12"),
+    client.proxy_reset_circuit_breaker_url("codex", "provider/a b"),
+    client.proxy_add_failover_queue_url("codex", "provider/a b"),
+    client.proxy_remove_failover_queue_url("codex", "provider/a b"),
+    client.proxy_set_auto_failover_enabled_url("codex", "true"),
+    client.proxy_set_takeover_status_url("codex", "true"),
+    client.proxy_switch_provider_url("codex", "codex oauth"),
+  ]
+  assert_true(urls.length() > 50)
+  for url in urls {
+    let path = moonstat_client_contract_path(url)
+    assert_true(moonstat_manifest_advertises_client_path(routes, path))
+  }
+}
+
+///|
 test "moonstat client discovers from suite status manifest" {
   let status = moonstat_suite_status_json(host="0.0.0.0", port=15722)
   let client = MoonstatClient::from_suite_status(status).unwrap()
