@@ -234,6 +234,78 @@ a {
   line-height: 1.35;
 }
 
+.connection-board {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 16px;
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.connection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#connection-copy-status {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.connection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.connection-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px 12px;
+  align-items: center;
+  min-height: 116px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 13px;
+  background: #fbfcfd;
+}
+
+.connection-card strong,
+.connection-card small,
+.connection-card code {
+  display: block;
+}
+
+.connection-card small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.connection-card code {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border: 1px solid #dbe7e5;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #f3faf8;
+  color: #134e4a;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-card button {
+  min-width: 72px;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--accent);
@@ -785,6 +857,7 @@ textarea {
   .status-grid,
   .readiness-cards,
   .operator-action-grid,
+  .connection-grid,
   .panel-grid,
   .usage-metrics,
   .detail-grid,
@@ -811,6 +884,7 @@ textarea {
   .status-grid,
   .readiness-cards,
   .operator-action-grid,
+  .connection-grid,
   .panel-grid,
   .usage-metrics,
   .detail-grid,

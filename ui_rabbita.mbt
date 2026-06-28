@@ -27,6 +27,7 @@ fn moonstat_rabbita_shell_view(
           moonstat_rabbita_topbar(),
           moonstat_rabbita_readiness_strip(),
           moonstat_rabbita_operator_workflow(),
+          moonstat_rabbita_connection_board(),
           @html.section(class="status-grid", [
             moonstat_rabbita_metric_card(
               "Gateway", "gateway-state", "gateway-detail", "Loading status",
@@ -203,6 +204,57 @@ fn moonstat_rabbita_operator_action(
     attrs=@html.Attrs::build().data_set("operator-action", action),
     [@html.strong(title), @html.span(detail)],
   )
+}
+
+///|
+fn moonstat_rabbita_connection_board() -> @html.Html {
+  @html.section(id="connection-board", class="connection-board", [
+    @html.div(class="connection-head", [
+      @html.div([
+        @html.p(class="eyebrow", "Connect"),
+        @html.h2("Client Endpoints"),
+      ]),
+      @html.span(id="connection-copy-status", "Copy full URLs"),
+    ]),
+    @html.div(class="connection-grid", [
+      moonstat_rabbita_connection_card(
+        "OpenAI Chat", "/v1/chat/completions", "OpenAI-compatible clients",
+      ),
+      moonstat_rabbita_connection_card(
+        "OpenAI Responses", "/v1/responses", "Codex-style responses clients",
+      ),
+      moonstat_rabbita_connection_card(
+        "Anthropic Messages", "/v1/messages", "Claude-compatible clients",
+      ),
+      moonstat_rabbita_connection_card(
+        "Claude Desktop", "/claude-desktop/v1/messages", "Desktop gateway route",
+      ),
+      moonstat_rabbita_connection_card(
+        "OpenClaw", "/openclaw/v1/chat/completions", "OpenClaw chat route",
+      ),
+      moonstat_rabbita_connection_card(
+        "Metrics", "/metrics", "Prometheus scrape",
+      ),
+    ]),
+  ])
+}
+
+///|
+fn moonstat_rabbita_connection_card(
+  title : String,
+  path : String,
+  detail : String,
+) -> @html.Html {
+  @html.article(class="connection-card", [
+    @html.div([@html.strong(title), @html.small(detail)]),
+    @html.code(path),
+    @html.button(
+      type_="button",
+      class="button-secondary",
+      attrs=@html.Attrs::build().data_set("copy-path", path),
+      "Copy",
+    ),
+  ])
 }
 
 ///|

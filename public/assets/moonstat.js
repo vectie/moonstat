@@ -139,6 +139,32 @@ function setOperatorStatus(value) {
   text("operator-action-status", value);
 }
 
+function shellApiBase() {
+  const shell = document.querySelector("[data-moonstat-api-base]");
+  const value = shell ? shell.getAttribute("data-moonstat-api-base") : "";
+  return value || window.location.origin;
+}
+
+function connectionUrl(path) {
+  return new URL(path, shellApiBase()).toString();
+}
+
+async function copyText(value) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+  const input = document.createElement("textarea");
+  input.value = value;
+  input.setAttribute("readonly", "true");
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand("copy");
+  input.remove();
+}
+
 async function runOperatorAction(action) {
   const labels = {
     "start-proxy": "Starting proxy",
@@ -170,6 +196,15 @@ $("operator-actions")?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-operator-action]");
   if (!button) return;
   runOperatorAction(button.dataset.operatorAction).catch(showError);
+});
+
+$("connection-board")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-copy-path]");
+  if (!button) return;
+  const url = connectionUrl(button.dataset.copyPath);
+  copyText(url)
+    .then(() => text("connection-copy-status", `Copied ${button.dataset.copyPath}`))
+    .catch(showError);
 });
 
 $("refresh")?.addEventListener("click", () => {

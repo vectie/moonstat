@@ -79,7 +79,10 @@ same `/status`, `/proxy/status`,
 UI also
 exposes proxy start/stop/sync controls and provider create/update/delete/test
 flows for Claude Code, Claude Desktop, Codex, Gemini, OpenCode, OpenClaw, and
-Hermes without removing additive-provider behavior. Its usage explorer filters
+Hermes without removing additive-provider behavior. Its first-screen operator
+workflow exposes common setup/routing actions, and the connection board shows
+copyable localhost endpoints for OpenAI, Anthropic, Claude Desktop, OpenClaw,
+and metrics clients. Its usage explorer filters
 summary, trend, provider, model, request-log, and request-detail views through
 the same `/usage/*` endpoints used by automation. The setup panel checks auth,
 config, runtime, tool, Claude Desktop, MCP, Claude plugin, proxy-running, and
