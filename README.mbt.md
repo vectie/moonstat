@@ -102,7 +102,9 @@ from MoonBit for tests and future generation while the production app continues
 to use the localhost gateway manifest. The preview shell now carries the full
 dashboard DOM contract, including the existing CSS and JavaScript assets, so it
 can be promoted behind Lepusa once runtime smoke tests are strong enough.
-Regenerate the preview contract with `moon run cmd/main -- suite lepusa-rabbita`.
+It is also served by the standalone gateway at `/ui/rabbita` for runtime
+validation. Regenerate the preview contract with
+`moon run cmd/main -- suite lepusa-rabbita`.
 
 ## Feature Testing Focus
 

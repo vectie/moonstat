@@ -205,6 +205,27 @@ async test "moonstat rabbita shell renders lepusa preview structure" {
 }
 
 ///|
+async test "moonstat rabbita document is routable standalone dashboard html" {
+  let document = moonstat_rabbita_document_html()
+  assert_true(document.contains("<html"))
+  assert_true(document.contains("data-moonstat-api-base"))
+  assert_true(document.contains("/assets/moonstat.css"))
+  assert_true(document.contains("/assets/moonstat-core.js"))
+  assert_true(document.contains("/assets/moonstat.js"))
+  for
+    id in [
+      "provider-form", "setup-config-rows", "suite-app-rows", "request-log",
+    ] {
+    assert_true(document.contains("id=\"\{id}\""))
+  }
+  guard moonstat_suite_manifest_json() is Object(obj) else {
+    fail("expected suite manifest object")
+  }
+  guard obj["routes"] is Array(routes) else { fail("expected manifest routes") }
+  assert_true(routes.contains(Json::string("GET /ui/rabbita")))
+}
+
+///|
 async test "moonstat rabbita lepusa preview manifest parses" {
   let manifest = @fsx.read_file("lepusa.rabbita.json")
   let generated = moonstat_rabbita_lepusa_manifest_json()

@@ -96,6 +96,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(capabilities.contains(Json::string("provider-presets")))
   assert_true(capabilities.contains(Json::string("suite-discovery")))
   assert_true(routes.contains(Json::string("GET /")))
+  assert_true(routes.contains(Json::string("GET /ui/rabbita")))
   assert_true(routes.contains(Json::string("GET /assets/moonstat.css")))
   assert_true(routes.contains(Json::string("GET /assets/moonstat-core.js")))
   assert_true(routes.contains(Json::string("GET /assets/moonstat.js")))

@@ -595,3 +595,17 @@ async fn WorkspaceService::handle_register_page(
     logger, w, "public/participant-register.html", "text/html; charset=utf-8",
   )
 }
+
+///|
+async fn WorkspaceService::handle_rabbita_dashboard_page(
+  self : WorkspaceService,
+  w : @httpx.ResponseWriter,
+  host : String,
+  port : Int,
+) -> Unit {
+  ignore(self)
+  w.header().set("Content-Type", "text/html; charset=utf-8")
+  w.write_header(@status.Ok)
+  w.write(moonstat_rabbita_document_html(api_base=@suite.base_url(host, port)))
+  w.flush()
+}
