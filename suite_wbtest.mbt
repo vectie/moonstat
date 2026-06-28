@@ -693,6 +693,84 @@ fn suite_routes_include_path(routes : Array[Json], path : String) -> Bool {
 }
 
 ///|
+fn suite_route_method_from_registration(prefix : String) -> String {
+  if prefix.contains("Get,") {
+    "GET"
+  } else if prefix.contains("Post,") {
+    "POST"
+  } else if prefix.contains("Delete,") {
+    "DELETE"
+  } else {
+    "ANY"
+  }
+}
+
+///|
+fn suite_registered_routes_from_source(
+  source : String,
+) -> Array[(String, String)] {
+  let routes : Array[(String, String)] = []
+  for segment_view in source.split("router.add_handler(") {
+    let segment = segment_view.to_owned()
+    guard segment.find("\"") is Some(start) else { continue }
+    let prefix = segment[:start].to_owned()
+    let rest = segment[start + 1:]
+    guard rest.find("\"") is Some(end) else { continue }
+    let path = rest[:end].to_owned()
+    if path.has_prefix("/") {
+      routes.push((suite_route_method_from_registration(prefix), path))
+    }
+  }
+  routes
+}
+
+///|
+fn suite_manifest_covers_registered_route(
+  routes : Array[Json],
+  verb : String,
+  path : String,
+) -> Bool {
+  routes.any(route => {
+    guard route is String(value) else { return false }
+    value == "\{verb} \{path}" ||
+    value == "ANY \{path}" ||
+    ((verb == "GET" || verb == "POST") && value == "GET|POST \{path}") ||
+    (
+      (verb == "GET" || verb == "POST" || verb == "DELETE") &&
+      value == "GET|POST|DELETE \{path}"
+    )
+  })
+}
+
+///|
+async test "suite manifest covers registered standalone gateway routes" {
+  let manifest = moonstat_suite_manifest_json(
+    host="127.0.0.1",
+    port=15721,
+    model="gpt-5",
+  )
+  guard manifest is Object(obj) else { fail("expected manifest object") }
+  guard obj["routes"] is Array(routes) else { fail("expected routes") }
+  let route_files = [
+    "gateway_auth_routes.mbt", "gateway_config_routes.mbt", "gateway_openclaw_routes.mbt",
+    "gateway_proxy_routes.mbt", "gateway_runtime_routes.mbt", "gateway_session_routes.mbt",
+    "gateway_skill_routes.mbt", "gateway_suite_routes.mbt", "gateway_usage_routes.mbt",
+    "gateway_workspace_routes.mbt",
+  ]
+  let mut registered_count = 0
+  for file in route_files {
+    let source = @fsx.read_file(file)
+    for route in suite_registered_routes_from_source(source) {
+      registered_count += 1
+      assert_true(
+        suite_manifest_covers_registered_route(routes, route.0, route.1),
+      )
+    }
+  }
+  assert_true(registered_count > 200)
+}
+
+///|
 fn moon_legacy_command_surface() -> Array[String] {
   [
     "get_claude_desktop_status", "get_claude_desktop_default_routes", "import_claude_desktop_providers_from_claude",
