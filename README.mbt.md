@@ -29,8 +29,8 @@ such as `cmd/main/cmd_misc.mbt`, `gateway_provider.mbt`,
 `gateway_claude_anthropic.mbt`, and `gateway_usage.mbt` when testing exposes
 friction or before a release-hardening pass. Lepusa is the frontend/desktop
 framework for Moonstat. The checked-in `lepusa.json` wraps Moonstat's own
-localhost gateway as the standalone app shell, while the dashboard payload is
-still served from `/` by Moonstat itself.
+localhost gateway as the standalone app shell, while the desktop dashboard
+payload is the generated Rabbita route at `/ui/rabbita`.
 
 Desktop/UI integration depends on published packages rather than local sibling
 checkouts. Moonstat imports published Rabbita (`moonbit-community/rabbita`) and
@@ -67,12 +67,14 @@ curl http://127.0.0.1:15721/metrics
 moon run cmd/main -- usage logs
 ```
 
-Open the operator UI at `http://127.0.0.1:15721/`, or launch it through Lepusa
-with the checked-in `lepusa.json` manifest. Lepusa is the frontend framework and
-desktop shell; it owns the system WebView, localhost service lifecycle,
-readiness probe, service discovery, and opener capability. The Moonstat gateway
-still serves the dashboard payload from `/`, so the same view works in a browser
-and inside the Lepusa shell. The UI reads the same `/status`, `/proxy/status`,
+Open the operator UI at `http://127.0.0.1:15721/ui/rabbita`, or launch it
+through Lepusa with the checked-in `lepusa.json` manifest. The legacy static
+browser fallback remains at `http://127.0.0.1:15721/`. Lepusa is the frontend
+framework and desktop shell; it owns the system WebView, localhost service
+lifecycle, readiness probe, service discovery, and opener capability. The
+Moonstat gateway serves the generated Rabbita dashboard at `/ui/rabbita`, so
+the same view works in a browser and inside the Lepusa shell. The UI reads the
+same `/status`, `/proxy/status`,
 `/usage/*`, and `/metrics` surfaces used by the CLI and suite integrations. The
 UI also
 exposes proxy start/stop/sync controls and provider create/update/delete/test
@@ -92,18 +94,17 @@ app payload.
 
 For a desktop shell, use published Lepusa against the checked-in `lepusa.json`
 manifest. The manifest follows Lepusa's gateway-source shape, wraps the
-existing Moonstat gateway as a localhost app, and does not depend on local
-`../lepusa` or `../rba` workspaces.
+existing Moonstat gateway as a localhost app, opens `/ui/rabbita`, and does not
+depend on local `../lepusa` or `../rba` workspaces.
 
 `lepusa.rabbita.json` is the migration preview for the Rabbita-first desktop
 UI path. It uses Lepusa `rootHtml` and is paired with
-`moonstat_rabbita_shell_html`, which renders the first Rabbita-authored shell
-from MoonBit for tests and future generation while the production app continues
-to use the localhost gateway manifest. The preview shell now carries the full
-dashboard DOM contract, including the existing CSS and JavaScript assets, so it
-can be promoted behind Lepusa once runtime smoke tests are strong enough.
-It is also served by the standalone gateway at `/ui/rabbita` for runtime
-validation. Regenerate the preview contract with
+`moonstat_rabbita_shell_html`, which renders the Rabbita-authored shell from
+MoonBit for tests and future generation. The production Lepusa manifest opens
+the same generated dashboard through the localhost gateway. The preview shell
+carries the full dashboard DOM contract, including the existing CSS and
+JavaScript assets. It is also served by the standalone gateway at `/ui/rabbita`
+for runtime validation. Regenerate the preview contract with
 `moon run cmd/main -- suite lepusa-rabbita`.
 
 ## Feature Testing Focus

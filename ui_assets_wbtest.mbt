@@ -170,7 +170,10 @@ async test "moonstat lepusa manifest uses published package boundary shape" {
   assert_true(manifest.contains("\"source\":"))
   assert_true(manifest.contains("\"localhost\""))
   assert_true(manifest.contains("\"port\": 15721"))
-  assert_true(manifest.contains("\"path\": \"/\""))
+  assert_true(manifest.contains("\"path\": \"/ui/rabbita\""))
+  assert_true(
+    moonstat_suite_manifest_json().stringify().contains("GET /ui/rabbita"),
+  )
   assert_true(
     manifest.contains(
       "\"command\": [\"moon\", \"run\", \"cmd/main\", \"--\", \"start\"]",

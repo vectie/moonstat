@@ -16,7 +16,7 @@
     "source": {
       "localhost": {
         "port": 15721,
-        "path": "/",
+        "path": "/ui/rabbita",
         "readinessPath": "/health",
         "command": ["moon", "run", "cmd/main", "--", "start"]
       }
