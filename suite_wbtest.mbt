@@ -116,6 +116,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_true(routes.contains(Json::string("GET /participant/register")))
   assert_true(routes.contains(Json::string("GET /suite/manifest")))
   assert_true(routes.contains(Json::string("GET /suite/status")))
+  assert_true(routes.contains(Json::string("GET /suite/drift")))
   assert_true(routes.contains(Json::string("POST /suite/status/write")))
   assert_true(routes.contains(Json::string("GET /suite/moonclaw-providers")))
   assert_true(
@@ -630,6 +631,87 @@ async test "moonclaw providers file writer materializes suite provider config" {
     assert_eq(provider["baseUrl"], Json::string("http://127.0.0.1:18081/v1"))
     assert_eq(provider["api"], Json::string("openai"))
     assert_eq(provider["apiKey"], Json::string("moonstat-local"))
+  })
+}
+
+///|
+fn suite_finding_by_product(findings : Array[Json], product : String) -> Json? {
+  for finding in findings {
+    guard finding is Object(obj) else { continue }
+    if obj["product"] == Json::string(product) {
+      return Some(finding)
+    }
+  }
+  None
+}
+
+///|
+async test "suite drift report derives canonical paths from moonsuite contract" {
+  @fsx.with_temporary_directory("moonstat-suite-drift-clean-XXXXXX", tmpdir => {
+    let report = moonstat_suite_drift_report_json(suite_root=tmpdir)
+    guard report is Object(obj) else { fail("expected drift report") }
+    assert_eq(obj["contract"], Json::string("moonstat.suite.drift.v1"))
+    assert_eq(obj["contractSource"], Json::string("vectie/moonlib/moonsuite"))
+    guard obj["canonical"] is Object(canonical) else {
+      fail("expected canonical paths")
+    }
+    assert_eq(
+      canonical["moonstatHome"],
+      Json::string(@pathx.join(tmpdir, ".moonsuite/products/moonstat")),
+    )
+    assert_eq(
+      canonical["moonclawProviders"],
+      Json::string(
+        @pathx.join(tmpdir, ".moonsuite/products/moonclaw/providers.json"),
+      ),
+    )
+    guard obj["findings"] is Array(findings) else {
+      fail("expected drift findings")
+    }
+    guard suite_finding_by_product(findings, "moonclaw") is Some(moonclaw) else {
+      fail("expected moonclaw finding")
+    }
+    guard moonclaw is Object(moonclaw_obj) else {
+      fail("expected moonclaw finding object")
+    }
+    assert_eq(moonclaw_obj["status"], Json::string("clear"))
+    assert_eq(moonclaw_obj["detected"], Json::boolean(false))
+    assert_eq(moonclaw_obj["legacyPath"], Json::string(".moonclaw"))
+    assert_eq(
+      moonclaw_obj["canonicalPath"],
+      Json::string(@pathx.join(tmpdir, ".moonsuite/products/moonclaw")),
+    )
+  })
+}
+
+///|
+async test "suite drift report flags legacy product homes when present" {
+  @fsx.with_temporary_directory("moonstat-suite-drift-legacy-XXXXXX", tmpdir => {
+    @fsx.make_directory(@pathx.join(tmpdir, ".moontown"))
+    @fsx.make_directory(@pathx.join(tmpdir, ".moonclaw"))
+    let report = moonstat_suite_drift_report_json(suite_root=tmpdir)
+    guard report is Object(obj) else { fail("expected drift report") }
+    guard obj["summary"] is Object(summary) else {
+      fail("expected drift summary")
+    }
+    assert_eq(summary["detected"], Json::number(2.0))
+    guard obj["findings"] is Array(findings) else {
+      fail("expected drift findings")
+    }
+    for product in ["moontown", "moonclaw"] {
+      guard suite_finding_by_product(findings, product) is Some(finding) else {
+        fail("expected \{product} finding")
+      }
+      guard finding is Object(finding_obj) else {
+        fail("expected \{product} finding object")
+      }
+      assert_eq(finding_obj["status"], Json::string("drift"))
+      assert_eq(finding_obj["detected"], Json::boolean(true))
+      assert_eq(
+        finding_obj["contractSource"],
+        Json::string("vectie/moonlib/moonsuite"),
+      )
+    }
   })
 }
 

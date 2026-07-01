@@ -2,13 +2,27 @@
 const SUITE_STATUS_FILE = "suite-status.json"
 
 ///|
-const MOONSTAT_MOONCLAW_PROVIDERS_FILE = ".moonsuite/products/moonclaw/providers.json"
+priv struct SuiteLegacyDriftCandidate {
+  product : String
+  legacy_path : String
+  canonical_path : String
+  reason : String
+}
 
 ///|
-const MOONSTAT_MOONCLAW_MODELS_FILE = ".moonsuite/products/moonclaw/models/models.json"
+fn moonstat_moonclaw_providers_file() -> String {
+  @moonsuite.product_artifact("", "moonclaw", "providers.json")
+}
 
 ///|
-const MOONSTAT_MOONCLAW_CONFIG_FILE = ".moonsuite/products/moonclaw/config.json"
+fn moonstat_moonclaw_models_file() -> String {
+  @moonsuite.product_artifact("", "moonclaw", "models/models.json")
+}
+
+///|
+fn moonstat_moonclaw_config_file() -> String {
+  @moonsuite.product_artifact("", "moonclaw", "config.json")
+}
 
 ///|
 pub fn moonstat_suite_manifest_json(
@@ -87,6 +101,138 @@ pub fn moonstat_suite_status_json(
 }
 
 ///|
+pub async fn moonstat_suite_drift_report_json(
+  suite_root? : String = ".",
+) -> Json {
+  let root = moonstat_normalize_suite_root(suite_root)
+  let findings = []
+  for candidate in moonstat_suite_legacy_drift_candidates(root) {
+    let detected = @fsx.exists(@pathx.join(root, candidate.legacy_path))
+    findings.push(
+      moonstat_suite_drift_finding_json(
+        candidate.product,
+        candidate.legacy_path,
+        candidate.canonical_path,
+        candidate.reason,
+        detected,
+      ),
+    )
+  }
+  Json::object({
+    "contract": Json::string("moonstat.suite.drift.v1"),
+    "suiteRoot": Json::string(root),
+    "contractSource": Json::string("vectie/moonlib/moonsuite"),
+    "role": Json::string("validator-reporter"),
+    "canonical": moonstat_suite_canonical_paths_json(root),
+    "findings": Json::array(findings),
+    "summary": Json::object({
+      "total": Json::number(findings.length().to_double()),
+      "detected": Json::number(
+        findings
+        .filter(fn(finding) {
+          match finding {
+            Object(obj) => obj["detected"] == Json::boolean(true)
+            _ => false
+          }
+        })
+        .length()
+        .to_double(),
+      ),
+    }),
+  })
+}
+
+///|
+fn moonstat_normalize_suite_root(root : String) -> String {
+  let trimmed = root.trim().to_owned()
+  if trimmed == "" {
+    "."
+  } else {
+    trimmed
+  }
+}
+
+///|
+fn moonstat_suite_canonical_paths_json(root : String) -> Json {
+  Json::object({
+    "suiteState": Json::string(@moonsuite.state_dir(root)),
+    "books": Json::string(@moonsuite.books_root(root)),
+    "tmp": Json::string(@moonsuite.tmp_root(root)),
+    "productRegistry": Json::string(@moonsuite.product_registry_path(root)),
+    "moonstatHome": Json::string(@moonsuite.product_dir(root, "moonstat")),
+    "moonclawHome": Json::string(@moonsuite.product_dir(root, "moonclaw")),
+    "moontownHome": Json::string(@moonsuite.product_dir(root, "moontown")),
+    "moonclawProviders": Json::string(
+      @moonsuite.product_artifact(root, "moonclaw", "providers.json"),
+    ),
+    "moonclawModels": Json::string(
+      @moonsuite.product_artifact(root, "moonclaw", "models/models.json"),
+    ),
+    "moonclawConfig": Json::string(
+      @moonsuite.product_artifact(root, "moonclaw", "config.json"),
+    ),
+  })
+}
+
+///|
+fn moonstat_suite_legacy_drift_candidates(
+  root : String,
+) -> Array[SuiteLegacyDriftCandidate] {
+  [
+    {
+      product: "moontown",
+      legacy_path: ".moontown",
+      canonical_path: @moonsuite.product_dir(root, "moontown"),
+      reason: "Moontown runtime state belongs under the MoonSuite product home.",
+    },
+    {
+      product: "moonclaw",
+      legacy_path: ".moonclaw",
+      canonical_path: @moonsuite.product_dir(root, "moonclaw"),
+      reason: "MoonClaw runtime state belongs under the MoonSuite product home.",
+    },
+    {
+      product: "moondesk",
+      legacy_path: ".moontown/moondesk-daemon",
+      canonical_path: @moonsuite.product_dir(root, "moondesk"),
+      reason: "Moondesk daemon state belongs under the Moondesk product home.",
+    },
+    {
+      product: "mooncode",
+      legacy_path: "moonclaw-jobs",
+      canonical_path: @moonsuite.product_artifact(root, "moonclaw", "jobs"),
+      reason: "MoonClaw jobs belong under the MoonClaw product home.",
+    },
+    {
+      product: "moonstat",
+      legacy_path: "moonstat",
+      canonical_path: @moonsuite.product_dir(root, "moonstat"),
+      reason: "MoonStat state belongs under the MoonStat product home.",
+    },
+  ]
+}
+
+///|
+fn moonstat_suite_drift_finding_json(
+  product : String,
+  legacy_path : String,
+  canonical_path : String,
+  reason : String,
+  detected : Bool,
+) -> Json {
+  Json::object({
+    "product": Json::string(product),
+    "status": Json::string(if detected { "drift" } else { "clear" }),
+    "detected": Json::boolean(detected),
+    "legacyPath": Json::string(legacy_path),
+    "canonicalPath": Json::string(canonical_path),
+    "source": Json::string("moonstat"),
+    "contractSource": Json::string("vectie/moonlib/moonsuite"),
+    "reason": Json::string(reason),
+  })
+}
+
+///|
 pub async fn write_moonstat_suite_status(
   path? : String = default_moonstat_suite_status_path(),
   host? : String = @suite.default_host(),
@@ -112,7 +258,7 @@ pub fn default_moonstat_suite_status_path() -> String {
 ///|
 fn default_moonstat_dir() -> String {
   let home = @os.home() catch { _ => "." }
-  @pathx.join(home, ".moonsuite")
+  @moonsuite.state_dir(home)
 }
 
 ///|
@@ -305,6 +451,10 @@ fn moonstat_suite_integrations_json(
   let openai_base_url = moonstat_openai_base_url(host, port)
   let anthropic_base_url = base_url
   let claude_desktop_base_url = moonstat_claude_desktop_base_url(host, port)
+  let moonclaw_models_file = moonstat_moonclaw_models_file()
+  let moonclaw_config_file = moonstat_moonclaw_config_file()
+  let moonclaw_providers_file = moonstat_moonclaw_providers_file()
+  let moonclaw_providers_write_command = "moonstat suite write-moonclaw-providers --path \{moonclaw_providers_file}"
   Json::object({
     "moonclaw": Json::object({
       "role": Json::string("agent-provider-edge"),
@@ -316,16 +466,16 @@ fn moonstat_suite_integrations_json(
         moonclaw_model_config_json(openai_base_url, model),
       ]),
       "moonclawModelsPathCandidates": Json::array([
-        Json::string(MOONSTAT_MOONCLAW_MODELS_FILE),
-        Json::string("~/\{MOONSTAT_MOONCLAW_MODELS_FILE}"),
+        Json::string(moonclaw_models_file),
+        Json::string("~/\{moonclaw_models_file}"),
       ]),
       "moonclawProviderName": Json::string("moonstat"),
       "moonclawProviderModelId": Json::string(model),
       "moonclawProviderConfigPaths": Json::array([
-        Json::string(MOONSTAT_MOONCLAW_MODELS_FILE),
-        Json::string("~/\{MOONSTAT_MOONCLAW_MODELS_FILE}"),
-        Json::string(MOONSTAT_MOONCLAW_CONFIG_FILE),
-        Json::string("~/\{MOONSTAT_MOONCLAW_CONFIG_FILE}"),
+        Json::string(moonclaw_models_file),
+        Json::string("~/\{moonclaw_models_file}"),
+        Json::string(moonclaw_config_file),
+        Json::string("~/\{moonclaw_config_file}"),
       ]),
       "moonclawProvidersFileJson": moonclaw_providers_file_json(
         openai_base_url, model,
@@ -334,7 +484,7 @@ fn moonstat_suite_integrations_json(
         "moonstat suite moonclaw-providers",
       ),
       "moonclawProvidersFileWriteCommand": Json::string(
-        "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
+        moonclaw_providers_write_command,
       ),
       "healthUrl": Json::string("\{base_url}/health"),
       "dashboardUrl": Json::string("\{base_url}/"),
@@ -385,32 +535,28 @@ fn moonstat_suite_integrations_json(
         "\{base_url}/usage/provider-limits",
       ),
       "suiteStatusFile": Json::string(default_moonstat_suite_status_path()),
-      "moonclawProviderManifestPath": Json::string(
-        MOONSTAT_MOONCLAW_PROVIDERS_FILE,
-      ),
+      "moonclawProviderManifestPath": Json::string(moonclaw_providers_file),
       "moonclawProviderManifestCommand": Json::string("moonstat"),
       "moonclawProviderManifestArgs": Json::array([
         Json::string("suite"),
         Json::string("write-moonclaw-providers"),
         Json::string("--path"),
-        Json::string(MOONSTAT_MOONCLAW_PROVIDERS_FILE),
+        Json::string(moonclaw_providers_file),
       ]),
       "moonclawProviderManifestFullCommand": Json::string(
-        "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
+        moonclaw_providers_write_command,
       ),
       "moonclawProviderManifestTarget": Json::string("moonbook"),
-      "moonbookProviderManifestPath": Json::string(
-        MOONSTAT_MOONCLAW_PROVIDERS_FILE,
-      ),
+      "moonbookProviderManifestPath": Json::string(moonclaw_providers_file),
       "moonbookProviderManifestCommand": Json::string("moonstat"),
       "moonbookProviderManifestArgs": Json::array([
         Json::string("suite"),
         Json::string("write-moonclaw-providers"),
         Json::string("--path"),
-        Json::string(MOONSTAT_MOONCLAW_PROVIDERS_FILE),
+        Json::string(moonclaw_providers_file),
       ]),
       "moonbookProviderManifestFullCommand": Json::string(
-        "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
+        moonclaw_providers_write_command,
       ),
       "adapterPackages": Json::array([
         Json::string("vectie/moontown/adapters/moonclaw"),
@@ -498,7 +644,7 @@ pub async fn write_moonstat_moonclaw_providers_file(
 
 ///|
 pub fn default_moonstat_moonclaw_providers_file_path() -> String {
-  MOONSTAT_MOONCLAW_PROVIDERS_FILE
+  moonstat_moonclaw_providers_file()
 }
 
 ///|
@@ -528,6 +674,7 @@ fn moonstat_suite_capabilities() -> Array[String] {
 
 ///|
 fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
+  let moonclaw_providers_write_command = "moonstat suite write-moonclaw-providers --path \{moonstat_moonclaw_providers_file()}"
   Json::object({
     "start": Json::string("moonstat start --port \{port}"),
     "health": Json::string("moonstat health"),
@@ -578,11 +725,10 @@ fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
     "updateTrayMenu": Json::string("moonstat runtime tray-menu update"),
     "suiteManifest": Json::string("moonstat suite manifest"),
     "suiteStatus": Json::string("moonstat suite status"),
+    "suiteDrift": Json::string("moonstat suite drift --root <suite_root>"),
     "suiteWriteStatus": Json::string("moonstat suite write-status"),
     "moonclawProviders": Json::string("moonstat suite moonclaw-providers"),
-    "moonclawProvidersWrite": Json::string(
-      "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
-    ),
+    "moonclawProvidersWrite": Json::string(moonclaw_providers_write_command),
   })
 }
 
@@ -592,18 +738,18 @@ fn moonstat_suite_routes() -> Array[String] {
     "GET /", "GET /ui/rabbita", "GET /assets/moonstat.css", "GET /assets/moonstat-core.js",
     "GET /assets/moonstat-frameworks.js", "GET /assets/moonstat-usage.js", "GET /assets/moonstat-setup.js",
     "GET /assets/moonstat-suite.js", "GET /assets/moonstat-resilience.js", "GET /assets/moonstat.js",
-    "GET /participant/register", "GET /suite/manifest", "GET /suite/status", "POST /suite/status/write",
-    "GET /suite/moonclaw-providers", "POST /suite/moonclaw-providers/write", "GET /health",
-    "GET /status", "GET /stats", "GET /metrics", "GET /usage/logs", "GET /usage/summary",
-    "GET /usage/summary/by-app", "GET /usage/provider-stats", "GET /usage/trends",
-    "GET /usage/provider-limits", "GET /usage/model-stats", "GET /usage/data-sources",
-    "POST /usage/sync-session", "GET /usage/model-pricing", "POST /usage/model-pricing",
-    "DELETE /usage/model-pricing", "GET /usage/request-detail/*path", "GET /usage/provider-usage",
-    "GET /usage/balance", "GET /usage/subscription-quota", "GET /usage/codex-oauth-quota",
-    "GET /usage/codex-oauth-models", "GET /usage/coding-plan-quota", "POST /usage/test-script",
-    "POST /proxy/stream-check/provider", "POST /proxy/stream-check/all", "GET /proxy/stream-check/config",
-    "POST /proxy/stream-check/config", "GET /providers/presets", "GET /v1/models",
-    "GET /claude-desktop/v1/models", "POST /v1/messages", "POST /claude-desktop/v1/messages",
+    "GET /participant/register", "GET /suite/manifest", "GET /suite/status", "GET /suite/drift",
+    "POST /suite/status/write", "GET /suite/moonclaw-providers", "POST /suite/moonclaw-providers/write",
+    "GET /health", "GET /status", "GET /stats", "GET /metrics", "GET /usage/logs",
+    "GET /usage/summary", "GET /usage/summary/by-app", "GET /usage/provider-stats",
+    "GET /usage/trends", "GET /usage/provider-limits", "GET /usage/model-stats",
+    "GET /usage/data-sources", "POST /usage/sync-session", "GET /usage/model-pricing",
+    "POST /usage/model-pricing", "DELETE /usage/model-pricing", "GET /usage/request-detail/*path",
+    "GET /usage/provider-usage", "GET /usage/balance", "GET /usage/subscription-quota",
+    "GET /usage/codex-oauth-quota", "GET /usage/codex-oauth-models", "GET /usage/coding-plan-quota",
+    "POST /usage/test-script", "POST /proxy/stream-check/provider", "POST /proxy/stream-check/all",
+    "GET /proxy/stream-check/config", "POST /proxy/stream-check/config", "GET /providers/presets",
+    "GET /v1/models", "GET /claude-desktop/v1/models", "POST /v1/messages", "POST /claude-desktop/v1/messages",
     "POST /v1/responses", "POST /v1/responses/compact", "POST /v1/chat/completions",
     "POST /openclaw/v1/chat/completions", "GET /auth/status", "GET /auth/accounts",
     "POST /auth/login", "POST /auth/poll", "DELETE /auth/account", "POST /auth/default-account",

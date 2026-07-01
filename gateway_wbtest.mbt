@@ -187,12 +187,13 @@ async test "suite http endpoints are registered by gateway suite routes" {
   assert_true(route_source.contains("bound_port : Int"))
   for
     route in [
-      "/suite/manifest", "/suite/status", "/suite/status/write", "/suite/moonclaw-providers",
-      "/suite/moonclaw-providers/write",
+      "/suite/manifest", "/suite/status", "/suite/drift", "/suite/status/write",
+      "/suite/moonclaw-providers", "/suite/moonclaw-providers/write",
     ] {
     assert_true(route_source.contains(route))
   }
   assert_true(route_source.contains("moonstat_suite_manifest_json("))
+  assert_true(route_source.contains("moonstat_suite_drift_report_json("))
   assert_true(route_source.contains("write_moonstat_suite_status("))
   assert_true(route_source.contains("moonstat_moonclaw_providers_file_json("))
   assert_true(route_source.contains("write_moonstat_moonclaw_providers_file("))

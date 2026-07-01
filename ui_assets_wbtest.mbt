@@ -129,7 +129,7 @@ async test "moonstat ui fetches current backend route surface" {
     "/proxy/circuit-breaker-config", "/proxy/circuit-breaker-stats", "/proxy/reset-circuit-breaker",
     "/proxy/failover-queue", "/proxy/available-failover-providers", "/proxy/auto-failover-enabled",
     "/usage/provider-limits", "/proxy/stream-check/all", "/proxy/stream-check/config",
-    "/suite/manifest", "/suite/status", "/suite/status/write", "/suite/moonclaw-providers",
+    "/suite/manifest", "/suite/status", "/suite/drift", "/suite/status/write", "/suite/moonclaw-providers",
     "/suite/moonclaw-providers/write",
   ]
   for route in required {
@@ -239,6 +239,7 @@ test "moonstat ui endpoint metadata preserves dashboard route support" {
     Json::string("/providers/claude-desktop/import"),
   )
   assert_eq(endpoints["suiteManifest"], Json::string("/suite/manifest"))
+  assert_eq(endpoints["suiteDrift"], Json::string("/suite/drift"))
   assert_eq(
     endpoints["suiteWriteMoonclawProviders"],
     Json::string("/suite/moonclaw-providers/write"),

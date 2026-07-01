@@ -3,6 +3,7 @@ supported_targets = "native"
 import {
   "vectie/moonstat/suite",
   "vectie/moonlib/fsx",
+  "vectie/moonlib/moonsuite",
   "vectie/moonstat/internal/claude_desktop",
   "vectie/moonstat/internal/codex_config",
   "moonbitlang/core/json",

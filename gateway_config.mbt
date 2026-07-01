@@ -40,7 +40,7 @@ fn moon_config_file_path(app : String) -> String {
 
 ///|
 fn moon_app_config_dir() -> String {
-  @pathx.join(moon_home_dir(), ".moonsuite")
+  @moonsuite.state_dir(moon_home_dir())
 }
 
 ///|

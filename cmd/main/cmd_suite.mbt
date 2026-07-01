@@ -5,6 +5,7 @@ fn suite_cli_commands() -> Array[CliCommandSpec] {
     { id: "suite_lepusa", patterns: ["suite lepusa"] },
     { id: "suite_lepusa_rabbita", patterns: ["suite lepusa-rabbita"] },
     { id: "suite_status", patterns: ["suite status"] },
+    { id: "suite_drift", patterns: ["suite drift"] },
     { id: "suite_write_status", patterns: ["suite write-status"] },
     { id: "suite_moonclaw_providers", patterns: ["suite moonclaw-providers"] },
     {
@@ -24,11 +25,22 @@ async fn run_suite_cli_command(
     "suite_lepusa" => print_lepusa_manifest(args)
     "suite_lepusa_rabbita" => print_lepusa_rabbita_manifest(args)
     "suite_status" => print_suite_status(args)
+    "suite_drift" => print_suite_drift(args)
     "suite_write_status" => write_suite_status(args)
     "suite_moonclaw_providers" => print_moonclaw_providers_file(args)
     "suite_write_moonclaw_providers" => write_moonclaw_providers_file(args)
     _ => ()
   }
+}
+
+///|
+async fn print_suite_drift(args : Array[String]) -> Unit {
+  let root = parse_string_arg(args, "--root").unwrap_or(".")
+  println(
+    @moonstat.moonstat_suite_drift_report_json(suite_root=root).stringify(
+      indent=2,
+    ),
+  )
 }
 
 ///|

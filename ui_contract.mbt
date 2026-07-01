@@ -112,6 +112,7 @@ pub fn moonstat_ui_endpoints_json() -> Json {
     "streamCheckConfig": Json::string("/proxy/stream-check/config"),
     "suiteManifest": Json::string("/suite/manifest"),
     "suiteStatus": Json::string("/suite/status"),
+    "suiteDrift": Json::string("/suite/drift"),
     "suiteWriteStatus": Json::string("/suite/status/write"),
     "suiteMoonclawProviders": Json::string("/suite/moonclaw-providers"),
     "suiteWriteMoonclawProviders": Json::string(

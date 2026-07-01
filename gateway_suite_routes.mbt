@@ -10,6 +10,9 @@ fn Gateway::register_suite_routes(
   router.add_handler(Get, "/suite/status", (_, w) => {
     self.handle_suite_status(w, bound_port)
   })
+  router.add_handler(Get, "/suite/drift", (r, w) => {
+    self.handle_suite_drift(r, w)
+  })
   router.add_handler(Post, "/suite/status/write", (r, w) => {
     self.handle_suite_write_status(r, w, bound_port)
   })
@@ -53,6 +56,17 @@ async fn Gateway::handle_suite_status(
       ready=true,
     ),
   )
+}
+
+///|
+async fn Gateway::handle_suite_drift(
+  _self : Gateway,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  let root = proxy_string_request(r.path, None, "root").unwrap_or(".")
+  let report = moonstat_suite_drift_report_json(suite_root=root)
+  write_usage_json(w, report)
 }
 
 ///|
