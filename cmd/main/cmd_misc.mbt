@@ -40,7 +40,9 @@ fn print_help() -> Unit {
   println("  suite status              Print Moon suite status contract")
   println("  suite write-status        Write ~/.moonsuite/suite-status.json")
   println("  suite moonclaw-providers  Print MoonClaw providers.json")
-  println("  suite write-moonclaw-providers  Write .moonclaw/providers.json")
+  println(
+    "  suite write-moonclaw-providers  Write .moonsuite/products/moonclaw/providers.json",
+  )
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")
   println("  metrics     Show Prometheus gateway metrics")

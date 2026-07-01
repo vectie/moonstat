@@ -2,6 +2,15 @@
 const SUITE_STATUS_FILE = "suite-status.json"
 
 ///|
+const MOONSTAT_MOONCLAW_PROVIDERS_FILE = ".moonsuite/products/moonclaw/providers.json"
+
+///|
+const MOONSTAT_MOONCLAW_MODELS_FILE = ".moonsuite/products/moonclaw/models/models.json"
+
+///|
+const MOONSTAT_MOONCLAW_CONFIG_FILE = ".moonsuite/products/moonclaw/config.json"
+
+///|
 pub fn moonstat_suite_manifest_json(
   host? : String = @suite.default_host(),
   port? : Int = @suite.default_port(),
@@ -307,16 +316,16 @@ fn moonstat_suite_integrations_json(
         moonclaw_model_config_json(openai_base_url, model),
       ]),
       "moonclawModelsPathCandidates": Json::array([
-        Json::string(".moonclaw/models/models.json"),
-        Json::string("~/.moonclaw/models/models.json"),
+        Json::string(MOONSTAT_MOONCLAW_MODELS_FILE),
+        Json::string("~/\{MOONSTAT_MOONCLAW_MODELS_FILE}"),
       ]),
       "moonclawProviderName": Json::string("moonstat"),
       "moonclawProviderModelId": Json::string(model),
       "moonclawProviderConfigPaths": Json::array([
-        Json::string(".moonclaw/models/models.json"),
-        Json::string("~/.moonclaw/models/models.json"),
-        Json::string(".moonclaw/config.json"),
-        Json::string("~/.moonclaw/config.json"),
+        Json::string(MOONSTAT_MOONCLAW_MODELS_FILE),
+        Json::string("~/\{MOONSTAT_MOONCLAW_MODELS_FILE}"),
+        Json::string(MOONSTAT_MOONCLAW_CONFIG_FILE),
+        Json::string("~/\{MOONSTAT_MOONCLAW_CONFIG_FILE}"),
       ]),
       "moonclawProvidersFileJson": moonclaw_providers_file_json(
         openai_base_url, model,
@@ -325,7 +334,7 @@ fn moonstat_suite_integrations_json(
         "moonstat suite moonclaw-providers",
       ),
       "moonclawProvidersFileWriteCommand": Json::string(
-        "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+        "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
       ),
       "healthUrl": Json::string("\{base_url}/health"),
       "dashboardUrl": Json::string("\{base_url}/"),
@@ -376,28 +385,32 @@ fn moonstat_suite_integrations_json(
         "\{base_url}/usage/provider-limits",
       ),
       "suiteStatusFile": Json::string(default_moonstat_suite_status_path()),
-      "moonclawProviderManifestPath": Json::string(".moonclaw/providers.json"),
+      "moonclawProviderManifestPath": Json::string(
+        MOONSTAT_MOONCLAW_PROVIDERS_FILE,
+      ),
       "moonclawProviderManifestCommand": Json::string("moonstat"),
       "moonclawProviderManifestArgs": Json::array([
         Json::string("suite"),
         Json::string("write-moonclaw-providers"),
         Json::string("--path"),
-        Json::string(".moonclaw/providers.json"),
+        Json::string(MOONSTAT_MOONCLAW_PROVIDERS_FILE),
       ]),
       "moonclawProviderManifestFullCommand": Json::string(
-        "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+        "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
       ),
       "moonclawProviderManifestTarget": Json::string("moonbook"),
-      "moonbookProviderManifestPath": Json::string(".moonclaw/providers.json"),
+      "moonbookProviderManifestPath": Json::string(
+        MOONSTAT_MOONCLAW_PROVIDERS_FILE,
+      ),
       "moonbookProviderManifestCommand": Json::string("moonstat"),
       "moonbookProviderManifestArgs": Json::array([
         Json::string("suite"),
         Json::string("write-moonclaw-providers"),
         Json::string("--path"),
-        Json::string(".moonclaw/providers.json"),
+        Json::string(MOONSTAT_MOONCLAW_PROVIDERS_FILE),
       ]),
       "moonbookProviderManifestFullCommand": Json::string(
-        "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+        "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
       ),
       "adapterPackages": Json::array([
         Json::string("vectie/moontown/adapters/moonclaw"),
@@ -485,7 +498,7 @@ pub async fn write_moonstat_moonclaw_providers_file(
 
 ///|
 pub fn default_moonstat_moonclaw_providers_file_path() -> String {
-  ".moonclaw/providers.json"
+  MOONSTAT_MOONCLAW_PROVIDERS_FILE
 }
 
 ///|
@@ -568,7 +581,7 @@ fn moonstat_suite_commands_json(port : Int, model : String) -> Json {
     "suiteWriteStatus": Json::string("moonstat suite write-status"),
     "moonclawProviders": Json::string("moonstat suite moonclaw-providers"),
     "moonclawProvidersWrite": Json::string(
-      "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+      "moonstat suite write-moonclaw-providers --path \{MOONSTAT_MOONCLAW_PROVIDERS_FILE}",
     ),
   })
 }

@@ -347,15 +347,31 @@ test "suite manifest publishes moonstat service contract" {
   guard moonclaw["moonclawModelsPathCandidates"] is Array(paths) else {
     fail("expected moonclaw models path candidates")
   }
-  assert_true(paths.contains(Json::string(".moonclaw/models/models.json")))
-  assert_true(paths.contains(Json::string("~/.moonclaw/models/models.json")))
+  assert_true(
+    paths.contains(
+      Json::string(".moonsuite/products/moonclaw/models/models.json"),
+    ),
+  )
+  assert_true(
+    paths.contains(
+      Json::string("~/.moonsuite/products/moonclaw/models/models.json"),
+    ),
+  )
   assert_eq(moonclaw["moonclawProviderName"], Json::string("moonstat"))
   assert_eq(moonclaw["moonclawProviderModelId"], Json::string("gpt-5"))
   guard moonclaw["moonclawProviderConfigPaths"] is Array(config_paths) else {
     fail("expected moonclaw provider config paths")
   }
-  assert_true(config_paths.contains(Json::string(".moonclaw/config.json")))
-  assert_true(config_paths.contains(Json::string("~/.moonclaw/config.json")))
+  assert_true(
+    config_paths.contains(
+      Json::string(".moonsuite/products/moonclaw/config.json"),
+    ),
+  )
+  assert_true(
+    config_paths.contains(
+      Json::string("~/.moonsuite/products/moonclaw/config.json"),
+    ),
+  )
   guard moonclaw["moonclawProvidersFileJson"] is Object(providers_file) else {
     fail("expected moonclaw providers file json")
   }
@@ -386,7 +402,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(
     moonclaw["moonclawProvidersFileWriteCommand"],
     Json::string(
-      "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+      "moonstat suite write-moonclaw-providers --path .moonsuite/products/moonclaw/providers.json",
     ),
   )
   assert_eq(
@@ -424,7 +440,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     moontown["moonclawProviderManifestPath"],
-    Json::string(".moonclaw/providers.json"),
+    Json::string(".moonsuite/products/moonclaw/providers.json"),
   )
   assert_eq(
     moontown["moonclawProviderManifestCommand"],
@@ -433,7 +449,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(
     moontown["moonclawProviderManifestFullCommand"],
     Json::string(
-      "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+      "moonstat suite write-moonclaw-providers --path .moonsuite/products/moonclaw/providers.json",
     ),
   )
   guard moontown["moonclawProviderManifestArgs"] is Array(moonclaw_args) else {
@@ -445,7 +461,7 @@ test "suite manifest publishes moonstat service contract" {
       Json::string("suite"),
       Json::string("write-moonclaw-providers"),
       Json::string("--path"),
-      Json::string(".moonclaw/providers.json"),
+      Json::string(".moonsuite/products/moonclaw/providers.json"),
     ],
   )
   assert_eq(
@@ -454,7 +470,7 @@ test "suite manifest publishes moonstat service contract" {
   )
   assert_eq(
     moontown["moonbookProviderManifestPath"],
-    Json::string(".moonclaw/providers.json"),
+    Json::string(".moonsuite/products/moonclaw/providers.json"),
   )
   assert_eq(
     moontown["moonbookProviderManifestCommand"],
@@ -463,7 +479,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(
     moontown["moonbookProviderManifestFullCommand"],
     Json::string(
-      "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+      "moonstat suite write-moonclaw-providers --path .moonsuite/products/moonclaw/providers.json",
     ),
   )
   guard moontown["moonbookProviderManifestArgs"] is Array(moonbook_args) else {
@@ -475,7 +491,7 @@ test "suite manifest publishes moonstat service contract" {
       Json::string("suite"),
       Json::string("write-moonclaw-providers"),
       Json::string("--path"),
-      Json::string(".moonclaw/providers.json"),
+      Json::string(".moonsuite/products/moonclaw/providers.json"),
     ],
   )
   guard moontown["adapterPackages"] is Array(moontown_adapters) else {
@@ -547,7 +563,7 @@ test "suite manifest publishes moonstat service contract" {
   assert_eq(
     commands["moonclawProvidersWrite"],
     Json::string(
-      "moonstat suite write-moonclaw-providers --path .moonclaw/providers.json",
+      "moonstat suite write-moonclaw-providers --path .moonsuite/products/moonclaw/providers.json",
     ),
   )
   assert_eq(
@@ -585,7 +601,9 @@ async test "suite manifest advertises standalone ui assets used by generated das
 ///|
 async test "moonclaw providers file writer materializes suite provider config" {
   @fsx.with_temporary_directory("moonstat-moonclaw-providers-XXXXXX", tmpdir => {
-    let path = @pathx.join(tmpdir, ".moonclaw/providers.json")
+    let path = @pathx.join(
+      tmpdir, ".moonsuite/products/moonclaw/providers.json",
+    )
     let written = write_moonstat_moonclaw_providers_file(
       path~,
       host="0.0.0.0",
