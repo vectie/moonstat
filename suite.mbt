@@ -440,13 +440,12 @@ pub async fn write_moonstat_suite_status(
 
 ///|
 pub fn default_moonstat_suite_status_path() -> String {
-  @pathx.join(default_moonstat_dir(), SUITE_STATUS_FILE)
+  @pathx.join(@moonsuite.state_dir(""), SUITE_STATUS_FILE)
 }
 
 ///|
 fn default_moonstat_dir() -> String {
-  let home = @os.home() catch { _ => "." }
-  @moonsuite.state_dir(home)
+  @moonsuite.product_dir("", "moonstat")
 }
 
 ///|

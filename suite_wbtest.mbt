@@ -16,6 +16,11 @@ test "suite manifest publishes moonstat service contract" {
     obj["statusFile"],
     Json::string(default_moonstat_suite_status_path()),
   )
+  assert_eq(
+    default_moonstat_suite_status_path(),
+    ".moonsuite/suite-status.json",
+  )
+  assert_eq(default_moonstat_stats_dir(), ".moonsuite/products/moonstat")
   assert_eq(obj["openaiBaseUrl"], Json::string("http://127.0.0.1:15721/v1"))
   assert_eq(
     obj["usageLogsUrl"],

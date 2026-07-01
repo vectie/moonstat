@@ -39,7 +39,7 @@ fn print_help() -> Unit {
   println("  suite lepusa-rabbita      Print Lepusa Rabbita preview manifest")
   println("  suite status              Print Moon suite status contract")
   println("  suite drift               Report MoonSuite legacy path drift")
-  println("  suite write-status        Write ~/.moonsuite/suite-status.json")
+  println("  suite write-status        Write .moonsuite/suite-status.json")
   println("  suite moonclaw-providers  Print MoonClaw providers.json")
   println(
     "  suite write-moonclaw-providers  Write .moonsuite/products/moonclaw/providers.json",

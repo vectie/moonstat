@@ -134,7 +134,7 @@ areas are:
   from Claude, Codex, Gemini, and OpenCode sources.
 - Provider management: CRUD, live import, universal providers, endpoint
   metadata, sort order, failover queues, auto-failover, and circuit breakers.
-- Suite discovery: `~/.moonsuite/suite-status.json` written by `start`, read by
+- Suite discovery: `.moonsuite/suite-status.json` written by `start`, read by
   MoonClaw, MoonBook, Moontown, and Moondesk adapters.
 - Install/config flows: hosts reroute, Codex config, Claude Desktop profile,
   OpenClaw/Hermes state, MCP/prompt import, and skill storage operations.
@@ -182,7 +182,7 @@ print JSON contracts for MoonClaw,
 MoonBook, Moontown, Moondesk, or any other local probe. They expose the
 gateway URLs, status file, capabilities, and command map needed by suite
 launchers. `suite write-status` and `POST /suite/status/write` write the same
-status contract to `~/.moonsuite/suite-status.json` by default, and `start`
+status contract to `.moonsuite/suite-status.json` by default, and `start`
 refreshes that file when the gateway boots. `GET /suite/moonclaw-providers`
 and `POST /suite/moonclaw-providers/write` expose the MoonClaw providers file
 contract over HTTP. The contract also includes a machine-readable
@@ -540,9 +540,9 @@ URL normalization, newest-first listing, and best-effort last-used updates.
 recent `proxy_request_logs` rows with Moonstat provider/app/model, token,
 cache-token, cost, latency, status, session, streaming, and data-source fields.
 Gateway startup loads file-backed usage state from
-`~/.moonsuite/proxy_request_logs.jsonl` and session sync offsets from
-`~/.moonsuite/session_log_sync.jsonl`; editable model pricing is stored
-in `~/.moonsuite/model_pricing.jsonl`. Manual `moonstat usage sync` saves usage
+`.moonsuite/products/moonstat/proxy_request_logs.jsonl` and session sync offsets from
+`.moonsuite/products/moonstat/session_log_sync.jsonl`; editable model pricing is stored
+in `.moonsuite/products/moonstat/model_pricing.jsonl`. Manual `moonstat usage sync` saves usage
 state after importing Claude, Codex, Gemini, and OpenCode-compatible session logs.
 OpenCode sync reads `opencode.db` directly when `sqlite3` is available, honoring
 `OPENCODE_DB` and `XDG_DATA_HOME`. It also accepts JSONL rows exported
