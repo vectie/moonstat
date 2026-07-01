@@ -314,7 +314,7 @@ async fn moonstat_suite_book_drift_candidates(
         book_id,
         "moonclaw",
         ".moonclaw/providers.json",
-        @moonsuite.product_artifact_for_book_root(
+        @moonsuite.product_artifact_for_workspace_root(
           book_root, "moonclaw", "providers.json",
         ),
         "Book-local MoonClaw provider manifests belong under the MoonClaw product home.",
@@ -326,7 +326,7 @@ async fn moonstat_suite_book_drift_candidates(
         book_id,
         "moonclaw",
         ".moonclaw/mooncode/sessions",
-        @moonsuite.product_artifact_for_book_root(
+        @moonsuite.product_artifact_for_workspace_root(
           book_root, "moonclaw", "mooncode/sessions",
         ),
         "Book-local MoonCode sidecar sessions belong under the MoonClaw product home.",

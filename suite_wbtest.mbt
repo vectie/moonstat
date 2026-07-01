@@ -821,7 +821,9 @@ async test "suite drift report flags book-local moonclaw and mooncode state" {
     assert_eq(
       provider_obj["canonicalPath"],
       Json::string(
-        @pathx.join(tmpdir, ".moonsuite/products/moonclaw/providers.json"),
+        @moonsuite.product_artifact_for_workspace_root(
+          book_root, "moonclaw", "providers.json",
+        ),
       ),
     )
     guard suite_finding_by_legacy_path(
@@ -839,7 +841,9 @@ async test "suite drift report flags book-local moonclaw and mooncode state" {
     assert_eq(
       session_obj["canonicalPath"],
       Json::string(
-        @pathx.join(tmpdir, ".moonsuite/products/moonclaw/mooncode/sessions"),
+        @moonsuite.product_artifact_for_workspace_root(
+          book_root, "moonclaw", "mooncode/sessions",
+        ),
       ),
     )
   })
