@@ -693,6 +693,10 @@ async test "suite drift report derives canonical paths from moonsuite contract" 
         @pathx.join(tmpdir, ".tmp/products/moonrobo/sdk-e1/snapshot.json"),
       ),
     )
+    assert_eq(
+      canonical["mooncodeSessions"],
+      Json::string(@pathx.join(tmpdir, ".moonsuite/products/mooncode/sessions")),
+    )
     guard obj["findings"] is Array(findings) else {
       fail("expected drift findings")
     }
@@ -767,6 +771,68 @@ async test "suite drift report flags legacy product homes when present" {
         Json::string("vectie/moonlib/moonsuite"),
       )
     }
+  })
+}
+
+///|
+async test "suite drift report flags book-local moonclaw and mooncode state" {
+  @fsx.with_temporary_directory("moonstat-suite-drift-books-XXXXXX", tmpdir => {
+    let global_tmp = @pathx.join(tmpdir, "global-tmp")
+    let book_root = @pathx.join(tmpdir, "books/research-demo")
+    @fsx.make_directory(
+      @pathx.join(book_root, ".moonclaw/mooncode/sessions"),
+      recursive=true,
+    )
+    @fsx.write_to_file(
+      @pathx.join(book_root, ".moonclaw/providers.json"),
+      "{\"providers\":[]}",
+    )
+    let report = moonstat_suite_drift_report_json(
+      suite_root=tmpdir,
+      global_tmp_root=global_tmp,
+    )
+    guard report is Object(obj) else { fail("expected drift report") }
+    guard obj["summary"] is Object(summary) else {
+      fail("expected drift summary")
+    }
+    assert_eq(summary["detected"], Json::number(2.0))
+    guard obj["findings"] is Array(findings) else {
+      fail("expected drift findings")
+    }
+    guard suite_finding_by_legacy_path(
+        findings, "books/research-demo/.moonclaw/providers.json",
+      )
+      is Some(provider_finding) else {
+      fail("expected book-local provider manifest finding")
+    }
+    guard provider_finding is Object(provider_obj) else {
+      fail("expected provider finding object")
+    }
+    assert_eq(provider_obj["product"], Json::string("moonclaw"))
+    assert_eq(provider_obj["status"], Json::string("drift"))
+    assert_eq(provider_obj["scope"], Json::string("book-root"))
+    assert_eq(
+      provider_obj["canonicalPath"],
+      Json::string(
+        @pathx.join(tmpdir, ".moonsuite/products/moonclaw/providers.json"),
+      ),
+    )
+    guard suite_finding_by_legacy_path(
+        findings, "books/research-demo/.moonclaw/mooncode/sessions",
+      )
+      is Some(session_finding) else {
+      fail("expected book-local mooncode sessions finding")
+    }
+    guard session_finding is Object(session_obj) else {
+      fail("expected session finding object")
+    }
+    assert_eq(session_obj["product"], Json::string("mooncode"))
+    assert_eq(session_obj["status"], Json::string("drift"))
+    assert_eq(session_obj["scope"], Json::string("book-root"))
+    assert_eq(
+      session_obj["canonicalPath"],
+      Json::string(@pathx.join(tmpdir, ".moonsuite/products/mooncode/sessions")),
+    )
   })
 }
 

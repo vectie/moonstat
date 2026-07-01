@@ -200,15 +200,18 @@ fn moonstat_suite_canonical_paths_json(root : String) -> Json {
     "moonclawConfig": Json::string(
       @moonsuite.product_artifact(root, "moonclaw", "config.json"),
     ),
+    "mooncodeSessions": Json::string(
+      @moonsuite.product_artifact(root, "mooncode", "sessions"),
+    ),
   })
 }
 
 ///|
-fn moonstat_suite_legacy_drift_candidates(
+async fn moonstat_suite_legacy_drift_candidates(
   root : String,
   global_tmp_root : String,
 ) -> Array[SuiteLegacyDriftCandidate] {
-  [
+  let candidates = [
     moonstat_suite_root_drift_candidate(
       root,
       "moontown",
@@ -286,6 +289,74 @@ fn moonstat_suite_legacy_drift_candidates(
       "MoonRobo SDK E1 commands belong under the suite product tmp home.",
     ),
   ]
+  for candidate in moonstat_suite_book_drift_candidates(root) {
+    candidates.push(candidate)
+  }
+  candidates
+}
+
+///|
+async fn moonstat_suite_book_drift_candidates(
+  root : String,
+) -> Array[SuiteLegacyDriftCandidate] {
+  let books_root = @moonsuite.books_root(root)
+  if !@fsx.exists(books_root) {
+    return []
+  }
+  let entries = @fsx.list_directory(books_root) catch { _ => return [] }
+  let candidates : Array[SuiteLegacyDriftCandidate] = []
+  for entry in entries {
+    let book_root = entry.path
+    let book_id = @pathx.basename(book_root).to_owned()
+    candidates.push(
+      moonstat_suite_book_drift_candidate(
+        book_root,
+        book_id,
+        "moonclaw",
+        ".moonclaw/providers.json",
+        @moonsuite.product_artifact_for_book_root(
+          book_root, "moonclaw", "providers.json",
+        ),
+        "Book-local MoonClaw provider manifests belong under the MoonClaw product home.",
+      ),
+    )
+    candidates.push(
+      moonstat_suite_book_drift_candidate(
+        book_root,
+        book_id,
+        "mooncode",
+        ".moonclaw/mooncode/sessions",
+        @moonsuite.product_artifact_for_book_root(
+          book_root, "mooncode", "sessions",
+        ),
+        "Book-local MoonCode sidecar sessions belong under the MoonCode product home.",
+      ),
+    )
+  }
+  candidates
+}
+
+///|
+fn moonstat_suite_book_drift_candidate(
+  book_root : String,
+  book_id : String,
+  product : String,
+  legacy_relative_path : String,
+  canonical_path : String,
+  reason : String,
+) -> SuiteLegacyDriftCandidate {
+  let legacy_path = @pathx.join(
+    @pathx.join("books", book_id),
+    legacy_relative_path,
+  )
+  {
+    product,
+    legacy_path,
+    probe_path: @pathx.join(book_root, legacy_relative_path),
+    canonical_path,
+    scope: "book-root",
+    reason,
+  }
 }
 
 ///|
