@@ -42,7 +42,7 @@ fn print_help() -> Unit {
   println("  suite write-status        Write .moonsuite/suite-status.json")
   println("  suite moonclaw-providers  Print MoonClaw providers.json")
   println(
-    "  suite write-moonclaw-providers  Write .moonsuite/products/moonclaw/providers.json",
+    "  suite write-moonclaw-providers  Write \{@moonsuite.product_display_artifact("moonclaw", "providers.json")}",
   )
   println("  status      Check reroute and gateway status")
   println("  stats       Show gateway traffic statistics")

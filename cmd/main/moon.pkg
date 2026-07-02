@@ -6,6 +6,7 @@ import {
   "vectie/moonstat/internal/claude_desktop",
   "vectie/moonstat/internal/codex_config",
   "vectie/moonlib/os",
+  "vectie/moonlib/moonsuite",
   "vectie/moonstat/internal/pino",
   "vectie/moonstat/internal/hosts",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
