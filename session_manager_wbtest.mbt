@@ -230,13 +230,44 @@ async test "moonstat session warp launch writes self removing script and URL" {
     assert_eq(launch.args[1], "Warp")
     assert_true(launch.args[2].has_prefix("warp://action/new_tab?path="))
     assert_true(launch.args[2].contains("%2F"))
-    let entries = @fsx.list_directory(tmpdir)
+    let script_dir = @pathx.join(
+      @moonsuite.product_home_for_workspace_root(tmpdir, "moonstat").tmp_path,
+      "warp",
+    )
+    let entries = @fsx.list_directory(script_dir)
     assert_eq(entries.length(), 1)
-    assert_true(entries[0].name.has_prefix(".moonsuite-warp-"))
+    assert_true(entries[0].name.has_prefix("warp-"))
     assert_true(entries[0].name.has_suffix(".sh"))
     let script = @fsx.read_file(entries[0].path)
     assert_true(script.contains("rm -- \"$0\""))
     assert_true(script.contains("exec claude --resume warp-1"))
   })
   assert_true(moon_session_terminal_launch("warp", "cmd", None, None) is Err(_))
+}
+
+///|
+async test "moonstat session warp launch uses suite temp for book roots" {
+  @fsx.with_temporary_directory("moonstat-warp-book-root-XXXXXX", tmpdir => {
+    let suite_root = @pathx.join(tmpdir, "suite")
+    let book_root = @pathx.join(suite_root, "books/research")
+    @fsx.make_directory(book_root, recursive=true, exists_ok=true)
+    let launch = moon_session_terminal_launch(
+      "warp",
+      "moonstat status",
+      Some(book_root),
+      None,
+    ).unwrap()
+    assert_eq(launch.program, "open")
+    let script_dir = @pathx.join(
+      @moonsuite.product_home_for_workspace_root(book_root, "moonstat").tmp_path,
+      "warp",
+    )
+    assert_true(script_dir.has_prefix(@pathx.join(suite_root, ".tmp")))
+    assert_false(script_dir.has_prefix(@pathx.join(book_root, ".tmp")))
+    let entries = @fsx.list_directory(script_dir)
+    assert_eq(entries.length(), 1)
+    assert_true(
+      launch.args[2].contains(moon_session_url_query_encode(entries[0].path)),
+    )
+  })
 }

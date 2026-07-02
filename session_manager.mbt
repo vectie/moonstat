@@ -317,8 +317,18 @@ async fn moon_session_warp_launch(
       "Failed to create temporary script file for launching Warp: cwd not found: \{dir}",
     )
   }
+  let script_dir = @pathx.join(
+    @moonsuite.product_home_for_workspace_root(dir, "moonstat").tmp_path,
+    "warp",
+  )
+  @fsx.make_directory(script_dir, recursive=true, exists_ok=true) catch {
+    error =>
+      return Err(
+        "Failed to create temporary script directory for Warp: \{error}",
+      )
+  }
   let gen = @uuid.generator(@random.Rand::new())
-  let script_path = @pathx.join(dir, ".moonsuite-warp-\{gen.v4()}.sh")
+  let script_path = @pathx.join(script_dir, "warp-\{gen.v4()}.sh")
   let script = [
     "#!/usr/bin/env sh",
     "",
