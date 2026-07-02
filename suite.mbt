@@ -695,12 +695,6 @@ fn moonstat_suite_integrations_json(
   let moonclaw_models_file = moonstat_moonclaw_models_file()
   let moonclaw_config_file = moonstat_moonclaw_config_file()
   let moonclaw_providers_file = moonstat_moonclaw_providers_file()
-  let home_moonclaw_models_file = @moonsuite.product_artifact(
-    "~", "moonclaw", "models/models.json",
-  )
-  let home_moonclaw_config_file = @moonsuite.product_artifact(
-    "~", "moonclaw", "config.json",
-  )
   let moonclaw_providers_write_command = "moonstat suite write-moonclaw-providers --path \{moonclaw_providers_file}"
   Json::object({
     "moonclaw": Json::object({
@@ -714,15 +708,12 @@ fn moonstat_suite_integrations_json(
       ]),
       "moonclawModelsPathCandidates": Json::array([
         Json::string(moonclaw_models_file),
-        Json::string(home_moonclaw_models_file),
       ]),
       "moonclawProviderName": Json::string("moonstat"),
       "moonclawProviderModelId": Json::string(model),
       "moonclawProviderConfigPaths": Json::array([
         Json::string(moonclaw_models_file),
-        Json::string(home_moonclaw_models_file),
         Json::string(moonclaw_config_file),
-        Json::string(home_moonclaw_config_file),
       ]),
       "moonclawProvidersFileJson": moonclaw_providers_file_json(
         openai_base_url, model,

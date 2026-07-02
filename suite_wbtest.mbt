@@ -358,8 +358,9 @@ test "suite manifest publishes moonstat service contract" {
   guard moonclaw["moonclawModelsPathCandidates"] is Array(paths) else {
     fail("expected moonclaw models path candidates")
   }
+  assert_eq(paths.length(), 1)
   assert_true(paths.contains(Json::string(moonstat_moonclaw_models_file())))
-  assert_true(
+  assert_false(
     paths.contains(
       Json::string("~/.moonsuite/products/moonclaw/models/models.json"),
     ),
@@ -369,10 +370,11 @@ test "suite manifest publishes moonstat service contract" {
   guard moonclaw["moonclawProviderConfigPaths"] is Array(config_paths) else {
     fail("expected moonclaw provider config paths")
   }
+  assert_eq(config_paths.length(), 2)
   assert_true(
     config_paths.contains(Json::string(moonstat_moonclaw_config_file())),
   )
-  assert_true(
+  assert_false(
     config_paths.contains(
       Json::string("~/.moonsuite/products/moonclaw/config.json"),
     ),
