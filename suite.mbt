@@ -2,6 +2,16 @@
 const SUITE_STATUS_FILE = "suite-status.json"
 
 ///|
+fn moonstat_product_state_path(root : String, product_id : String) -> String {
+  @moonsuite.product_home(root, product_id).state_path
+}
+
+///|
+fn moonstat_product_tmp_path(root : String, product_id : String) -> String {
+  @moonsuite.product_home(root, product_id).tmp_path
+}
+
+///|
 priv struct SuiteLegacyDriftCandidate {
   product : String
   legacy_path : String
@@ -193,10 +203,10 @@ fn moonstat_suite_canonical_paths_json(root : String) -> Json {
     "books": Json::string(@moonsuite.books_root(root)),
     "tmp": Json::string(@moonsuite.tmp_root(root)),
     "productRegistry": Json::string(@moonsuite.product_registry_path(root)),
-    "moonstatHome": Json::string(@moonsuite.product_dir(root, "moonstat")),
-    "moonclawHome": Json::string(@moonsuite.product_dir(root, "moonclaw")),
-    "moontownHome": Json::string(@moonsuite.product_dir(root, "moontown")),
-    "moonroboHome": Json::string(@moonsuite.product_dir(root, "moonrobo")),
+    "moonstatHome": Json::string(moonstat_product_state_path(root, "moonstat")),
+    "moonclawHome": Json::string(moonstat_product_state_path(root, "moonclaw")),
+    "moontownHome": Json::string(moonstat_product_state_path(root, "moontown")),
+    "moonroboHome": Json::string(moonstat_product_state_path(root, "moonrobo")),
     "moonroboGatewayCommands": Json::string(
       @moonsuite.product_artifact(root, "moonrobo", "gateway-commands"),
     ),
@@ -208,13 +218,13 @@ fn moonstat_suite_canonical_paths_json(root : String) -> Json {
     ),
     "moonroboSdkE1Snapshot": Json::string(
       @pathx.join(
-        @moonsuite.product_tmp_dir(root, "moonrobo"),
+        moonstat_product_tmp_path(root, "moonrobo"),
         "sdk-e1/snapshot.json",
       ),
     ),
     "moonroboSdkE1Command": Json::string(
       @pathx.join(
-        @moonsuite.product_tmp_dir(root, "moonrobo"),
+        moonstat_product_tmp_path(root, "moonrobo"),
         "sdk-e1/command.json",
       ),
     ),
@@ -243,21 +253,21 @@ async fn moonstat_suite_legacy_drift_candidates(
       root,
       "moontown",
       ".moontown",
-      @moonsuite.product_dir(root, "moontown"),
+      moonstat_product_state_path(root, "moontown"),
       "Moontown runtime state belongs under the MoonSuite product home.",
     ),
     moonstat_suite_root_drift_candidate(
       root,
       "moonclaw",
       ".moonclaw",
-      @moonsuite.product_dir(root, "moonclaw"),
+      moonstat_product_state_path(root, "moonclaw"),
       "MoonClaw runtime state belongs under the MoonSuite product home.",
     ),
     moonstat_suite_root_drift_candidate(
       root,
       "moondesk",
       ".moontown/moondesk-daemon",
-      @moonsuite.product_dir(root, "moondesk"),
+      moonstat_product_state_path(root, "moondesk"),
       "Moondesk daemon state belongs under the Moondesk product home.",
     ),
     moonstat_suite_root_drift_candidate(
@@ -271,7 +281,7 @@ async fn moonstat_suite_legacy_drift_candidates(
       root,
       "moonstat",
       "moonstat",
-      @moonsuite.product_dir(root, "moonstat"),
+      moonstat_product_state_path(root, "moonstat"),
       "MoonStat state belongs under the MoonStat product home.",
     ),
     moonstat_suite_root_drift_candidate(
@@ -300,7 +310,7 @@ async fn moonstat_suite_legacy_drift_candidates(
       "moonrobo",
       "moonrobo-sdk-e1-bridge-snapshot-test.json",
       @pathx.join(
-        @moonsuite.product_tmp_dir(root, "moonrobo"),
+        moonstat_product_tmp_path(root, "moonrobo"),
         "sdk-e1/snapshot.json",
       ),
       "MoonRobo SDK E1 snapshots belong under the suite product tmp home.",
@@ -310,7 +320,7 @@ async fn moonstat_suite_legacy_drift_candidates(
       "moonrobo",
       "moonrobo-sdk-e1-bridge-command-test.json",
       @pathx.join(
-        @moonsuite.product_tmp_dir(root, "moonrobo"),
+        moonstat_product_tmp_path(root, "moonrobo"),
         "sdk-e1/command.json",
       ),
       "MoonRobo SDK E1 commands belong under the suite product tmp home.",
@@ -496,10 +506,7 @@ fn moonstat_active_workspace_root() -> String {
 
 ///|
 pub fn moonstat_product_home_for_workspace_root(root : String) -> String {
-  @moonsuite.product_dir(
-    @moonsuite.suite_root_for_workspace_root(root),
-    "moonstat",
-  )
+  @moonsuite.product_home_for_workspace_root(root, "moonstat").state_path
 }
 
 ///|
