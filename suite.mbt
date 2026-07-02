@@ -3,12 +3,23 @@ const SUITE_STATUS_FILE = "suite-status.json"
 
 ///|
 fn moonstat_product_state_path(root : String, product_id : String) -> String {
-  @moonsuite.product_home(root, product_id).state_path
+  @moonsuite.product_home_for_workspace_root(root, product_id).state_path
 }
 
 ///|
 fn moonstat_product_tmp_path(root : String, product_id : String) -> String {
-  @moonsuite.product_home(root, product_id).tmp_path
+  @moonsuite.product_home_for_workspace_root(root, product_id).tmp_path
+}
+
+///|
+fn moonstat_product_artifact_path(
+  root : String,
+  product_id : String,
+  relative_path : String,
+) -> String {
+  @moonsuite.product_artifact_for_workspace_root(
+    root, product_id, relative_path,
+  )
 }
 
 ///|
@@ -145,7 +156,7 @@ pub async fn moonstat_suite_drift_report_json(
   global_tmp_root? : String = "/tmp",
 ) -> Json {
   let root = moonstat_normalize_suite_root(suite_root)
-  let global_tmp = moonstat_normalize_suite_root(global_tmp_root)
+  let global_tmp = moonstat_trim_root(global_tmp_root)
   let findings = []
   for candidate in moonstat_suite_legacy_drift_candidates(root, global_tmp) {
     let detected = @fsx.exists(candidate.probe_path)
@@ -187,7 +198,7 @@ pub async fn moonstat_suite_drift_report_json(
 }
 
 ///|
-fn moonstat_normalize_suite_root(root : String) -> String {
+fn moonstat_trim_root(root : String) -> String {
   let trimmed = root.trim().to_owned()
   if trimmed == "" {
     "."
@@ -197,61 +208,102 @@ fn moonstat_normalize_suite_root(root : String) -> String {
 }
 
 ///|
+fn moonstat_normalize_suite_root(root : String) -> String {
+  let workspace_root = moonstat_trim_root(root)
+  @moonsuite.suite_root_for_workspace_root(workspace_root)
+}
+
+///|
 fn moonstat_suite_canonical_paths_json(root : String) -> Json {
+  let suite_root = moonstat_normalize_suite_root(root)
   Json::object({
-    "suiteState": Json::string(@moonsuite.state_dir(root)),
-    "books": Json::string(@moonsuite.books_root(root)),
-    "tmp": Json::string(@moonsuite.tmp_root(root)),
-    "productRegistry": Json::string(@moonsuite.product_registry_path(root)),
-    "moondeskHome": Json::string(moonstat_product_state_path(root, "moondesk")),
-    "moonbookHome": Json::string(moonstat_product_state_path(root, "moonbook")),
-    "moonwikiHome": Json::string(moonstat_product_state_path(root, "moonwiki")),
-    "mooncodeHome": Json::string(moonstat_product_state_path(root, "mooncode")),
-    "moonstatHome": Json::string(moonstat_product_state_path(root, "moonstat")),
-    "moonclawHome": Json::string(moonstat_product_state_path(root, "moonclaw")),
-    "moontownHome": Json::string(moonstat_product_state_path(root, "moontown")),
-    "moonroboHome": Json::string(moonstat_product_state_path(root, "moonrobo")),
-    "moonfishHome": Json::string(moonstat_product_state_path(root, "moonfish")),
-    "moonmoonHome": Json::string(moonstat_product_state_path(root, "moonmoon")),
-    "moonchatHome": Json::string(moonstat_product_state_path(root, "moonchat")),
-    "moonvisHome": Json::string(moonstat_product_state_path(root, "moonvis")),
-    "bookkeeperHome": Json::string(
-      moonstat_product_state_path(root, "bookkeeper"),
+    "suiteState": Json::string(@moonsuite.state_dir(suite_root)),
+    "books": Json::string(@moonsuite.books_root(suite_root)),
+    "tmp": Json::string(@moonsuite.tmp_root(suite_root)),
+    "productRegistry": Json::string(
+      @moonsuite.product_registry_path(suite_root),
     ),
-    "lepusaHome": Json::string(moonstat_product_state_path(root, "lepusa")),
-    "rabbitaHome": Json::string(moonstat_product_state_path(root, "rabbita")),
+    "moondeskHome": Json::string(
+      moonstat_product_state_path(suite_root, "moondesk"),
+    ),
+    "moonbookHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonbook"),
+    ),
+    "moonwikiHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonwiki"),
+    ),
+    "mooncodeHome": Json::string(
+      moonstat_product_state_path(suite_root, "mooncode"),
+    ),
+    "moonstatHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonstat"),
+    ),
+    "moonclawHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonclaw"),
+    ),
+    "moontownHome": Json::string(
+      moonstat_product_state_path(suite_root, "moontown"),
+    ),
+    "moonroboHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonrobo"),
+    ),
+    "moonfishHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonfish"),
+    ),
+    "moonmoonHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonmoon"),
+    ),
+    "moonchatHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonchat"),
+    ),
+    "moonvisHome": Json::string(
+      moonstat_product_state_path(suite_root, "moonvis"),
+    ),
+    "bookkeeperHome": Json::string(
+      moonstat_product_state_path(suite_root, "bookkeeper"),
+    ),
+    "lepusaHome": Json::string(
+      moonstat_product_state_path(suite_root, "lepusa"),
+    ),
+    "rabbitaHome": Json::string(
+      moonstat_product_state_path(suite_root, "rabbita"),
+    ),
     "moonroboGatewayCommands": Json::string(
-      @moonsuite.product_artifact(root, "moonrobo", "gateway-commands"),
+      moonstat_product_artifact_path(suite_root, "moonrobo", "gateway-commands"),
     ),
     "moonroboRoboLoops": Json::string(
-      @moonsuite.product_artifact(root, "moonrobo", "robo-loops"),
+      moonstat_product_artifact_path(suite_root, "moonrobo", "robo-loops"),
     ),
     "moonroboProofSessions": Json::string(
-      @moonsuite.product_artifact(root, "moonrobo", "proof-sessions"),
+      moonstat_product_artifact_path(suite_root, "moonrobo", "proof-sessions"),
     ),
     "moonroboSdkE1Snapshot": Json::string(
       @pathx.join(
-        moonstat_product_tmp_path(root, "moonrobo"),
+        moonstat_product_tmp_path(suite_root, "moonrobo"),
         "sdk-e1/snapshot.json",
       ),
     ),
     "moonroboSdkE1Command": Json::string(
       @pathx.join(
-        moonstat_product_tmp_path(root, "moonrobo"),
+        moonstat_product_tmp_path(suite_root, "moonrobo"),
         "sdk-e1/command.json",
       ),
     ),
     "moonclawProviders": Json::string(
-      @moonsuite.product_artifact(root, "moonclaw", "providers.json"),
+      moonstat_product_artifact_path(suite_root, "moonclaw", "providers.json"),
     ),
     "moonclawModels": Json::string(
-      @moonsuite.product_artifact(root, "moonclaw", "models/models.json"),
+      moonstat_product_artifact_path(
+        suite_root, "moonclaw", "models/models.json",
+      ),
     ),
     "moonclawConfig": Json::string(
-      @moonsuite.product_artifact(root, "moonclaw", "config.json"),
+      moonstat_product_artifact_path(suite_root, "moonclaw", "config.json"),
     ),
     "mooncodeSessions": Json::string(
-      @moonsuite.product_artifact(root, "moonclaw", "mooncode/sessions"),
+      moonstat_product_artifact_path(
+        suite_root, "moonclaw", "mooncode/sessions",
+      ),
     ),
   })
 }
@@ -315,7 +367,7 @@ async fn moonstat_suite_legacy_drift_candidates(
       root,
       "moonclaw",
       "moonclaw-jobs",
-      @moonsuite.product_artifact(root, "moonclaw", "jobs"),
+      moonstat_product_artifact_path(root, "moonclaw", "jobs"),
       "MoonClaw jobs belong under the MoonClaw product home.",
     ),
     moonstat_suite_root_drift_candidate(
@@ -378,21 +430,21 @@ async fn moonstat_suite_legacy_drift_candidates(
       root,
       "moonrobo",
       "runs/gateway-commands",
-      @moonsuite.product_artifact(root, "moonrobo", "gateway-commands"),
+      moonstat_product_artifact_path(root, "moonrobo", "gateway-commands"),
       "MoonRobo gateway commands belong under the MoonRobo product home.",
     ),
     moonstat_suite_root_drift_candidate(
       root,
       "moonrobo",
       "runs/robo-loops",
-      @moonsuite.product_artifact(root, "moonrobo", "robo-loops"),
+      moonstat_product_artifact_path(root, "moonrobo", "robo-loops"),
       "MoonRobo loop artifacts belong under the MoonRobo product home.",
     ),
     moonstat_suite_root_drift_candidate(
       root,
       "moonrobo",
       "runs/proof-sessions",
-      @moonsuite.product_artifact(root, "moonrobo", "proof-sessions"),
+      moonstat_product_artifact_path(root, "moonrobo", "proof-sessions"),
       "MoonRobo proof sessions belong under the MoonRobo product home.",
     ),
     moonstat_suite_global_tmp_drift_candidate(

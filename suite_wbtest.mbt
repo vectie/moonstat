@@ -768,6 +768,32 @@ async test "suite drift report derives canonical paths from moonsuite contract" 
     assert_false(
       moonclaw_providers_path.contains("books/research-demo/.moonsuite"),
     )
+    let book_report = moonstat_suite_drift_report_json(
+      suite_root=book_root,
+      global_tmp_root=global_tmp,
+    )
+    guard book_report is Object(book_obj) else {
+      fail("expected book-root drift report")
+    }
+    assert_eq(book_obj["suiteRoot"], Json::string(tmpdir))
+    guard book_obj["canonical"] is Object(book_canonical) else {
+      fail("expected book-root canonical paths")
+    }
+    assert_eq(
+      book_canonical["moonstatHome"],
+      Json::string(@pathx.join(tmpdir, ".moonsuite/products/moonstat")),
+    )
+    assert_eq(
+      book_canonical["moonclawProviders"],
+      Json::string(
+        @pathx.join(tmpdir, ".moonsuite/products/moonclaw/providers.json"),
+      ),
+    )
+    assert_false(
+      book_canonical["moonclawProviders"]
+      .stringify()
+      .contains("books/research-demo/.moonsuite"),
+    )
     guard obj["findings"] is Array(findings) else {
       fail("expected drift findings")
     }
