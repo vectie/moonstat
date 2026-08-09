@@ -333,7 +333,7 @@ fn init {
     value => value
   }
   if ci is Some("1" | "true") {
-    @os.atexit(() => println("\{os_args.join(" ")} exited"))
+    ignore(@os.atexit(() => println("\{os_args.join(" ")} exited")))
   }
 }
 
