@@ -190,21 +190,10 @@ priv struct ModelsUrlTarget {
 
 ///|
 fn models_url_target(url : String) -> Result[ModelsUrlTarget, String] {
-  let (raw_origin, raw_path) = split_origin_and_path(url)
-  let (origin, raw_path) = if raw_path.is_empty() {
-    match raw_origin.find("?") {
-      Some(index) =>
-        (raw_origin[:index].to_owned(), "/\{raw_origin[index:].to_owned()}")
-      None => (raw_origin, raw_path)
-    }
-  } else {
-    (raw_origin, raw_path)
+  match moon_parse_network_url(url, ["http", "https"]) {
+    Ok(target) => Ok({ origin: target.origin, path: target.path })
+    Err(_) => Err("Invalid models endpoint URL: \{url}")
   }
-  if !origin.contains("://") {
-    return Err("Invalid models endpoint URL: \{url}")
-  }
-  let path = if raw_path.is_empty() { "/" } else { raw_path }
-  Ok({ origin, path })
 }
 
 ///|

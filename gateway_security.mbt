@@ -109,8 +109,26 @@ fn moongate_static_route(method_ : @httpx.Method, path : String) -> Bool {
     path == "/ui/rabbita" ||
     path == "/participant/register" ||
     path == "/favicon.ico" ||
-    path.has_prefix("/assets/")
+    (path.has_prefix("/assets/") && moongate_safe_static_path(path))
   )
+}
+
+///|
+fn moongate_safe_static_path(path : String) -> Bool {
+  if path.length() > 8_192 ||
+    path.contains("\\") ||
+    path.contains("#") ||
+    path.contains("%") ||
+    path.contains("\r") ||
+    path.contains("\n") {
+    return false
+  }
+  for segment in path.split("/") {
+    if segment == "." || segment == ".." {
+      return false
+    }
+  }
+  true
 }
 
 ///|
@@ -150,13 +168,85 @@ fn moongate_loopback_host(host : String) -> Bool {
 }
 
 ///|
-fn moongate_parse_authority(authority : String) -> @url.Url? {
-  let value = authority.trim()
+priv struct MoongateAuthority {
+  host : String
+  port : Int?
+}
+
+///|
+fn moongate_parse_port(value : StringView) -> Int? {
   if value.is_empty() {
     return None
   }
-  Some(@url.parse("http://\{value}")) catch {
-    _ => None
+  for char in value {
+    if char < '0' || char > '9' {
+      return None
+    }
+  }
+  let port = @string.parse_int(value.to_owned()) catch { _ => return None }
+  if port < 1 || port > 65535 {
+    return None
+  }
+  Some(port)
+}
+
+///|
+fn moongate_parse_authority(authority : String) -> MoongateAuthority? {
+  let value = authority.trim()
+  if value != authority {
+    return None
+  }
+  if value.is_empty() ||
+    value.length() > 1_024 ||
+    value.contains("/") ||
+    value.contains("\\") ||
+    value.contains("?") ||
+    value.contains("#") ||
+    value.contains("@") ||
+    value.contains(",") ||
+    value.contains("%") ||
+    value.contains(" ") ||
+    value.contains("\t") ||
+    value.contains("\r") ||
+    value.contains("\n") {
+    return None
+  }
+  if value.has_prefix("[") {
+    match value.split("]").collect() {
+      [bracketed_host, suffix] => {
+        let host = bracketed_host[1:].to_owned()
+        if !host.contains(":") || !moon_network_host_syntax_valid(host) {
+          return None
+        }
+        let port = match suffix {
+          "" => None
+          [':', .. port] => {
+            guard moongate_parse_port(port) is Some(port) else { return None }
+            Some(port)
+          }
+          _ => return None
+        }
+        Some({ host, port })
+      }
+      _ => None
+    }
+  } else {
+    match value.split(":").collect() {
+      [host] =>
+        if !moon_network_host_syntax_valid(host.to_owned()) {
+          None
+        } else {
+          Some({ host: host.to_owned(), port: None })
+        }
+      [host, port] => {
+        if !moon_network_host_syntax_valid(host.to_owned()) {
+          return None
+        }
+        guard moongate_parse_port(port) is Some(port) else { return None }
+        Some({ host: host.to_owned(), port: Some(port) })
+      }
+      _ => None
+    }
   }
 }
 
@@ -166,11 +256,16 @@ fn moongate_origin_allowed(
   configured_host : String,
   port : Int,
 ) -> Bool {
-  let value = origin.trim().to_owned()
-  if value.is_empty() || value == "null" {
+  let value = origin.trim()
+  if value != origin || value.is_empty() || value == "null" {
     return false
   }
-  let parsed = @url.parse(value) catch { _ => return false }
+  guard value is ['h', 't', 't', 'p', ':', '/', '/', .. authority] else {
+    return false
+  }
+  guard moongate_parse_authority(authority.to_owned()) is Some(parsed) else {
+    return false
+  }
   moongate_host_allowed(parsed.host, configured_host) &&
   moongate_port_allowed(parsed.port, port)
 }

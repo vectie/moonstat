@@ -468,10 +468,15 @@ fn moon_proxy_non_streaming_timeout_default(_app_type : String) -> Int {
 
 ///|
 fn upstream_proxy_url_is_valid(url : String) -> Bool {
-  url.has_prefix("http://") ||
-  url.has_prefix("https://") ||
-  url.has_prefix("socks5://") ||
-  url.has_prefix("socks5h://")
+  match
+    moon_parse_network_url(
+      url,
+      ["http", "https", "socks5", "socks5h"],
+      allow_credentials=true,
+    ) {
+    Ok(target) => target.path == "/"
+    Err(_) => false
+  }
 }
 
 ///|

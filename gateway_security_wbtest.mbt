@@ -154,3 +154,82 @@ async test "gateway control token persists and authenticates" {
   second.initialize(path~)
   assert_eq(second.token, Some(token))
 }
+
+///|
+test "gateway security rejects fuzzed malformed loopback authorities" {
+  let malformed_ports = ["", "0", "-1", "+15721", "15721x", "65536"]
+  for port in malformed_ports {
+    assert_false(
+      moongate_request_authority_allowed(
+        { "host": "127.0.0.1:\{port}" },
+        "127.0.0.1",
+        15721,
+      ),
+    )
+  }
+  let authority_suffixes = [
+    "/providers", "?ignored=true", "#fragment", "@attacker.example", ",attacker.example",
+    "%2fproviders", "\\..\\providers", "\r\nx-forwarded-host: attacker.example",
+  ]
+  for suffix in authority_suffixes {
+    assert_false(
+      moongate_request_authority_allowed(
+        { "host": "127.0.0.1:15721\{suffix}" },
+        "127.0.0.1",
+        15721,
+      ),
+    )
+  }
+}
+
+///|
+test "gateway security rejects adversarial origin grammar" {
+  let origins = [
+    "https://127.0.0.1:15721", "ftp://127.0.0.1:15721", "http://user@127.0.0.1:15721",
+    "http://127.0.0.1:15721/providers", "http://127.0.0.1:15721?query=true", "http://127.0.0.1:15721#fragment",
+    "http://127.0.0.1:15721%2fproviders", "http://127.0.0.1:15721,attacker.example",
+  ]
+  for origin in origins {
+    assert_false(moongate_origin_allowed(origin, "127.0.0.1", 15721))
+  }
+}
+
+///|
+test "gateway security supports strict IPv6 loopback authority" {
+  assert_true(
+    moongate_request_authority_allowed(
+      { "host": "[::1]:15721", "origin": "http://[::1]:15721" },
+      "::1",
+      15721,
+    ),
+  )
+  assert_false(
+    moongate_request_authority_allowed(
+      { "host": "[::1]:not-a-port" },
+      "::1",
+      15721,
+    ),
+  )
+}
+
+///|
+test "gateway security keeps adversarial public-route mutations protected" {
+  let public_inference = [
+    "/v1/messages", "/v1/chat/completions", "/v1/responses", "/v1/responses/compact",
+    "/openclaw/v1/chat/completions",
+  ]
+  let suffixes = ["/", "/..", ".json", "%00", "#fragment"]
+  for path in public_inference {
+    for suffix in suffixes {
+      assert_true(moongate_route_requires_control(Get, "\{path}\{suffix}"))
+      assert_true(moongate_route_requires_control(Post, "\{path}\{suffix}"))
+    }
+  }
+  let static_traversals = [
+    "/assets/../providers", "/assets/./moongate.js", "/assets/%2e%2e/providers",
+    "/assets/%252e%252e/providers", "/assets/..\\providers",
+  ]
+  for path in static_traversals {
+    assert_true(moongate_route_requires_control(Get, path))
+  }
+}

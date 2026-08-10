@@ -40,7 +40,10 @@ pub fn FileServer::new(path : StringView) -> FileServer {
         w.write_header(@status.MethodNotAllowed)
         return
       }
-      let request_path = static_request_path(r.path)
+      guard static_request_path(r.path) is Some(request_path) else {
+        w.write_header(@status.BadRequest)
+        return
+      }
       let path = match request_path {
         "/" => @pathx.join(self_path, "index.html")
         ['/', .. path] => @pathx.join(self_path, path)
@@ -77,8 +80,23 @@ pub fn FileServer::new(path : StringView) -> FileServer {
 }
 
 ///|
-fn static_request_path(path : StringView) -> String {
-  path.split("?").next().unwrap_or(path).to_owned()
+fn static_request_path(path : StringView) -> String? {
+  let request_path = path.split("?").next().unwrap_or(path).to_owned()
+  if request_path.length() > 8_192 ||
+    !request_path.has_prefix("/") ||
+    request_path.contains("\\") ||
+    request_path.contains("#") ||
+    request_path.contains("%") ||
+    request_path.contains("\r") ||
+    request_path.contains("\n") {
+    return None
+  }
+  for segment in request_path.split("/") {
+    if segment == "." || segment == ".." {
+      return None
+    }
+  }
+  Some(request_path)
 }
 
 ///|
