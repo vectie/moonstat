@@ -269,7 +269,7 @@ async fn copilot_save_credentials(
   let path = copilot_credentials_path()
   let dir = @pathx.dirname(path)
   @fsx.make_directory(dir, recursive=true, exists_ok=true)
-  @fsx.write_to_file(path, credentials.to_json().stringify(), create=0o600)
+  @fsx.write_to_file(path, @json.to_json(credentials).stringify(), create=0o600)
 }
 
 ///|
@@ -351,7 +351,7 @@ pub async fn copilot_start_device_flow(
         "GitHub device code request failed: \{response.code} - \{data.text()}",
       )
     }
-    Ok(parse_copilot_device_code_response(data.json()).to_json())
+    Ok(@json.to_json(parse_copilot_device_code_response(data.json())))
   } catch {
     error => Err("\{error}")
   }

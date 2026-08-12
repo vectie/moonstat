@@ -6,7 +6,7 @@ fn canonicalize_json_value(value : Json) -> Json {
     Object(obj) => {
       let keys = obj.keys().collect()
       keys.sort_by(ascii_lex_compare)
-      let sorted : Map[String, Json] = {}
+      let sorted : Map[String, Json] = Map([])
       for key in keys {
         match obj.get(key) {
           Some(value) => sorted[key] = canonicalize_json_value(value)

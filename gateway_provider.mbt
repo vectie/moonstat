@@ -1072,7 +1072,7 @@ fn provider_update_settings_with_credential_clear(
 fn provider_merge_update_settings(existing : Json?, incoming : Json?) -> Json? {
   match (existing, incoming) {
     (Some(Object(existing_obj)), Some(Object(incoming_obj))) => {
-      let merged : Map[String, Json] = {}
+      let merged : Map[String, Json] = Map([])
       for key in existing_obj.keys() {
         match existing_obj.get(key) {
           Some(value) => merged[key] = value
@@ -2064,7 +2064,7 @@ fn provider_settings_config_with_inline_metadata(
   obj : Map[String, Json],
 ) -> Json {
   guard settings is Object(settings_obj) else { return settings }
-  let merged : Map[String, Json] = {}
+  let merged : Map[String, Json] = Map([])
   for key in settings_obj.keys() {
     match settings_obj.get(key) {
       Some(value) => merged[key] = value
@@ -2175,7 +2175,7 @@ fn provider_limit_string_from_settings(
 
 ///|
 fn provider_inline_settings_config(obj : Map[String, Json]) -> Json? {
-  let settings : Map[String, Json] = {}
+  let settings : Map[String, Json] = Map([])
   provider_copy_inline_metadata_fields(settings, obj)
   if settings.is_empty() {
     None
@@ -2210,7 +2210,7 @@ fn provider_copy_inline_metadata_fields(
 fn provider_merge_inline_meta(existing : Json?, incoming : Json) -> Json {
   match (existing, incoming) {
     (Some(Object(existing_obj)), Object(incoming_obj)) => {
-      let merged : Map[String, Json] = {}
+      let merged : Map[String, Json] = Map([])
       for key in existing_obj.keys() {
         match existing_obj.get(key) {
           Some(value) => merged[key] = value
@@ -2303,12 +2303,12 @@ fn universal_provider_models_from_request(
   path : StringView,
   body : Json?,
 ) -> Json {
-  let models : Map[String, Json] = {}
+  let models : Map[String, Json] = Map([])
   match provider_string_from_request(path, body, "claudeModel") {
     Some(model) => models["claude"] = { "model": Json::string(model) }.to_json()
     None => ()
   }
-  let codex : Map[String, Json] = {}
+  let codex : Map[String, Json] = Map([])
   match provider_string_from_request(path, body, "codexModel") {
     Some(model) => codex["model"] = Json::string(model)
     None => ()

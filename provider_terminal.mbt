@@ -90,7 +90,7 @@ fn moon_provider_terminal_env(
   provider : ProviderRouteTarget,
   app_type : String,
 ) -> Map[String, String] {
-  let env : Map[String, String] = {}
+  let env : Map[String, String] = Map([])
   match provider.settings_config {
     Some(Object(obj)) =>
       match obj.get("env") {

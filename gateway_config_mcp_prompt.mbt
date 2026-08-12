@@ -326,7 +326,7 @@ fn moon_mcp_servers_object_for_app(
   servers : Map[String, Json],
   app : String?,
 ) -> Json {
-  let result : Map[String, Json] = {}
+  let result : Map[String, Json] = Map([])
   for id in servers.keys() {
     guard servers.get(id) is Some(server) else { continue }
     match app {
@@ -426,7 +426,7 @@ fn moon_import_mcp_from_codex_toml_text(
   servers : Map[String, Json],
   content : String,
 ) -> Int {
-  let raw_specs : Map[String, Json] = {}
+  let raw_specs : Map[String, Json] = Map([])
   let mut current_id : String? = None
   let mut current_table = ""
   for line_view in content.split("\n") {
@@ -468,7 +468,7 @@ fn moon_import_mcp_from_codex_toml_text(
       let nested = match spec.get(nested_key) {
         Some(Object(obj)) => obj
         _ => {
-          let obj : Map[String, Json] = {}
+          let obj : Map[String, Json] = Map([])
           spec[nested_key] = Json::object(obj)
           obj
         }
@@ -480,7 +480,7 @@ fn moon_import_mcp_from_codex_toml_text(
     }
     raw_specs[id] = Json::object(spec)
   }
-  let normalized : Map[String, Json] = {}
+  let normalized : Map[String, Json] = Map([])
   for id in raw_specs.keys() {
     guard raw_specs.get(id) is Some(raw_spec) else { continue }
     normalized[id] = moon_codex_mcp_unified_spec(raw_spec)
@@ -496,7 +496,7 @@ fn moon_codex_raw_mcp_spec(
   match specs.get(id) {
     Some(Object(obj)) => obj
     _ => {
-      let obj : Map[String, Json] = {}
+      let obj : Map[String, Json] = Map([])
       specs[id] = Json::object(obj)
       obj
     }
@@ -650,7 +650,7 @@ fn moon_toml_value(raw : String) -> Json? {
     return Some(Json::array(items))
   }
   if value.has_prefix("{") && value.has_suffix("}") {
-    let obj : Map[String, Json] = {}
+    let obj : Map[String, Json] = Map([])
     for item in moon_toml_split_csv(value[1:value.length() - 1].to_owned()) {
       match moon_toml_assignment(item) {
         Some((key, nested_raw)) =>
@@ -889,7 +889,7 @@ fn moon_prompts_object_for_app(
 ) -> Json {
   let normalized = moon_normalize_app_type(app)
   let prefix = "\{normalized}:"
-  let result : Map[String, Json] = {}
+  let result : Map[String, Json] = Map([])
   for key in prompts.keys() {
     if key.has_prefix(prefix) {
       guard prompts.get(key) is Some(Object(prompt)) else { continue }

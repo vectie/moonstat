@@ -31,7 +31,7 @@ pub impl Show for Failed with fn output(self : Failed, logger : &Logger) -> Unit
     logger.write_string(arg.escape())
   }
   logger.write_string(" failed with status ")
-  self.status.output(logger)
+  logger.write_string(self.status.to_string())
   logger.write_string(".\n")
   if !self.stdout.is_blank() {
     logger.write_string("Standard Output:\n")

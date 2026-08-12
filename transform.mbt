@@ -143,7 +143,7 @@ fn anthropic_json_to_gemini(
   shadow_turns : Array[GeminiAssistantTurn],
 ) -> Json {
   guard body is Object(obj) else { return body }
-  let result : Map[String, Json] = {}
+  let result : Map[String, Json] = Map([])
   let system_instruction = anthropic_gemini_system_instruction(obj)
   if system_instruction is Some(instruction) {
     result["systemInstruction"] = instruction
@@ -780,7 +780,7 @@ fn append_gemini_generation_config(
   obj : Map[String, Json],
   result : Map[String, Json],
 ) -> Unit {
-  let config : Map[String, Json] = {}
+  let config : Map[String, Json] = Map([])
   if obj.get("max_tokens") is Some(value) {
     config["maxOutputTokens"] = value
   }
@@ -830,7 +830,7 @@ fn append_gemini_tool_choice(
   result : Map[String, Json],
 ) -> Unit {
   guard obj.get("tool_choice") is Some(choice) else { return }
-  let config : Map[String, Json] = {}
+  let config : Map[String, Json] = Map([])
   match choice {
     String("any") => config["mode"] = Json::string("ANY")
     String("auto") => config["mode"] = Json::string("AUTO")
@@ -863,7 +863,7 @@ fn anthropic_json_to_openai_chat(
   explicit_prompt_cache_key : String?,
 ) -> Json {
   guard body is Object(obj) else { return body }
-  let result : Map[String, Json] = {}
+  let result : Map[String, Json] = Map([])
   copy_json_field(obj, result, "model")
   let messages : Array[Json] = []
   append_openai_chat_system_messages(obj, messages)
@@ -900,7 +900,7 @@ fn anthropic_json_to_openai_responses(
   codex_fast_mode : Bool,
 ) -> Json {
   guard body is Object(obj) else { return body }
-  let result : Map[String, Json] = {}
+  let result : Map[String, Json] = Map([])
   copy_json_field(obj, result, "model")
   let instructions = anthropic_system_instructions(obj)
   if !instructions.is_empty() {

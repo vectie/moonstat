@@ -1,6 +1,6 @@
 ///|
 fn routing_int_map_from_body(body : Json?, key : String) -> Map[String, Int]? {
-  let values : Map[String, Int] = {}
+  let values : Map[String, Int] = Map([])
   guard body is Some(Object(obj)) else { return Some(values) }
   guard obj.get(key) is Some(value) else { return Some(values) }
   guard value is Object(entries) else { return None }

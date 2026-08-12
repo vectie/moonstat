@@ -303,7 +303,7 @@ async fn write_meta(path : String, applied_profile_id : String?) -> Unit {
       entries.push(entry)
     }
   }
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   for k, v in source {
     if k != "entries" && k != "appliedId" {
       obj[k] = v
@@ -447,12 +447,12 @@ async fn remove_gateway_enterprise_config(path : String) -> Unit {
   let value = read_json_or_empty(path)
   match value {
     Object(obj) => {
-      let clean : Map[String, Json] = {}
+      let clean : Map[String, Json] = Map([])
       for k, v in obj {
         if k == "enterpriseConfig" {
           match v {
             Object(enterprise) => {
-              let clean_enterprise : Map[String, Json] = {}
+              let clean_enterprise : Map[String, Json] = Map([])
               for ek, ev in enterprise {
                 if !is_gateway_enterprise_config_key(ek) {
                   clean_enterprise[ek] = ev

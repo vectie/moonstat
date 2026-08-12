@@ -141,7 +141,7 @@ fn ProxyService::moon_export_providers_json(
   obj["circuitBreakerConfig"] = self.provider_router.circuit_config.to_json()
   obj["customEndpoints"] = self.provider_router.all_custom_endpoints_json()
   obj["routingPolicies"] = self.provider_router.routing_policy_store_json()
-  let auto_failover : Map[String, Json] = {}
+  let auto_failover : Map[String, Json] = Map([])
   for app in moon_suite_app_types() {
     auto_failover[app] = Json::boolean(
       self.provider_router.auto_failover_enabled_for_app(app),

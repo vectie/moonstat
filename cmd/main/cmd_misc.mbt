@@ -1103,7 +1103,7 @@ fn mcp_validate_command_path(args : Array[String]) -> String {
 ///|
 fn mcp_server_json_from_args(args : Array[String], id : String) -> String {
   let name = parse_string_arg(args, "--name").unwrap_or(id)
-  let spec : Map[String, Json] = {}
+  let spec : Map[String, Json] = Map([])
   match parse_string_arg(args, "--command") {
     Some(command) => spec["command"] = Json::string(command)
     None => ()

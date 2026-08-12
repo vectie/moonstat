@@ -169,7 +169,7 @@ fn moon_settings_with_bool(settings : Json, key : String, value : Bool) -> Json 
       Json::object(obj)
     }
     _ => {
-      let obj : Map[String, Json] = {}
+      let obj : Map[String, Json] = Map([])
       obj[key] = Json::boolean(value)
       Json::object(obj)
     }
@@ -502,7 +502,7 @@ fn moon_mcp_config_text(servers : Map[String, Json]) -> String? {
   if servers.is_empty() {
     return None
   }
-  let mcp_servers : Map[String, Json] = {}
+  let mcp_servers : Map[String, Json] = Map([])
   for id in servers.keys() {
     guard servers.get(id) is Some(Object(server)) else { continue }
     match server.get("server") {
@@ -677,7 +677,7 @@ fn moon_extract_codex_common_config_from_toml(toml : String) -> String {
 ///|
 fn moon_extract_gemini_common_config(settings : Json) -> String {
   guard settings is Object(config) else { return "{}" }
-  let snippet : Map[String, Json] = {}
+  let snippet : Map[String, Json] = Map([])
   match config.get("env") {
     Some(Object(env)) =>
       for key in env.keys() {

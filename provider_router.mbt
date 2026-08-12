@@ -513,7 +513,7 @@ fn ProviderRouteTarget::to_moon_provider_json(
   health_status? : String = "unknown",
   include_secrets? : Bool = false,
 ) -> Json {
-  let empty_settings : Map[String, Json] = {}
+  let empty_settings : Map[String, Json] = Map([])
   let settings = self.settings_config.unwrap_or(empty_settings.to_json())
   let obj : Map[String, Json] = {
     "id": Json::string(self.provider_id),
@@ -560,7 +560,7 @@ fn ProviderRouteTarget::to_moon_provider_json(
   }
   if self.claude_desktop_mode is Some(_) ||
     !self.claude_desktop_model_routes.is_empty() {
-    let meta : Map[String, Json] = {}
+    let meta : Map[String, Json] = Map([])
     match self.claude_desktop_mode {
       Some(mode) => meta["claudeDesktopMode"] = Json::string(mode)
       None => ()
@@ -605,7 +605,7 @@ fn ProviderRouteTarget::has_stored_api_key(self : ProviderRouteTarget) -> Bool {
 fn provider_route_redact_secrets(value : Json) -> Json {
   match value {
     Object(obj) => {
-      let redacted : Map[String, Json] = {}
+      let redacted : Map[String, Json] = Map([])
       for key, child in obj {
         let normalized = key.to_lower()
         if normalized == "apikey" ||
@@ -631,7 +631,7 @@ fn provider_route_redact_secrets(value : Json) -> Json {
 fn claude_desktop_model_routes_json(
   routes : Map[String, ClaudeDesktopModelRoute],
 ) -> Json {
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   for route_id in routes.keys() {
     match routes.get(route_id) {
       Some(route) => obj[route_id] = route.to_json()
@@ -1015,7 +1015,7 @@ fn ProviderRouter::providers_moon_json(
   include_secrets? : Bool = false,
 ) -> Json {
   let queue = self.failover_queues.get(app_type).unwrap_or([])
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   match self.providers.get(app_type) {
     Some(providers) => {
       let provider_ids : Array[String] = []
@@ -1253,7 +1253,7 @@ fn ProviderRouter::import_live_providers(
 
 ///|
 fn ProviderRouter::universal_providers_json(self : ProviderRouter) -> Json {
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   let ids : Array[String] = []
   for id in self.universal_providers.keys() {
     ids.push(id)
@@ -1389,7 +1389,7 @@ fn universal_provider_settings_config(
   obj : Map[String, Json],
   app_type : String,
 ) -> Json {
-  let settings : Map[String, Json] = {}
+  let settings : Map[String, Json] = Map([])
   match json_string_from_map(obj, "baseUrl") {
     Some(base_url) => settings["baseUrl"] = Json::string(base_url)
     None => ()

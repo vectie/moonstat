@@ -189,7 +189,7 @@ fn moon_copilot_optimizer_headers(
   config : CopilotOptimizerConfig,
   session_id : String,
 ) -> Map[String, String] {
-  let headers : Map[String, String] = {}
+  let headers : Map[String, String] = Map([])
   if config.request_classification {
     headers["x-initiator"] = classification.initiator
   }
@@ -975,7 +975,7 @@ fn json_has_cache_control(value : Json) -> Bool {
 fn copy_json(value : Json) -> Json {
   match value {
     Object(obj) => {
-      let result : Map[String, Json] = {}
+      let result : Map[String, Json] = Map([])
       for key, child in obj {
         result[key] = copy_json(child)
       }
@@ -1032,7 +1032,7 @@ fn upgrade_block_cache_ttl(block : Json, cache_ttl : String) -> Unit {
   guard block_obj.get("cache_control") is Some(Object(cache_control)) else {
     return
   }
-  let upgraded : Map[String, Json] = {}
+  let upgraded : Map[String, Json] = Map([])
   for key, child in cache_control {
     if key != "ttl" {
       upgraded[key] = child

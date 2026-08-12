@@ -56,14 +56,25 @@ test "live benchmark limits and decision vocabularies fail closed" {
     cancellation_id: "cancel-bounds",
     authority_decision_id: None,
   }
-  let invalid : Result[Unit, Error] = try? validate_live_request(request, 1000L)
-  let unknown_status : Result[LiveBenchmarkStatusV1, @json.JsonDecodeError] = try? @json.from_json(
-    Json::string("running"),
-  )
-  let unknown_reason : Result[LiveBenchmarkReasonV1, @json.JsonDecodeError] = try? @json.from_json(
-    Json::string("probably-safe"),
-  )
-  assert_true(invalid is Err(_))
-  assert_true(unknown_status is Err(_))
-  assert_true(unknown_reason is Err(_))
+  try validate_live_request(request, 1000L) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an out-of-bounds live request to fail validation")
+  }
+  try {
+    let _ : LiveBenchmarkStatusV1 = @json.from_json(Json::string("running"))
+  } catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an unknown live benchmark status to fail decoding")
+  }
+  try {
+    let _ : LiveBenchmarkReasonV1 = @json.from_json(
+      Json::string("probably-safe"),
+    )
+  } catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an unknown live benchmark reason to fail decoding")
+  }
 }

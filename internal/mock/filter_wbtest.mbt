@@ -47,7 +47,7 @@ async test "Context::json uses filter" {
   let t = @test.Test("Context::json uses filter")
   run(t, ctx => {
     let cwd = ctx.cwd.path()
-    let payload : Map[String, Json] = {}
+    let payload : Map[String, Json] = Map([])
     payload[cwd] = Json::string(cwd)
     payload["items"] = Json::array([
       Json::string(cwd),

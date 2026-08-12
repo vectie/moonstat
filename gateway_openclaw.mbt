@@ -302,7 +302,7 @@ fn openclaw_env_from_request(path : StringView, body : Json?) -> Json? {
     return None
   }
   let value = proxy_string_request(path, body, "value").unwrap_or("")
-  let env : Map[String, Json] = {}
+  let env : Map[String, Json] = Map([])
   env[key.trim().to_owned()] = Json::string(value)
   Some(Json::object(env))
 }

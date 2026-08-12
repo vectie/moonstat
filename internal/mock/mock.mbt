@@ -28,7 +28,7 @@ impl @clock.Clock for Clock with fn now(self : Clock) -> @clock.Timestamp {
 
 ///|
 impl @clock.Clock for Clock with fn now_str(self : Clock) -> String {
-  let t = self.now()
+  let t = @clock.Clock::now(self)
   "Tick:\{t.ms()}"
 }
 

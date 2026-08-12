@@ -428,7 +428,7 @@ fn codex_responses_content_to_chat_content(content : Json?) -> Json {
 
 ///|
 fn codex_responses_input_file_to_chat_file(part : Map[String, Json]) -> Json? {
-  let file : Map[String, Json] = {}
+  let file : Map[String, Json] = Map([])
   let mut has_supported_file_ref = false
   for key in ["file_id", "file_data", "filename"] {
     if part.get(key) is Some(value) {
@@ -482,7 +482,7 @@ fn codex_responses_call_arguments(item : Map[String, Json]) -> String {
   }
   if json_string_from_map(item, "type") is Some("custom_tool_call") {
     let input = item.get("input").unwrap_or(Json::string(""))
-    let args : Map[String, Json] = {}
+    let args : Map[String, Json] = Map([])
     args[CUSTOM_TOOL_INPUT_FIELD] = input
     return canonical_json_string(Json::object(args))
   }
@@ -643,7 +643,7 @@ fn append_codex_custom_tool_as_openai_chat_tool(
   if name.trim().is_empty() {
     return
   }
-  let properties : Map[String, Json] = {}
+  let properties : Map[String, Json] = Map([])
   properties[CUSTOM_TOOL_INPUT_FIELD] = Json::object({
     "type": Json::string("string"),
     "description": Json::string(CUSTOM_TOOL_INPUT_DESCRIPTION),

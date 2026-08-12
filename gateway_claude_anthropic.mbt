@@ -581,10 +581,11 @@ fn claude_compatible_response_to_anthropic(
   model : String,
 ) -> Json {
   match api_format {
-    "openai_chat" => openai_chat_completion_to_anthropic(body, model).to_json()
-    "openai_responses" => convert_codex_to_anthropic(body, model).to_json()
+    "openai_chat" =>
+      @json.to_json(openai_chat_completion_to_anthropic(body, model))
+    "openai_responses" => @json.to_json(convert_codex_to_anthropic(body, model))
     "gemini_native" =>
-      gemini_native_response_to_anthropic(body, model).to_json()
+      @json.to_json(gemini_native_response_to_anthropic(body, model))
     _ => body
   }
 }
@@ -675,7 +676,7 @@ pub fn moon_strip_hop_by_hop_response_headers(
 ) -> Map[String, String] {
   let hop_by_hop = moon_hop_by_hop_response_header_names()
   let connection_listed = moon_connection_listed_response_headers(headers)
-  let result : Map[String, String] = {}
+  let result : Map[String, String] = Map([])
   for key, value in headers {
     let normalized = key.to_lower()
     if hop_by_hop.contains(normalized) || connection_listed.contains(normalized) {
@@ -690,7 +691,7 @@ pub fn moon_strip_hop_by_hop_response_headers(
 pub fn moon_strip_entity_headers_for_rebuilt_body(
   headers : Map[String, String],
 ) -> Map[String, String] {
-  let result : Map[String, String] = {}
+  let result : Map[String, String] = Map([])
   for key, value in headers {
     match key.to_lower() {
       "content-encoding" | "content-length" | "transfer-encoding" => continue
@@ -1510,7 +1511,7 @@ async fn ProxyService::handle_non_streaming_request(
       let anthropic_response = convert_codex_to_anthropic(json, request.model)
       w.header().set("Content-Type", "application/json")
       w.write_header(@status.Ok)
-      w.write(anthropic_response.to_json().stringify())
+      w.write(@json.to_json(anthropic_response).stringify())
     }
     Err(_) => {
       usage.record_internal_error_with_provider(self)

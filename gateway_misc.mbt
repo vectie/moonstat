@@ -1027,7 +1027,7 @@ fn json_non_empty_string_from_map(
 
 ///|
 fn suite_write_outcome_json() -> Json {
-  let empty : Map[String, Json] = {}
+  let empty : Map[String, Json] = Map([])
   Json::object(empty)
 }
 

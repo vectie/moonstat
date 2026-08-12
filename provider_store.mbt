@@ -64,9 +64,9 @@ fn provider_store_origin(row : Map[String, Json]) -> String {
 
 ///|
 fn ProviderRouter::all_custom_endpoints_json(self : ProviderRouter) -> Json {
-  let apps : Map[String, Json] = {}
+  let apps : Map[String, Json] = Map([])
   for app_type, app_endpoints in self.custom_endpoints {
-    let providers : Map[String, Json] = {}
+    let providers : Map[String, Json] = Map([])
     for provider_id in app_endpoints.keys() {
       providers[provider_id] = self.custom_endpoints_json(app_type, provider_id)
     }
@@ -89,9 +89,9 @@ fn ProviderHealthState::store_json(self : ProviderHealthState) -> Json {
 
 ///|
 fn ProviderRouter::provider_health_store_json(self : ProviderRouter) -> Json {
-  let apps : Map[String, Json] = {}
+  let apps : Map[String, Json] = Map([])
   for app_type in moon_suite_app_types() {
-    let providers : Map[String, Json] = {}
+    let providers : Map[String, Json] = Map([])
     match self.providers.get(app_type) {
       Some(app_providers) =>
         for provider_id in app_providers.keys() {
@@ -114,7 +114,7 @@ fn ProviderRouter::provider_health_store_json(self : ProviderRouter) -> Json {
 fn routing_policy_map_store_json(
   policies : Map[String, @routing.RoutingPolicyV1],
 ) -> Json {
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   for app_type, policy in policies {
     obj[app_type] = policy.to_json()
   }
@@ -125,7 +125,7 @@ fn routing_policy_map_store_json(
 fn routing_decision_map_store_json(
   decisions : Map[String, @routing.RoutingDecisionV1],
 ) -> Json {
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   for app_type, decision in decisions {
     obj[app_type] = decision.to_json()
   }
@@ -136,7 +136,7 @@ fn routing_decision_map_store_json(
 fn routing_smooth_map_store_json(
   states : Map[String, @routing.SmoothStateV1],
 ) -> Json {
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   for app_type, state in states {
     obj[app_type] = state.to_json()
   }
@@ -145,7 +145,7 @@ fn routing_smooth_map_store_json(
 
 ///|
 fn routing_int_map_store_json(values : Map[String, Int]) -> Json {
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   for key, value in values {
     obj[key] = Json::number(value.to_double())
   }
@@ -154,7 +154,7 @@ fn routing_int_map_store_json(values : Map[String, Int]) -> Json {
 
 ///|
 fn routing_int64_map_store_json(values : Map[String, Int64]) -> Json {
-  let obj : Map[String, Json] = {}
+  let obj : Map[String, Json] = Map([])
   for key, value in values {
     obj[key] = Json::number(value.to_double())
   }

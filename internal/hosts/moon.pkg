@@ -3,3 +3,5 @@ import {
   "vectie/moonlib/fsx",
   "vectie/moonlib/spawn",
 }
+
+supported_targets = "native"

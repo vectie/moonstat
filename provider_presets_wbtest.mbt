@@ -246,7 +246,7 @@ test "moongate Moon Suite templates share the correct provider scopes" {
 test "moongate provider forms preserve endpoint and protocol distinctions" {
   let forms = moon_provider_template_seeds()
   assert_eq(forms.length(), 15)
-  let by_id : Map[String, ProviderTemplateSeed] = {}
+  let by_id : Map[String, ProviderTemplateSeed] = Map([])
   for seed in forms {
     by_id[seed.id] = seed
   }

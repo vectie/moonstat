@@ -81,7 +81,7 @@ fn moon_omo_local_file_data_json(
   path : String,
   last_modified : Json,
 ) -> Json {
-  let other : Map[String, Json] = {}
+  let other : Map[String, Json] = Map([])
   for key in obj.keys() {
     if key != "agents" && key != "categories" {
       guard obj.get(key) is Some(value) else { continue }

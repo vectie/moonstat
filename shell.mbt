@@ -266,7 +266,7 @@ async fn moon_enumerate_tool_installations(
   tool : String,
 ) -> Array[MoonToolInstallation] {
   let installs : Array[MoonToolInstallation] = []
-  let seen : Map[String, Bool] = {}
+  let seen : Map[String, Bool] = Map([])
   match moon_command_path(tool) {
     Some(path) => {
       let real = @fsx.resolve(path) catch { _ => path }
@@ -401,7 +401,7 @@ fn moon_tool_installations_conflict(
   if installs.length() < 2 {
     return false
   }
-  let versions : Map[String, Bool] = {}
+  let versions : Map[String, Bool] = Map([])
   let mut runnable_count = 0
   let mut broken_count = 0
   for install in installs {

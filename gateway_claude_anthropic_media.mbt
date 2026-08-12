@@ -74,7 +74,7 @@ fn filter_private_params_for_upstream(
     Object(obj) => {
       let schema_name_map = parent_key is Some(key) &&
         matches_schema_name_map(key)
-      let result : Map[String, Json] = {}
+      let result : Map[String, Json] = Map([])
       for key, value in obj {
         if key.has_prefix("_") && !schema_name_map && !whitelist.contains(key) {
           continue

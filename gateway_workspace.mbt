@@ -80,7 +80,7 @@ async fn moon_list_daily_memory_files_json() -> Json {
     return Json::array([])
   }
   let filenames : Array[String] = []
-  let rows_by_filename : Map[String, Json] = {}
+  let rows_by_filename : Map[String, Json] = Map([])
   let rows : Array[Json] = []
   let entries = @fsx.list_directory(memory_dir) catch {
     _ => return Json::array([])
@@ -115,7 +115,7 @@ async fn moon_search_daily_memory_files_json(query : String) -> Json {
     return Json::array([])
   }
   let filenames : Array[String] = []
-  let rows_by_filename : Map[String, Json] = {}
+  let rows_by_filename : Map[String, Json] = Map([])
   let rows : Array[Json] = []
   let entries = @fsx.list_directory(memory_dir) catch {
     _ => return Json::array([])

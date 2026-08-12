@@ -241,7 +241,7 @@ test "github copilot usage conversion mirrors moongate premium row" {
 
 ///|
 test "github copilot usage conversion reports malformed response" {
-  let empty : Map[String, Json] = {}
+  let empty : Map[String, Json] = Map([])
   assert_eq(
     moon_copilot_usage_result_from_json(empty.to_json()).to_json(),
     UsageResult::new(
@@ -4537,7 +4537,7 @@ test "codex to anthropic response emits moongate cache usage buckets" {
     ),
   )
   let response = convert_codex_to_anthropic(body, "claude-sonnet-4-6")
-  json_inspect(response.usage.to_json(), content={
+  json_inspect(@json.to_json(response.usage), content={
     "input_tokens": 64,
     "output_tokens": 7,
     "cache_read_input_tokens": 31,
@@ -10041,7 +10041,7 @@ test "moongate mcp request parser accepts canonical server JSON" {
 
 ///|
 test "moongate mcp import helpers merge app configs" {
-  let servers : Map[String, Json] = {}
+  let servers : Map[String, Json] = Map([])
   let claude_root = {
     "mcpServers": {
       "filesystem": { "command": Json::string("npx") }.to_json(),
@@ -10066,7 +10066,7 @@ test "moongate mcp import helpers merge app configs" {
 
 ///|
 test "moongate mcp import normalizes gemini httpUrl specs" {
-  let servers : Map[String, Json] = {}
+  let servers : Map[String, Json] = Map([])
   let gemini_root = {
     "mcpServers": {
       "web": { "httpUrl": Json::string("https://mcp.example") }.to_json(),
@@ -10086,7 +10086,7 @@ test "moongate mcp import normalizes gemini httpUrl specs" {
 
 ///|
 test "moongate mcp import parses codex official toml servers" {
-  let servers : Map[String, Json] = {}
+  let servers : Map[String, Json] = Map([])
   let content =
     #|[mcp_servers.filesystem]
     #|command = "npx"
@@ -10117,7 +10117,7 @@ test "moongate mcp import parses codex official toml servers" {
 
 ///|
 test "moongate mcp import parses codex legacy toml servers" {
-  let servers : Map[String, Json] = {}
+  let servers : Map[String, Json] = Map([])
   let content =
     #|[mcp.servers.web]
     #|type = "http"
@@ -10193,7 +10193,7 @@ test "moongate prompt helpers keep app-scoped prompt records" {
     )
     is None,
   )
-  let prompts : Map[String, Json] = {}
+  let prompts : Map[String, Json] = Map([])
   prompts[moon_prompt_store_key(app, id)] = prompt
   prompts[moon_prompt_store_key("claude", "review")] = moon_normalize_prompt(
     "review",
@@ -10234,7 +10234,7 @@ async test "moongate prompt file helpers import and read prompt files" {
       fail("expected request path")
     }
     assert_eq(resolved_path, prompt_path)
-    let prompts : Map[String, Json] = {}
+    let prompts : Map[String, Json] = Map([])
     guard moon_import_prompt_from_file_json(prompts, "codex", prompt_path)
       is Ok(String(id)) else {
       fail("expected imported id")
@@ -10278,7 +10278,7 @@ async test "moongate prompt enable writes prompt file and disables app siblings"
     tmpdir,
   ) {
     let prompt_path = @pathx.join(tmpdir, "AGENTS.md")
-    let prompts : Map[String, Json] = {}
+    let prompts : Map[String, Json] = Map([])
     prompts[moon_prompt_store_key("codex", "first")] = moon_normalize_prompt(
       "first",
       {
@@ -10628,7 +10628,7 @@ test "moongate claude desktop direct compatibility filters unsafe providers" {
 ///|
 test "moongate import skips claude providers without direct or proxy compatibility" {
   let gateway = Gateway::new(port=17073)
-  let empty_env : Map[String, Json] = {}
+  let empty_env : Map[String, Json] = Map([])
   gateway.proxy.provider_router.upsert_provider(
     ProviderRouteTarget::new(
       app_type="claude",
@@ -10679,7 +10679,7 @@ test "moongate import derives claude desktop routes from claude provider env" {
 
 ///|
 test "moongate skill repo request accepts query and json body shapes" {
-  let empty_body : Map[String, Json] = {}
+  let empty_body : Map[String, Json] = Map([])
   guard moon_skill_repo_request_json(
       "/skills/repos?owner=vectie&name=moongate-skills&branch=main&enabled=true",
       Some(empty_body.to_json()),

@@ -18,14 +18,22 @@ test "empty percentiles remain explicitly unavailable" {
 
 ///|
 test "telemetry decision vocabularies reject unknown wire values" {
-  let outcome : Result[TerminalOutcomeV1, @json.JsonDecodeError] = try? @json.from_json(
-    Json::string("invented-outcome"),
-  )
-  let circuit : Result[CircuitStateV1, @json.JsonDecodeError] = try? @json.from_json(
-    Json::string("mostly-open"),
-  )
-  assert_true(outcome is Err(_))
-  assert_true(circuit is Err(_))
+  try {
+    let _ : TerminalOutcomeV1 = @json.from_json(
+      Json::string("invented-outcome"),
+    )
+  } catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an unknown terminal outcome to fail decoding")
+  }
+  try {
+    let _ : CircuitStateV1 = @json.from_json(Json::string("mostly-open"))
+  } catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an unknown circuit state to fail decoding")
+  }
   json_inspect(TerminalOutcomeV1::RateLimited, content="rate-limit")
   json_inspect(CircuitStateV1::HalfOpen, content="half-open")
 }

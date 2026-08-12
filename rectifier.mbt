@@ -185,7 +185,7 @@ fn rectify_anthropic_request(body : Json) -> ThinkingRectifyResult {
             _ => ()
           }
           if block_obj.get("signature") is Some(_) {
-            let clean_block : Map[String, Json] = {}
+            let clean_block : Map[String, Json] = Map([])
             for key, value in block_obj {
               if key != "signature" {
                 clean_block[key] = value

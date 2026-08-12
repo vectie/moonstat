@@ -17,3 +17,5 @@ import {
   "vectie/moonlib/uuid",
   "vectie/moongate/model",
 }
+
+supported_targets = "native"

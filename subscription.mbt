@@ -686,7 +686,7 @@ async fn moon_query_gemini_quota(token : String) -> SubscriptionQuota {
     Err(error) => return moon_quota_error("gemini", error.status, error.message)
     Ok(body) => moon_gemini_project_id(body)
   }
-  let quota_body : Map[String, Json] = {}
+  let quota_body : Map[String, Json] = Map([])
   match project_id {
     Some(project_id) => quota_body["project"] = Json::string(project_id)
     None => ()
@@ -927,7 +927,7 @@ fn moon_parse_codex_quota(
 
 ///|
 fn moon_parse_gemini_quota(body : Json) -> SubscriptionQuota {
-  let categories : Map[String, Json] = {}
+  let categories : Map[String, Json] = Map([])
   guard body is Object(obj) else {
     return moon_quota_error(
       "gemini",

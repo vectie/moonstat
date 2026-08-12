@@ -17,3 +17,5 @@ import {
   "moonbitlang/core/string",
   "vectie/moongate/internal/pino",
 }
+
+supported_targets = "native"

@@ -141,16 +141,27 @@ test "routing decision vocabularies are canonical and fail closed" {
     content="bounded-canary",
   )
   json_inspect(RoutingActivationActionV1::Activate, content="activate")
-  let unknown_mode : Result[RoutingMode, @json.JsonDecodeError] = try? @json.from_json(
-    Json::string("random"),
-  )
-  let unknown_action : Result[RoutingActivationActionV1, @json.JsonDecodeError] = try? @json.from_json(
-    Json::string("replace"),
-  )
-  let unknown_scope : Result[RoutingActivationScopeV1, @json.JsonDecodeError] = try? @json.from_json(
-    Json::string("all-traffic"),
-  )
-  assert_true(unknown_mode is Err(_))
-  assert_true(unknown_action is Err(_))
-  assert_true(unknown_scope is Err(_))
+  try {
+    let _ : RoutingMode = @json.from_json(Json::string("random"))
+  } catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an unknown routing mode to fail decoding")
+  }
+  try {
+    let _ : RoutingActivationActionV1 = @json.from_json(Json::string("replace"))
+  } catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an unknown routing action to fail decoding")
+  }
+  try {
+    let _ : RoutingActivationScopeV1 = @json.from_json(
+      Json::string("all-traffic"),
+    )
+  } catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected an unknown routing scope to fail decoding")
+  }
 }

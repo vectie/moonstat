@@ -9,3 +9,5 @@ import {
   "vectie/moonlib/uuid",
   "vectie/moongate/internal/rand",
 }
+
+supported_targets = "native"

@@ -332,7 +332,7 @@ fn moon_app_settings_with_sync(
       Json::object(obj)
     }
     _ => {
-      let obj : Map[String, Json] = {}
+      let obj : Map[String, Json] = Map([])
       obj[key] = sync_settings
       Json::object(obj)
     }
@@ -513,7 +513,7 @@ fn moon_sync_manifest_json(
   artifacts : Map[String, MoonSyncArtifactMeta],
   snapshot_id : String,
 ) -> Json {
-  let artifact_json : Map[String, Json] = {}
+  let artifact_json : Map[String, Json] = Map([])
   let keys = artifacts.keys().collect()
   keys.sort()
   for key in keys {
@@ -1184,7 +1184,7 @@ async fn ConfigService::moon_sync_build_local_snapshot(
   let skills_zip = @encoding/utf8.encode(
     moon_skill_state_load().stringify(indent=2) + "\n",
   )
-  let artifacts : Map[String, MoonSyncArtifactMeta] = {}
+  let artifacts : Map[String, MoonSyncArtifactMeta] = Map([])
   artifacts[moon_sync_remote_db_sql()] = moon_sync_artifact_meta(db_sql)
   artifacts[moon_sync_remote_skills_zip()] = moon_sync_artifact_meta(skills_zip)
   let snapshot_id = moon_sync_snapshot_id(artifacts)
@@ -2071,7 +2071,7 @@ fn moon_sync_manifest_info_from_json(
   }
   let artifacts = artifact_map.keys().collect()
   artifacts.sort()
-  let artifact_meta : Map[String, MoonSyncArtifactMeta] = {}
+  let artifact_meta : Map[String, MoonSyncArtifactMeta] = Map([])
   for name in artifacts {
     guard artifact_map.get(name) is Some(Object(meta_obj)) else {
       return Err("Remote manifest artifact \{name} is not a JSON object.")
