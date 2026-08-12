@@ -599,6 +599,11 @@ MoonGate currently exposes the standalone local routes below:
 `/status`, `/proxy/status`, and `/stats` include MoonGate request counts,
 success/failure counts, active connections, token totals, cache token totals,
 last request time, last error, current provider metadata, and success rate.
+MoonClaw's per-round cache, prompt-shape, and selected-tool observations map to
+these gateway aggregates as documented in
+[`docs/MOONCLAW_HARNESS_METRICS.md`](docs/MOONCLAW_HARNESS_METRICS.md). Detailed
+prompt and tool-bundle fields remain bounded session/evaluation evidence rather
+than high-cardinality Prometheus labels.
 `/proxy/takeover-status` and `/proxy/running` expose standalone HTTP endpoints
 for proxy control. Their POST endpoints accept camelCase JSON bodies or query
 parameters for standalone scripts. `/proxy/global-config`, `/proxy/app-config`,
