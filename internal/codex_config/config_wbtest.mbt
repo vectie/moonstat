@@ -36,6 +36,20 @@ async test "codex config install writes moongate-style local provider block" {
     guard catalog["models"] is Array(models) else { fail("expected models") }
     guard models[0] is Object(model) else { fail("expected model") }
     assert_eq(model["slug"], Json::string("gpt-5"))
+    assert_eq(model["supported_reasoning_levels"], Json::array([]))
+    assert_eq(model["shell_type"], Json::string("shell_command"))
+    assert_eq(model["support_verbosity"], Json::boolean(false))
+    assert_eq(model["default_verbosity"], Json::string("low"))
+    assert_eq(model["apply_patch_tool_type"], Json::string("freeform"))
+    assert_eq(model["web_search_tool_type"], Json::string("text"))
+    assert_eq(model["input_modalities"], Json::array([Json::string("text")]))
+    assert_eq(model["supports_parallel_tool_calls"], Json::boolean(true))
+    assert_eq(model["supports_image_detail_original"], Json::boolean(false))
+    assert_eq(model["experimental_supported_tools"], Json::array([]))
+    assert_eq(model["supports_search_tool"], Json::boolean(false))
+    assert_eq(model["use_responses_lite"], Json::boolean(false))
+    assert_eq(model["tool_mode"], Json::string("default"))
+    assert_eq(model["multi_agent_version"], Json::string("disabled"))
     assert_true(model["model_messages"] is Object(_))
   })
 }
@@ -195,6 +209,13 @@ test "codex model catalog uses moongate modelCatalog models and context" {
   assert_eq(first["max_context_window"], Json::number(64000.0))
   assert_eq(first["priority"], Json::number(1000.0))
   assert_eq(first["additional_speed_tiers"], Json::array([]))
+  assert_eq(first["supported_reasoning_levels"], Json::array([]))
+  assert_eq(first["shell_type"], Json::string("shell_command"))
+  assert_eq(first["support_verbosity"], Json::boolean(false))
+  assert_eq(
+    first["truncation_policy"],
+    { "mode": Json::string("tokens"), "limit": Json::number(10000.0) }.to_json(),
+  )
   assert_true(first["availability_nux"] is Null)
   assert_true(first["model_messages"] is Object(_))
   guard models[1] is Object(second) else { fail("expected second model") }
