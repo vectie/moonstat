@@ -437,6 +437,11 @@ fn ProviderRouteTarget::binding_model(
 }
 
 ///|
+fn moon_binding_codex_expected_url(host : String, port : Int) -> String {
+  "http://\{host}:\{port}/v1"
+}
+
+///|
 async fn ProxyService::app_binding_status_json(
   self : ProxyService,
   app_type : String,
@@ -482,7 +487,7 @@ async fn ProxyService::app_binding_status_json(
     }
     "codex" => {
       let status = @codex_config.status()
-      let expected = "http://{host}:{port}/v1"
+      let expected = moon_binding_codex_expected_url(host, port)
       managed = status.configured
       bound = status.configured && status.base_url == Some(expected)
       stale = status.configured && !bound

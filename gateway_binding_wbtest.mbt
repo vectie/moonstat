@@ -181,3 +181,15 @@ test "app binding falls back when provider has no model mapping" {
   )
   assert_eq(provider.binding_model("gpt-5.6-sol"), "gpt-5.6-sol")
 }
+
+///|
+test "Codex binding verification interpolates the gateway address" {
+  assert_eq(
+    moon_binding_codex_expected_url("127.0.0.1", 65321),
+    "http://127.0.0.1:65321/v1",
+  )
+  assert_eq(
+    moon_binding_codex_expected_url("localhost", 15721),
+    "http://localhost:15721/v1",
+  )
+}
