@@ -33,6 +33,8 @@ affecting provider traffic accounting.
 | `completion_tokens` | Provider-reported output tokens | `moongate_output_tokens_total` and usage-log output tokens |
 | `configured_request_chars` | Serialized request size before overload shaping | `moongate_request_bytes_total` is the transported-byte aggregate, not an exact equivalent |
 | `effective_request_chars` | Estimated serialized size after retry shaping | correlate with MoonGate request bytes and retry observations |
+| `configured_request_chars - effective_request_chars` | Characters removed by model-facing projection | `moongate_planner_projection_saved_chars_total`; clamped at zero per round |
+| `request_message_count` / `request_message_chars` | Effective model-facing message shape | aggregate counters for cohort averages; never message content |
 | `system_prompt_chars` | Stable system-prompt character count | MoonClaw-only shape diagnostic |
 | `tool_schema_chars` | Serialized selected-tool schema size | MoonClaw-only bundle diagnostic |
 | `tool_count` | Number of tool schemas sent to the model | MoonClaw-only bundle diagnostic |
@@ -60,6 +62,18 @@ The resulting low-cardinality counters are named
 `moongate_planner_responses_rounds_total`,
 `moongate_planner_chat_completion_rounds_total`, and
 `moongate_planner_chat_fallback_rounds_total`.
+
+Projection accounting additionally exposes
+`moongate_planner_configured_request_chars_total`,
+`moongate_planner_effective_request_chars_total`,
+`moongate_planner_projection_saved_chars_total`,
+`moongate_planner_request_messages_total`,
+`moongate_planner_request_message_chars_total`,
+`moongate_planner_system_prompt_chars_total`, and
+`moongate_planner_tools_total`. Cost-oriented cohort analysis uses
+`moongate_planner_total_tokens_total`, fresh-input/cache counters, and the sum
+of per-round `cache_read_ratio_ppm` divided by the round count. These are
+diagnostic aggregates; provider usage logs remain authoritative for billing.
 
 ## Responses compatibility route
 

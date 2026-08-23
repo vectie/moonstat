@@ -10,7 +10,15 @@ test "moongate aggregates moonclaw planner metrics without labels" {
       "cache_read_tokens": 60,
       "cache_write_tokens": 15,
       "fresh_input_tokens": 40,
+      "total_tokens": 120,
+      "configured_request_chars": 1_500,
+      "effective_request_chars": 1_100,
+      "request_message_count": 8,
+      "request_message_chars": 700,
+      "system_prompt_chars": 200,
       "tool_schema_chars": 900,
+      "tool_count": 6,
+      "cache_read_ratio_ppm": 600_000,
       "request_compacted": true,
       "planner_latency_ms": 125,
       "model_retry_count": 2,
@@ -25,6 +33,21 @@ test "moongate aggregates moonclaw planner metrics without labels" {
   assert_true(metrics.contains("moongate_planner_rounds_total 1"))
   assert_true(metrics.contains("moongate_planner_cache_read_tokens_total 60"))
   assert_true(metrics.contains("moongate_planner_cache_write_tokens_total 15"))
+  assert_true(metrics.contains("moongate_planner_total_tokens_total 120"))
+  assert_true(
+    metrics.contains("moongate_planner_configured_request_chars_total 1500"),
+  )
+  assert_true(
+    metrics.contains("moongate_planner_effective_request_chars_total 1100"),
+  )
+  assert_true(
+    metrics.contains("moongate_planner_projection_saved_chars_total 400"),
+  )
+  assert_true(metrics.contains("moongate_planner_request_messages_total 8"))
+  assert_true(metrics.contains("moongate_planner_tools_total 6"))
+  assert_true(
+    metrics.contains("moongate_planner_cache_read_ratio_ppm_total 600000"),
+  )
   assert_true(metrics.contains("moongate_planner_compacted_rounds_total 1"))
   assert_true(metrics.contains("moongate_planner_model_latency_ms_total 125"))
   assert_true(metrics.contains("moongate_planner_model_retries_total 2"))

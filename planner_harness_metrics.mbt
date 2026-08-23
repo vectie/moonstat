@@ -10,7 +10,16 @@ priv struct PlannerHarnessAggregate {
   mut cache_read_tokens : Int
   mut cache_write_tokens : Int
   mut fresh_input_tokens : Int
+  mut total_tokens : Int
+  mut configured_request_chars : Int
+  mut effective_request_chars : Int
+  mut projection_saved_chars : Int
+  mut request_message_count : Int
+  mut request_message_chars : Int
+  mut system_prompt_chars : Int
   mut tool_schema_chars : Int
+  mut tool_count : Int
+  mut cache_read_ratio_ppm : Int
   mut compacted_rounds : Int
   mut planner_latency_ms : Int
   mut model_retries : Int
@@ -37,7 +46,16 @@ fn PlannerHarnessAggregate::new() -> PlannerHarnessAggregate {
     cache_read_tokens: 0,
     cache_write_tokens: 0,
     fresh_input_tokens: 0,
+    total_tokens: 0,
+    configured_request_chars: 0,
+    effective_request_chars: 0,
+    projection_saved_chars: 0,
+    request_message_count: 0,
+    request_message_chars: 0,
+    system_prompt_chars: 0,
     tool_schema_chars: 0,
+    tool_count: 0,
+    cache_read_ratio_ppm: 0,
     compacted_rounds: 0,
     planner_latency_ms: 0,
     model_retries: 0,
@@ -76,7 +94,29 @@ fn PlannerHarnessAggregate::record(
   self.cache_read_tokens += planner_metric_int(payload, "cache_read_tokens")
   self.cache_write_tokens += planner_metric_int(payload, "cache_write_tokens")
   self.fresh_input_tokens += planner_metric_int(payload, "fresh_input_tokens")
+  self.total_tokens += planner_metric_int(payload, "total_tokens")
+  let configured_request_chars = planner_metric_int(
+    payload, "configured_request_chars",
+  )
+  let effective_request_chars = planner_metric_int(
+    payload, "effective_request_chars",
+  )
+  self.configured_request_chars += configured_request_chars
+  self.effective_request_chars += effective_request_chars
+  self.projection_saved_chars += (configured_request_chars -
+  effective_request_chars).max(0)
+  self.request_message_count += planner_metric_int(
+    payload, "request_message_count",
+  )
+  self.request_message_chars += planner_metric_int(
+    payload, "request_message_chars",
+  )
+  self.system_prompt_chars += planner_metric_int(payload, "system_prompt_chars")
   self.tool_schema_chars += planner_metric_int(payload, "tool_schema_chars")
+  self.tool_count += planner_metric_int(payload, "tool_count")
+  self.cache_read_ratio_ppm += planner_metric_int(
+    payload, "cache_read_ratio_ppm",
+  ).min(1_000_000)
   self.planner_latency_ms += planner_metric_int(payload, "planner_latency_ms")
   self.model_retries += planner_metric_int(payload, "model_retry_count")
   if payload.get("request_compacted") == Some(Json::boolean(true)) {
@@ -130,8 +170,49 @@ fn PlannerHarnessAggregate::prometheus_metrics(
   )
   prometheus_counter(
     out,
+    "moongate_planner_total_tokens_total",
+    self.total_tokens,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_configured_request_chars_total",
+    self.configured_request_chars,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_effective_request_chars_total",
+    self.effective_request_chars,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_projection_saved_chars_total",
+    self.projection_saved_chars,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_request_messages_total",
+    self.request_message_count,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_request_message_chars_total",
+    self.request_message_chars,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_system_prompt_chars_total",
+    self.system_prompt_chars,
+  )
+  prometheus_counter(
+    out,
     "moongate_planner_tool_schema_chars_total",
     self.tool_schema_chars,
+  )
+  prometheus_counter(out, "moongate_planner_tools_total", self.tool_count)
+  prometheus_counter(
+    out,
+    "moongate_planner_cache_read_ratio_ppm_total",
+    self.cache_read_ratio_ppm,
   )
   prometheus_counter(
     out,
