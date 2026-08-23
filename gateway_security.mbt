@@ -73,6 +73,7 @@ fn moongate_inference_route(method_ : @httpx.Method, path : String) -> Bool {
       path == "/claude-desktop/v1/messages" ||
       path == "/v1/chat/completions" ||
       path == "/openclaw/v1/chat/completions" ||
+      path == "/openclaw/v1/responses" ||
       path == "/v1/responses" ||
       path == "/v1/responses/compact" ||
       path.has_prefix("/gemini/v1/") ||

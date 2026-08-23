@@ -37,6 +37,17 @@ fn ProxyService::register_inference_routes(
       app_type="openclaw",
     )
   })
+  router.add_handler(Post, "/openclaw/v1/responses", (r, w) => {
+    self.handle_codex_responses(
+      auth,
+      usage,
+      session,
+      model,
+      r,
+      w,
+      app_type="openclaw",
+    )
+  })
   router.add_handler(Post, "/v1/responses", (r, w) => {
     self.handle_codex_responses(auth, usage, session, model, r, w)
   })

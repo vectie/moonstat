@@ -1,0 +1,185 @@
+///|
+/// Aggregate MoonClaw planner observations without retaining prompts, paths,
+/// tool names, or session identifiers. Detailed round records stay on the
+/// MoonClaw side of the boundary.
+priv struct PlannerHarnessAggregate {
+  mut rounds : Int
+  mut tool_calls : Int
+  mut prompt_tokens : Int
+  mut completion_tokens : Int
+  mut cache_read_tokens : Int
+  mut cache_write_tokens : Int
+  mut fresh_input_tokens : Int
+  mut tool_schema_chars : Int
+  mut compacted_rounds : Int
+  mut planner_latency_ms : Int
+  mut model_retries : Int
+  mut selected_rounds : Int
+  mut no_tool_call_rounds : Int
+  mut responses_rounds : Int
+  mut chat_completion_rounds : Int
+  mut chat_fallback_rounds : Int
+}
+
+///|
+/// Planner observations cross a local HTTP boundary and are not authority.
+/// Bound every additive sample so malformed telemetry cannot overflow or
+/// permanently poison process-lifetime counters in one request.
+const PLANNER_HARNESS_METRIC_SAMPLE_MAX : Int = 1_000_000_000
+
+///|
+fn PlannerHarnessAggregate::new() -> PlannerHarnessAggregate {
+  {
+    rounds: 0,
+    tool_calls: 0,
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    cache_read_tokens: 0,
+    cache_write_tokens: 0,
+    fresh_input_tokens: 0,
+    tool_schema_chars: 0,
+    compacted_rounds: 0,
+    planner_latency_ms: 0,
+    model_retries: 0,
+    selected_rounds: 0,
+    no_tool_call_rounds: 0,
+    responses_rounds: 0,
+    chat_completion_rounds: 0,
+    chat_fallback_rounds: 0,
+  }
+}
+
+///|
+fn planner_metric_int(payload : Map[String, Json], key : String) -> Int {
+  json_int(payload, key)
+  .unwrap_or(0)
+  .max(0)
+  .min(PLANNER_HARNESS_METRIC_SAMPLE_MAX)
+}
+
+///|
+/// Returns false for arbitrary JSON so callers can fail closed at the API
+/// boundary without changing normal provider traffic behavior.
+fn PlannerHarnessAggregate::record(
+  self : PlannerHarnessAggregate,
+  body : Json,
+) -> Bool {
+  guard body is Object(payload) else { return false }
+  guard json_string(payload, "contract") is Some(contract) &&
+    contract == "moonclaw.planner.metrics.v1" else {
+    return false
+  }
+  self.rounds += 1
+  self.tool_calls += planner_metric_int(payload, "tool_call_count")
+  self.prompt_tokens += planner_metric_int(payload, "prompt_tokens")
+  self.completion_tokens += planner_metric_int(payload, "completion_tokens")
+  self.cache_read_tokens += planner_metric_int(payload, "cache_read_tokens")
+  self.cache_write_tokens += planner_metric_int(payload, "cache_write_tokens")
+  self.fresh_input_tokens += planner_metric_int(payload, "fresh_input_tokens")
+  self.tool_schema_chars += planner_metric_int(payload, "tool_schema_chars")
+  self.planner_latency_ms += planner_metric_int(payload, "planner_latency_ms")
+  self.model_retries += planner_metric_int(payload, "model_retry_count")
+  if payload.get("request_compacted") == Some(Json::boolean(true)) {
+    self.compacted_rounds += 1
+  }
+  match json_string(payload, "outcome") {
+    Some("selected") => self.selected_rounds += 1
+    Some("no_tool_calls") => self.no_tool_call_rounds += 1
+    _ => ()
+  }
+  match json_string(payload, "model_transport") {
+    Some("responses") => self.responses_rounds += 1
+    Some("chat_completions") => self.chat_completion_rounds += 1
+    Some("chat_fallback") => self.chat_fallback_rounds += 1
+    _ => ()
+  }
+  true
+}
+
+///|
+fn PlannerHarnessAggregate::prometheus_metrics(
+  self : PlannerHarnessAggregate,
+) -> String {
+  let out = StringBuilder::new()
+  prometheus_counter(out, "moongate_planner_rounds_total", self.rounds)
+  prometheus_counter(out, "moongate_planner_tool_calls_total", self.tool_calls)
+  prometheus_counter(
+    out,
+    "moongate_planner_prompt_tokens_total",
+    self.prompt_tokens,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_completion_tokens_total",
+    self.completion_tokens,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_cache_read_tokens_total",
+    self.cache_read_tokens,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_cache_write_tokens_total",
+    self.cache_write_tokens,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_fresh_input_tokens_total",
+    self.fresh_input_tokens,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_tool_schema_chars_total",
+    self.tool_schema_chars,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_compacted_rounds_total",
+    self.compacted_rounds,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_model_latency_ms_total",
+    self.planner_latency_ms,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_model_retries_total",
+    self.model_retries,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_selected_rounds_total",
+    self.selected_rounds,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_no_tool_call_rounds_total",
+    self.no_tool_call_rounds,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_responses_rounds_total",
+    self.responses_rounds,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_chat_completion_rounds_total",
+    self.chat_completion_rounds,
+  )
+  prometheus_counter(
+    out,
+    "moongate_planner_chat_fallback_rounds_total",
+    self.chat_fallback_rounds,
+  )
+  out.to_string()
+}
+
+///|
+fn TrafficStats::record_planner_metrics(
+  self : TrafficStats,
+  body : Json,
+) -> Bool {
+  self.planner_metrics.record(body)
+}

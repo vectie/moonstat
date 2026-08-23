@@ -249,6 +249,7 @@ priv struct TrafficStats {
   mut last_error : String?
   request_logs : Array[RequestLog]
   daily_rollups : Array[UsageDailyRollup]
+  planner_metrics : PlannerHarnessAggregate
 }
 
 ///|
@@ -330,6 +331,7 @@ fn TrafficStats::new() -> TrafficStats {
     last_error: None,
     request_logs: [],
     daily_rollups: [],
+    planner_metrics: PlannerHarnessAggregate::new(),
   }
 }
 
@@ -2095,6 +2097,7 @@ fn TrafficStats::prometheus_metrics(self : TrafficStats) -> String {
     "moongate_storage_failures_total",
     self.storage_failure_count,
   )
+  out.write_string(self.planner_metrics.prometheus_metrics())
   prometheus_gauge(
     out,
     "moongate_recent_request_logs",

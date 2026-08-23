@@ -172,6 +172,7 @@ test "suite manifest publishes moongate service contract" {
   assert_true(routes.contains(Json::string("GET /usage/codex-oauth-models")))
   assert_true(routes.contains(Json::string("GET /usage/coding-plan-quota")))
   assert_true(routes.contains(Json::string("POST /usage/test-script")))
+  assert_true(routes.contains(Json::string("POST /usage/planner-metrics")))
   assert_true(
     routes.contains(Json::string("POST /proxy/stream-check/provider")),
   )

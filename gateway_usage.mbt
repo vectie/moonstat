@@ -36,6 +36,26 @@ fn UsageService::metrics_text(
 }
 
 ///|
+/// Ingest a MoonClaw planner observation into MoonGate's existing aggregate
+/// metrics. The endpoint is additive and does not participate in provider
+/// routing or request accounting.
+async fn UsageService::handle_planner_metrics(
+  self : UsageService,
+  r : @httpx.RequestReader,
+  w : @httpx.ResponseWriter,
+) -> Unit {
+  guard proxy_json_body(r) is Some(body) else {
+    write_usage_bad_request(w, "missing_planner_metrics")
+    return
+  }
+  if self.stats.record_planner_metrics(body) {
+    write_usage_json(w, { "accepted": Json::boolean(true) }.to_json())
+  } else {
+    write_usage_bad_request(w, "invalid_planner_metrics_contract")
+  }
+}
+
+///|
 fn UsageService::status_json(
   self : UsageService,
   address : String,

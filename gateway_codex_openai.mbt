@@ -72,12 +72,23 @@ async fn ProxyService::handle_codex_responses(
   r : @httpx.RequestReader,
   w : @httpx.ResponseWriter,
   compact? : Bool = false,
+  app_type? : String = "codex",
 ) -> Unit {
+  if app_type == "openclaw" &&
+    !env_bool_default(["MOONGATE_OPENCLAW_RESPONSES_ENABLED"], false) {
+    w.header().set("Content-Type", "application/json")
+    w.write_header(@status.NotFound)
+    w.write(
+      "{\"error\":{\"message\":\"OpenClaw Responses transport is disabled\",\"type\":\"not_found\"}}",
+    )
+    w.flush()
+    return
+  }
   let body = r.body.read_all()
   let body_str = body.text()
   let usage = usage.begin_request(body_str.length())
-  let _ = self.activate_provider(usage, "codex")
-  usage.record_request_context("codex", model)
+  let _ = self.activate_provider(usage, app_type)
+  usage.record_request_context(app_type, model)
   let json_result : Result[Json, Error] = moon_result(() => {
     @json.parse(body_str)
   })
@@ -105,10 +116,10 @@ async fn ProxyService::handle_codex_responses(
         json,
         client_format,
       )
-      ignore(usage.bind_routing_session(self, "codex", session.session_id))
+      ignore(usage.bind_routing_session(self, app_type, session.session_id))
       let upstream_session_id = session.upstream_session_id()
       usage.record_request_context(
-        "codex",
+        app_type,
         json_string_field(json, "model").unwrap_or(model),
         session_id=Some(session.session_id),
       )
@@ -119,12 +130,12 @@ async fn ProxyService::handle_codex_responses(
       if stream {
         self.forward_streaming_codex_response(
           auth, usage, session_store, model, request, endpoint, upstream_session_id,
-          w,
+          app_type, w,
         )
       } else {
         self.forward_non_streaming_codex_response(
           auth, usage, session_store, model, request, endpoint, upstream_session_id,
-          w,
+          app_type, w,
         )
       }
     }
@@ -677,16 +688,17 @@ async fn ProxyService::forward_non_streaming_codex_response(
   request : Json,
   endpoint : String,
   session_id : String?,
+  app_type : String,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let selection = self.provider_router.provider_chain_after_activation(
-    "codex",
+    app_type,
     usage.current_provider_id(),
   )
   if provider_selection_is_all_circuits_open(selection) {
     usage.write_provider_selection_error(
       self,
-      "codex",
+      app_type,
       AllProvidersCircuitOpen,
       w,
     )
@@ -747,7 +759,7 @@ async fn ProxyService::forward_non_streaming_codex_response(
             if !providers.is_empty() {
               let next = self.activate_next_provider_after_upstream_status(
                 usage,
-                "codex",
+                app_type,
                 providers,
                 attempted_provider_ids,
                 @status.BadGateway,
@@ -825,7 +837,7 @@ async fn ProxyService::forward_non_streaming_codex_response(
     if !providers.is_empty() {
       let next = self.activate_next_provider_after_upstream_status(
         usage,
-        "codex",
+        app_type,
         providers,
         attempted_provider_ids,
         response.code,
@@ -871,16 +883,17 @@ async fn ProxyService::forward_streaming_codex_response(
   request : Json,
   endpoint : String,
   session_id : String?,
+  app_type : String,
   w : @httpx.ResponseWriter,
 ) -> Unit {
   let selection = self.provider_router.provider_chain_after_activation(
-    "codex",
+    app_type,
     usage.current_provider_id(),
   )
   if provider_selection_is_all_circuits_open(selection) {
     usage.write_provider_selection_error(
       self,
-      "codex",
+      app_type,
       AllProvidersCircuitOpen,
       w,
     )
@@ -926,7 +939,7 @@ async fn ProxyService::forward_streaming_codex_response(
             if !providers.is_empty() {
               let next = self.activate_next_provider_after_upstream_status(
                 usage,
-                "codex",
+                app_type,
                 providers,
                 attempted_provider_ids,
                 @status.BadGateway,
@@ -979,7 +992,7 @@ async fn ProxyService::forward_streaming_codex_response(
       if !providers.is_empty() {
         let next = self.activate_next_provider_after_upstream_status(
           usage,
-          "codex",
+          app_type,
           providers,
           attempted_provider_ids,
           response.code,
@@ -1014,7 +1027,7 @@ async fn ProxyService::forward_streaming_codex_response(
         if !providers.is_empty() {
           let next = self.activate_next_provider_after_upstream_status(
             usage,
-            "codex",
+            app_type,
             providers,
             attempted_provider_ids,
             @status.BadGateway,

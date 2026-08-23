@@ -39,6 +39,9 @@ fn UsageService::register_routes(
   router.add_handler(Get, "/usage/logs", (r, w) => {
     self.handle_usage_logs(r, w, self.pricing_override_rows())
   })
+  router.add_handler(Post, "/usage/planner-metrics", (r, w) => {
+    self.handle_planner_metrics(r, w)
+  })
   router.add_handler(Get, "/usage/summary", (r, w) => {
     self.handle_usage_summary(r, w)
   })
